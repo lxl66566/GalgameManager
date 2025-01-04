@@ -7,7 +7,7 @@ import { Sidebar, SidebarItem } from './Sidebar'
 
 const App = () => {
   return (
-    <div class="flex min-h-screen">
+    <div class="flex min-h-screen dark h-screen">
       <Sidebar>
         <SidebarItem label="Game" icon={<CgGames class="w-6 h-6" />} href="/Game" />
         <SidebarItem
@@ -16,9 +16,9 @@ const App = () => {
           href="/Settings"
         />
       </Sidebar>
-      <div class="flex-1 p-6 overflow-y-auto">
+      <div class="flex-1 p-0 overflow-y-auto">
         <Router>
-          <Route path={['/Game', '/']} component={Game} />
+          <Route path={['/Game', '/', '']} component={Game} />
           <Route path="/Settings" component={Settings} />
         </Router>
       </div>
