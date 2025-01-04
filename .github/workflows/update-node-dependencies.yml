@@ -1,0 +1,25 @@
+name: Update NodeJS Dependencies
+on: 
+  push:
+    branches:
+      - 'renovate/**'
+    paths:
+      - 'package.json'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+        
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+        
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build 🔧
+        run: bun run build
