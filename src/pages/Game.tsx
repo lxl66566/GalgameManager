@@ -1,3 +1,4 @@
+import { DropArea } from '@components/DropArea'
 import GameSettingButton from '@components/GameSettingButton'
 import { FaRegularCirclePlay } from 'solid-icons/fa'
 import { IoOptionsOutline } from 'solid-icons/io'
@@ -99,11 +100,17 @@ const GameItem = ({ game }: { game: Game }) => {
 
 const GamePage = () => {
   return (
-    <div class="container mx-auto p-4">
+    <div class="flex flex-col container mx-auto p-4 h-screen">
       <h1 class="text-3xl font-bold mb-4">启动游戏</h1>
-      <div class="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-x-8 gap-y-6">
-        {games.map(game => GameItem({ game }))}
-      </div>
+      {games.length > 0 ? (
+        <div class="flex-1 grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-x-8 gap-y-6">
+          {games.map(game => GameItem({ game }))}
+        </div>
+      ) : (
+        DropArea({
+          /* TODO */
+        })
+      )}
     </div>
   )
 }

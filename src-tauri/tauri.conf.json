@@ -12,10 +12,12 @@
   "app": {
     "windows": [
       {
-        "title": "app",
+        "title": "GalgameManager",
         "width": 800,
         "height": 600,
-        "resizable": true
+        "resizable": true,
+        "center": true,
+        "dragDropEnabled": true
       }
     ],
     "security": {
