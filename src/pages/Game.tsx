@@ -1,3 +1,4 @@
+import GameSettingButton from '@components/GameSettingButton'
 import { FaRegularCirclePlay } from 'solid-icons/fa'
 import { IoOptionsOutline } from 'solid-icons/io'
 import { createSignal } from 'solid-js'
@@ -28,11 +29,16 @@ const games: Game[] = [
 
 const GameItem = ({ game }: { game: Game }) => {
   const [modalOpen, setModalOpen] = createSignal(false)
-  const [selectedGame, setSelectedGame] = createSignal(null)
+  const [selectedGame, setSelectedGame] = createSignal<Game | null>(null)
 
-  const openModal = game => {
+  const openModal = (game: Game) => {
     setSelectedGame(game)
     setModalOpen(true)
+  }
+
+  const closeModalAndSave = () => {
+    console.log('保存设置') // TODO
+    setModalOpen(false)
   }
 
   const closeModal = () => {
@@ -40,12 +46,12 @@ const GameItem = ({ game }: { game: Game }) => {
   }
   return (
     <>
-      <div class="relative rounded-lg overflow-hidden dark:bg-slate-700 shadow-md w-40 h-72">
+      <div class="relative rounded-lg overflow-hidden dark:bg-slate-700 shadow-md w-44 h-72">
         <div class="relative group">
           <img
             src={game.image}
             alt={game.name}
-            class="w-full h-48 object-cover rounded-t-lg transition duration-300"
+            class="w-full h-52 object-cover rounded-t-lg transition duration-300"
           />
           <div class="absolute inset-0 dark:bg-black/50 opacity-0 group-hover:opacity-100 transition duration-300 flex items-center justify-center">
             <FaRegularCirclePlay class="w-16 h-16 text-white" />
@@ -80,12 +86,10 @@ const GameItem = ({ game }: { game: Game }) => {
             </h2>
             {/* 这里添加设置内容 */}
             <p>这里是 {selectedGame() ? selectedGame().name : ''} 的设置内容。</p>
-            <button
-              onClick={closeModal}
-              class="mt-4 dark:bg-gray-400 hover:dark:bg-gray-500 dark:text-gray-800 font-bold py-2 px-4 rounded"
-            >
-              关闭
-            </button>
+            <div class="mt-2 flex justify-end">
+              <GameSettingButton func={closeModalAndSave} color="red" text="保存" />
+              <GameSettingButton func={closeModal} color="gray" text="取消" />
+            </div>
           </div>
         </div>
       )}
@@ -95,12 +99,10 @@ const GameItem = ({ game }: { game: Game }) => {
 
 const GamePage = () => {
   return (
-    <div class="dark:bg-slate-800 dark:text-gray-400 min-h-screen p-4">
-      <div class="container mx-auto">
-        <h1 class="text-3xl font-bold mb-4">启动游戏</h1>
-        <div class="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-4">
-          {games.map(game => GameItem({ game }))}
-        </div>
+    <div class="container mx-auto p-4">
+      <h1 class="text-3xl font-bold mb-4">启动游戏</h1>
+      <div class="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-x-8 gap-y-6">
+        {games.map(game => GameItem({ game }))}
       </div>
     </div>
   )
