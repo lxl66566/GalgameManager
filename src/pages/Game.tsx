@@ -76,7 +76,7 @@ const GameItem = ({ game }: { game: Game }) => {
           onClick={closeModal}
         >
           <div
-            class="dark:bg-zinc-800 rounded-lg p-8 w-1/2"
+            class="dark:bg-zinc-800 rounded-lg p-6 w-1/2"
             onClick={e => e.stopPropagation()}
           >
             {' '}
