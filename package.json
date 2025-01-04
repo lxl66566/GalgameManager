@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "dev:tauri": "tauri dev",
-    "build:tauri": "tauri build",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
     "preview": "vite preview",
     "prettier": "prettier src -c",
     "prettier:fix": "prettier src -w",

@@ -142,3 +142,7 @@ dist
 
 # SvelteKit build / generate output
 .svelte-kit
+
+# Tauri
+
+src-tauri/gen
