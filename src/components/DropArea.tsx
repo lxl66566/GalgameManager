@@ -1,5 +1,6 @@
 import { listen } from '@tauri-apps/api/event'
-import { createSignal, JSX } from 'solid-js'
+import { createSignal, JSX, Show } from 'solid-js'
+import FullScreenMask from './FullScreenMask'
 
 export function DropArea({
   children,
@@ -19,6 +20,7 @@ export function DropArea({
   callback?: (paths: string[]) => void
 }) {
   const [hovering, setHovering] = createSignal(false)
+  // innerText 在没有给出 children 时使用，一般用于测试
   const [innerText, setInnerText] = createSignal('拖拽文件到此处')
   void listen('tauri://drag-enter', () => {
     setHovering(true)
@@ -37,15 +39,9 @@ export function DropArea({
 
   return (
     <>
-      <div
-        class="fixed inset-0 bg-black transition-opacity duration-300"
-        classList={{
-          'bg-black/50': hovering(),
-          'bg-black/0': !hovering(),
-          'z-20': hovering(),
-          '-z-10': !hovering()
-        }}
-      />
+      <Show when={hovering()}>
+        <FullScreenMask />
+      </Show>
       {children ?? <p>{innerText()}</p>}
     </>
   )

@@ -1,9 +1,10 @@
 import { DropArea } from '@components/DropArea'
+import FullScreenMask from '@components/FullScreenMask'
 import GameSettingButton from '@components/GameSettingButton'
 import { AiTwotonePlusCircle } from 'solid-icons/ai'
 import { FaRegularCirclePlay } from 'solid-icons/fa'
 import { IoOptionsOutline } from 'solid-icons/io'
-import { createSignal, JSX } from 'solid-js'
+import { createSignal, JSX, Show } from 'solid-js'
 
 interface Game {
   name: string
@@ -128,24 +129,26 @@ const GameItemWrapper = ({
 
 const GamePage = () => {
   return (
-    <div class="flex flex-col container mx-auto p-4 h-screen">
-      <h1 class="text-3xl font-bold mb-4">启动游戏</h1>
-      <div class="flex-1 grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-x-8 gap-y-6 pb-5">
-        {games.map(game => GameItem({ game }))}
-        {/* 新增游戏按钮 */}
-        <GameItemWrapper extra_class="flex">
-          <div
-            class="flex flex-col flex-1 items-center justify-center text-center cursor-pointer"
-            onclick={triggerSelectToAddNewGames}
-          >
-            <DropArea callback={addNewGames}>
-              <AiTwotonePlusCircle class="w-16 h-16 text-gray-400" />
-              <p class="text-gray-400 text-sm mt-2 mx-5">点击或拖拽可执行文件到此处</p>
-            </DropArea>
-          </div>
-        </GameItemWrapper>
+    <>
+      <div class="flex flex-col container mx-auto p-4 h-screen">
+        <h1 class="text-3xl font-bold mb-4">启动游戏</h1>
+        <div class="flex-1 grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-x-8 gap-y-6 pb-5">
+          {games.map(game => GameItem({ game }))}
+          {/* 新增游戏按钮 */}
+          <GameItemWrapper extra_class="flex">
+            <div
+              class="flex flex-col flex-1 items-center justify-center text-center cursor-pointer"
+              onclick={triggerSelectToAddNewGames}
+            >
+              <DropArea callback={addNewGames}>
+                <AiTwotonePlusCircle class="w-16 h-16 text-gray-400" />
+                <p class="text-gray-400 text-sm mt-2 mx-5">点击或拖拽可执行文件到此处</p>
+              </DropArea>
+            </div>
+          </GameItemWrapper>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
