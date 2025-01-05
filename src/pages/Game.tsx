@@ -1,32 +1,33 @@
 import { DropArea } from '@components/DropArea'
-import FullScreenMask from '@components/FullScreenMask'
 import GameSettingButton from '@components/GameSettingButton'
 import { AiTwotonePlusCircle } from 'solid-icons/ai'
 import { FaRegularCirclePlay } from 'solid-icons/fa'
 import { IoOptionsOutline } from 'solid-icons/io'
-import { createSignal, JSX, Show } from 'solid-js'
-
-interface Game {
-  name: string
-  duration: string
-  image: string
-}
+import { createSignal, JSX } from 'solid-js'
+import { Game } from '../types'
+import GameImportDialog from './GameSettingDialog'
 
 const games: Game[] = [
   {
+    id: 1,
     name: '游戏 1',
-    duration: '10 小时',
-    image: 'https://via.placeholder.com/300x200' // 替换成你的图片 URL
+    path: 'C:\\Program Files\\Galgame\\game.exe',
+    time: 10,
+    image_url: 'https://via.placeholder.com/300x200' // 替换成你的图片 URL
   },
   {
+    id: 2,
     name: '游戏 2',
-    duration: '5 小时',
-    image: 'https://via.placeholder.com/300x200'
+    time: 5,
+    path: 'C:\\Program Files\\Galgame\\game.exe',
+    image_url: 'https://via.placeholder.com/300x200'
   },
   {
+    id: 3,
     name: '游戏 3',
-    duration: '8 小时',
-    image: 'https://via.placeholder.com/300x200'
+    time: 8,
+    path: 'C:\\Program Files\\Galgame\\game.exe',
+    image_url: 'https://via.placeholder.com/300x200'
   }
 ]
 
@@ -52,7 +53,7 @@ const GameItem = ({ game }: { game: Game }) => {
       <GameItemWrapper>
         <div class="relative group">
           <img
-            src={game.image}
+            src={game.image_url ?? ''}
             alt={game.name}
             class="w-full h-52 object-cover rounded-t-lg transition duration-300"
           />
@@ -68,7 +69,7 @@ const GameItem = ({ game }: { game: Game }) => {
         </div>
         <div class="p-4 dark:bg-slate-700">
           <h2 class="dark:text-gray-300 font-semibold">{game.name}</h2>
-          <p class="dark:text-gray-400">{game.duration}</p>
+          <p class="dark:text-gray-400">{game.time}</p>
         </div>
       </GameItemWrapper>
 
@@ -90,8 +91,16 @@ const GameItem = ({ game }: { game: Game }) => {
             {/* 这里添加设置内容 */}
             <p>这里是 {selectedGame() ? selectedGame().name : ''} 的设置内容。</p>
             <div class="mt-2 flex justify-end">
-              <GameSettingButton func={closeModalAndSave} color="red" text="保存" />
-              <GameSettingButton func={closeModal} color="gray" text="取消" />
+              <GameSettingButton
+                func={closeModalAndSave}
+                color="dark:bg-red-400 hover:dark:bg-red-500"
+                text="保存"
+              />
+              <GameSettingButton
+                func={closeModal}
+                color="dark:bg-gray-400 hover:dark:bg-gray-500"
+                text="取消"
+              />
             </div>
           </div>
         </div>
@@ -130,8 +139,9 @@ const GameItemWrapper = ({
 const GamePage = () => {
   return (
     <>
+      <GameImportDialog cancel={() => {}} confirm={() => {}} />
       <div class="flex flex-col container mx-auto p-4 h-screen">
-        <h1 class="text-3xl font-bold mb-4">启动游戏</h1>
+        <h1 class="text-2xl font-bold mb-4">启动游戏</h1>
         <div class="flex-1 grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-x-8 gap-y-6 pb-5">
           {games.map(game => GameItem({ game }))}
           {/* 新增游戏按钮 */}

@@ -1,3 +1,9 @@
+/**
+ * 按钮组件，用于游戏设置页面。
+ * @param func 点击事件
+ * @param color 按钮颜色的 class
+ * @param text 按钮文本
+ */
 export default ({
   func,
   color,
@@ -9,7 +15,7 @@ export default ({
 }) => (
   <button
     onClick={func}
-    class={`mt-4 dark:bg-${color}-400 hover:dark:bg-${color}-500 dark:text-gray-800 font-bold mx-2 px-2 py-1 rounded`}
+    class={`${color} dark:text-gray-800 rounded font-bold mx-2 mt-4 px-2 py-1`}
   >
     {text}
   </button>

@@ -2,9 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": [
-    "main"
-  ],
+  "windows": ["main"],
   "permissions": [
     "core:path:default",
     "core:event:default",
@@ -12,6 +10,10 @@
     "core:app:default",
     "core:resources:default",
     "core:menu:default",
-    "core:tray:default"
+    "core:tray:default",
+    {
+      "identifier": "http:default",
+      "allow": [{ "url": "https://**" }, { "url": "http://**" }]
+    }
   ]
 }

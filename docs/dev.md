@@ -25,15 +25,16 @@ table name: `config`
 
 table name: `game`
 
-| Name       | Type             | Description             |
-| ---------- | ---------------- | ----------------------- |
-| id         | INTEGER          | 主键 (Unique)           |
-| name       | TEXT             | 游戏名称 (Unique)       |
-| path       | TEXT             | 游戏可执行文件路径      |
-| image_data | BLOB             | 游戏图片数据 (Optional) |
-| image_url  | TEXT             | 游戏图片 URL (Optional) |
-| time       | UNSIGNED BIG INT | 游戏时长(秒)            |
-| chain      | TEXT             | 游戏启动链 (Optional)   |
+| Name            | Type             | Description                   |
+| --------------- | ---------------- | ----------------------------- |
+| id              | INTEGER          | 主键 (Unique)                 |
+| name            | TEXT             | 游戏名称 (Unique)             |
+| path            | TEXT             | 游戏可执行文件路径            |
+| image_data      | BLOB             | 游戏图片数据 (Optional)       |
+| image_mime_type | TEXT             | 游戏图片 MIME 信息 (Optional) |
+| image_url       | TEXT             | 游戏图片 URL (Optional)       |
+| time            | UNSIGNED BIG INT | 游戏时长(秒)                  |
+| chain           | TEXT             | 游戏启动链 (Optional)         |
 
 ### Plugin table
 

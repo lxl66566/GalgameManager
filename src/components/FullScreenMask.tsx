@@ -4,12 +4,18 @@
  * <Show when={mask()}>
  *   <FullScreenMask />
  * </Show>
+ *
+ * 还可以传入 children 元素，它会在遮罩层上居中显示。
  */
 
-export default () => {
+import { JSX } from 'solid-js'
+
+export default ({ children }: { children?: JSX.Element }) => {
   return (
     <div
-      class={`fixed inset-0 bg-black transition-opacity duration-300 bg-black/50 z-20`}
-    />
+      class={`fixed inset-0 flex items-center justify-center transition-opacity duration-300 bg-black/50 z-20`}
+    >
+      {children}
+    </div>
   )
 }

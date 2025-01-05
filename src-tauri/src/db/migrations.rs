@@ -15,6 +15,7 @@ pub fn migrations() -> Vec<Migration> {
             name TEXT UNIQUE,
             path TEXT,
             image_data BLOB,
+            image_mime_type TEXT,
             image_url TEXT,
             time UNSIGNED BIG INT,
             chain TEXT
