@@ -36,11 +36,17 @@ export function DropArea({
   })
 
   return (
-    <div
-      class="flex-1 flex bg-black items-center justify-center transition-opacity duration-300"
-      classList={{ 'bg-black/50': hovering(), 'bg-black/0': !hovering() }}
-    >
-      <div class="p-4 text-center">{children ?? <p>{innerText()}</p>}</div>
-    </div>
+    <>
+      <div
+        class="fixed inset-0 bg-black transition-opacity duration-300"
+        classList={{
+          'bg-black/50': hovering(),
+          'bg-black/0': !hovering(),
+          'z-20': hovering(),
+          '-z-10': !hovering()
+        }}
+      />
+      {children ?? <p>{innerText()}</p>}
+    </>
   )
 }

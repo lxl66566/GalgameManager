@@ -1,8 +1,9 @@
 import { DropArea } from '@components/DropArea'
 import GameSettingButton from '@components/GameSettingButton'
+import { AiTwotonePlusCircle } from 'solid-icons/ai'
 import { FaRegularCirclePlay } from 'solid-icons/fa'
 import { IoOptionsOutline } from 'solid-icons/io'
-import { createSignal } from 'solid-js'
+import { createSignal, JSX } from 'solid-js'
 
 interface Game {
   name: string
@@ -47,7 +48,7 @@ const GameItem = ({ game }: { game: Game }) => {
   }
   return (
     <>
-      <div class="relative rounded-lg overflow-hidden dark:bg-slate-700 shadow-md w-44 h-72">
+      <GameItemWrapper>
         <div class="relative group">
           <img
             src={game.image}
@@ -68,7 +69,7 @@ const GameItem = ({ game }: { game: Game }) => {
           <h2 class="dark:text-gray-300 font-semibold">{game.name}</h2>
           <p class="dark:text-gray-400">{game.duration}</p>
         </div>
-      </div>
+      </GameItemWrapper>
 
       {/* 模态窗口 */}
       {modalOpen() && (
@@ -98,21 +99,65 @@ const GameItem = ({ game }: { game: Game }) => {
   )
 }
 
+/**
+ * GameItemWrapper defines the size and style of the game item.
+ * @param param0 inner element
+ * @returns void
+ */
+const GameItemWrapper = ({
+  children,
+  extra_class
+}: {
+  /**
+   * Inner element.
+   */
+  children: JSX.Element
+  /**
+   * Extra classes to add to the wrapper.
+   */
+  extra_class?: string
+}) => {
+  return (
+    <div
+      class={`relative rounded-lg overflow-hidden dark:bg-slate-700 shadow-md w-44 h-72 ${extra_class}`}
+    >
+      {children}
+    </div>
+  )
+}
+
 const GamePage = () => {
   return (
     <div class="flex flex-col container mx-auto p-4 h-screen">
       <h1 class="text-3xl font-bold mb-4">启动游戏</h1>
-      {games.length > 0 ? (
-        <div class="flex-1 grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-x-8 gap-y-6">
-          {games.map(game => GameItem({ game }))}
-        </div>
-      ) : (
-        DropArea({
-          /* TODO */
-        })
-      )}
+      <div class="flex-1 grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-x-8 gap-y-6 pb-5">
+        {games.map(game => GameItem({ game }))}
+        {/* 新增游戏按钮 */}
+        <GameItemWrapper extra_class="flex">
+          <div
+            class="flex flex-col flex-1 items-center justify-center text-center cursor-pointer"
+            onclick={triggerSelectToAddNewGames}
+          >
+            <DropArea callback={addNewGames}>
+              <AiTwotonePlusCircle class="w-16 h-16 text-gray-400" />
+              <p class="text-gray-400 text-sm mt-2 mx-5">点击或拖拽可执行文件到此处</p>
+            </DropArea>
+          </div>
+        </GameItemWrapper>
+      </div>
     </div>
   )
 }
 
 export default GamePage
+
+const triggerSelectToAddNewGames = () => {
+  // TODO
+  console.log('选择文件')
+  addNewGames([''])
+}
+
+const addNewGames = (paths: string[]) => {
+  // TODO
+  console.log('新增游戏')
+}
