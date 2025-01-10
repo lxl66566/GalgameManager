@@ -1,21 +1,19 @@
-import { defineConfig } from 'vite'
-import solid from 'vite-plugin-solid'
+import process from 'node:process'
+import path from 'path'
 import autoprefixer from 'autoprefixer'
 import tailwindcss from 'tailwindcss'
-import process from 'node:process'
+import { defineConfig } from 'vite'
+import solid from 'vite-plugin-solid'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
-const host = process.env.TAURI_DEV_HOST;
+const host = process.env.TAURI_DEV_HOST
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [solid(), tsconfigPaths()],
   css: {
     postcss: {
-      plugins: [
-        tailwindcss,
-        autoprefixer
-      ]
+      plugins: [tailwindcss, autoprefixer]
     }
   },
   // prevent vite from obscuring rust errors
@@ -27,18 +25,26 @@ export default defineConfig({
     host: host || false,
     hmr: host
       ? {
-        protocol: "ws",
-        host,
-        port: 1421,
-      }
+          protocol: 'ws',
+          host,
+          port: 1421
+        }
       : undefined,
     watch: {
       // Ignore watching `src-tauri`
-      ignored: ["**/src-tauri/**"],
-    },
+      ignored: ['**/src-tauri/**']
+    }
   },
   // to access the Tauri environment variables set by the CLI with information about the current target
-  envPrefix: ['VITE_', 'TAURI_PLATFORM', 'TAURI_ARCH', 'TAURI_FAMILY', 'TAURI_PLATFORM_VERSION', 'TAURI_PLATFORM_TYPE', 'TAURI_DEBUG'],
+  envPrefix: [
+    'VITE_',
+    'TAURI_PLATFORM',
+    'TAURI_ARCH',
+    'TAURI_FAMILY',
+    'TAURI_PLATFORM_VERSION',
+    'TAURI_PLATFORM_TYPE',
+    'TAURI_DEBUG'
+  ],
   build: {
     // Tauri uses Chromium on Windows and WebKit on macOS and Linux
     target: process.env.TAURI_PLATFORM == 'windows' ? 'chrome105' : 'safari13',
@@ -46,6 +52,11 @@ export default defineConfig({
     minify: !process.env.TAURI_DEBUG ? 'esbuild' : false,
     cssMinify: !process.env.TAURI_DEBUG ? 'lightningcss' : false,
     // produce sourcemaps for debug builds
-    sourcemap: !!process.env.TAURI_DEBUG,
+    sourcemap: !!process.env.TAURI_DEBUG
   },
+  resolve: {
+    alias: {
+      '~': path.resolve(__dirname, './src')
+    }
+  }
 })

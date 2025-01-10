@@ -1,1 +1,3 @@
-export default () => <div>Plugin Page</div>
+export default () => {
+  return <div>Plugin</div>
+}

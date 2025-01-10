@@ -139,7 +139,7 @@ const GameItemWrapper = ({
 const GamePage = () => {
   return (
     <>
-      <GameImportDialog cancel={() => {}} confirm={() => {}} />
+      {/* <GameImportDialog cancel={() => {}} confirm={() => {}} /> */}
       <div class="flex flex-col container mx-auto p-4 h-screen">
         <h1 class="text-2xl font-bold mb-4">启动游戏</h1>
         <div class="flex-1 grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-x-8 gap-y-6 pb-5">
