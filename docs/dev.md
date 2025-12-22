@@ -4,7 +4,7 @@
 
 ```sh
 bun install
-bun run tauri:dev
+bun run tauri dev
 ```
 
 ## 数据库表
