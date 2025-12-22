@@ -8,7 +8,7 @@
  * 还可以传入 children 元素，它会在遮罩层上居中显示。
  */
 
-import { JSX } from 'solid-js'
+import type { JSX } from 'solid-js'
 
 export default ({ children }: { children?: JSX.Element }) => {
   return (

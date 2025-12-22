@@ -1,21 +1,38 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ES2022",
+    "target": "ESNext",
+    "module": "ESNext",
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
     "types": ["vite/client", "node"],
-    "noEmit": true,
-    "isolatedModules": true,
     "baseUrl": ".",
     "paths": {
       "@components/*": ["src/components/*"],
       "~/*": ["./src/*"]
-    }
+    },
+    "noEmit": true,
+    "alwaysStrict": true, // 在代码中强制使用严格模式（自动添加 "use strict"）
+    "declaration": true, // 生成对应的 .d.ts 声明文件（配合 isolatedDeclarations 使用）
+    "exactOptionalPropertyTypes": true, // 精确的可选属性类型检查（区分 undefined 和缺失值）
+    "forceConsistentCasingInFileNames": true, // 强制文件名大小写一致性（避免大小写问题导致的模块导入错误）
+    "isolatedDeclarations": false, // 强制所有导出内容必须显式声明类型（有性能要求时建议关闭）
+    "isolatedModules": true, // 要求每个文件必须是独立的模块（能单独编译），避免因类型导入或跨文件类型依赖导致编译错误
+    "noFallthroughCasesInSwitch": true, // 禁止 switch 语句中 case 的穿透（必须使用 break/return）
+    "noImplicitAny": true, // 禁止隐式的 any 类型（必须显式声明类型）
+    "noImplicitOverride": true, // 禁止隐式覆盖（派生类覆盖基类成员必须使用 override 修饰符）
+    "noImplicitReturns": true, // 禁止隐式返回（函数必须显式返回所有路径的值）
+    "noImplicitThis": true, // 禁止隐式 any 类型的 this（必须显式声明 this 类型）
+    "noPropertyAccessFromIndexSignature": true, // 禁止通过点符号访问索引签名属性（强制使用 obj['key'] 语法）
+    "strict": true, // 启用所有严格类型检查选项
+    "strictBindCallApply": true, // 严格检查 bind/call/apply 方法的参数类型
+    "strictFunctionTypes": true, // 严格检查函数类型（禁用函数参数的双变行为）
+    "strictNullChecks": true, // 严格的 null/undefined 检查（避免空值错误）
+    "useUnknownInCatchVariables": true, // 将 catch 子句变量类型设为 unknown（替代 any 更安全）
+    "verbatimModuleSyntax": true // 使用严格的模块语法（推荐所有 TS 项目开启）
   },
-  "include": ["src", "tailwind.config.ts"],
+  "include": ["src"],
   "exclude": ["node_modules", "dist"]
 }

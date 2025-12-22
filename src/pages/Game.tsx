@@ -3,9 +3,8 @@ import GameSettingButton from '@components/GameSettingButton'
 import { AiTwotonePlusCircle } from 'solid-icons/ai'
 import { FaRegularCirclePlay } from 'solid-icons/fa'
 import { IoOptionsOutline } from 'solid-icons/io'
-import { createSignal, JSX } from 'solid-js'
-import { Game } from '../types'
-import GameImportDialog from './GameSettingDialog'
+import { createSignal, type JSX } from 'solid-js'
+import type { Game } from '../types'
 
 const games: Game[] = [
   {
@@ -85,11 +84,9 @@ const GameItem = ({ game }: { game: Game }) => {
           >
             {' '}
             {/* 阻止事件冒泡 */}
-            <h2 class="text-2xl font-bold mb-4">
-              {selectedGame() ? selectedGame().name : '设置'} 设置
-            </h2>
+            <h2 class="text-2xl font-bold mb-4">{selectedGame()?.name ?? '设置'} 设置</h2>
             {/* 这里添加设置内容 */}
-            <p>这里是 {selectedGame() ? selectedGame().name : ''} 的设置内容。</p>
+            <p>这里是 {selectedGame()?.name ?? ''} 的设置内容。</p>
             <div class="mt-2 flex justify-end">
               <GameSettingButton
                 func={closeModalAndSave}
@@ -136,7 +133,7 @@ const GameItemWrapper = ({
   )
 }
 
-const GamePage = () => {
+const GamePage = (): JSX.Element => {
   return (
     <>
       {/* <GameImportDialog cancel={() => {}} confirm={() => {}} /> */}

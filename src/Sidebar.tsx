@@ -1,4 +1,4 @@
-import { JSX } from 'solid-js'
+import type { JSX } from 'solid-js'
 
 const SidebarItem = (props: { label: string; icon: JSX.Element; href: string }) => {
   return (

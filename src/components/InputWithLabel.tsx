@@ -1,4 +1,4 @@
-import { JSX } from 'solid-js'
+import type { JSX } from 'solid-js'
 
 /**
  * props 的类型定义。
