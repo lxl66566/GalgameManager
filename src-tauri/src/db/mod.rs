@@ -2,12 +2,14 @@ pub mod device;
 
 use std::{collections::HashMap, path::PathBuf};
 
+use crate::error::Result;
 use chrono::{DateTime, Duration, Utc};
 use config_file2::{LoadConfigFile, Storable};
 use device::DEVICE_UID;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::sync::LazyLock as Lazy;
+use strfmt::strfmt;
 
 pub static CONFIG_PATH: Lazy<PathBuf> = Lazy::new(|| {
     home::home_dir()
@@ -53,6 +55,8 @@ pub struct Device {
     pub variables: HashMap<String, String>,
 }
 
+static DEFAULT_DEVICE: Lazy<Device> = Lazy::new(Device::default);
+
 impl Config {
     #[inline]
     pub fn get_device(&self) -> Option<&Device> {
@@ -63,4 +67,11 @@ impl Config {
     pub fn get_device_mut(&mut self) -> Option<&mut Device> {
         self.devices.iter_mut().find(|d| d.uid == *DEVICE_UID)
     }
+}
+
+#[tauri::command]
+pub fn resolve_var(s: impl AsRef<str>) -> Result<String> {
+    let lock = CONFIG.lock();
+    let device = lock.get_device().unwrap_or(&*DEFAULT_DEVICE);
+    Ok(strfmt(s.as_ref(), &device.variables)?)
 }

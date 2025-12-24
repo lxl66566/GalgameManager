@@ -60,9 +60,7 @@ export default ({
                 <Show when={!image_url.error}>
                   <img src={image_url()} alt={gameInfo.name} />
                 </Show>
-                {/* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */}
                 <Show when={image_url.error}>
-                  {/* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access */}
                   <p>图片加载失败: {image_url.error.message}</p>
                 </Show>
               </Suspense>

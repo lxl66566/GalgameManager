@@ -15,6 +15,9 @@ pub enum Error {
 
     #[error("Clone error")]
     Clone,
+
+    #[error("Could not resolve var: {0}")]
+    ResolveVar(#[from] strfmt::FmtError),
 }
 
 impl Clone for Error {
