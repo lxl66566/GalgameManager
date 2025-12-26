@@ -9,7 +9,7 @@ import { CgGames } from 'solid-icons/cg'
 import { IoSettingsOutline } from 'solid-icons/io'
 import Game from './pages/Game'
 import Plugin from './pages/Plugin'
-import Settings from './pages/Settings'
+import Setting from './pages/Setting'
 import { Sidebar, SidebarItem } from './Sidebar'
 
 const App = () => {
@@ -27,7 +27,7 @@ const App = () => {
             href="/Plugin"
           />
           <SidebarItem
-            label="Settings"
+            label="Setting"
             icon={<IoSettingsOutline class="w-6 h-6" />}
             href="/Settings"
           />
@@ -36,7 +36,7 @@ const App = () => {
           <Router>
             <Route path={['/Game', '/', '']} component={Game} />
             <Route path="/Plugin" component={Plugin} />
-            <Route path="/Settings" component={Settings} />
+            <Route path="/Setting" component={Setting} />
           </Router>
         </div>
       </ColorModeProvider>

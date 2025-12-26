@@ -38,8 +38,8 @@ const InputWithLabel = ({
   children
 }: InputWithLabelProps) => {
   return (
-    <div class={`flex flex-row items-center ${extraClass}`}>
-      <span class="inline text-base font-medium">{label}</span>
+    <div class={`flex flex-row items-center pt-1 ${extraClass}`}>
+      <span class="inline text-base font-medium mr-2">{label}</span>
       <input
         type="text"
         value={value}

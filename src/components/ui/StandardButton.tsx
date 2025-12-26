@@ -7,15 +7,17 @@
 export default ({
   func,
   color,
-  text
+  text,
+  textColor = 'text-gray-800 dark:text-gray-200'
 }: {
   func: () => void
   color: string
   text: string
+  textColor?: string
 }) => (
   <button
     onClick={func}
-    class={`${color} dark:text-gray-800 rounded font-bold mx-2 mt-4 px-2 py-1`}
+    class={`${color} ${textColor} rounded font-bold mx-2 mt-4 px-2 py-1 cursor-pointer`}
   >
     {text}
   </button>

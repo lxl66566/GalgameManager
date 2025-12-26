@@ -1,8 +1,8 @@
 import { type Game } from '@bindings/Game'
 import { DropArea } from '@components/DropArea'
+import GameEditModal from '@components/GameEditModel'
 import CachedImage from '@components/ui/Image'
-import GameSettingButton from '@components/ui/StandardButton'
-import { formatDuration } from '@utils/bindings'
+import { displayDuration } from '@utils/time'
 import { AiTwotonePlusCircle } from 'solid-icons/ai'
 import { FaRegularCirclePlay } from 'solid-icons/fa'
 import { IoOptionsOutline } from 'solid-icons/io'
@@ -72,37 +72,32 @@ const GameItem = ({ game }: { game: Game }) => {
         </div>
         <div class="p-4 dark:bg-slate-700">
           <h2 class="dark:text-gray-300 font-semibold">{game.name}</h2>
-          <p class="dark:text-gray-400">{formatDuration(game.useTime)}</p>
+          <p class="dark:text-gray-400">{displayDuration(game.useTime)}</p>
         </div>
       </GameItemWrapper>
 
       {/* 模态窗口 */}
       {modalOpen() && (
         <div
-          class="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+          class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" // p-4 保证极小屏幕下也有边距
           onClick={closeModal}
         >
+          {/* 
+            修改点：
+            1. max-h-[90vh]: 保证上下留有空隙，不会贴边。
+            2. flex flex-col: 让内部元素可以正确布局。
+            3. overflow-hidden: 配合内部的 overflow-y-auto，实现内部滚动。
+            4. w-full max-w-4xl: 响应式宽度，大屏更宽，小屏占满。
+          */}
           <div
-            class="dark:bg-zinc-800 rounded-lg p-6 w-1/2"
+            class="dark:bg-zinc-800 bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col p-6 overflow-hidden border border-gray-700"
             onClick={e => e.stopPropagation()}
           >
-            {' '}
-            {/* 阻止事件冒泡 */}
-            <h2 class="text-2xl font-bold mb-4">{selectedGame()?.name ?? '设置'} 设置</h2>
-            {/* 这里添加设置内容 */}
-            <p>这里是 {selectedGame()?.name ?? ''} 的设置内容。</p>
-            <div class="mt-2 flex justify-end">
-              <GameSettingButton
-                func={closeModalAndSave}
-                color="dark:bg-red-400 hover:dark:bg-red-500"
-                text="保存"
-              />
-              <GameSettingButton
-                func={closeModal}
-                color="dark:bg-gray-400 hover:dark:bg-gray-500"
-                text="取消"
-              />
-            </div>
+            <GameEditModal
+              gameInfo={selectedGame()!}
+              cancel={closeModal}
+              confirm={closeModalAndSave}
+            />
           </div>
         </div>
       )}
@@ -171,7 +166,4 @@ const triggerSelectToAddNewGames = () => {
   addNewGames([''])
 }
 
-const addNewGames = (paths: string[]) => {
-  // TODO
-  console.log('新增游戏')
-}
+const addNewGames = (paths: string[]) => {}

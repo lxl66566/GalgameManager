@@ -15,6 +15,8 @@
     "core:window:allow-set-title",
     "fs:default",
     "fs:scope-appcache-recursive",
+    "dialog:allow-open",
+    "dialog:default",
     {
       "identifier": "fs:scope",
       "allow": ["**", "**/*", "/**/*"]
