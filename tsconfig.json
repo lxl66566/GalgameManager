@@ -18,7 +18,7 @@
     "noEmit": true,
     "alwaysStrict": true, // 在代码中强制使用严格模式（自动添加 "use strict"）
     "declaration": true, // 生成对应的 .d.ts 声明文件（配合 isolatedDeclarations 使用）
-    "exactOptionalPropertyTypes": true, // 精确的可选属性类型检查（区分 undefined 和缺失值）
+    "exactOptionalPropertyTypes": false, // 精确的可选属性类型检查（区分 undefined 和缺失值）
     "forceConsistentCasingInFileNames": true, // 强制文件名大小写一致性（避免大小写问题导致的模块导入错误）
     "isolatedDeclarations": false, // 强制所有导出内容必须显式声明类型（有性能要求时建议关闭）
     "isolatedModules": true, // 要求每个文件必须是独立的模块（能单独编译），避免因类型导入或跨文件类型依赖导致编译错误

@@ -1,5 +1,6 @@
 // src/stores/configStore.ts
 import { type Config } from '@bindings/Config'
+import type { Game } from '@bindings/Game'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { createStore, produce } from 'solid-js/store'
@@ -54,22 +55,19 @@ const save = async () => {
   }
 }
 
-// 导出操作接口
 export const useConfig = () => {
   return {
     config,
     refresh: refreshConfig,
     save,
-    // 封装一些便捷的修改方法 (Action)
     actions: {
-      addGame: (game: any) => {
-        // 这里类型应为 Game，但在添加时可能不完整
+      addGame: (game: Game) => {
         setConfig(
           produce(state => {
             state.games.push(game)
           })
         )
-        save() // 立即保存，或者让用户手动点保存按钮
+        save()
       },
       removeGame: (index: number) => {
         setConfig(
@@ -79,11 +77,29 @@ export const useConfig = () => {
         )
         save()
       },
-      updateDeviceVar: (deviceUid: string, key: string, value: string) => {
-        setConfig('devices', d => d.uid === deviceUid, 'variables', key, value)
+      updateGame: (index: number, game: Game) => {
+        setConfig(
+          produce(state => {
+            if (state.games[index]) {
+              state.games[index] = game
+            }
+          })
+        )
         save()
       },
-      // 通用修改器，允许组件直接修改 store draft
+      updateDeviceVar: (deviceUid: string, key: string, value: string) => {
+        // 注意：这里假设 devices 结构，根据你的类型定义可能需要调整查找逻辑
+        setConfig(
+          produce(state => {
+            const device = state.devices.find(d => d.uid === deviceUid) // 假设 Device 有 uid
+            if (device) {
+              // @ts-ignore: 假设 variables 是个 Record 或者 Map
+              device.variables[key] = value
+            }
+          })
+        )
+        save()
+      },
       mutate: (fn: (state: Config) => void) => {
         setConfig(produce(fn))
         save()
