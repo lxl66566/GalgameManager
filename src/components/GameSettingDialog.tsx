@@ -1,8 +1,8 @@
+import { type Game } from '@bindings/Game'
 import CachedImage from '@components/ui/Image'
 import InputWithLabel from '@components/ui/InputWithLabel'
 import GameSettingButton from '@components/ui/StandardButton'
 import { createEffect, createMemo, createSignal, Suspense } from 'solid-js'
-import { type Game } from '../types'
 import FullScreenMask from './ui/FullScreenMask'
 
 /**

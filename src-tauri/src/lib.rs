@@ -1,5 +1,13 @@
+mod bindings;
 pub mod db;
 pub mod error;
+
+use bindings::{get_config, save_config};
+use db::device::device_id;
+use db::resolve_var;
+use tauri_plugin_fs::FsExt;
+
+use crate::db::CONFIG_DIR;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -11,9 +19,17 @@ pub fn run() {
         //         .add_migrations("sqlite:data.db", db::migrations())
         //         .build(),
         // )
-        // Add your commands here that you will call from your JS code
-        // .invoke_handler(tauri::generate_handler![ /* Add your commands here */ ])
-        // .setup(|app| Ok(()))
+        .invoke_handler(tauri::generate_handler![
+            device_id,
+            resolve_var,
+            get_config,
+            save_config
+        ])
+        .setup(|app| {
+            let scope = app.fs_scope();
+            scope.allow_directory(CONFIG_DIR.as_path(), true)?;
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

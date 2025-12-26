@@ -12,7 +12,8 @@
     "paths": {
       "@components/*": ["./src/components/*"],
       "@utils/*": ["./src/utils/*"],
-      "~/*": ["./src/*"]
+      "~/*": ["./src/*"],
+      "@bindings/*": ["./src-tauri/bindings/*"]
     },
     "noEmit": true,
     "alwaysStrict": true, // 在代码中强制使用严格模式（自动添加 "use strict"）

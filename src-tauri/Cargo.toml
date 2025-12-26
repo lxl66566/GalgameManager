@@ -34,6 +34,7 @@ tauri             = { version = "2.0.6", features = [] }
 tauri-plugin-fs   = "2.4.4"
 tauri-plugin-http = "2.2.0"
 thiserror         = "2.0.17"
+ts-rs             = { version = "11.1.0", features = ["format", "chrono-impl"] }
 # tauri-plugin-sql  = { version = "2.2.0", features = ["sqlite"] }
 
 [features]
@@ -44,8 +45,8 @@ default         = ["custom-protocol"]
 incremental = true # Compile your binary in smaller steps.
 
 [profile.release]
-codegen-units = 1       # Compile crates one after another so the compiler can optimize better
-lto           = true    # Enables link to optimizations
-opt-level     = "s"     # Optimize for binary size. Use `3` if you prefer speed.
-panic         = "abort" # Strip expensive panic clean-up logic
-strip         = true    # Automatically strip symbols from the binary
+# codegen-units = 1       # Compile crates one after another so the compiler can optimize better
+lto       = true    # Enables link to optimizations
+opt-level = "s"     # Optimize for binary size. Use `3` if you prefer speed.
+panic     = "abort" # Strip expensive panic clean-up logic
+strip     = true    # Automatically strip symbols from the binary

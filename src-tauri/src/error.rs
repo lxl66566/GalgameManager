@@ -1,3 +1,4 @@
+use serde::{Serialize, Serializer};
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -18,6 +19,9 @@ pub enum Error {
 
     #[error("Could not resolve var: {0}")]
     ResolveVar(#[from] strfmt::FmtError),
+
+    #[error("Tauri Emit signal error")]
+    Emit,
 }
 
 impl Clone for Error {
@@ -26,5 +30,14 @@ impl Clone for Error {
             Error::Device(e) => Error::Device(e.clone()),
             _ => Self::Clone,
         }
+    }
+}
+
+impl Serialize for Error {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.to_string().as_ref())
     }
 }

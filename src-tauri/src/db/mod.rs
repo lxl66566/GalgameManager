@@ -10,13 +10,15 @@ use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::sync::LazyLock as Lazy;
 use strfmt::strfmt;
+use ts_rs::TS;
 
-pub static CONFIG_PATH: Lazy<PathBuf> = Lazy::new(|| {
+pub static CONFIG_DIR: Lazy<PathBuf> = Lazy::new(|| {
     home::home_dir()
         .expect("cannot find home dir on your OS!")
         .join(env!("CARGO_PKG_NAME"))
-        .join("config.toml")
 });
+
+pub static CONFIG_PATH: Lazy<PathBuf> = Lazy::new(|| CONFIG_DIR.join("config.toml"));
 
 pub static CONFIG: Lazy<Mutex<Config>> = Lazy::new(|| {
     Mutex::new(Config::load_or_default(CONFIG_PATH.as_path()).expect("load config file failed!"))
@@ -28,7 +30,8 @@ impl Storable for Config {
     }
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct Config {
     pub db_version: u32,
@@ -37,7 +40,8 @@ pub struct Config {
     pub devices: Vec<Device>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct Game {
     pub name: String,
@@ -50,7 +54,8 @@ pub struct Game {
     pub use_time: Duration,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct Device {
     pub name: String,
@@ -73,8 +78,8 @@ impl Config {
 }
 
 #[tauri::command]
-pub fn resolve_var(s: impl AsRef<str>) -> Result<String> {
+pub fn resolve_var(s: &str) -> Result<String> {
     let lock = CONFIG.lock();
     let device = lock.get_device().unwrap_or(&*DEFAULT_DEVICE);
-    Ok(strfmt(s.as_ref(), &device.variables)?)
+    Ok(strfmt(s, &device.variables)?)
 }

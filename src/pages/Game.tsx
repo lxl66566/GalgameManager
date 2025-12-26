@@ -1,30 +1,37 @@
+import { type Game } from '@bindings/Game'
 import { DropArea } from '@components/DropArea'
 import CachedImage from '@components/ui/Image'
 import GameSettingButton from '@components/ui/StandardButton'
+import { formatDuration } from '@utils/bindings'
 import { AiTwotonePlusCircle } from 'solid-icons/ai'
 import { FaRegularCirclePlay } from 'solid-icons/fa'
 import { IoOptionsOutline } from 'solid-icons/io'
 import { createSignal, type JSX } from 'solid-js'
-import { formatDuration, type Game } from '../types'
 
 const games: Game[] = [
   {
     name: '游戏 1',
+    excutablePath: null,
     savePaths: [],
     imageUrl: 'https://via.placeholder.com/300x200',
     imageSha256: '',
     addedTime: new Date().toISOString(),
-    lastPlayedTime: new Date().toISOString(),
-    useTime: { secs: 0, nanos: 0 }
+    lastPlayedTime: null,
+    useTime: [0, 0]
   },
-  ...Array.from({ length: 5 }, (_, i) => ({
-    name: `游戏 ${i + 2}`,
-    savePaths: [],
-    imageUrl: 'https://via.placeholder.com/300x200',
-    imageSha256: '',
-    addedTime: new Date().toISOString(),
-    useTime: { secs: 0, nanos: 0 }
-  }))
+  ...Array.from(
+    { length: 5 },
+    (_, i): Game => ({
+      name: `游戏 ${i + 2}`,
+      excutablePath: null,
+      savePaths: [],
+      imageUrl: 'https://via.placeholder.com/300x200',
+      imageSha256: '',
+      addedTime: new Date().toISOString(),
+      lastPlayedTime: null,
+      useTime: [0, 0]
+    })
+  )
 ]
 
 const GameItem = ({ game }: { game: Game }) => {
