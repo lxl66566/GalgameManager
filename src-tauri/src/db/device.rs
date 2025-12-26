@@ -13,7 +13,6 @@ fn get_current_device_uid() -> Result<String> {
 }
 
 #[tauri::command]
-#[specta::specta]
 pub fn device_id() -> &'static str {
     *DEVICE_UID
 }

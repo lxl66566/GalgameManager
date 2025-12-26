@@ -73,9 +73,8 @@ impl Config {
 }
 
 #[tauri::command]
-#[specta::specta]
-pub fn resolve_var(s: &str) -> Result<String> {
+pub fn resolve_var(s: impl AsRef<str>) -> Result<String> {
     let lock = CONFIG.lock();
     let device = lock.get_device().unwrap_or(&*DEFAULT_DEVICE);
-    Ok(strfmt(s, &device.variables)?)
+    Ok(strfmt(s.as_ref(), &device.variables)?)
 }
