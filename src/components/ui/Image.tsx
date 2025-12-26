@@ -1,16 +1,16 @@
+import { loadCachedImage } from '@utils/image'
 import { createEffect, createResource, Show, type Component } from 'solid-js'
-import { loadCachedImage } from '../utils/image'
 
 interface ImageProps {
-  url: string
-  hash?: string // 可选的已知 Hash
+  url?: string | null | undefined
+  hash?: string | null | undefined // 可选的已知 Hash
   alt?: string
   class?: string
   /** 当计算出新的 Hash 或 Hash 不一致时回调，用于保存配置 */
   onHashUpdate?: (newHash: string) => void
 }
 
-const Image: Component<ImageProps> = props => {
+const CachedImage: Component<ImageProps> = props => {
   // 使用 createResource 处理异步加载逻辑
   const [imageData] = createResource(
     () => ({ url: props.url, hash: props.hash }),
@@ -66,4 +66,4 @@ const Image: Component<ImageProps> = props => {
   )
 }
 
-export default Image
+export default CachedImage

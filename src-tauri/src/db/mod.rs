@@ -38,17 +38,20 @@ pub struct Config {
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Game {
     pub name: String,
+    pub excutable_path: Option<String>,
     pub save_paths: Vec<String>,
     pub image_url: Option<String>,
     pub image_sha256: Option<String>,
     pub added_time: DateTime<Utc>,
-    pub last_played_time: DateTime<Utc>,
+    pub last_played_time: Option<DateTime<Utc>>,
     pub use_time: Duration,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Device {
     pub name: String,
     pub uid: String,

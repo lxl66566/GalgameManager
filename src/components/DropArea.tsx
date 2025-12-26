@@ -1,6 +1,6 @@
 import { listen } from '@tauri-apps/api/event'
 import { createSignal, Show, type JSX } from 'solid-js'
-import FullScreenMask from './FullScreenMask'
+import FullScreenMask from './ui/FullScreenMask'
 
 export function DropArea({
   children,

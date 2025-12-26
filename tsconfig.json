@@ -10,7 +10,8 @@
     "types": ["vite/client", "node"],
     "baseUrl": ".",
     "paths": {
-      "@components/*": ["src/components/*"],
+      "@components/*": ["./src/components/*"],
+      "@utils/*": ["./src/utils/*"],
       "~/*": ["./src/*"]
     },
     "noEmit": true,

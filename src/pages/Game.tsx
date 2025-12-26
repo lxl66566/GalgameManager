@@ -1,33 +1,30 @@
 import { DropArea } from '@components/DropArea'
-import GameSettingButton from '@components/GameSettingButton'
+import CachedImage from '@components/ui/Image'
+import GameSettingButton from '@components/ui/StandardButton'
 import { AiTwotonePlusCircle } from 'solid-icons/ai'
 import { FaRegularCirclePlay } from 'solid-icons/fa'
 import { IoOptionsOutline } from 'solid-icons/io'
 import { createSignal, type JSX } from 'solid-js'
-import type { Game } from '../types'
+import { formatDuration, type Game } from '../types'
 
 const games: Game[] = [
   {
-    id: 1,
     name: '游戏 1',
-    path: 'C:\\Program Files\\Galgame\\game.exe',
-    time: 10,
-    image_url: 'https://via.placeholder.com/300x200' // 替换成你的图片 URL
+    savePaths: [],
+    imageUrl: 'https://via.placeholder.com/300x200',
+    imageSha256: '',
+    addedTime: new Date().toISOString(),
+    lastPlayedTime: new Date().toISOString(),
+    useTime: { secs: 0, nanos: 0 }
   },
-  {
-    id: 2,
-    name: '游戏 2',
-    time: 5,
-    path: 'C:\\Program Files\\Galgame\\game.exe',
-    image_url: 'https://via.placeholder.com/300x200'
-  },
-  {
-    id: 3,
-    name: '游戏 3',
-    time: 8,
-    path: 'C:\\Program Files\\Galgame\\game.exe',
-    image_url: 'https://via.placeholder.com/300x200'
-  }
+  ...Array.from({ length: 5 }, (_, i) => ({
+    name: `游戏 ${i + 2}`,
+    savePaths: [],
+    imageUrl: 'https://via.placeholder.com/300x200',
+    imageSha256: '',
+    addedTime: new Date().toISOString(),
+    useTime: { secs: 0, nanos: 0 }
+  }))
 ]
 
 const GameItem = ({ game }: { game: Game }) => {
@@ -50,9 +47,9 @@ const GameItem = ({ game }: { game: Game }) => {
   return (
     <>
       <GameItemWrapper>
-        <div class="relative group">
-          <img
-            src={game.image_url ?? ''}
+        <div class="relative group cursor-pointer">
+          <CachedImage
+            url={game.imageUrl ?? ''}
             alt={game.name}
             class="w-full h-52 object-cover rounded-t-lg transition duration-300"
           />
@@ -68,7 +65,7 @@ const GameItem = ({ game }: { game: Game }) => {
         </div>
         <div class="p-4 dark:bg-slate-700">
           <h2 class="dark:text-gray-300 font-semibold">{game.name}</h2>
-          <p class="dark:text-gray-400">{game.time}</p>
+          <p class="dark:text-gray-400">{formatDuration(game.useTime)}</p>
         </div>
       </GameItemWrapper>
 
