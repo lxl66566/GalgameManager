@@ -1,4 +1,4 @@
-// src/pages/settings/tabs/AppearanceTab.tsx
+// src/pages/settings/AppearanceTab.tsx
 import { type ThemeMode } from '@bindings/ThemeMode'
 import { Select, SettingRow, SettingSection } from '@components/ui/settings'
 import { useConfig } from '~/store'

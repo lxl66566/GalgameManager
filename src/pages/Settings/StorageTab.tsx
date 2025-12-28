@@ -94,7 +94,7 @@ const LocalForm: Component<{
       <Input
         value={props.path}
         onInput={e => props.onChange(e.currentTarget.value)}
-        placeholder="D:/Backups"
+        placeholder="(None)"
       />
     </SettingRow>
   </SettingSubGroup>

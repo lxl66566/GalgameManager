@@ -1,101 +1,121 @@
-// src/pages/settings/tabs/DeviceTab.tsx
+import type { Device } from '@bindings/Device'
 import { Input, SettingRow, SettingSection } from '@components/ui/settings'
+import { VariableEditor } from '@components/VariableEditor'
 import { useConfig } from '~/store'
-import { For, type Component } from 'solid-js'
+import { createResource, Show, Suspense, type Component } from 'solid-js'
+import { unwrap } from 'solid-js/store'
 
 export const DeviceTab: Component = () => {
-  const { config, actions } = useConfig()
+  const { actions } = useConfig()
 
-  const addVariable = () => {
-    actions.updateSettings(s => {
-      // 避免 key 冲突，生成临时 key
-      s.currentDevice.variables['NEW_VAR_' + Date.now()] = ''
+  const [device, { mutate }] = createResource(async () => {
+    return await actions.getCurrentDeviceOrDefault()
+  })
+
+  // 2. 核心修改逻辑：克隆 -> 修改 -> 乐观更新 UI -> 提交到 Store
+  const modifyDevice = async (modifier: (d: Device) => void) => {
+    const current = device()
+    if (!current) return
+
+    // 第一步：深拷贝 (Deep Clone)
+    // 使用 structuredClone 创建一个全新的、非 Proxy 的普通 JavaScript 对象。
+    // 如果没有 unwrap，直接 structuredClone(current) 在现代浏览器通常也行，
+    // 但加上 unwrap 是 SolidJS 的标准做法，确保剥离 Proxy。
+    const next = structuredClone(unwrap(current))
+
+    // 第二步：在副本上应用修改 (此时 next 是普通对象，可以随意修改)
+    modifier(next)
+
+    // 第三步：乐观更新 (Optimistic Update)
+    // 将修改后的新对象塞回 Resource，触发 UI 更新
+    mutate(next)
+
+    await actions.updateCurrentDevice(next)
+  }
+
+  const handleNameChange = (name: string) => {
+    modifyDevice(d => (d.name = name))
+  }
+
+  const handleAddVar = (key: string, value: string) => {
+    modifyDevice(d => {
+      // 确保 variables 对象存在
+      if (!d.variables) d.variables = {}
+      d.variables[key] = value
     })
   }
 
-  const removeVariable = (key: string) => {
-    actions.updateSettings(s => {
-      delete s.currentDevice.variables[key]
+  const handleRemoveVar = (key: string) => {
+    modifyDevice(d => {
+      if (d.variables) delete d.variables[key]
     })
   }
 
-  // 修改 Key 比较麻烦，通常建议删除重建，或者 UI 上做特殊处理
-  // 这里简化为只修改 Value，Key 在创建时定好或用特殊 UI 修改
-  const updateVarValue = (key: string, val: string) => {
-    actions.updateSettings(s => {
-      s.currentDevice.variables[key] = val
+  const handleUpdateVarValue = (key: string, val: string) => {
+    modifyDevice(d => {
+      if (d.variables) d.variables[key] = val
+    })
+  }
+
+  const handleRenameVarKey = (oldKey: string, newKey: string) => {
+    modifyDevice(d => {
+      if (!d.variables) return
+      const val = d.variables[oldKey]
+      // 只有当旧值存在时才迁移
+      if (val !== undefined) {
+        delete d.variables[oldKey]
+        d.variables[newKey] = val
+      }
     })
   }
 
   return (
-    <div class="max-w-4xl">
-      <SettingSection title="Device Identity">
-        <SettingRow label="Device Name">
-          <Input
-            value={config.settings.currentDevice.name}
-            onInput={e =>
-              actions.updateSettings(s => (s.currentDevice.name = e.currentTarget.value))
-            }
-          />
-        </SettingRow>
-        <SettingRow label="UUID" description="Unique ID for sync identification">
-          <div class="text-sm font-mono text-gray-500">
-            {config.settings.currentDevice.uuid}
-          </div>
-        </SettingRow>
-      </SettingSection>
-
-      <SettingSection title="Path Variables">
-        <div class="p-4 space-y-3">
-          <div class="text-sm text-gray-500 mb-2">
-            Define variables to use in game paths (e.g., <code>%STEAM_ROOT%</code>).
-          </div>
-
-          <div class="grid grid-cols-12 gap-2 font-medium text-xs text-gray-400 uppercase">
-            <div class="col-span-4">Variable Name</div>
-            <div class="col-span-7">Local Path</div>
-            <div class="col-span-1"></div>
-          </div>
-
-          <For each={Object.entries(config.settings.currentDevice.variables)}>
-            {([key, value]) => (
-              <div class="grid grid-cols-12 gap-2 items-center">
-                <div class="col-span-4">
+    <div class="max-w-4xl w-full mx-auto">
+      <Suspense
+        fallback={<div class="p-8 text-center text-gray-500">Loading device info...</div>}
+      >
+        <Show
+          when={device()}
+          fallback={<div class="p-8 text-center text-red-500">Device not found.</div>}
+        >
+          {dev => (
+            <>
+              <SettingSection title="Device Identity">
+                <SettingRow
+                  label="Device Name"
+                  description="Friendly name for this machine"
+                >
                   <Input
-                    disabled
-                    value={key}
-                    class="!w-full font-mono text-xs bg-gray-100 dark:bg-gray-800"
+                    value={dev().name}
+                    onChange={e => handleNameChange(e.currentTarget.value)}
+                    class="max-w-xs"
+                  />
+                </SettingRow>
+
+                <SettingRow label="UUID" description="Unique ID for sync identification">
+                  <div class="flex items-center gap-2">
+                    <code class="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-gray-600 dark:text-gray-400 select-all">
+                      {dev().uid}
+                    </code>
+                  </div>
+                </SettingRow>
+              </SettingSection>
+
+              <SettingSection title="Path Variables">
+                <div class="p-4">
+                  <VariableEditor
+                    variables={dev().variables || {}}
+                    onAdd={handleAddVar}
+                    onRemove={handleRemoveVar}
+                    onUpdateValue={handleUpdateVarValue}
+                    onRenameKey={handleRenameVarKey}
                   />
                 </div>
-                <div class="col-span-7">
-                  <Input
-                    value={value}
-                    onInput={e => updateVarValue(key, e.currentTarget.value)}
-                    class="!w-full font-mono text-xs"
-                    placeholder="C:/Games/..."
-                  />
-                </div>
-                <div class="col-span-1 flex justify-center">
-                  <button
-                    onClick={() => removeVariable(key)}
-                    class="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
-                  ></button>
-                </div>
-              </div>
-            )}
-          </For>
-
-          <div class="pt-2">
-            {/* 实际实现中，添加变量应该是一个弹窗或者底部的输入行，输入 Key 和 Value 后确认 */}
-            <button
-              onClick={addVariable}
-              class="text-sm text-blue-600 hover:text-blue-700 font-medium"
-            >
-              + Add Variable
-            </button>
-          </div>
-        </div>
-      </SettingSection>
+              </SettingSection>
+            </>
+          )}
+        </Show>
+      </Suspense>
     </div>
   )
 }

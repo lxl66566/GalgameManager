@@ -2,9 +2,7 @@ mod bindings;
 pub mod db;
 pub mod error;
 
-use bindings::{get_config, save_config};
-use db::device::device_id;
-use db::resolve_var;
+use bindings::{device_id, get_config, resolve_var, save_config};
 use tauri_plugin_fs::FsExt;
 
 use crate::db::CONFIG_DIR;

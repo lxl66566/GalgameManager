@@ -1,10 +1,11 @@
 // src/stores/configStore.ts
 import { type Config } from '@bindings/Config'
+import type { Device } from '@bindings/Device'
 import type { Game } from '@bindings/Game'
 import type { Settings } from '@bindings/Settings'
 import { invoke } from '@tauri-apps/api/core'
-import { listen } from '@tauri-apps/api/event'
 import { createStore, produce, unwrap } from 'solid-js/store'
+import { currentDeviceId } from './Singleton'
 
 // 初始空状态
 const DEFAULT_CONFIG: Config = {
@@ -124,6 +125,35 @@ export const useConfig = () => {
       },
       updateSettings: (fn: (settings: Settings) => void) => {
         setConfig(produce(state => fn(state.settings)))
+        save()
+      },
+      getCurrentDevice: async (): Promise<Device | undefined> => {
+        const uid = await currentDeviceId()
+        return config.devices.find(d => d.uid === uid)
+      },
+      getCurrentDeviceOrDefault: async (): Promise<Device> => {
+        const uid = await currentDeviceId()
+        const device = config.devices.find(d => d.uid === uid) || {
+          name: 'Unnamed' + (config.devices.length + 1),
+          uid: uid,
+          variables: {}
+        }
+        return device
+      },
+      updateCurrentDevice: async (device: Device) => {
+        const uid = await currentDeviceId()
+        setConfig(
+          produce(state => {
+            const index = state.devices.findIndex(d => d.uid === uid)
+            if (index !== -1) {
+              state.devices[index] = device
+            }
+            // 如果没有找到，则添加
+            else {
+              state.devices.push(device)
+            }
+          })
+        )
         save()
       },
       mutate: (fn: (state: Config) => void) => {

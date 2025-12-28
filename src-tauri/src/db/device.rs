@@ -25,8 +25,3 @@ pub struct Device {
 fn get_current_device_uid() -> Result<String> {
     machine_uid::get().map_err(|e| Error::Device(format!("cannot get machine id: {e}")))
 }
-
-#[tauri::command]
-pub fn device_id() -> &'static str {
-    *DEVICE_UID
-}

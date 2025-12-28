@@ -9,7 +9,6 @@ pub struct Settings {
     pub storage: StorageConfig,
     pub archive: ArchiveConfig,
     pub appearance: AppearanceConfig,
-    pub current_device: DeviceIdentity,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, TS)]

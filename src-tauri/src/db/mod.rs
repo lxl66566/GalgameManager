@@ -3,15 +3,13 @@ pub mod settings;
 
 use std::{fs, path::PathBuf};
 
-use crate::error::Result;
 use chrono::{DateTime, Duration, Utc};
 use config_file2::{LoadConfigFile, Storable};
-use device::{Device, DEFAULT_DEVICE, DEVICE_UID};
+use device::{Device, DEVICE_UID};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use settings::Settings;
 use std::sync::LazyLock as Lazy;
-use strfmt::strfmt;
 use ts_rs::TS;
 
 pub static CONFIG_DIR: Lazy<PathBuf> = Lazy::new(|| {
@@ -70,11 +68,4 @@ impl Config {
     pub fn get_device_mut(&mut self) -> Option<&mut Device> {
         self.devices.iter_mut().find(|d| d.uid == *DEVICE_UID)
     }
-}
-
-#[tauri::command]
-pub fn resolve_var(s: &str) -> Result<String> {
-    let lock = CONFIG.lock();
-    let device = lock.get_device().unwrap_or(&*DEFAULT_DEVICE);
-    Ok(strfmt(s, &device.variables)?)
 }
