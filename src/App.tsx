@@ -44,7 +44,22 @@ const App = () => {
           </Router>
         </div>
       </ColorModeProvider>
-      <Toaster position="bottom-left" />
+      <Toaster
+        position="bottom-left"
+        toastOptions={{
+          className: `
+            !bg-white !text-gray-900 
+            dark:!bg-slate-800 dark:!text-gray-100
+            border border-gray-200 dark:border-slate-700
+            shadow-lg rounded-md
+          `,
+          // 2. 必须：去掉默认的内联背景色，否则 className 里的背景色会被覆盖
+          style: {
+            background: 'transparent',
+            'box-shadow': 'none'
+          }
+        }}
+      />
     </div>
   )
 }

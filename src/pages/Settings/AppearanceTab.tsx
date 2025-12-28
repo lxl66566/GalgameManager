@@ -1,11 +1,13 @@
 // src/pages/settings/AppearanceTab.tsx
 import { type ThemeMode } from '@bindings/ThemeMode'
 import { Select, SettingRow, SettingSection } from '@components/ui/settings'
+import { useColorMode } from '@kobalte/core/color-mode'
 import { useConfig } from '~/store'
 import { type Component } from 'solid-js'
 
 export const AppearanceTab: Component = () => {
   const { config, actions } = useConfig()
+  const { setColorMode } = useColorMode()
 
   return (
     <div class="max-w-4xl">
@@ -13,11 +15,13 @@ export const AppearanceTab: Component = () => {
         <SettingRow label="Theme" description="Choose how the app looks">
           <Select
             value={config.settings.appearance.theme}
-            onChange={e =>
+            onChange={e => {
+              const newValue = e.currentTarget.value as ThemeMode
+              setColorMode(newValue as any)
               actions.updateSettings(
                 s => (s.appearance.theme = e.currentTarget.value as ThemeMode)
               )
-            }
+            }}
             options={[
               { label: 'System Default', value: 'system' },
               { label: 'Light Mode', value: 'light' },

@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core'
 import { loadCachedImage } from '@utils/image'
 import { createEffect, createResource, onCleanup, Show, type Component } from 'solid-js'
 import toast from 'solid-toast'
@@ -11,14 +12,27 @@ interface ImageProps {
 }
 
 const CachedImage: Component<ImageProps> = props => {
-  // 1. 修改：Resource 只监听 url 变化，不再监听 hash
+  // Resource 只监听 url 变化，不再监听 hash
   // 这样当 Hash 计算完成并更新回 props 时，不会触发二次重载
   const [imageData] = createResource(
     () => props.url,
-    async url => {
-      if (!url) return null
-      // 这里的 props.hash 是读取时的当前值，不会建立响应式依赖
-      return await loadCachedImage(url, props.hash)
+    async rawUrl => {
+      if (!rawUrl) return null
+
+      try {
+        // 1. 第一步：解析变量
+        // 如果 rawUrl 里没有变量，resolve_var 应该原样返回
+        const resolvedUrl = await invoke<string>('resolve_var', { s: rawUrl })
+
+        // 2. 第二步：加载图片
+        // 注意：这里传入的是解析后的绝对路径/URL
+        return await loadCachedImage(resolvedUrl, props.hash)
+      } catch (e: any) {
+        toast.error(`failed to load image: ${e}`)
+
+        // 必须抛出错误，以便 Resource 进入 error 状态，UI 显示错误占位符
+        throw e
+      }
     }
   )
 
