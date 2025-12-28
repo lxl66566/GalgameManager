@@ -1,11 +1,11 @@
 [package]
 authors     = ["lxl66566 <lxl66566@gmail.com>"]
-default-run = "app"
-description = "Manage your galgames"
+default-run = "GalgameManager"
+description = "Manage and sync your galgames"
 edition     = "2021"
 license     = "MIT"
-name        = "app"
-repository  = "https://github.com/lxl66566/GalgameManager2"
+name        = "GalgameManager"
+repository  = "https://github.com/lxl66566/GalgameManager"
 version     = "0.1.0"
 
 [lib]

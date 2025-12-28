@@ -1,21 +1,26 @@
 pub mod device;
+pub mod settings;
 
-use std::{collections::HashMap, path::PathBuf};
+use std::{fs, path::PathBuf};
 
 use crate::error::Result;
 use chrono::{DateTime, Duration, Utc};
 use config_file2::{LoadConfigFile, Storable};
-use device::DEVICE_UID;
+use device::{Device, DEFAULT_DEVICE, DEVICE_UID};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
+use settings::Settings;
 use std::sync::LazyLock as Lazy;
 use strfmt::strfmt;
 use ts_rs::TS;
 
 pub static CONFIG_DIR: Lazy<PathBuf> = Lazy::new(|| {
-    home::home_dir()
+    let dir = home::home_dir()
         .expect("cannot find home dir on your OS!")
-        .join(env!("CARGO_PKG_NAME"))
+        .join(".config")
+        .join(env!("CARGO_PKG_NAME"));
+    _ = fs::create_dir_all(&dir);
+    dir
 });
 
 pub static CONFIG_PATH: Lazy<PathBuf> = Lazy::new(|| CONFIG_DIR.join("config.toml"));
@@ -38,6 +43,7 @@ pub struct Config {
     pub last_updated: DateTime<Utc>,
     pub games: Vec<Game>,
     pub devices: Vec<Device>,
+    pub settings: Settings,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
@@ -53,17 +59,6 @@ pub struct Game {
     pub last_played_time: Option<DateTime<Utc>>,
     pub use_time: Duration,
 }
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
-#[ts(export)]
-#[serde(rename_all = "camelCase")]
-pub struct Device {
-    pub name: String,
-    pub uid: String,
-    pub variables: HashMap<String, String>,
-}
-
-static DEFAULT_DEVICE: Lazy<Device> = Lazy::new(Device::default);
 
 impl Config {
     #[inline]

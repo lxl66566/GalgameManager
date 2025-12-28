@@ -9,8 +9,11 @@ import { CgGames } from 'solid-icons/cg'
 import { IoSettingsOutline } from 'solid-icons/io'
 import Game from './pages/Game'
 import Plugin from './pages/Plugin'
-import Setting from './pages/Setting'
+import Settings from './pages/Settings'
 import { Sidebar, SidebarItem } from './Sidebar'
+import { initConfig } from './store'
+
+await initConfig()
 
 const App = () => {
   const storageManager = createLocalStorageManager('vite-ui-theme')
@@ -27,7 +30,7 @@ const App = () => {
             href="/Plugin"
           />
           <SidebarItem
-            label="Setting"
+            label="Settings"
             icon={<IoSettingsOutline class="w-6 h-6" />}
             href="/Settings"
           />
@@ -36,7 +39,7 @@ const App = () => {
           <Router>
             <Route path={['/Game', '/', '']} component={Game} />
             <Route path="/Plugin" component={Plugin} />
-            <Route path="/Setting" component={Setting} />
+            <Route path="/Settings" component={Settings} />
           </Router>
         </div>
       </ColorModeProvider>
