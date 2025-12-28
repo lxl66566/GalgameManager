@@ -6,7 +6,7 @@ import { basename, dirname } from '@tauri-apps/api/path'
 import { open } from '@tauri-apps/plugin-dialog'
 import { dateToInput, durationToForm, inputToDate } from '@utils/time'
 import { createEffect, createSignal, Show, Suspense } from 'solid-js'
-import { createStore } from 'solid-js/store'
+import { createStore, unwrap } from 'solid-js/store'
 
 interface GameEditModalProps {
   gameInfo?: Game | null
@@ -30,7 +30,7 @@ export default function GameEditModal(props: GameEditModalProps) {
   const isEditMode = () => !!props.gameInfo
 
   const [localGame, setLocalGame] = createStore<Game>(
-    structuredClone(props.gameInfo ?? DEFAULT_GAME)
+    structuredClone(unwrap(props.gameInfo ?? DEFAULT_GAME))
   )
 
   // 1. 新增：临时存储输入框的内容，避免每次按键都触发图片加载
@@ -49,7 +49,7 @@ export default function GameEditModal(props: GameEditModalProps) {
     setLocalGame('useTime', [totalSecs, 0])
   }
 
-  // 3. 修改：提交图片更改的逻辑
+  // 提交图片更改的逻辑
   const commitImageChange = () => {
     const currentInput = tempImageUrl().trim()
     // 只有当内容真正改变时才更新 store
@@ -160,21 +160,21 @@ export default function GameEditModal(props: GameEditModalProps) {
           {/* Image Source Input */}
           <div class="flex flex-col gap-1">
             <label class="text-sm font-bold text-gray-700 dark:text-gray-300">
-              封面图片 (URL 或 本地路径)
+              封面图片
             </label>
             <div class="flex gap-2">
               <input
                 type="text"
                 class="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
-                // 4. 修改：绑定到 tempImageUrl
+                // 绑定到 tempImageUrl
                 value={tempImageUrl()}
-                // 5. 修改：输入时只更新临时变量
+                // 输入时只更新临时变量
                 onInput={e => setTempImageUrl(e.currentTarget.value)}
-                // 6. 修改：失去焦点时提交
+                // 失去焦点时提交
                 onBlur={commitImageChange}
-                // 7. 修改：按下回车时提交
+                // 按下回车时提交
                 onKeyDown={e => e.key === 'Enter' && commitImageChange()}
-                placeholder="https://... 或 C:\..."
+                placeholder="https://... 或 C:/..."
               />
               <button
                 onClick={handleSelectImage}
