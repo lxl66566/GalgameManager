@@ -1,4 +1,5 @@
 import { type Game } from '@bindings/Game'
+import PathListEditor from '@components/PathListEditor'
 import CachedImage from '@components/ui/Image'
 import GameSettingButton from '@components/ui/StandardButton'
 import { basename, dirname } from '@tauri-apps/api/path'
@@ -6,7 +7,6 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { dateToInput, durationToForm, inputToDate } from '@utils/time'
 import { createSignal, Show, Suspense } from 'solid-js'
 import { createStore } from 'solid-js/store'
-import PathListEditor from './PathListEditor'
 
 interface GameEditModalProps {
   // 如果为 undefined/null，则视为“新增游戏”模式

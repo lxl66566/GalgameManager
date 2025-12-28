@@ -1,6 +1,5 @@
 import { type Game } from '@bindings/Game'
 import { DropArea } from '@components/DropArea'
-import GameEditModal from '@components/GameEditModel'
 import CachedImage from '@components/ui/Image'
 import { displayDuration } from '@utils/time'
 import { useConfig } from '~/store'
@@ -8,6 +7,7 @@ import { AiTwotonePlusCircle } from 'solid-icons/ai'
 import { FaRegularCirclePlay } from 'solid-icons/fa'
 import { IoOptionsOutline } from 'solid-icons/io'
 import { createSignal, For, Show, type JSX } from 'solid-js'
+import GameEditModal from './GameEditModel'
 
 // GameItem 现在是一个纯展示组件，行为通过回调传入
 const GameItem = (props: { game: Game; onEdit: () => void }) => {
