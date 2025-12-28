@@ -1,6 +1,6 @@
 import { type Game } from '@bindings/Game'
 import { DropArea } from '@components/DropArea'
-import CachedImage from '@components/ui/Image'
+import CachedImage from '@components/ui/CachedImage'
 import { displayDuration } from '@utils/time'
 import { useConfig } from '~/store'
 import { AiTwotonePlusCircle } from 'solid-icons/ai'

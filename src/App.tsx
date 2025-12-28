@@ -7,6 +7,7 @@ import { Route, Router } from '@solidjs/router'
 import { BiRegularExtension } from 'solid-icons/bi'
 import { CgGames } from 'solid-icons/cg'
 import { IoSettingsOutline } from 'solid-icons/io'
+import { Toaster } from 'solid-toast'
 import Game from './pages/Game'
 import Plugin from './pages/Plugin'
 import Settings from './pages/Settings'
@@ -43,6 +44,7 @@ const App = () => {
           </Router>
         </div>
       </ColorModeProvider>
+      <Toaster position="bottom-left" />
     </div>
   )
 }

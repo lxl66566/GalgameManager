@@ -1,19 +1,17 @@
 import { type Game } from '@bindings/Game'
 import PathListEditor from '@components/PathListEditor'
-import CachedImage from '@components/ui/Image'
+import CachedImage from '@components/ui/CachedImage'
 import GameSettingButton from '@components/ui/StandardButton'
 import { basename, dirname } from '@tauri-apps/api/path'
 import { open } from '@tauri-apps/plugin-dialog'
 import { dateToInput, durationToForm, inputToDate } from '@utils/time'
-import { createSignal, Show, Suspense } from 'solid-js'
+import { createEffect, createSignal, Show, Suspense } from 'solid-js'
 import { createStore } from 'solid-js/store'
 
 interface GameEditModalProps {
-  // 如果为 undefined/null，则视为“新增游戏”模式
   gameInfo?: Game | null
   confirm: (game: Game) => void
   cancel: () => void
-  // 只有在编辑模式下才需要传入 onDelete
   onDelete?: () => void
 }
 
@@ -31,10 +29,17 @@ const DEFAULT_GAME: Game = {
 export default function GameEditModal(props: GameEditModalProps) {
   const isEditMode = () => !!props.gameInfo
 
-  // 如果 props.gameInfo 存在则深拷贝，否则使用默认空对象
   const [localGame, setLocalGame] = createStore<Game>(
     structuredClone(props.gameInfo ?? DEFAULT_GAME)
   )
+
+  // 1. 新增：临时存储输入框的内容，避免每次按键都触发图片加载
+  const [tempImageUrl, setTempImageUrl] = createSignal(localGame.imageUrl || '')
+
+  // 2. 新增：当 store 中的 imageUrl 发生变化（例如通过浏览按钮或清除按钮）时，同步到输入框
+  createEffect(() => {
+    setTempImageUrl(localGame.imageUrl || '')
+  })
 
   const [playTime, setPlayTime] = createSignal(durationToForm(localGame.useTime))
 
@@ -44,14 +49,30 @@ export default function GameEditModal(props: GameEditModalProps) {
     setLocalGame('useTime', [totalSecs, 0])
   }
 
+  // 3. 修改：提交图片更改的逻辑
+  const commitImageChange = () => {
+    const currentInput = tempImageUrl().trim()
+    // 只有当内容真正改变时才更新 store
+    if (currentInput !== (localGame.imageUrl || '')) {
+      setLocalGame('imageUrl', currentInput || null)
+      setLocalGame('imageSha256', null) // 重置 Hash 以触发重新计算/加载
+    }
+  }
+
   const handleSelectImage = async () => {
     try {
       const selected = await open({
         multiple: false,
         directory: false,
-        filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'ico'] }]
+        filters: [
+          {
+            name: 'Images',
+            extensions: ['png', 'jpg', 'jpeg', 'webp', 'ico', 'bmp', 'svg']
+          }
+        ]
       })
       if (selected && typeof selected === 'string') {
+        // 浏览选择直接更新 Store，createEffect 会自动同步 tempImageUrl
         setLocalGame('imageUrl', selected)
         setLocalGame('imageSha256', null)
       }
@@ -69,7 +90,6 @@ export default function GameEditModal(props: GameEditModalProps) {
       })
       if (selected && typeof selected === 'string') {
         setLocalGame('excutablePath', selected)
-        // 智能填充名称：如果是新增模式且名字为空
         if (!localGame.name) {
           const parentDir = await dirname(selected)
           const name = await basename(parentDir)
@@ -92,9 +112,9 @@ export default function GameEditModal(props: GameEditModalProps) {
 
       {/* Body */}
       <div class="flex flex-row gap-6 flex-1 min-h-0">
-        {/* Left Column: Image */}
-        <div class="w-48 flex flex-col gap-3 flex-shrink-0">
-          <div class="aspect-[2/3] w-full bg-gray-200 dark:bg-gray-900 rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600 relative group shadow-lg">
+        {/* Left Column: Image Preview */}
+        <div class="w-[25%] max-w-50 min-w-20 flex flex-col gap-3">
+          <div class="aspect-[2/3] w-full bg-gray-200 dark:bg-gray-900 rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600 relative shadow-lg">
             <Suspense
               fallback={
                 <div class="w-full h-full animate-pulse bg-gray-300 dark:bg-gray-700" />
@@ -104,24 +124,21 @@ export default function GameEditModal(props: GameEditModalProps) {
                 url={localGame.imageUrl}
                 hash={localGame.imageSha256}
                 class="object-cover w-full h-full"
+                onHashUpdate={(newHash: string) => {
+                  setLocalGame('imageSha256', newHash)
+                }}
               />
             </Suspense>
-            <div
-              class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity cursor-pointer gap-2"
-              onClick={handleSelectImage}
-            >
-              <span class="text-white text-xs font-bold">更换封面</span>
-            </div>
+            {/* 只有当没有图片时显示提示，有图片时依靠右侧输入框修改，保持界面整洁 */}
+            <Show when={!localGame.imageUrl}>
+              <div
+                class="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                onClick={handleSelectImage}
+              >
+                <span class="text-gray-400 text-xs">点击选择图片</span>
+              </div>
+            </Show>
           </div>
-          <button
-            onClick={() => {
-              setLocalGame('imageUrl', null)
-              setLocalGame('imageSha256', null)
-            }}
-            class="text-xs text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 underline text-center"
-          >
-            移除图片
-          </button>
         </div>
 
         {/* Right Column: Form */}
@@ -138,6 +155,46 @@ export default function GameEditModal(props: GameEditModalProps) {
               onInput={e => setLocalGame('name', e.currentTarget.value)}
               placeholder="请输入游戏名称"
             />
+          </div>
+
+          {/* Image Source Input */}
+          <div class="flex flex-col gap-1">
+            <label class="text-sm font-bold text-gray-700 dark:text-gray-300">
+              封面图片 (URL 或 本地路径)
+            </label>
+            <div class="flex gap-2">
+              <input
+                type="text"
+                class="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
+                // 4. 修改：绑定到 tempImageUrl
+                value={tempImageUrl()}
+                // 5. 修改：输入时只更新临时变量
+                onInput={e => setTempImageUrl(e.currentTarget.value)}
+                // 6. 修改：失去焦点时提交
+                onBlur={commitImageChange}
+                // 7. 修改：按下回车时提交
+                onKeyDown={e => e.key === 'Enter' && commitImageChange()}
+                placeholder="https://... 或 C:\..."
+              />
+              <button
+                onClick={handleSelectImage}
+                class="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-800 dark:text-white px-3 py-1.5 rounded text-sm whitespace-nowrap transition-colors"
+              >
+                浏览
+              </button>
+              <Show when={localGame.imageUrl}>
+                <button
+                  onClick={() => {
+                    setLocalGame('imageUrl', null)
+                    setLocalGame('imageSha256', null)
+                    // createEffect 会自动处理 tempImageUrl 的清空
+                  }}
+                  class="bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 px-3 py-1.5 rounded text-sm whitespace-nowrap transition-colors"
+                >
+                  清除
+                </button>
+              </Show>
+            </div>
           </div>
 
           {/* Executable Path */}
@@ -245,7 +302,6 @@ export default function GameEditModal(props: GameEditModalProps) {
 
       {/* Footer Actions */}
       <div class="flex flex-row items-center justify-between w-full mt-4 pt-3 border-t border-gray-300 dark:border-gray-700 flex-shrink-0">
-        {/* Delete Button (Only in Edit Mode) */}
         <div>
           <Show when={isEditMode()}>
             <button
