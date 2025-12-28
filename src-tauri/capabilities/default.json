@@ -15,6 +15,7 @@
     "core:window:allow-set-title",
     "fs:default",
     "fs:scope-appcache-recursive",
+    "fs:scope-applocaldata-recursive",
     "dialog:allow-open",
     "dialog:default",
     {

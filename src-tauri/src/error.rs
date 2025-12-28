@@ -22,6 +22,12 @@ pub enum Error {
 
     #[error("Tauri Emit signal error")]
     Emit,
+
+    #[error("Tauri error: {0}")]
+    Tauri(#[from] tauri::Error),
+
+    #[error("Archive error: {0}")]
+    Archive(#[from] backhand::BackhandError),
 }
 
 impl Clone for Error {

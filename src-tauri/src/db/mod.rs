@@ -1,7 +1,7 @@
 pub mod device;
 pub mod settings;
 
-use std::{fs, path::PathBuf};
+use std::{fs, path::PathBuf, sync::LazyLock as Lazy};
 
 use chrono::{DateTime, Duration, Utc};
 use config_file2::{LoadConfigFile, Storable};
@@ -9,7 +9,6 @@ use device::{Device, DEVICE_UID};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use settings::Settings;
-use std::sync::LazyLock as Lazy;
 use ts_rs::TS;
 
 pub static CONFIG_DIR: Lazy<PathBuf> = Lazy::new(|| {
@@ -48,14 +47,16 @@ pub struct Config {
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct Game {
+    pub id: u32,
     pub name: String,
     pub excutable_path: Option<String>,
     pub save_paths: Vec<String>,
     pub image_url: Option<String>,
     pub image_sha256: Option<String>,
     pub added_time: DateTime<Utc>,
-    pub last_played_time: Option<DateTime<Utc>>,
     pub use_time: Duration,
+    pub last_played_time: Option<DateTime<Utc>>,
+    pub last_upload_time: Option<DateTime<Utc>>,
 }
 
 impl Config {

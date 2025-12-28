@@ -1,6 +1,9 @@
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
 use ts_rs::TS;
+
+use crate::archive::ArchiveConfig;
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
@@ -53,31 +56,6 @@ pub struct S3Config {
     pub endpoint: Option<String>,
     pub access_key: String,
     pub secret_key: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, TS)]
-#[ts(export)]
-#[serde(rename_all = "camelCase")]
-pub enum ArchiveAlgo {
-    SquashfsZstd,
-    None,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, TS)]
-#[ts(export)]
-#[serde(rename_all = "camelCase")]
-pub struct ArchiveConfig {
-    pub algorithm: ArchiveAlgo,
-    pub level: u8,
-}
-
-impl Default for ArchiveConfig {
-    fn default() -> Self {
-        Self {
-            algorithm: ArchiveAlgo::SquashfsZstd,
-            level: 3,
-        }
-    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]

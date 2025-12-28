@@ -1,0 +1,237 @@
+mod squashfs;
+mod tar;
+
+use std::{
+    fs, io,
+    path::{Path, PathBuf},
+};
+
+use serde::{Deserialize, Serialize};
+use squashfs::SquashfsArchiver;
+use tar::TarArchiver;
+use ts_rs::TS;
+
+use crate::{
+    bindings::{device_id, resolve_var},
+    error::Result,
+};
+
+// region structure
+
+#[derive(Debug, Serialize, Deserialize, Clone, TS)]
+#[ts(export)]
+#[serde(rename_all = "camelCase")]
+pub enum ArchiveAlgo {
+    SquashfsZstd,
+    Tar,
+}
+
+impl ArchiveAlgo {
+    pub fn ext(&self) -> &str {
+        match self {
+            ArchiveAlgo::SquashfsZstd => "squashfs",
+            ArchiveAlgo::Tar => "tar",
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, TS)]
+#[ts(export)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchiveConfig {
+    pub algorithm: ArchiveAlgo,
+    pub level: u8,
+    pub backup_before_restore: bool,
+}
+
+impl Default for ArchiveConfig {
+    fn default() -> Self {
+        Self {
+            algorithm: ArchiveAlgo::SquashfsZstd,
+            level: 3,
+            backup_before_restore: true,
+        }
+    }
+}
+
+// region interface
+
+pub trait Archive {
+    fn archive(
+        &self,
+        paths: Vec<impl AsRef<Path>>,
+        writer: impl io::Write + io::Seek,
+    ) -> io::Result<()>;
+    fn extract(
+        &self,
+        reader: impl io::Read + io::Seek + Send,
+        targets: Vec<impl AsRef<Path>>,
+    ) -> io::Result<()>;
+}
+
+impl Archive for ArchiveConfig {
+    fn archive(
+        &self,
+        paths: Vec<impl AsRef<Path>>,
+        writer: impl io::Write + io::Seek,
+    ) -> io::Result<()> {
+        match self.algorithm {
+            ArchiveAlgo::SquashfsZstd => SquashfsArchiver(self.level).archive(paths, writer),
+            ArchiveAlgo::Tar => TarArchiver.archive(paths, writer),
+        }
+    }
+    fn extract(
+        &self,
+        reader: impl io::Read + io::Seek + Send,
+        targets: Vec<impl AsRef<Path>>,
+    ) -> io::Result<()> {
+        match self.algorithm {
+            ArchiveAlgo::SquashfsZstd => SquashfsArchiver(self.level).extract(reader, targets),
+            ArchiveAlgo::Tar => TarArchiver.extract(reader, targets),
+        }
+    }
+}
+
+// region impl
+
+// 格式: YYYYMMDD_HHMMSS_{DeviceName}.{Ext}
+pub fn archive_impl(
+    archive_conf: &ArchiveConfig,
+    game_backup_dir: PathBuf,
+    paths: Vec<String>,
+) -> Result<String> {
+    // 1. 解析路径
+    let target_paths: Vec<PathBuf> = paths
+        .iter()
+        .map(|s| resolve_var(s).map(PathBuf::from))
+        .collect::<Result<_>>()?;
+
+    if !game_backup_dir.exists() {
+        fs::create_dir_all(&game_backup_dir)?;
+    }
+
+    let now = chrono::Local::now();
+    let timestamp = now.format("%Y%m%d_%H%M%S");
+    let device_name = device_id();
+
+    let filename = format!(
+        "{}_{}.{}",
+        timestamp,
+        device_name,
+        archive_conf.algorithm.ext()
+    );
+    let file_path = game_backup_dir.join(&filename);
+
+    let file = fs::File::create(&file_path)?;
+
+    archive_conf.archive(target_paths, file)?;
+
+    Ok(filename)
+}
+
+pub fn restore(
+    archive_conf: &ArchiveConfig,
+    game_backup_dir: PathBuf,
+    archive_filename: String,
+    paths: Vec<String>,
+) -> Result<()> {
+    let target_paths: Vec<PathBuf> = paths
+        .iter()
+        .map(|s| resolve_var(s).map(PathBuf::from))
+        .collect::<Result<_>>()?;
+
+    let archive_path = game_backup_dir.join(&archive_filename);
+
+    if !archive_path.exists() {
+        return Err(io::Error::new(io::ErrorKind::NotFound, "Archive not found").into());
+    }
+
+    let file = fs::File::open(&archive_path)?;
+
+    archive_conf.extract(file, target_paths)?;
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_archiver(archiver: impl Archive + Sized) -> io::Result<()> {
+        // 1. Setup Source Environment
+        let src_dir = tempfile::tempdir()?.keep();
+        let src_path = src_dir;
+        print!("use tempdir: {src_path:?}");
+
+        // Create a file: src/file1.txt
+        let file1_path = src_path.join("file1.txt");
+        fs::write(&file1_path, "content of file 1")?;
+
+        // Create a directory with content: src/data/sub.txt
+        let dir1_path = src_path.join("data");
+        fs::create_dir(&dir1_path)?;
+        let subfile_path = dir1_path.join("sub.txt");
+        fs::write(&subfile_path, "content of sub file")?;
+
+        // 2. Archive
+        // We archive [src/file1.txt, src/data]
+        // In the archive, they should appear as "file1.txt" and "data/" (plus children)
+        let paths_to_archive = vec![file1_path.clone(), dir1_path.clone()];
+
+        // Using a file for the archive content to simulate real IO
+        let archive_file_path = src_path.join("archive");
+        let archive_file = fs::OpenOptions::new()
+            .write(true)
+            .read(true)
+            .create(true)
+            .truncate(true)
+            .open(&archive_file_path)?;
+
+        archiver.archive(paths_to_archive, &archive_file)?;
+
+        // 3. Prepare Restore Targets
+        let dst_dir = tempfile::tempdir()?;
+        let dst_path = dst_dir.path();
+
+        let target_file = dst_path.join("file1.txt");
+        let target_dir = dst_path.join("data");
+        let targets = vec![target_file.clone(), target_dir.clone()];
+
+        // Re-open archive for reading
+        let mut reader = fs::File::open(&archive_file_path)?;
+
+        // 4. Extract
+        archiver.extract(&mut reader, targets)?;
+
+        // 5. Verify
+
+        // Verify File
+        assert!(target_file.exists(), "Target file should exist");
+        let content = fs::read_to_string(&target_file)?;
+        assert_eq!(content, "content of file 1");
+
+        // Verify Directory and Subfile
+        assert!(target_dir.exists(), "Target directory should exist");
+        assert!(target_dir.is_dir());
+
+        let target_subfile = target_dir.join("sub.txt");
+        assert!(
+            target_subfile.exists(),
+            "Subfile inside target directory should exist"
+        );
+        let sub_content = fs::read_to_string(&target_subfile)?;
+        assert_eq!(sub_content, "content of sub file");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_tar_archiver() -> io::Result<()> {
+        test_archiver(TarArchiver)
+    }
+
+    #[test]
+    fn test_squashfs_archiver() -> io::Result<()> {
+        test_archiver(SquashfsArchiver(1))
+    }
+}

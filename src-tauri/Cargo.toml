@@ -22,6 +22,7 @@ name       = "app_lib"
 tauri-build = { version = "2.0.2", features = [] }
 
 [dependencies]
+backhand            = "0.24.0"
 chrono              = { version = "0.4", features = ["serde"] }
 config-file2        = "0.4.1"
 home                = "0.5.12"
@@ -30,6 +31,7 @@ parking_lot         = "0.12.5"
 serde               = { version = "1.0", features = ["derive"] }
 serde_json          = "1.0"
 strfmt              = "0.2.5"
+tar                 = "0.4.44"
 tauri               = { version = "2.0.6", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-fs     = "2.4.4"
@@ -37,6 +39,9 @@ tauri-plugin-http   = "2.2.0"
 thiserror           = "2.0.17"
 ts-rs               = { version = "11.1.0", features = ["format", "chrono-impl"] }
 # tauri-plugin-sql  = { version = "2.2.0", features = ["sqlite"] }
+
+[dev-dependencies]
+tempfile = "3"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

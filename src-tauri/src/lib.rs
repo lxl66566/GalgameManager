@@ -1,3 +1,4 @@
+pub mod archive;
 mod bindings;
 pub mod db;
 pub mod error;
