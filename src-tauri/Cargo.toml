@@ -28,6 +28,7 @@ config-file2        = "0.4.1"
 home                = "0.5.12"
 machine-uid         = "0.5.4"
 parking_lot         = "0.12.5"
+pathdiff            = "0.2.3"
 serde               = { version = "1.0", features = ["derive"] }
 serde_json          = "1.0"
 strfmt              = "0.2.5"
@@ -38,6 +39,7 @@ tauri-plugin-fs     = "2.4.4"
 tauri-plugin-http   = "2.2.0"
 thiserror           = "2.0.17"
 ts-rs               = { version = "11.1.0", features = ["format", "chrono-impl"] }
+walkdir             = "2.5.0"
 # tauri-plugin-sql  = { version = "2.2.0", features = ["sqlite"] }
 
 [dev-dependencies]

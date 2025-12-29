@@ -159,68 +159,57 @@ mod tests {
 
     fn test_archiver(archiver: impl Archive + Sized) -> io::Result<()> {
         // 1. Setup Source Environment
-        let src_dir = tempfile::tempdir()?.keep();
-        let src_path = src_dir;
-        print!("use tempdir: {src_path:?}");
+        let src_dir_1 = tempfile::tempdir()?;
+        let src_path_1 = src_dir_1.path();
+        let src_dir_2 = tempfile::tempdir()?;
+        let src_path_2 = src_dir_2.path();
 
-        // Create a file: src/file1.txt
-        let file1_path = src_path.join("file1.txt");
-        fs::write(&file1_path, "content of file 1")?;
+        let file1_path = src_path_1.join("file1.txt");
+        fs::write(&file1_path, "1")?;
+        let dir2_path = src_path_2.join("data");
+        fs::create_dir(&dir2_path)?;
+        let subfile_path = dir2_path.join("sub.txt");
+        fs::write(&subfile_path, "sub")?;
 
-        // Create a directory with content: src/data/sub.txt
-        let dir1_path = src_path.join("data");
-        fs::create_dir(&dir1_path)?;
-        let subfile_path = dir1_path.join("sub.txt");
-        fs::write(&subfile_path, "content of sub file")?;
-
-        // 2. Archive
-        // We archive [src/file1.txt, src/data]
-        // In the archive, they should appear as "file1.txt" and "data/" (plus children)
-        let paths_to_archive = vec![file1_path.clone(), dir1_path.clone()];
+        let paths_to_archive = vec![file1_path.clone(), dir2_path.clone()];
+        println!("paths_to_archive: {paths_to_archive:?}");
 
         // Using a file for the archive content to simulate real IO
-        let archive_file_path = src_path.join("archive");
+        let dst_dir_1 = tempfile::tempdir()?.keep(); // for debug
+        let dst_path_1 = dst_dir_1.as_path();
+        println!("archive dest dir: {dst_path_1:?}");
+        let archive_file_path = dst_path_1.join("archive");
         let archive_file = fs::OpenOptions::new()
             .write(true)
             .read(true)
             .create(true)
             .truncate(true)
             .open(&archive_file_path)?;
-
-        archiver.archive(paths_to_archive, &archive_file)?;
+        archiver.archive(paths_to_archive, &archive_file).unwrap();
 
         // 3. Prepare Restore Targets
-        let dst_dir = tempfile::tempdir()?;
-        let dst_path = dst_dir.path();
-
-        let target_file = dst_path.join("file1.txt");
-        let target_dir = dst_path.join("data");
+        let dst_dir_2 = tempfile::tempdir()?;
+        let dst_path_2 = dst_dir_2.path();
+        let target_file = dst_path_2.join("file1.txt");
+        let target_dir = dst_path_2.join("data");
         let targets = vec![target_file.clone(), target_dir.clone()];
+        println!("restore targets: {targets:?}");
 
-        // Re-open archive for reading
         let mut reader = fs::File::open(&archive_file_path)?;
+        archiver.extract(&mut reader, targets).unwrap();
 
-        // 4. Extract
-        archiver.extract(&mut reader, targets)?;
-
-        // 5. Verify
-
-        // Verify File
         assert!(target_file.exists(), "Target file should exist");
         let content = fs::read_to_string(&target_file)?;
-        assert_eq!(content, "content of file 1");
-
-        // Verify Directory and Subfile
+        assert_eq!(content, "1");
         assert!(target_dir.exists(), "Target directory should exist");
         assert!(target_dir.is_dir());
-
         let target_subfile = target_dir.join("sub.txt");
         assert!(
             target_subfile.exists(),
             "Subfile inside target directory should exist"
         );
         let sub_content = fs::read_to_string(&target_subfile)?;
-        assert_eq!(sub_content, "content of sub file");
+        assert_eq!(sub_content, "sub");
 
         Ok(())
     }

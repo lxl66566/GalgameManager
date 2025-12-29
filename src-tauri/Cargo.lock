@@ -12,6 +12,7 @@ dependencies = [
  "home",
  "machine-uid",
  "parking_lot",
+ "pathdiff",
  "serde",
  "serde_json",
  "strfmt",
@@ -24,6 +25,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.17",
  "ts-rs",
+ "walkdir",
 ]
 
 [[package]]
@@ -2928,6 +2930,12 @@ dependencies = [
  "smallvec",
  "windows-link 0.2.1",
 ]
+
+[[package]]
+name = "pathdiff"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df94ce210e5bc13cb6651479fa48d14f601d9858cfe0467f43ae157023b938d3"
 
 [[package]]
 name = "percent-encoding"
