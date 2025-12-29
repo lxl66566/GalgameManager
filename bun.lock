@@ -10,7 +10,6 @@
         "@tauri-apps/cli": "^2.9.6",
         "@tauri-apps/plugin-dialog": "~2",
         "@tauri-apps/plugin-fs": "^2.4.4",
-        "@tauri-apps/plugin-http": "https://github.com/tauri-apps/tauri-plugin-http#v2",
         "baseline-browser-mapping": "^2.9.11",
         "caniuse-lite": "^1.0.30001761",
         "cheerio": "^1.1.2",
@@ -291,8 +290,6 @@
     "@tauri-apps/plugin-dialog": ["@tauri-apps/plugin-dialog@2.4.2", "", { "dependencies": { "@tauri-apps/api": "^2.8.0" } }, "sha512-lNIn5CZuw8WZOn8zHzmFmDSzg5zfohWoa3mdULP0YFh/VogVdMVWZPcWSHlydsiJhRQYaTNSYKN7RmZKE2lCYQ=="],
 
     "@tauri-apps/plugin-fs": ["@tauri-apps/plugin-fs@2.4.4", "", { "dependencies": { "@tauri-apps/api": "^2.8.0" } }, "sha512-MTorXxIRmOnOPT1jZ3w96vjSuScER38ryXY88vl5F0uiKdnvTKKTtaEjTEo8uPbl4e3gnUtfsDVwC7h77GQLvQ=="],
-
-    "@tauri-apps/plugin-http": ["@tauri-apps/plugin-http@github:tauri-apps/tauri-plugin-http#42b0c7d", { "dependencies": { "@tauri-apps/api": "^2.8.0" } }, "tauri-apps-tauri-plugin-http-42b0c7d"],
 
     "@types/babel__core": ["@types/babel__core@7.20.5", "", { "dependencies": { "@babel/parser": "^7.20.7", "@babel/types": "^7.20.7", "@types/babel__generator": "*", "@types/babel__template": "*", "@types/babel__traverse": "*" } }, "sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA=="],
 

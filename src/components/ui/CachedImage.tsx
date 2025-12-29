@@ -1,7 +1,46 @@
+import { type ImageData } from '@bindings/ImageData'
 import { invoke } from '@tauri-apps/api/core'
-import { loadCachedImage } from '@utils/image'
-import { createEffect, createResource, onCleanup, Show, type Component } from 'solid-js'
+import { getBase64ImageSrc } from '@utils/image'
+import { createEffect, createResource, Show, type Component } from 'solid-js'
 import toast from 'solid-toast'
+
+// 缓存最大容量，防止 Base64 占用过多内存
+const MAX_CACHE_SIZE = 50
+const imageCache = new Map<string, ImageData>()
+
+/**
+ * 将图片存入缓存 (LRU 策略)
+ */
+const cacheImage = (data: ImageData) => {
+  if (!data.hash) return
+
+  // 如果已存在，先删除再重新添加，使其变为"最近使用"
+  if (imageCache.has(data.hash)) {
+    imageCache.delete(data.hash)
+  } else if (imageCache.size >= MAX_CACHE_SIZE) {
+    // 缓存已满，删除最早插入的元素 (Map 的迭代器顺序即插入顺序)
+    const firstKey = imageCache.keys().next().value
+    if (firstKey) imageCache.delete(firstKey)
+  }
+
+  imageCache.set(data.hash, data)
+}
+
+/**
+ * 尝试从缓存获取
+ */
+const getCachedImage = (hash?: string | null): ImageData | undefined => {
+  if (!hash) return undefined
+  const data = imageCache.get(hash)
+  if (data) {
+    // 命中缓存，刷新其在 LRU 中的位置
+    imageCache.delete(hash)
+    imageCache.set(hash, data)
+  }
+  return data
+}
+
+// --- Component ---
 
 interface ImageProps {
   url?: string | null | undefined
@@ -12,66 +51,72 @@ interface ImageProps {
 }
 
 const CachedImage: Component<ImageProps> = props => {
-  // Resource 只监听 url 变化，不再监听 hash
-  // 这样当 Hash 计算完成并更新回 props 时，不会触发二次重载
+  // 使用数组作为 source，同时监听 url 和 hash 的变化
   const [imageData] = createResource(
-    () => props.url,
-    async rawUrl => {
+    () => [props.url, props.hash] as const,
+    async ([rawUrl, currentHash]) => {
+      // 1. 优先检查缓存 (根据 Hash)
+      // 如果有 Hash 且缓存命中，直接返回，无需任何 IPC 通信
+      const cached = getCachedImage(currentHash)
+      if (cached) {
+        return cached
+      }
+
       if (!rawUrl) return null
 
       try {
-        // 1. 第一步：解析变量
-        // 如果 rawUrl 里没有变量，resolve_var 应该原样返回
+        // 2. 缓存未命中，执行 Rust 通信
+        // 第一步：解析变量
         const resolvedUrl = await invoke<string>('resolve_var', { s: rawUrl })
 
-        // 2. 第二步：加载图片
-        // 注意：这里传入的是解析后的绝对路径/URL
-        return await loadCachedImage(resolvedUrl, props.hash)
-      } catch (e: any) {
-        toast.error(`failed to load image: ${e}`)
+        // 第二步：加载图片
+        const data = await invoke<ImageData>('get_image', {
+          url: resolvedUrl,
+          hash: currentHash
+        })
 
-        // 必须抛出错误，以便 Resource 进入 error 状态，UI 显示错误占位符
+        // 3. 存入缓存
+        cacheImage(data)
+
+        return data
+      } catch (e: any) {
+        // 仅在非取消错误时 toast，避免快速切换路由时的干扰
+        if (!String(e).includes('cancelled')) {
+          toast.error(`failed to load image: ${e}`)
+        }
         throw e
       }
     }
   )
 
-  // 2. 监听 Hash 变化并通知父组件 (保持不变)
+  // 监听 Hash 变化并通知父组件 (用于首次加载生成 Hash 后回写 Config)
   createEffect(() => {
-    // 安全访问：先检查状态，避免在错误或加载时读取导致异常
-    if (imageData.state === 'ready' && imageData()) {
+    if (imageData.state === 'ready') {
       const data = imageData()
+      // 只有当新获取的 hash 与 props 传入的不一致时才通知，避免死循环
       if (data && data.hash && props.hash !== data.hash) {
         props.onHashUpdate?.(data.hash)
       }
     }
   })
 
-  // 3. 错误提示 (保持不变)
+  // 错误日志
   createEffect(() => {
     if (imageData.error) {
-      // 仅在控制台打印详细错误，UI 上显示简略信息
       console.warn(`[Image Load Failed] ${props.url}:`, imageData.error)
-    }
-  })
-
-  // 4. 清理内存 (保持不变)
-  createEffect(() => {
-    if (imageData.state === 'ready' && imageData()?.src) {
-      const src = imageData()!.src
-      onCleanup(() => URL.revokeObjectURL(src))
     }
   })
 
   return (
     <div class={`relative overflow-hidden bg-gray-800/50 ${props.class || ''}`}>
-      <Show when={imageData.loading}>
+      {/* Loading 状态：仅在没有数据且正在加载时显示 */}
+      <Show when={imageData.loading && !imageData.latest}>
         <div class="absolute inset-0 flex items-center justify-center bg-gray-100/10 backdrop-blur-sm z-10">
           <div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
         </div>
       </Show>
 
-      {/* 错误状态：显式处理，防止 Suspense 无法恢复 */}
+      {/* 错误状态 */}
       <Show when={imageData.error}>
         <div
           class="absolute inset-0 flex flex-col items-center justify-center bg-red-900/20 border border-red-500/30 text-red-400 p-2"
@@ -81,15 +126,17 @@ const CachedImage: Component<ImageProps> = props => {
         </div>
       </Show>
 
-      <Show when={!imageData.error && !imageData.loading && imageData()}>
+      {/* 图片显示 */}
+      <Show when={imageData()}>
         {data => (
           <img
-            src={data().src}
+            src={getBase64ImageSrc(data().base64)}
             alt={props.alt || 'Game cover'}
             class="w-full h-full object-cover animate-in fade-in duration-300"
             onError={e => {
               e.currentTarget.style.display = 'none'
-              toast.error('Image render failed')
+              // 避免重复 toast，这里可以仅 log
+              console.error('Image render failed (DOM error)')
             }}
           />
         )}

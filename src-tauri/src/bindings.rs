@@ -9,6 +9,7 @@ use crate::{
         Config, CONFIG,
     },
     error::Result,
+    http::ImageData,
 };
 
 #[tauri::command]
@@ -36,6 +37,11 @@ pub fn resolve_var(s: &str) -> Result<String> {
     let lock = CONFIG.lock();
     let device = lock.get_device().unwrap_or(&*DEFAULT_DEVICE);
     Ok(strfmt(s, &device.variables)?)
+}
+
+#[tauri::command(async)]
+pub async fn get_image(url: String, hash: Option<String>) -> Result<ImageData> {
+    crate::http::get_image(&url, hash.as_deref()).await
 }
 
 #[tauri::command]

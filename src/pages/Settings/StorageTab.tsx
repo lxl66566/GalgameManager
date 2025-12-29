@@ -215,7 +215,7 @@ export const StorageTab: Component = () => {
             }
             options={[
               { label: 'Squashfs + Zstd', value: 'squashfsZstd' },
-              { label: 'None', value: 'none' }
+              { label: 'tar', value: 'tar' }
             ]}
           />
         </SettingRow>

@@ -28,6 +28,9 @@ pub enum Error {
 
     #[error("Game id not found")]
     GameNotFound,
+
+    #[error("Request error: {0}")]
+    Request(#[from] reqwest::Error),
 }
 
 impl Clone for Error {

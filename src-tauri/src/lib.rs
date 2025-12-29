@@ -2,6 +2,7 @@ pub mod archive;
 mod bindings;
 pub mod db;
 pub mod error;
+pub mod http;
 
 use bindings::*;
 use tauri_plugin_fs::FsExt;
@@ -12,7 +13,6 @@ use crate::db::CONFIG_DIR;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_dialog::init())
         // .plugin(
         //     tauri_plugin_sql::Builder::default()
@@ -25,7 +25,8 @@ pub fn run() {
             get_config,
             save_config,
             archive,
-            extract
+            extract,
+            get_image,
         ])
         .setup(|app| {
             let scope = app.fs_scope();
