@@ -11,10 +11,7 @@ use squashfs::SquashfsArchiver;
 use tar::TarArchiver;
 use ts_rs::TS;
 
-use crate::{
-    bindings::{device_id, resolve_var},
-    error::Result,
-};
+use crate::{bindings::resolve_var, error::Result};
 
 // region structure
 
@@ -96,6 +93,7 @@ impl Archive for ArchiveConfig {
 
 // 格式: YYYYMMDD_HHMMSS_{DeviceName}.{Ext}
 pub fn archive_impl(
+    device_name: &str,
     archive_conf: &ArchiveConfig,
     game_backup_dir: PathBuf,
     paths: Vec<String>,
@@ -112,7 +110,6 @@ pub fn archive_impl(
 
     let now = chrono::Local::now();
     let timestamp = now.format("%Y%m%d_%H%M%S");
-    let device_name = device_id();
 
     let filename = format!(
         "{}_{}.{}",

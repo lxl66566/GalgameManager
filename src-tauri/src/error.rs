@@ -31,6 +31,9 @@ pub enum Error {
 
     #[error("Request error: {0}")]
     Request(#[from] reqwest::Error),
+
+    #[error("Remote Operation Error: {0}")]
+    RemoteOperation(#[from] opendal::Error),
 }
 
 impl Clone for Error {

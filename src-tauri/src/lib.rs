@@ -3,6 +3,7 @@ mod bindings;
 pub mod db;
 pub mod error;
 pub mod http;
+pub mod sync;
 
 use bindings::*;
 use tauri_plugin_fs::FsExt;
@@ -14,11 +15,6 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
-        // .plugin(
-        //     tauri_plugin_sql::Builder::default()
-        //         .add_migrations("sqlite:data.db", db::migrations())
-        //         .build(),
-        // )
         .invoke_handler(tauri::generate_handler![
             device_id,
             resolve_var,
@@ -27,6 +23,11 @@ pub fn run() {
             archive,
             extract,
             get_image,
+            list_archive,
+            upload_archive,
+            delete_archive,
+            pull_archive,
+            clean_current_operator,
         ])
         .setup(|app| {
             let scope = app.fs_scope();

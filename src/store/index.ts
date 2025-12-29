@@ -60,12 +60,12 @@ const refreshConfig = async () => {
 // 使用 Solid 的 Store，我们可以直接修改 store，然后把 snapshot 发给 Rust
 const save = async () => {
   try {
-    const currentConfig = config
+    const currentConfig = unwrap(config)
 
     // 更新 lastUpdated
     currentConfig.lastUpdated = new Date().toISOString()
 
-    await invoke('save_config', { newConfig: unwrap(currentConfig) })
+    await invoke('save_config', { newConfig: currentConfig })
     // 注意：我们不需要在这里 setConfig，因为 save_config 成功后会 emit 事件
     // 或者你可以选择在这里乐观更新
   } catch (e) {

@@ -1,0 +1,120 @@
+use std::path::PathBuf;
+
+use crate::error::Result;
+use std::path::Path;
+use std::{fs, io};
+
+pub struct LocalUploader(pub PathBuf);
+
+impl LocalUploader {
+    pub fn new(path: PathBuf) -> io::Result<Self> {
+        fs::create_dir_all(&path)?;
+        Ok(Self(path))
+    }
+}
+
+#[async_trait::async_trait]
+impl super::MyOperation for LocalUploader {
+    async fn list_archive(&self, game_id: u32) -> Result<Vec<String>> {
+        let remote_game_dir = self.0.join(game_id.to_string());
+        if !remote_game_dir.exists() {
+            return Ok(vec![]);
+        }
+        let mut archives = vec![];
+        for entry in std::fs::read_dir(remote_game_dir)? {
+            let entry = entry?;
+            debug_assert!(entry.file_type().unwrap().is_file());
+            let filename = entry.file_name();
+            archives.push(filename.to_string_lossy().to_string());
+        }
+        Ok(archives)
+    }
+
+    async fn upload_archive(
+        &self,
+        game_id: u32,
+        archive_filename: String,
+        backup_dir: &Path,
+    ) -> Result<()> {
+        let game_src = backup_dir.join(game_id.to_string());
+        let game_dst = self.0.join(game_id.to_string());
+        fs::create_dir_all(&game_dst)?;
+        dbg!(&game_src, &game_dst);
+        fs::copy(
+            game_src.join(&archive_filename),
+            game_dst.join(&archive_filename),
+        )?;
+        Ok(())
+    }
+    async fn delete_archive(&self, game_id: u32, archive_filename: String) -> Result<()> {
+        let game_dst = self.0.join(game_id.to_string());
+        fs::remove_file(game_dst.join(archive_filename))?;
+        Ok(())
+    }
+
+    async fn pull_archive(
+        &self,
+        game_id: u32,
+        archive_filename: String,
+        backup_dir: &Path,
+    ) -> Result<()> {
+        let game_dst = self.0.join(game_id.to_string());
+        let game_src = backup_dir.join(game_id.to_string());
+        fs::create_dir_all(&game_src)?;
+        fs::copy(
+            game_dst.join(&archive_filename),
+            game_src.join(&archive_filename),
+        )?;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::MyOperation;
+    use super::*;
+
+    #[tokio::test]
+    async fn test_local_operator() -> io::Result<()> {
+        let game_id = 1;
+        let archive_filename = "test.txt";
+
+        // store the remote files
+        let tmp_dir = tempfile::tempdir()?;
+        let remote_path = tmp_dir.path().join("test");
+
+        // store the local files
+        let src_dir = tempfile::tempdir()?;
+        let src_path = src_dir.path();
+        let src_archive = src_path.join(game_id.to_string()).join(archive_filename);
+        fs::create_dir(src_archive.parent().unwrap())?;
+        fs::write(&src_archive, "test")?;
+
+        let op = LocalUploader::new(remote_path.clone())?;
+
+        // initial state
+        let ls = op.list_archive(game_id).await.unwrap();
+        assert_eq!(ls, Vec::<String>::new());
+
+        // upload
+        op.upload_archive(game_id, archive_filename.to_string(), src_path)
+            .await
+            .unwrap();
+        let ls = op.list_archive(game_id).await.unwrap();
+        assert_eq!(ls, vec![archive_filename.to_string()]);
+
+        // pull
+        fs::remove_file(&src_archive)?;
+        op.pull_archive(game_id, archive_filename.to_string(), src_path)
+            .await
+            .unwrap();
+        assert_eq!(fs::read_to_string(&src_archive)?, "test");
+
+        op.delete_archive(game_id, archive_filename.to_string())
+            .await
+            .unwrap();
+        assert!(!remote_path.join("test").join("1").exists());
+
+        Ok(())
+    }
+}
