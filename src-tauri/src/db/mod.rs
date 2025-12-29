@@ -10,6 +10,8 @@ use device::{Device, DEVICE_UID};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use settings::Settings;
+use strfmt::strfmt;
+use tauri::{AppHandle, Emitter as _};
 use ts_rs::TS;
 
 pub static CONFIG_DIR: Lazy<PathBuf> = Lazy::new(|| {
@@ -74,10 +76,33 @@ impl Config {
     }
 
     #[inline]
+    pub fn resolve_var(&self, s: &str) -> Result<String> {
+        let device = self
+            .get_device()
+            .ok_or_else(|| crate::error::Error::Device("No device found".to_string()))?;
+        Ok(strfmt(s, &device.variables)?)
+    }
+
+    #[inline]
     pub fn get_game_by_id(&self, id: u32) -> Result<&Game> {
         self.games
             .iter()
             .find(|g| g.id == id)
             .ok_or_else(|| crate::error::Error::GameNotFound)
+    }
+
+    #[inline]
+    pub fn get_game_by_id_mut(&mut self, id: u32) -> Result<&mut Game> {
+        self.games
+            .iter_mut()
+            .find(|g| g.id == id)
+            .ok_or_else(|| crate::error::Error::GameNotFound)
+    }
+
+    #[inline]
+    pub fn save_and_emit(&self, app_handle: &AppHandle) -> Result<()> {
+        self.store()?;
+        app_handle.emit("config://updated", self)?;
+        Ok(())
     }
 }

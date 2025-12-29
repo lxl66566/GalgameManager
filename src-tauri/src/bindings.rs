@@ -1,16 +1,13 @@
 use std::fs;
 
 use config_file2::Storable;
-use strfmt::strfmt;
 use tauri::{AppHandle, Manager as _};
 
 use crate::{
     archive::{archive_impl, restore_impl},
-    db::{
-        device::{DEFAULT_DEVICE, DEVICE_UID},
-        Config, CONFIG,
-    },
+    db::{device::DEVICE_UID, Config, CONFIG},
     error::Result,
+    exec::launch_game,
     http::ImageData,
     sync::{init_operator, CURRENT_OPERATOR},
     utils::list_dir_all,
@@ -22,12 +19,12 @@ pub fn get_config() -> Result<Config> {
     Ok(lock.clone())
 }
 
+// called from frontend, do not use it in other places
 #[tauri::command]
 pub fn save_config(new_config: Config) -> Result<()> {
     let mut lock = CONFIG.lock();
     *lock = new_config;
     lock.store()?;
-    // app.emit("config://updated", &*lock)?;
     Ok(())
 }
 
@@ -38,9 +35,7 @@ pub fn device_id() -> &'static str {
 
 #[tauri::command]
 pub fn resolve_var(s: &str) -> Result<String> {
-    let lock = CONFIG.lock();
-    let device = lock.get_device().unwrap_or(&*DEFAULT_DEVICE);
-    Ok(strfmt(s, &device.variables)?)
+    CONFIG.lock().resolve_var(s)
 }
 
 // region http
@@ -179,4 +174,11 @@ pub async fn clean_current_operator() -> Result<()> {
     let mut lock = CURRENT_OPERATOR.lock().await;
     *lock = None;
     Ok(())
+}
+
+// region exec
+
+#[tauri::command(async)]
+pub async fn exec(app: AppHandle, game_id: u32) {
+    _ = tauri::async_runtime::spawn(async move { launch_game(app, game_id).await });
 }

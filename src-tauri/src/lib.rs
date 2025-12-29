@@ -2,6 +2,7 @@ pub mod archive;
 mod bindings;
 pub mod db;
 pub mod error;
+pub mod exec;
 pub mod http;
 pub mod sync;
 pub mod utils;
@@ -33,6 +34,7 @@ pub fn run() {
             pull_archive,
             rename_remote_archive,
             clean_current_operator,
+            exec
         ])
         .setup(|app| {
             let scope = app.fs_scope();

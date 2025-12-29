@@ -2,12 +2,12 @@ import { type Game } from '@bindings/Game'
 import { DropArea } from '@components/DropArea'
 import FullScreenMask from '@components/ui/FullScreenMask'
 import { invoke } from '@tauri-apps/api/core'
+import { once } from '@tauri-apps/api/event'
 import { getParentPath } from '@utils/path'
 import { useConfig } from '~/store'
 import { AiTwotonePlusCircle } from 'solid-icons/ai'
 import { createSignal, For, Show, type JSX } from 'solid-js'
-import toast from 'solid-toast' // 引入 toast
-
+import toast from 'solid-toast'
 import GameEditModal from './GameEditModal'
 import { GameItem, GameItemWrapper } from './GameItem'
 import { ArchiveSyncModal } from './SyncModal'
@@ -20,8 +20,10 @@ const GamePage = (): JSX.Element => {
   const [isEditMode, setEditMode] = createSignal(false)
   const [editingGameInfo, setEditingGameInfo] = createSignal<Game | null>(null)
   const [editingIndex, setEditingIndex] = createSignal<number | null>(null)
-  // 用于追踪正在备份的游戏 ID
-  const [backingUpId, setBackingUpId] = createSignal<number | null>(null)
+
+  // 使用数组存储多个正在操作的游戏 ID
+  const [backingUpIds, setBackingUpIds] = createSignal<number[]>([])
+  const [playingIds, setPlayingIds] = createSignal<number[]>([])
 
   const findNextGameId = () => {
     const nextId = config.games.reduce((maxId, game) => {
@@ -63,6 +65,46 @@ const GamePage = (): JSX.Element => {
     setEditingGameInfo(null)
   }
 
+  // 游戏启动逻辑
+  const handleStart = async (index: number) => {
+    const game = config.games[index]
+    if (!game) return
+
+    // 如果已经在运行中，阻止重复点击
+    if (playingIds().includes(game.id)) return
+
+    // 1. 使用 once 注册单次监听器
+    // 仍然获取 unlisten 函数，仅用于在 invoke 报错时手动清理
+    const [unlistenSpawn, unlistenExit] = await Promise.all([
+      once(`game://spawn/${game.id}`, () => {
+        console.log(`Game ${game.id} spawned`)
+        setPlayingIds(prev => [...prev, game.id])
+        toast.success(`${game.name} is running`)
+      }),
+
+      once<boolean>(`game://exit/${game.id}`, event => {
+        console.log(`Game ${game.id} exited, success: ${event.payload}`)
+        setPlayingIds(prev => prev.filter(id => id !== game.id))
+
+        if (!event.payload) {
+          toast.error(`${game.name} exited abnormally`)
+        }
+      })
+    ])
+
+    try {
+      // 2. 调用后端启动命令
+      await invoke('exec', { gameId: game.id })
+    } catch (error) {
+      console.error('Failed to start game:', error)
+      toast.error(`Failed to start: ${error}`)
+
+      // 3. 如果启动指令本身失败，手动清理刚才注册的监听器
+      unlistenSpawn()
+      unlistenExit()
+    }
+  }
+
   const handleSave = (game: Game) => {
     const index = editingIndex()
     if (index === null) {
@@ -89,7 +131,7 @@ const GamePage = (): JSX.Element => {
     openGameAddModal(paths.at(0))
   }
 
-  // --- 核心修改：健壮的备份处理函数 ---
+  // 并发备份处理
   const handleBackup = async (index: number) => {
     const game = config.games[index]
     if (!game) return
@@ -98,39 +140,32 @@ const GamePage = (): JSX.Element => {
       return
     }
 
-    // 防止重复点击
-    if (backingUpId() === game.id) return
+    // 检查该游戏是否正在备份中
+    if (backingUpIds().includes(game.id)) return
 
-    // 设置当前正在备份的状态
-    setBackingUpId(game.id)
+    // 添加到备份队列
+    setBackingUpIds(prev => [...prev, game.id])
 
-    // 创建一个 toast ID，用于后续更新同一个 toast
     const toastId = toast.loading(`Archiving: ${game.name}...`)
 
     try {
-      // 1. 执行归档
       const archived_filename = await invoke<string>('archive', { gameId: game.id })
-      console.log('archived_filename:', archived_filename)
 
-      // 2. 更新 Toast 状态为上传中
       toast.loading(`Uploading: ${game.name}...`, { id: toastId })
 
-      // 3. 执行上传
       await invoke<void>('upload_archive', {
         gameId: game.id,
         archiveFilename: archived_filename
       })
 
-      // 4. 成功提示
       toast.success(`Sync Success: ${game.name}`, { id: toastId, duration: 3000 })
     } catch (error) {
       console.error('Backup failed:', error)
-      // 提取错误信息，兼容 Error 对象和字符串
       const errMsg = error instanceof Error ? error.message : String(error)
       toast.error(`Sync Failed: ${errMsg}`, { id: toastId, duration: 4000 })
     } finally {
-      // 无论成功失败，重置状态，恢复按钮可用
-      setBackingUpId(null)
+      // 从备份队列中移除
+      setBackingUpIds(prev => prev.filter(id => id !== game.id))
     }
   }
 
@@ -156,16 +191,17 @@ const GamePage = (): JSX.Element => {
             {(game, i) => (
               <GameItem
                 game={game}
-                // 传递 loading 状态给子组件
-                isBackingUp={backingUpId() === game.id}
+                onStart={() => handleStart(i())}
                 onEdit={() => openEditModal(i())}
                 onBackup={() => handleBackup(i())}
                 onSync={() => openSyncModal(i())}
+                // 根据 ID 数组判断状态
+                isBackingUp={backingUpIds().includes(game.id)}
+                isPlaying={playingIds().includes(game.id)}
               />
             )}
           </For>
 
-          {/* 新增游戏按钮保持不变 */}
           <GameItemWrapper extra_class="border-2 border-dashed border-gray-300 dark:border-gray-600 bg-transparent shadow-none hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
             <div
               class="flex flex-col flex-1 items-center justify-center text-center cursor-pointer w-full h-full group"
@@ -187,7 +223,6 @@ const GamePage = (): JSX.Element => {
         </div>
       </div>
 
-      {/* Modal 部分保持不变 */}
       <Show when={isEditModalOpen()}>
         <FullScreenMask onClose={closeEditModal}>
           <div class="dark:bg-zinc-800 bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col p-6 overflow-hidden border border-gray-200 dark:border-gray-700">

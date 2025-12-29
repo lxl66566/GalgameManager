@@ -3,34 +3,61 @@ import CachedImage from '@components/ui/CachedImage'
 import { GameActionButton } from '@components/ui/GameActionButton'
 import { displayDuration } from '@utils/time'
 import { AiOutlineCloudUpload, AiOutlineEdit, AiOutlineSync } from 'solid-icons/ai'
-import { FaRegularCirclePlay } from 'solid-icons/fa'
-import { type JSX } from 'solid-js'
+import { FaRegularCirclePlay, FaSolidGamepad } from 'solid-icons/fa'
+import { Show, type JSX } from 'solid-js'
 
 // --- 组件：游戏卡片 ---
 interface GameItemProps {
   game: Game
+  onStart: () => void
   onEdit: () => void
   onBackup: () => void
   onSync: () => void
-  // 接收备份状态
+  // 接收状态
   isBackingUp?: boolean
+  isPlaying?: boolean
 }
 
 export const GameItem = (props: GameItemProps) => {
   return (
     <GameItemWrapper>
       {/* 上半部分：图片区域 */}
-      <div class="relative group cursor-pointer h-52 overflow-hidden">
+      <div
+        class="relative group cursor-pointer h-52 overflow-hidden"
+        onClick={() => !props.isPlaying && props.onStart()}
+      >
         <CachedImage
           url={props.game.imageUrl}
           hash={props.game.imageSha256}
           alt={props.game.name}
           class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
-        {/* 图片悬浮遮罩：开始游戏 */}
-        <div class="absolute inset-0 bg-black/30 dark:bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[2px]">
-          <FaRegularCirclePlay class="w-16 h-16 text-white drop-shadow-lg hover:scale-110 transition-transform duration-200" />
-        </div>
+
+        {/* 状态层：使用 Show 进行互斥显示 */}
+        <Show
+          when={props.isPlaying}
+          fallback={
+            /* 默认状态：悬浮显示开始游戏 */
+            <div class="absolute inset-0 bg-black/30 dark:bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[2px]">
+              <FaRegularCirclePlay class="w-16 h-16 text-white drop-shadow-lg hover:scale-110 transition-transform duration-200" />
+            </div>
+          }
+        >
+          {/* 游玩中状态：常驻显示，带有呼吸效果 */}
+          <div class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[2px] cursor-default border-b-4 border-emerald-500">
+            {/* 居中图标与文字 */}
+            <FaSolidGamepad class="w-14 h-14 text-emerald-400 animate-pulse drop-shadow-lg" />
+            <span class="mt-2 text-emerald-100 font-bold text-xs tracking-widest uppercase">
+              Running
+            </span>
+
+            {/* 右上角呼吸灯 (Ping Animation) */}
+            <div class="absolute top-3 right-3 flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </div>
+          </div>
+        </Show>
       </div>
 
       {/* 下半部分：详情与工具栏区域 */}

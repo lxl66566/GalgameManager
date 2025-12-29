@@ -16,9 +16,20 @@ const DEFAULT_CONFIG: Config = {
   devices: [],
   settings: {
     storage: {
-      backend: {
-        type: 'local',
-        config: ''
+      provider: 'local',
+      local: '',
+      webdav: {
+        endpoint: '',
+        username: '',
+        password: '',
+        rootPath: ''
+      },
+      s3: {
+        bucket: '',
+        region: '',
+        endpoint: '',
+        accessKey: '',
+        secretKey: ''
       }
     },
     archive: {

@@ -34,6 +34,9 @@ pub enum Error {
 
     #[error("Remote Operation Error: {0}")]
     RemoteOperation(#[from] opendal::Error),
+
+    #[error("Launch error: executable not found")]
+    Launch,
 }
 
 impl Clone for Error {

@@ -161,7 +161,7 @@ export const StorageTab: Component = () => {
             options={[
               { label: 'Local Storage', value: 'local' },
               { label: 'WebDAV', value: 'webDav' },
-              { label: 'S3 Compatible', value: 's3' }
+              { label: 'S3', value: 's3' }
             ]}
           />
         </SettingRow>
