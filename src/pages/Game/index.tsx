@@ -1,8 +1,12 @@
 import { type Game } from '@bindings/Game'
 import { DropArea } from '@components/DropArea'
+import { invoke } from '@tauri-apps/api/core'
+import { getParentPath } from '@utils/path'
 import { useConfig } from '~/store'
 import { AiTwotonePlusCircle } from 'solid-icons/ai'
 import { createSignal, For, Show, type JSX } from 'solid-js'
+import toast from 'solid-toast' // 引入 toast
+
 import GameEditModal from './GameEditModel'
 import { GameItem, GameItemWrapper } from './GameItem'
 
@@ -10,21 +14,50 @@ const GamePage = (): JSX.Element => {
   const { config, actions } = useConfig()
 
   const [isModalOpen, setModalOpen] = createSignal(false)
+  const [isEditMode, setEditMode] = createSignal(false)
+  const [editingGameInfo, setEditingGameInfo] = createSignal<Game | null>(null)
   const [editingIndex, setEditingIndex] = createSignal<number | null>(null)
+  // 用于追踪正在备份的游戏 ID
+  const [backingUpId, setBackingUpId] = createSignal<number | null>(null)
 
-  const openAddModal = () => {
+  const findNextGameId = () => {
+    const nextId = config.games.reduce((maxId, game) => {
+      return Math.max(maxId, game.id)
+    }, 0)
+    return nextId + 1
+  }
+
+  const openAddModal = (path?: string) => {
+    const newGame: Game = {
+      id: findNextGameId(),
+      name: path ? (getParentPath(path) ?? '') : '',
+      excutablePath: path ?? null,
+      savePaths: [],
+      imageUrl: null,
+      imageSha256: null,
+      addedTime: new Date().toISOString(),
+      useTime: [0, 0],
+      lastPlayedTime: null,
+      lastUploadTime: null
+    }
+    console.log('add newGame:', newGame)
     setEditingIndex(null)
+    setEditingGameInfo(newGame)
+    setEditMode(false)
     setModalOpen(true)
   }
 
   const openEditModal = (index: number) => {
     setEditingIndex(index)
+    setEditingGameInfo(config.games[index])
+    setEditMode(true)
     setModalOpen(true)
   }
 
   const closeModal = () => {
     setModalOpen(false)
     setEditingIndex(null)
+    setEditingGameInfo(null)
   }
 
   const handleSave = (game: Game) => {
@@ -50,20 +83,53 @@ const GamePage = (): JSX.Element => {
 
   const handleDropAdd = (paths: string[]) => {
     console.log('Dropped paths:', paths)
-    openAddModal()
+    openAddModal(paths.at(0))
   }
 
-  // --- 新增功能的处理函数占位符 ---
-  const handleBackup = (index: number) => {
+  // --- 核心修改：健壮的备份处理函数 ---
+  const handleBackup = async (index: number) => {
     const game = config.games[index]
-    console.log(`Backing up game: ${game.name}`)
-    // TODO: 实现备份逻辑
+    if (!game) return
+
+    // 防止重复点击
+    if (backingUpId() === game.id) return
+
+    // 设置当前正在备份的状态
+    setBackingUpId(game.id)
+
+    // 创建一个 toast ID，用于后续更新同一个 toast
+    const toastId = toast.loading(`正在归档: ${game.name}...`)
+
+    try {
+      // 1. 执行归档
+      const archived_filename = await invoke<string>('archive', { gameId: game.id })
+
+      // 2. 更新 Toast 状态为上传中
+      toast.loading(`正在上传: ${game.name}...`, { id: toastId })
+
+      // 3. 执行上传
+      // await invoke<void>('upload', {
+      //   gameId: game.id,
+      //   archiveFilename: archived_filename
+      // })
+
+      // 4. 成功提示
+      toast.success(`备份成功: ${game.name}`, { id: toastId, duration: 3000 })
+    } catch (error) {
+      console.error('Backup failed:', error)
+      // 提取错误信息，兼容 Error 对象和字符串
+      const errMsg = error instanceof Error ? error.message : String(error)
+      toast.error(`备份失败: ${errMsg}`, { id: toastId, duration: 4000 })
+    } finally {
+      // 无论成功失败，重置状态，恢复按钮可用
+      setBackingUpId(null)
+    }
   }
 
   const handleSync = (index: number) => {
     const game = config.games[index]
     console.log(`Syncing game: ${game.name}`)
-    // TODO: 实现同步逻辑
+    toast('同步功能开发中...', { icon: '🚧' })
   }
 
   return (
@@ -75,6 +141,8 @@ const GamePage = (): JSX.Element => {
             {(game, i) => (
               <GameItem
                 game={game}
+                // 传递 loading 状态给子组件
+                isBackingUp={backingUpId() === game.id}
                 onEdit={() => openEditModal(i())}
                 onBackup={() => handleBackup(i())}
                 onSync={() => handleSync(i())}
@@ -82,11 +150,11 @@ const GamePage = (): JSX.Element => {
             )}
           </For>
 
-          {/* 新增游戏按钮 */}
+          {/* 新增游戏按钮保持不变 */}
           <GameItemWrapper extra_class="border-2 border-dashed border-gray-300 dark:border-gray-600 bg-transparent shadow-none hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
             <div
               class="flex flex-col flex-1 items-center justify-center text-center cursor-pointer w-full h-full group"
-              onClick={openAddModal}
+              onClick={() => openAddModal()}
             >
               <DropArea
                 callback={handleDropAdd}
@@ -96,7 +164,7 @@ const GamePage = (): JSX.Element => {
                 <p class="text-gray-500 dark:text-gray-400 text-sm mt-2 px-4 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
                   点击添加
                   <br />
-                  或拖拽文件至此
+                  或拖拽可执行文件至此
                 </p>
               </DropArea>
             </div>
@@ -104,7 +172,7 @@ const GamePage = (): JSX.Element => {
         </div>
       </div>
 
-      {/* 全局模态框 */}
+      {/* Modal 部分保持不变 */}
       <Show when={isModalOpen()}>
         <div
           class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
@@ -115,7 +183,8 @@ const GamePage = (): JSX.Element => {
             onClick={e => e.stopPropagation()}
           >
             <GameEditModal
-              gameInfo={editingIndex() !== null ? config.games[editingIndex()!] : null}
+              gameInfo={editingGameInfo()}
+              editMode={isEditMode()}
               cancel={closeModal}
               confirm={handleSave}
               onDelete={editingIndex() !== null ? handleDelete : undefined}

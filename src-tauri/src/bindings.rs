@@ -1,18 +1,15 @@
-
 use config_file2::Storable;
 use strfmt::strfmt;
-use tauri::{AppHandle, Emitter, Manager as _};
+use tauri::{AppHandle, Manager as _};
 
 use crate::{
-    archive::{archive_impl, Archive as _},
+    archive::{archive_impl, restore_impl},
     db::{
         device::{DEFAULT_DEVICE, DEVICE_UID},
         Config, CONFIG,
     },
-    error::{Error, Result},
+    error::Result,
 };
-
-pub const EVENT_CONFIG_UPDATED: &str = "config://updated";
 
 #[tauri::command]
 pub fn get_config() -> Result<Config> {
@@ -21,12 +18,11 @@ pub fn get_config() -> Result<Config> {
 }
 
 #[tauri::command]
-pub fn save_config(app: AppHandle, new_config: Config) -> Result<()> {
+pub fn save_config(new_config: Config) -> Result<()> {
     let mut lock = CONFIG.lock();
     *lock = new_config;
     lock.store()?;
-    app.emit(EVENT_CONFIG_UPDATED, &*lock)
-        .map_err(|_| Error::Emit)?;
+    // app.emit("config://updated", &*lock)?;
     Ok(())
 }
 
@@ -43,13 +39,27 @@ pub fn resolve_var(s: &str) -> Result<String> {
 }
 
 #[tauri::command]
-pub fn archive(app: AppHandle, game_id: u32, paths: Vec<String>) -> Result<String> {
+pub fn archive(app: AppHandle, game_id: u32) -> Result<String> {
     let data_dir = app.path().app_local_data_dir()?;
+    let game_backup_dir = data_dir.join("backup").join(game_id.to_string());
 
     let lock = CONFIG.lock();
     let archive_conf = lock.settings.archive.clone();
-    let game_backup_dir = data_dir.join("backup").join(game_id.to_string());
+    let paths = lock.get_game_by_id(game_id)?.save_paths.clone();
     drop(lock);
 
     archive_impl(&archive_conf, game_backup_dir, paths)
+}
+
+#[tauri::command]
+pub fn extract(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
+    let data_dir = app.path().app_local_data_dir()?;
+    let game_backup_dir = data_dir.join("backup").join(game_id.to_string());
+
+    let lock = CONFIG.lock();
+    let archive_conf = lock.settings.archive.clone();
+    let paths = lock.get_game_by_id(game_id)?.save_paths.clone();
+    drop(lock);
+
+    restore_impl(&archive_conf, game_backup_dir, archive_filename, paths)
 }

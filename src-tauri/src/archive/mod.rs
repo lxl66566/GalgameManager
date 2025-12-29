@@ -129,7 +129,7 @@ pub fn archive_impl(
     Ok(filename)
 }
 
-pub fn restore(
+pub fn restore_impl(
     archive_conf: &ArchiveConfig,
     game_backup_dir: PathBuf,
     archive_filename: String,

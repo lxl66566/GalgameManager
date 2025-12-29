@@ -11,7 +11,7 @@ pub enum Error {
     #[error("Device error: {0}")]
     Device(String),
 
-    #[error("Config error: {0}")]
+    #[error("Config operation error: {0}")]
     Config(#[from] config_file2::error::Error),
 
     #[error("Clone error")]
@@ -20,14 +20,14 @@ pub enum Error {
     #[error("Could not resolve var: {0}")]
     ResolveVar(#[from] strfmt::FmtError),
 
-    #[error("Tauri Emit signal error")]
-    Emit,
-
     #[error("Tauri error: {0}")]
     Tauri(#[from] tauri::Error),
 
     #[error("Archive error: {0}")]
     Archive(#[from] backhand::BackhandError),
+
+    #[error("Game id not found")]
+    GameNotFound,
 }
 
 impl Clone for Error {

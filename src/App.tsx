@@ -7,6 +7,7 @@ import { Route, Router } from '@solidjs/router'
 import { BiRegularExtension } from 'solid-icons/bi'
 import { CgGames } from 'solid-icons/cg'
 import { IoSettingsOutline } from 'solid-icons/io'
+import { onMount } from 'solid-js'
 import { Toaster } from 'solid-toast'
 import Game from './pages/Game'
 import Plugin from './pages/Plugin'
@@ -14,10 +15,12 @@ import Settings from './pages/Settings'
 import { Sidebar, SidebarItem } from './Sidebar'
 import { initConfig } from './store'
 
-await initConfig()
-
 const App = () => {
   const storageManager = createLocalStorageManager('vite-ui-theme')
+
+  onMount(() => {
+    initConfig()
+  })
 
   return (
     <div class="flex min-h-screen dark h-screen">

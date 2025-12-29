@@ -10,12 +10,14 @@ import { createStore, unwrap } from 'solid-js/store'
 
 interface GameEditModalProps {
   gameInfo?: Game | null
+  editMode?: boolean
   confirm: (game: Game) => void
   cancel: () => void
   onDelete?: () => void
 }
 
 const DEFAULT_GAME: Game = {
+  id: 0,
   name: '',
   excutablePath: null,
   savePaths: [],
@@ -23,11 +25,12 @@ const DEFAULT_GAME: Game = {
   imageSha256: null,
   addedTime: new Date().toISOString(),
   lastPlayedTime: null,
-  useTime: [0, 0]
+  useTime: [0, 0],
+  lastUploadTime: null
 }
 
 export default function GameEditModal(props: GameEditModalProps) {
-  const isEditMode = () => !!props.gameInfo
+  const isEditMode = () => props.editMode ?? !!props.gameInfo
 
   const [localGame, setLocalGame] = createStore<Game>(
     structuredClone(unwrap(props.gameInfo ?? DEFAULT_GAME))

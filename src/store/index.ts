@@ -4,6 +4,7 @@ import type { Device } from '@bindings/Device'
 import type { Game } from '@bindings/Game'
 import type { Settings } from '@bindings/Settings'
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import { createStore, produce, unwrap } from 'solid-js/store'
 import { currentDeviceId } from './Singleton'
 
@@ -22,16 +23,12 @@ const DEFAULT_CONFIG: Config = {
     },
     archive: {
       algorithm: 'squashfsZstd',
-      level: 3
+      level: 3,
+      backupBeforeRestore: true
     },
     appearance: {
       theme: 'system',
       language: 'zh-CN'
-    },
-    currentDevice: {
-      name: 'Default',
-      uuid: '00000000-0000-0000-0000-000000000000',
-      variables: {}
     }
   }
 }
@@ -41,10 +38,10 @@ const [config, setConfig] = createStore<Config>(DEFAULT_CONFIG)
 // 初始化：监听 Rust 事件并拉取初始数据
 const initConfig = async () => {
   // 1. 监听来自 Rust 的更新 (例如其他窗口修改了配置，或者保存成功后的回显)
-  // await listen<Config>('config://updated', event => {
-  //   console.log('Config updated from Rust:', event.payload)
-  //   setConfig(event.payload)
-  // })
+  await listen<Config>('config://updated', event => {
+    console.log('Config updated from Rust:', event.payload)
+    setConfig(event.payload)
+  })
 
   // 2. 主动拉取一次
   refreshConfig()
@@ -85,6 +82,7 @@ export const useConfig = () => {
     save,
     actions: {
       addGame: (game: Game) => {
+        game.addedTime = new Date().toISOString()
         setConfig(
           produce(state => {
             state.games.push(game)

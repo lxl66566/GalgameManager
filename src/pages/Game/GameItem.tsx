@@ -12,6 +12,8 @@ interface GameItemProps {
   onEdit: () => void
   onBackup: () => void
   onSync: () => void
+  // 接收备份状态
+  isBackingUp?: boolean
 }
 
 export const GameItem = (props: GameItemProps) => {
@@ -62,6 +64,7 @@ export const GameItem = (props: GameItemProps) => {
             icon={<AiOutlineCloudUpload class="w-6 h-6" />}
             colorClass="text-emerald-600 dark:text-emerald-400"
             onClick={props.onBackup}
+            loading={props.isBackingUp} // 传递 loading 状态
           />
 
           {/* 按钮 3: 同步状态 */}

@@ -3,7 +3,7 @@ mod bindings;
 pub mod db;
 pub mod error;
 
-use bindings::{device_id, get_config, resolve_var, save_config};
+use bindings::*;
 use tauri_plugin_fs::FsExt;
 
 use crate::db::CONFIG_DIR;
@@ -23,7 +23,9 @@ pub fn run() {
             device_id,
             resolve_var,
             get_config,
-            save_config
+            save_config,
+            archive,
+            extract
         ])
         .setup(|app| {
             let scope = app.fs_scope();

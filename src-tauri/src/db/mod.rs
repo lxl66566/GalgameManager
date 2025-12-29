@@ -3,6 +3,7 @@ pub mod settings;
 
 use std::{fs, path::PathBuf, sync::LazyLock as Lazy};
 
+use crate::error::Result;
 use chrono::{DateTime, Duration, Utc};
 use config_file2::{LoadConfigFile, Storable};
 use device::{Device, DEVICE_UID};
@@ -68,5 +69,13 @@ impl Config {
     #[inline]
     pub fn get_device_mut(&mut self) -> Option<&mut Device> {
         self.devices.iter_mut().find(|d| d.uid == *DEVICE_UID)
+    }
+
+    #[inline]
+    pub fn get_game_by_id(&self, id: u32) -> Result<&Game> {
+        self.games
+            .iter()
+            .find(|g| g.id == id)
+            .ok_or_else(|| crate::error::Error::GameNotFound)
     }
 }
