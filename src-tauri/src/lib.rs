@@ -4,6 +4,7 @@ pub mod db;
 pub mod error;
 pub mod http;
 pub mod sync;
+pub mod utils;
 
 use bindings::*;
 use tauri_plugin_fs::FsExt;
@@ -20,6 +21,9 @@ pub fn run() {
             resolve_var,
             get_config,
             save_config,
+            list_local_archive,
+            delete_local_archive,
+            rename_local_archive,
             archive,
             extract,
             get_image,
@@ -27,6 +31,7 @@ pub fn run() {
             upload_archive,
             delete_archive,
             pull_archive,
+            rename_remote_archive,
             clean_current_operator,
         ])
         .setup(|app| {

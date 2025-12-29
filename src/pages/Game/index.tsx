@@ -7,13 +7,15 @@ import { AiTwotonePlusCircle } from 'solid-icons/ai'
 import { createSignal, For, Show, type JSX } from 'solid-js'
 import toast from 'solid-toast' // 引入 toast
 
-import GameEditModal from './GameEditModel'
+import GameEditModal from './GameEditModal'
 import { GameItem, GameItemWrapper } from './GameItem'
+import { ArchiveSyncModal } from './SyncModal'
 
 const GamePage = (): JSX.Element => {
   const { config, actions } = useConfig()
 
-  const [isModalOpen, setModalOpen] = createSignal(false)
+  const [isEditModalOpen, setEditModalOpen] = createSignal(false)
+  const [isSyncModalOpen, setSyncModalOpen] = createSignal(false)
   const [isEditMode, setEditMode] = createSignal(false)
   const [editingGameInfo, setEditingGameInfo] = createSignal<Game | null>(null)
   const [editingIndex, setEditingIndex] = createSignal<number | null>(null)
@@ -27,7 +29,7 @@ const GamePage = (): JSX.Element => {
     return nextId + 1
   }
 
-  const openAddModal = (path?: string) => {
+  const openGameAddModal = (path?: string) => {
     const newGame: Game = {
       id: findNextGameId(),
       name: path ? (getParentPath(path) ?? '') : '',
@@ -44,18 +46,18 @@ const GamePage = (): JSX.Element => {
     setEditingIndex(null)
     setEditingGameInfo(newGame)
     setEditMode(false)
-    setModalOpen(true)
+    setEditModalOpen(true)
   }
 
   const openEditModal = (index: number) => {
     setEditingIndex(index)
     setEditingGameInfo(config.games[index])
     setEditMode(true)
-    setModalOpen(true)
+    setEditModalOpen(true)
   }
 
-  const closeModal = () => {
-    setModalOpen(false)
+  const closeEditModal = () => {
+    setEditModalOpen(false)
     setEditingIndex(null)
     setEditingGameInfo(null)
   }
@@ -67,7 +69,7 @@ const GamePage = (): JSX.Element => {
     } else {
       actions.updateGame(index, game)
     }
-    closeModal()
+    closeEditModal()
   }
 
   const handleDelete = () => {
@@ -76,14 +78,14 @@ const GamePage = (): JSX.Element => {
       const confirmed = confirm(`确定要删除游戏 "${config.games[index].name}" 吗？`)
       if (confirmed) {
         actions.removeGame(index)
-        closeModal()
+        closeEditModal()
       }
     }
   }
 
   const handleDropAdd = (paths: string[]) => {
     console.log('Dropped paths:', paths)
-    openAddModal(paths.at(0))
+    openGameAddModal(paths.at(0))
   }
 
   // --- 核心修改：健壮的备份处理函数 ---
@@ -129,8 +131,15 @@ const GamePage = (): JSX.Element => {
 
   const openSyncModal = (index: number) => {
     const game = config.games[index]
-    console.log(`Syncing game: ${game.name}`)
-    toast('同步功能开发中...', { icon: '🚧' })
+    setEditingIndex(index)
+    setEditingGameInfo(game)
+    setSyncModalOpen(true)
+  }
+
+  const closeSyncModal = () => {
+    setEditingIndex(null)
+    setEditingGameInfo(null)
+    setSyncModalOpen(false)
   }
 
   return (
@@ -155,7 +164,7 @@ const GamePage = (): JSX.Element => {
           <GameItemWrapper extra_class="border-2 border-dashed border-gray-300 dark:border-gray-600 bg-transparent shadow-none hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
             <div
               class="flex flex-col flex-1 items-center justify-center text-center cursor-pointer w-full h-full group"
-              onClick={() => openAddModal()}
+              onClick={() => openGameAddModal()}
             >
               <DropArea
                 callback={handleDropAdd}
@@ -174,10 +183,10 @@ const GamePage = (): JSX.Element => {
       </div>
 
       {/* Modal 部分保持不变 */}
-      <Show when={isModalOpen()}>
+      <Show when={isEditModalOpen()}>
         <div
           class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={closeModal}
+          onClick={closeEditModal}
         >
           <div
             class="dark:bg-zinc-800 bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col p-6 overflow-hidden border border-gray-200 dark:border-gray-700"
@@ -186,9 +195,25 @@ const GamePage = (): JSX.Element => {
             <GameEditModal
               gameInfo={editingGameInfo()}
               editMode={isEditMode()}
-              cancel={closeModal}
+              cancel={closeEditModal}
               confirm={handleSave}
               onDelete={editingIndex() !== null ? handleDelete : undefined}
+            />
+          </div>
+        </div>
+      </Show>
+      <Show when={isSyncModalOpen()}>
+        <div
+          class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={closeEditModal}
+        >
+          <div
+            class="dark:bg-zinc-800 bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col p-6 overflow-hidden border border-gray-200 dark:border-gray-700"
+            onClick={e => e.stopPropagation()}
+          >
+            <ArchiveSyncModal
+              gameId={editingGameInfo()?.id ?? 0}
+              onClose={closeSyncModal}
             />
           </div>
         </div>

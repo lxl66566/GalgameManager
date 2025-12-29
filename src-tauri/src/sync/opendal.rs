@@ -64,4 +64,16 @@ impl super::MyOperation for Operator {
         .await?;
         Ok(())
     }
+
+    async fn rename_archive(
+        &self,
+        game_id: u32,
+        archive_filename: String,
+        new_archive_filename: String,
+    ) -> Result<()> {
+        let remote_path = format!("{}/{}", game_id, archive_filename);
+        let new_remote_path = format!("{}/{}", game_id, new_archive_filename);
+        self.rename(&remote_path, &new_remote_path).await?;
+        Ok(())
+    }
 }

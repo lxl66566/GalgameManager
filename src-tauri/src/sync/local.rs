@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use crate::error::Result;
+use crate::utils::list_dir_all;
 use std::path::Path;
 use std::{fs, io};
 
@@ -20,14 +21,7 @@ impl super::MyOperation for LocalUploader {
         if !remote_game_dir.exists() {
             return Ok(vec![]);
         }
-        let mut archives = vec![];
-        for entry in std::fs::read_dir(remote_game_dir)? {
-            let entry = entry?;
-            debug_assert!(entry.file_type().unwrap().is_file());
-            let filename = entry.file_name();
-            archives.push(filename.to_string_lossy().to_string());
-        }
-        Ok(archives)
+        Ok(list_dir_all(remote_game_dir)?)
     }
 
     async fn upload_archive(
@@ -65,6 +59,19 @@ impl super::MyOperation for LocalUploader {
             game_dst.join(&archive_filename),
             game_src.join(&archive_filename),
         )?;
+        Ok(())
+    }
+
+    async fn rename_archive(
+        &self,
+        game_id: u32,
+        archive_filename: String,
+        new_archive_filename: String,
+    ) -> Result<()> {
+        let game_dst = self.0.join(game_id.to_string());
+        let game_src = game_dst.join(&archive_filename);
+        let new_game_src = game_dst.join(&new_archive_filename);
+        fs::rename(game_src, new_game_src)?;
         Ok(())
     }
 }

@@ -11,7 +11,9 @@ use crate::{
     error::Result,
     http::ImageData,
     sync::{init_operator, CURRENT_OPERATOR},
+    utils::list_dir_all,
 };
+use std::fs;
 
 #[tauri::command]
 pub fn get_config() -> Result<Config> {
@@ -50,6 +52,37 @@ pub async fn get_image(url: String, hash: Option<String>) -> Result<ImageData> {
 // region archive
 
 #[tauri::command]
+pub fn list_local_archive(app: AppHandle, game_id: u32) -> Result<Vec<String>> {
+    let data_dir = app.path().app_local_data_dir()?;
+    let game_backup_dir = data_dir.join("backup").join(game_id.to_string());
+    Ok(list_dir_all(game_backup_dir)?)
+}
+
+#[tauri::command]
+pub fn delete_local_archive(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
+    let data_dir = app.path().app_local_data_dir()?;
+    let game_backup_dir = data_dir.join("backup").join(game_id.to_string());
+    let archive_path = game_backup_dir.join(archive_filename);
+    fs::remove_file(archive_path)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn rename_local_archive(
+    app: AppHandle,
+    game_id: u32,
+    archive_filename: String,
+    new_archive_filename: String,
+) -> Result<()> {
+    let data_dir = app.path().app_local_data_dir()?;
+    let game_backup_dir = data_dir.join("backup").join(game_id.to_string());
+    let archive_path = game_backup_dir.join(archive_filename);
+    let new_archive_path = game_backup_dir.join(new_archive_filename);
+    fs::rename(archive_path, new_archive_path)?;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn archive(app: AppHandle, game_id: u32) -> Result<String> {
     let data_dir = app.path().app_local_data_dir()?;
     let game_backup_dir = data_dir.join("backup").join(game_id.to_string());
@@ -80,13 +113,6 @@ pub fn extract(app: AppHandle, game_id: u32, archive_filename: String) -> Result
 }
 
 // region sync
-
-#[tauri::command(async)]
-pub async fn clean_current_operator() -> Result<()> {
-    let mut lock = CURRENT_OPERATOR.lock().await;
-    *lock = None;
-    Ok(())
-}
 
 #[tauri::command(async)]
 pub async fn list_archive(game_id: u32) -> Result<Vec<String>> {
@@ -128,4 +154,24 @@ pub async fn pull_archive(app: AppHandle, game_id: u32, archive_filename: String
         &app.path().app_local_data_dir()?.join("backup"),
     )
     .await
+}
+
+#[tauri::command(async)]
+pub async fn rename_remote_archive(
+    game_id: u32,
+    archive_filename: String,
+    new_archive_filename: String,
+) -> Result<()> {
+    init_operator().await?;
+    let lock = CURRENT_OPERATOR.lock().await;
+    let op = lock.as_ref().unwrap();
+    op.rename_archive(game_id, archive_filename, new_archive_filename)
+        .await
+}
+
+#[tauri::command(async)]
+pub async fn clean_current_operator() -> Result<()> {
+    let mut lock = CURRENT_OPERATOR.lock().await;
+    *lock = None;
+    Ok(())
 }

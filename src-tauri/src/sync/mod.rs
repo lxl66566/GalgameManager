@@ -41,6 +41,12 @@ pub trait MyOperation {
         archive_filename: String,
         backup_dir: &Path,
     ) -> Result<()>;
+    async fn rename_archive(
+        &self,
+        game_id: u32,
+        archive_filename: String,
+        new_archive_filename: String,
+    ) -> Result<()>;
 }
 
 impl StorageBackend {
