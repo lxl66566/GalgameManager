@@ -48,7 +48,7 @@ export const GameItem = (props: GameItemProps) => {
             {/* 居中图标与文字 */}
             <FaSolidGamepad class="w-14 h-14 text-emerald-400 animate-pulse drop-shadow-lg" />
             <span class="mt-2 text-emerald-100 font-bold text-xs tracking-widest uppercase">
-              Running
+              playing
             </span>
 
             {/* 右上角呼吸灯 (Ping Animation) */}

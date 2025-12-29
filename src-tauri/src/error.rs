@@ -37,6 +37,9 @@ pub enum Error {
 
     #[error("Launch error: executable not found")]
     Launch,
+
+    #[error("Windows API error: {0}")]
+    WindowsApi(#[from] windows_result::Error),
 }
 
 impl Clone for Error {

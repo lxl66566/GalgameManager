@@ -180,5 +180,5 @@ pub async fn clean_current_operator() -> Result<()> {
 
 #[tauri::command(async)]
 pub async fn exec(app: AppHandle, game_id: u32) {
-    _ = tauri::async_runtime::spawn(async move { launch_game(app, game_id).await });
+    _ = tauri::async_runtime::spawn(async move { launch_game(app, game_id, 30).await });
 }
