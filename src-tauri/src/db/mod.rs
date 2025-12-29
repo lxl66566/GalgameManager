@@ -36,6 +36,7 @@ impl Storable for Config {
 #[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[serde(default)]
 pub struct Config {
     pub db_version: u32,
     pub last_updated: DateTime<Utc>,
@@ -47,6 +48,7 @@ pub struct Config {
 #[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[serde(default)]
 pub struct Game {
     pub id: u32,
     pub name: String,

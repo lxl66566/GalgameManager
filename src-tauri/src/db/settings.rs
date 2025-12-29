@@ -8,33 +8,34 @@ use crate::archive::ArchiveConfig;
 #[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[serde(default)]
 pub struct Settings {
     pub storage: StorageConfig,
     pub archive: ArchiveConfig,
     pub appearance: AppearanceConfig,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, TS)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq, TS)]
 #[ts(export)]
-#[serde(tag = "type", content = "config", rename_all = "camelCase")]
-pub enum StorageBackend {
-    WebDav(WebDavConfig),
-    S3(S3Config),
-    Local(String),
+#[serde(rename_all = "camelCase")]
+pub enum StorageProvider {
+    #[default]
+    Local,
+    WebDav,
+    S3,
 }
 
-impl Default for StorageBackend {
-    fn default() -> Self {
-        Self::Local(String::new())
-    }
-}
-
+// 2. 修改：StorageConfig 现在持有所有配置 + 当前激活的 Provider
 #[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[serde(default)]
 pub struct StorageConfig {
-    pub backend: StorageBackend,
-    // pub auto_sync_interval: u32, // 0 = off
+    pub provider: StorageProvider, // 当前选中的后端
+    pub local: String,             // Local 配置 (路径)
+    pub webdav: WebDavConfig,      // WebDAV 配置
+    pub s3: S3Config,              // S3 配置
+                                   // pub auto_sync_interval: u32, // 0 = off
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, TS)]
@@ -52,7 +53,18 @@ fn default_root_path() -> String {
     concat!("/", env!("CARGO_PKG_NAME")).to_string()
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, TS)]
+impl Default for WebDavConfig {
+    fn default() -> Self {
+        Self {
+            endpoint: "".to_string(),
+            username: "".to_string(),
+            password: None,
+            root_path: default_root_path(),
+        }
+    }
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct S3Config {

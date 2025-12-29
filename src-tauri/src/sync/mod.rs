@@ -5,7 +5,7 @@ use std::{path::Path, sync::LazyLock as Lazy};
 
 use local::LocalUploader;
 
-use crate::db::settings::StorageBackend;
+use crate::db::settings::{StorageConfig, StorageProvider};
 use crate::db::CONFIG;
 use crate::error::Result;
 use ::opendal::{services, Operator};
@@ -19,7 +19,7 @@ pub async fn init_operator() -> Result<()> {
     let mut op = CURRENT_OPERATOR.lock().await;
     if op.is_none() {
         let lock = CONFIG.lock();
-        let new_operator = lock.settings.storage.backend.build_operator()?;
+        let new_operator = lock.settings.storage.build_operator()?;
         *op = Some(new_operator);
     }
     Ok(())
@@ -49,11 +49,12 @@ pub trait MyOperation {
     ) -> Result<()>;
 }
 
-impl StorageBackend {
-    fn build_operator(&self) -> Result<Box<dyn MyOperation + Send>> {
-        match self {
-            StorageBackend::Local(path) => Ok(Box::new(LocalUploader::new(path.into())?)),
-            StorageBackend::WebDav(config) => {
+impl StorageConfig {
+    pub fn build_operator(&self) -> Result<Box<dyn MyOperation + Send>> {
+        match self.provider {
+            StorageProvider::Local => Ok(Box::new(LocalUploader::new(self.local.clone().into())?)),
+            StorageProvider::WebDav => {
+                let config = &self.webdav;
                 let operator = Operator::new(
                     services::Webdav::default()
                         .endpoint(&config.endpoint)
@@ -64,7 +65,8 @@ impl StorageBackend {
                 .finish();
                 Ok(Box::new(operator))
             }
-            StorageBackend::S3(config) => {
+            StorageProvider::S3 => {
+                let config = &self.s3;
                 let operator = Operator::new(
                     services::S3::default()
                         .bucket(&config.bucket)

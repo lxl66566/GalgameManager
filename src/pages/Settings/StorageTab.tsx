@@ -1,4 +1,5 @@
 import type { S3Config } from '@bindings/S3Config'
+import type { StorageProvider } from '@bindings/StorageProvider'
 import type { WebDavConfig } from '@bindings/WebDavConfig'
 import {
   Input,
@@ -7,6 +8,7 @@ import {
   SettingSection,
   SettingSubGroup
 } from '@components/ui/settings'
+import { invoke } from '@tauri-apps/api/core'
 import { useConfig } from '~/store'
 import { createMemo, Match, Switch, type Component } from 'solid-js'
 
@@ -108,59 +110,40 @@ const LocalForm: Component<{
 )
 
 // --- 主组件 ---
+
 export const StorageTab: Component = () => {
   const { config, actions } = useConfig()
 
-  const currentBackendType = createMemo(() => config.settings.storage.backend.type)
+  // 获取当前的 provider 字符串
+  const currentProvider = () => config.settings.storage.provider
 
+  // 切换 Provider：只修改 provider 字段，不触碰具体配置
   const handleProviderChange = (e: Event) => {
-    const newType = (e.target as HTMLSelectElement).value
-
+    const newProvider = (e.target as HTMLSelectElement).value as StorageProvider
     actions.updateSettings(s => {
-      if (newType === 'webDav') {
-        s.storage.backend = {
-          type: 'webDav',
-          config: { endpoint: '', username: '', password: '', rootPath: '' }
-        }
-      } else if (newType === 's3') {
-        s.storage.backend = {
-          type: 's3',
-          config: {
-            endpoint: '',
-            region: 'auto',
-            bucket: '',
-            accessKey: '',
-            secretKey: ''
-          }
-        }
-      } else if (newType === 'local') {
-        s.storage.backend = {
-          type: 'local',
-          config: '' // Local config 是一个字符串路径
-        }
-      }
+      s.storage.provider = newProvider
+    })
+    invoke('clean_current_operator')
+  }
+
+  // 更新 WebDAV 配置
+  const updateWebDav = (key: keyof WebDavConfig, value: string) => {
+    actions.updateSettings(s => {
+      s.storage.webdav[key] = value
     })
   }
 
-  // 通用的对象型配置更新 (WebDAV, S3)
-  const updateBackendObjectConfig = <T extends WebDavConfig | S3Config>(
-    key: keyof T,
-    value: string
-  ) => {
+  // 更新 S3 配置
+  const updateS3 = (key: keyof S3Config, value: string) => {
     actions.updateSettings(s => {
-      // 仅当当前类型不是 local 时才执行对象属性赋值
-      if (s.storage.backend.type !== 'local') {
-        ;(s.storage.backend.config as any)[key] = value
-      }
+      s.storage.s3[key] = value
     })
   }
 
-  // 专用的 Local 路径更新
-  const updateLocalPath = (value: string) => {
+  // 更新 Local 配置
+  const updateLocal = (value: string) => {
     actions.updateSettings(s => {
-      if (s.storage.backend.type === 'local') {
-        s.storage.backend.config = value
-      }
+      s.storage.local = value
     })
   }
 
@@ -173,7 +156,7 @@ export const StorageTab: Component = () => {
           class="z-10 relative"
         >
           <Select
-            value={currentBackendType()}
+            value={currentProvider()}
             onChange={handleProviderChange}
             options={[
               { label: 'Local Storage', value: 'local' },
@@ -185,28 +168,18 @@ export const StorageTab: Component = () => {
 
         <Switch>
           {/* Local Case */}
-          <Match when={currentBackendType() === 'local'}>
-            <LocalForm
-              // 此时 config 是 string
-              path={(config.settings.storage.backend as any).config}
-              onChange={updateLocalPath}
-            />
+          <Match when={currentProvider() === 'local'}>
+            <LocalForm path={config.settings.storage.local} onChange={updateLocal} />
           </Match>
 
           {/* WebDAV Case */}
-          <Match when={currentBackendType() === 'webDav'}>
-            <WebDavForm
-              config={(config.settings.storage.backend as any).config}
-              onChange={(k, v) => updateBackendObjectConfig<WebDavConfig>(k, v)}
-            />
+          <Match when={currentProvider() === 'webDav'}>
+            <WebDavForm config={config.settings.storage.webdav} onChange={updateWebDav} />
           </Match>
 
           {/* S3 Case */}
-          <Match when={currentBackendType() === 's3'}>
-            <S3Form
-              config={(config.settings.storage.backend as any).config}
-              onChange={(k, v) => updateBackendObjectConfig<S3Config>(k, v)}
-            />
+          <Match when={currentProvider() === 's3'}>
+            <S3Form config={config.settings.storage.s3} onChange={updateS3} />
           </Match>
         </Switch>
       </SettingSection>
