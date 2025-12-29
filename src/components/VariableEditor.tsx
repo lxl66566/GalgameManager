@@ -84,7 +84,7 @@ export const VariableEditor: Component<VariableEditorProps> = props => {
       {/* Header */}
       <div class="flex justify-between items-center">
         <div class="flex flex-col">
-          <span class="text-sm text-gray-300">{props.label || 'Path Variables'}</span>
+          <span class="text-sm text-gray-300">{props.label || 'Variables'}</span>
           <span class="text-[10px] text-gray-500">
             Define variables for current device. This will be inserted into template
             paths.

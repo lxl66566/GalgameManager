@@ -64,7 +64,7 @@ impl Default for WebDavConfig {
     }
 }
 
-#[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]
+#[derive(Debug, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct S3Config {
@@ -73,6 +73,18 @@ pub struct S3Config {
     pub endpoint: Option<String>,
     pub access_key: String,
     pub secret_key: String,
+}
+
+impl Default for S3Config {
+    fn default() -> Self {
+        Self {
+            bucket: env!("CARGO_PKG_NAME").to_string(),
+            region: "".to_string(),
+            endpoint: None,
+            access_key: "".to_string(),
+            secret_key: "".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]

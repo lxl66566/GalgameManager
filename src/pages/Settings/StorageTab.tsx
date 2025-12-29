@@ -58,7 +58,7 @@ const S3Form: Component<{
       <Input
         value={props.config.endpoint || ''}
         onInput={e => props.onChange('endpoint', e.currentTarget.value)}
-        placeholder="https://s3.us-east-1.amazonaws.com"
+        placeholder=""
       />
     </SettingRow>
     <SettingRow label="Region" indent>
@@ -66,14 +66,14 @@ const S3Form: Component<{
         class="w-32"
         value={props.config.region}
         onInput={e => props.onChange('region', e.currentTarget.value)}
-        placeholder="us-east-1"
+        placeholder=""
       />
     </SettingRow>
     <SettingRow label="Bucket Name" indent>
       <Input
         value={props.config.bucket}
         onInput={e => props.onChange('bucket', e.currentTarget.value)}
-        placeholder="my-game-saves"
+        placeholder=""
       />
     </SettingRow>
     <SettingRow label="Access Key" indent>

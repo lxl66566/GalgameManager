@@ -101,7 +101,7 @@ export const DeviceTab: Component = () => {
                 </SettingRow>
               </SettingSection>
 
-              <SettingSection title="Path Variables">
+              <SettingSection title="Variables">
                 <div class="p-4">
                   <VariableEditor
                     variables={dev().variables || {}}

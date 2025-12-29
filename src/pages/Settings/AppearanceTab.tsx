@@ -12,7 +12,7 @@ export const AppearanceTab: Component = () => {
   return (
     <div class="max-w-4xl">
       <SettingSection title="Interface">
-        <SettingRow label="Theme" description="Choose how the app looks">
+        <SettingRow label="Theme (WIP)" description="Choose how the app looks">
           <Select
             value={config.settings.appearance.theme}
             onChange={e => {
@@ -30,15 +30,15 @@ export const AppearanceTab: Component = () => {
           />
         </SettingRow>
 
-        <SettingRow label="Language" description="Select display language">
+        <SettingRow label="Language (WIP)" description="Select display language">
           <Select
             value={config.settings.appearance.language}
             onChange={e =>
               actions.updateSettings(s => (s.appearance.language = e.currentTarget.value))
             }
             options={[
-              { label: 'English', value: 'en-US' },
               { label: '简体中文', value: 'zh-CN' },
+              { label: 'English', value: 'en-US' },
               { label: '日本語', value: 'ja-JP' }
             ]}
           />
