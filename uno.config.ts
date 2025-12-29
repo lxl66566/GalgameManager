@@ -8,5 +8,14 @@ export default defineConfig({
       dark: 'class'
     }),
     presetScrollbarHide()
+  ],
+  preflights: [
+    {
+      getCSS: () => `
+        button {
+          cursor: pointer;
+        }
+      `
+    }
   ]
 }) satisfies UserConfig<Theme> as UserConfig<Theme>

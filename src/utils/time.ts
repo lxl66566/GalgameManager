@@ -25,7 +25,33 @@ const durationToForm = (useTime: [number, number]) => {
 
 const displayDuration = (d: [number, number]) => {
   const form = durationToForm(d)
-  return `${form.h}h${form.m}min`
+  return `${form.h}h${form.m}m`
 }
 
-export { dateToInput, inputToDate, durationToForm, displayDuration }
+const formatTimeAgo = (dateStr: string | null) => {
+  if (!dateStr) return 'Never'
+
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffSecs = Math.floor(diffMs / 1000)
+
+  if (diffSecs < 60) return 'Just now'
+
+  const diffMins = Math.floor(diffSecs / 60)
+  if (diffMins < 60) return `${diffMins}m ago`
+
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
+
+  const diffDays = Math.floor(diffHours / 24)
+  if (diffDays < 30) return `${diffDays}d ago`
+
+  const diffMonths = Math.floor(diffDays / 30)
+  if (diffMonths < 12) return `${diffMonths}mo ago`
+
+  const diffYears = Math.floor(diffDays / 365)
+  return `${diffYears}y ago`
+}
+
+export { dateToInput, inputToDate, durationToForm, displayDuration, formatTimeAgo }

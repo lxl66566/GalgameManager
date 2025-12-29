@@ -1,7 +1,7 @@
 import { type Game } from '@bindings/Game'
 import CachedImage from '@components/ui/CachedImage'
 import { GameActionButton } from '@components/ui/GameActionButton'
-import { displayDuration } from '@utils/time'
+import { displayDuration, formatTimeAgo } from '@utils/time'
 import { AiOutlineCloudUpload, AiOutlineEdit, AiOutlineSync } from 'solid-icons/ai'
 import { FaRegularCirclePlay, FaSolidGamepad } from 'solid-icons/fa'
 import { Show, type JSX } from 'solid-js'
@@ -19,6 +19,12 @@ interface GameItemProps {
 }
 
 export const GameItem = (props: GameItemProps) => {
+  const titleSizeClass = () => {
+    const len = props.game.name.length
+    if (len > 12) return 'text-sm' // 字数很多，用小号
+    return 'text-base'
+  }
+
   return (
     <GameItemWrapper>
       {/* 上半部分：图片区域 */}
@@ -61,19 +67,37 @@ export const GameItem = (props: GameItemProps) => {
       </div>
 
       {/* 下半部分：详情与工具栏区域 */}
-      {/* 使用 group/info 命名组，以便精确控制 hover 范围 */}
+
       <div class="relative flex-1 bg-white dark:bg-slate-700 p-4 group/info overflow-hidden">
-        {/* 游戏信息文字 */}
+        {/* 游戏信息容器 */}
         <div class="flex flex-col h-full justify-center transition-opacity duration-300 group-hover/info:opacity-40">
+          {/* 1. 游戏标题：动态字号 + 截断 */}
           <h2
-            class="dark:text-gray-200 text-gray-800 font-bold truncate text-lg"
+            class={`dark:text-gray-200 text-gray-800 font-bold truncate transition-all ${titleSizeClass()}`}
             title={props.game.name}
           >
             {props.game.name}
           </h2>
-          <p class="dark:text-gray-400 text-gray-500 text-xs mt-1 font-mono">
-            {displayDuration(props.game.useTime)}
-          </p>
+
+          {/* 2. 信息行：左右分布 */}
+          <div class="flex items-center justify-between mt-1.5 font-mono text-xs">
+            {/* 左侧：上次游玩时间 */}
+            <div
+              class="flex items-center text-gray-400 dark:text-gray-500"
+              title={`Last played: ${props.game.lastPlayedTime || 'Never'}`}
+            >
+              {/* <History class="w-3 h-3 mr-1" /> */}
+              <span>{formatTimeAgo(props.game.lastPlayedTime)}</span>
+            </div>
+
+            {/* 右侧：总游玩时长 */}
+            <div
+              class="text-gray-500 dark:text-gray-400 font-medium"
+              title="Total play time"
+            >
+              {displayDuration(props.game.useTime)}
+            </div>
+          </div>
         </div>
 
         {/* 底部滑出工具栏 */}

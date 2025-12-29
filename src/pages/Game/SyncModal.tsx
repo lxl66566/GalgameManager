@@ -246,7 +246,8 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
   }
 
   return (
-    <div class="flex flex-col w-full h-full max-h-[80vh] bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
+    // 修改 1: 固定宽度 (w-[90vw] max-w-2xl) 和高度 (h-[80vh])，防止界面随内容抖动
+    <div class="flex flex-col w-[90vw] max-w-2xl h-[80vh] bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700 transition-all">
       {/* Header */}
       <div class="flex justify-between items-center px-5 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex-shrink-0">
         <div class="flex items-center gap-2">
@@ -268,7 +269,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
         <Show
           when={!loading()}
           fallback={
-            <div class="flex items-center justify-center h-32 text-gray-500 dark:text-gray-400 text-sm">
+            <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 text-sm">
               加载中...
             </div>
           }
@@ -276,7 +277,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
           <Show
             when={archives().length > 0}
             fallback={
-              <div class="flex flex-col items-center justify-center h-40 text-gray-400 dark:text-gray-500 gap-2">
+              <div class="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 gap-2">
                 <TbFileZip class="w-8 h-8 opacity-50" />
                 <span class="text-sm">暂无存档记录</span>
               </div>
@@ -311,7 +312,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                           when={editingName() === item.name}
                           fallback={
                             <div
-                              class="flex items-center gap-2 cursor-text"
+                              class="flex items-center gap-2 cursor-text min-w-0"
                               onDblClick={() => startRename(item.name)}
                             >
                               <span
@@ -322,7 +323,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                               </span>
                               <button
                                 onClick={() => startRename(item.name)}
-                                class="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-blue-500 transition-opacity cursor-pointer"
+                                class="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-blue-500 transition-opacity cursor-pointer flex-shrink-0"
                                 title="重命名"
                               >
                                 <TbEdit class="w-3.5 h-3.5" />
@@ -330,19 +331,21 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                             </div>
                           }
                         >
+                          {/* 修改 2: Input 增加 min-w-0 和 stopPropagation */}
                           <input
                             type="text"
-                            class="w-full bg-white dark:bg-gray-900 border border-blue-500 rounded px-2 py-0.5 text-sm text-gray-900 dark:text-white focus:outline-none"
+                            class="w-full min-w-0 bg-white dark:bg-gray-900 border border-blue-500 rounded px-2 py-0.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                             value={tempName()}
                             onInput={e => setTempName(e.currentTarget.value)}
                             onBlur={() => commitRename(item.name, item.status)}
                             onKeyDown={e =>
                               e.key === 'Enter' && commitRename(item.name, item.status)
                             }
+                            onClick={e => e.stopPropagation()}
                             autofocus
                           />
                         </Show>
-                        <div class="text-[10px] text-gray-400 dark:text-gray-500 leading-none mt-1">
+                        <div class="text-[10px] text-gray-400 dark:text-gray-500 leading-none mt-1 truncate">
                           {item.status === 'Synced'
                             ? '本地 & 云端'
                             : item.status === 'LocalOnly'
@@ -353,8 +356,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                     </div>
 
                     {/* Right: Actions (Grid Layout for Alignment) */}
-                    {/* Grid Columns: [Restore Slot] [Sync Slot] [Delete Slot] */}
-                    <div class="grid grid-cols-[2rem_2rem_5rem] gap-1 items-center justify-items-center">
+                    <div class="grid grid-cols-[2rem_2rem_5rem] gap-1 items-center justify-items-center flex-shrink-0">
                       {/* Slot 1: Restore */}
                       <div class="w-full flex justify-center">
                         <Show when={item.status !== 'RemoteOnly'}>

@@ -225,15 +225,13 @@ const GamePage = (): JSX.Element => {
 
       <Show when={isEditModalOpen()}>
         <FullScreenMask onClose={closeEditModal}>
-          <div class="dark:bg-zinc-800 bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col p-6 overflow-hidden border border-gray-200 dark:border-gray-700">
-            <GameEditModal
-              gameInfo={editingGameInfo()}
-              editMode={isEditMode()}
-              cancel={closeEditModal}
-              confirm={handleSave}
-              onDelete={editingIndex() !== null ? handleDelete : undefined}
-            />
-          </div>
+          <GameEditModal
+            gameInfo={editingGameInfo()}
+            editMode={isEditMode()}
+            cancel={closeEditModal}
+            confirm={handleSave}
+            onDelete={editingIndex() !== null ? handleDelete : undefined}
+          />
         </FullScreenMask>
       </Show>
       <Show when={isSyncModalOpen()}>

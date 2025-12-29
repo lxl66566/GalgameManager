@@ -38,8 +38,7 @@ export const AppearanceTab: Component = () => {
             }
             options={[
               { label: '简体中文', value: 'zh-CN' },
-              { label: 'English', value: 'en-US' },
-              { label: '日本語', value: 'ja-JP' }
+              { label: 'English', value: 'en-US' }
             ]}
           />
         </SettingRow>
