@@ -44,6 +44,9 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
         invoke<string[]>('list_archive', { gameId: props.gameId })
       ])
 
+      console.log('localList:', localList)
+      console.log('remoteList:', remoteList)
+
       const localSet = new Set(localList)
       const remoteSet = new Set(remoteList)
       const allNames = new Set([...localList, ...remoteList])
@@ -77,7 +80,11 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
     try {
       await invoke('upload_archive', { gameId: props.gameId, archiveFilename: filename })
       toast.success('上传成功', { id: toastId })
-      await fetchData()
+
+      // 上传成功：LocalOnly -> Synced
+      setArchives(prev =>
+        prev.map(item => (item.name === filename ? { ...item, status: 'Synced' } : item))
+      )
     } catch (e) {
       toast.error(`上传失败: ${e}`, { id: toastId })
     }
@@ -88,7 +95,11 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
     try {
       await invoke('pull_archive', { gameId: props.gameId, archiveFilename: filename })
       toast.success('下载成功', { id: toastId })
-      await fetchData()
+
+      // 下载成功：RemoteOnly -> Synced
+      setArchives(prev =>
+        prev.map(item => (item.name === filename ? { ...item, status: 'Synced' } : item))
+      )
     } catch (e) {
       toast.error(`下载失败: ${e}`, { id: toastId })
     }
@@ -105,19 +116,29 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
   }
 
   const handleDeleteRemote = async (filename: string) => {
-    if (!confirm(`确定要删除云端存档 "${filename}" 吗？此操作不可恢复。`)) return
     const toastId = toast.loading('正在删除云端存档...')
     try {
       await invoke('delete_archive', { gameId: props.gameId, archiveFilename: filename })
       toast.success('删除成功', { id: toastId })
-      await fetchData()
+
+      // 不重新 fetch，直接更新本地状态
+      setArchives(prev =>
+        prev
+          .map(item => {
+            if (item.name !== filename) return item
+            // 如果原本是已同步，删除云端后变为仅本地
+            if (item.status === 'Synced') return { ...item, status: 'LocalOnly' }
+            // 如果原本是仅云端，则直接移除
+            return null
+          })
+          .filter((item): item is ArchiveItem => item !== null)
+      )
     } catch (e) {
       toast.error(`删除失败: ${e}`, { id: toastId })
     }
   }
 
   const handleDeleteLocal = async (filename: string) => {
-    if (!confirm(`确定要删除本地备份 "${filename}" 吗？`)) return
     const toastId = toast.loading('正在删除本地存档...')
     try {
       await invoke('delete_local_archive', {
@@ -125,7 +146,19 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
         archiveFilename: filename
       })
       toast.success('删除成功', { id: toastId })
-      await fetchData()
+
+      // 不重新 fetch，直接更新本地状态
+      setArchives(prev =>
+        prev
+          .map(item => {
+            if (item.name !== filename) return item
+            // 如果原本是已同步，删除本地后变为仅云端
+            if (item.status === 'Synced') return { ...item, status: 'RemoteOnly' }
+            // 如果原本是仅本地，则直接移除
+            return null
+          })
+          .filter((item): item is ArchiveItem => item !== null)
+      )
     } catch (e) {
       toast.error(`删除失败: ${e}`, { id: toastId })
     }
@@ -139,8 +172,16 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
 
   const commitRename = async (oldName: string, status: ArchiveStatus) => {
     const newName = tempName().trim()
+
+    // 1. 基础校验：名称为空或未修改
     if (!newName || newName === oldName) {
       setEditingName(null)
+      return
+    }
+
+    // 2. 冲突校验：检查新名称是否已存在于列表中
+    if (archives().some(a => a.name === newName)) {
+      toast.error('该存档名称已存在，请换一个名字')
       return
     }
 
@@ -159,7 +200,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
           newArchiveFilename: newName
         })
       } else {
-        // Synced: 需要同时修改，且保持一致性
+        // Synced: 需要同时修改
         // 1. 先改本地
         await invoke('rename_local_archive', {
           gameId: props.gameId,
@@ -179,19 +220,28 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
           console.error('Remote rename failed, rolling back local...', remoteErr)
           await invoke('rename_local_archive', {
             gameId: props.gameId,
-            archiveFilename: newName, // 注意这里是把新名字改回旧名字
+            archiveFilename: newName,
             newArchiveFilename: oldName
           })
+          // 抛出错误，中断后续的状态更新
           throw new Error(`云端重命名失败，已回滚本地更改: ${remoteErr}`)
         }
       }
 
       toast.success('重命名成功', { id: toastId })
       setEditingName(null)
-      await fetchData()
+
+      // 3. 状态更新：修改名称并重新排序
+      setArchives(prev => {
+        const updatedList = prev.map(item =>
+          item.name === oldName ? { ...item, name: newName } : item
+        )
+        // 保持原本的倒序排列 (Z-A)
+        return updatedList.sort((a, b) => b.name.localeCompare(a.name))
+      })
     } catch (e) {
       toast.error(`${e}`, { id: toastId })
-      // 保持编辑状态以便用户重试
+      // 发生错误时保持编辑状态，方便用户修改后重试
     }
   }
 
@@ -200,7 +250,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       {/* Header */}
       <div class="flex justify-between items-center px-5 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex-shrink-0">
         <div class="flex items-center gap-2">
-          <h2 class="text-lg font-bold text-gray-900 dark:text-white">存档同步管理</h2>
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white">存档管理</h2>
           <span class="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
             {archives().length} 个存档
           </span>
@@ -394,9 +444,9 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       </div>
 
       {/* Footer Hint */}
-      <div class="px-4 py-2 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 text-[10px] text-gray-400 text-center flex-shrink-0">
+      {/* <div class="px-4 py-2 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 text-[10px] text-gray-400 text-center flex-shrink-0">
         双击文件名重命名
-      </div>
+      </div> */}
     </div>
   )
 }

@@ -22,7 +22,8 @@ export const GameItem = (props: GameItemProps) => {
       {/* 上半部分：图片区域 */}
       <div class="relative group cursor-pointer h-52 overflow-hidden">
         <CachedImage
-          url={props.game.imageUrl ?? ''}
+          url={props.game.imageUrl}
+          hash={props.game.imageSha256}
           alt={props.game.name}
           class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />

@@ -11,12 +11,12 @@ export default function PathListEditor(props: PathListEditorProps) {
   // 记录当前正在编辑的索引，null 表示没有在编辑
   const [editingIndex, setEditingIndex] = createSignal<number | null>(null)
 
-  const handleAddPath = async () => {
+  const handleAddPath = async (directory: boolean) => {
     try {
       const selected = await open({
-        directory: true,
+        directory,
         multiple: true,
-        title: '选择存档文件夹'
+        title: '选择存档文件/文件夹'
       })
 
       if (selected) {
@@ -43,7 +43,6 @@ export default function PathListEditor(props: PathListEditorProps) {
   }
 
   const handleUpdatePath = (index: number, newValue: string) => {
-    // 如果内容为空，视为取消编辑或保持原样（根据需求也可以设计为删除）
     if (!newValue.trim()) {
       setEditingIndex(null)
       return
@@ -60,13 +59,22 @@ export default function PathListEditor(props: PathListEditorProps) {
       {/* Header */}
       <div class="flex justify-between items-center">
         <span class="text-sm font-bold text-gray-300">{props.label || '存档路径'}</span>
-        <button
-          onClick={handleAddPath}
-          class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded transition-colors cursor-pointer"
-          type="button"
-        >
-          + 添加路径
-        </button>
+        <div class="flex gap-2">
+          <button
+            onClick={() => handleAddPath(false)}
+            class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded transition-colors cursor-pointer"
+            type="button"
+          >
+            + 添加文件
+          </button>
+          <button
+            onClick={() => handleAddPath(true)}
+            class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded transition-colors cursor-pointer"
+            type="button"
+          >
+            + 添加文件夹
+          </button>
+        </div>
       </div>
 
       {/* List Container */}

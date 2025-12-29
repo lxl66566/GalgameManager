@@ -77,6 +77,7 @@ const CachedImage: Component<ImageProps> = props => {
 
         // 3. 存入缓存
         cacheImage(data)
+        props.onHashUpdate?.(data.hash)
 
         return data
       } catch (e: any) {
@@ -88,17 +89,6 @@ const CachedImage: Component<ImageProps> = props => {
       }
     }
   )
-
-  // 监听 Hash 变化并通知父组件 (用于首次加载生成 Hash 后回写 Config)
-  createEffect(() => {
-    if (imageData.state === 'ready') {
-      const data = imageData()
-      // 只有当新获取的 hash 与 props 传入的不一致时才通知，避免死循环
-      if (data && data.hash && props.hash !== data.hash) {
-        props.onHashUpdate?.(data.hash)
-      }
-    }
-  })
 
   // 错误日志
   createEffect(() => {

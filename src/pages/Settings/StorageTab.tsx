@@ -36,6 +36,13 @@ const WebDavForm: Component<{
         onInput={e => props.onChange('password', e.currentTarget.value)}
       />
     </SettingRow>
+    <SettingRow label="Root" indent>
+      <Input
+        value={props.config.rootPath}
+        onInput={e => props.onChange('rootPath', e.currentTarget.value)}
+        placeholder=""
+      />
+    </SettingRow>
   </SettingSubGroup>
 )
 

@@ -1,19 +1,26 @@
 use std::path::Path;
 
-use crate::error::Result;
-use futures::TryStreamExt as _;
+use futures::{AsyncWriteExt, TryStreamExt as _};
 use opendal::Operator;
 use tokio::fs;
 use tokio_util::compat::TokioAsyncReadCompatExt;
 
+use crate::error::Result;
+
 #[async_trait::async_trait]
 impl super::MyOperation for Operator {
     async fn list_archive(&self, game_id: u32) -> Result<Vec<String>> {
-        let path = format!("{}", game_id);
-        let mut lister = self.lister_with(&path).recursive(true).await?;
+        let path = format!("{}/", game_id);
+        let mut lister = self.lister_with(&path).recursive(false).await?;
         let mut archives = vec![];
+        let d = lister.try_next().await?;
+        // empty dir
+        if d.is_none() {
+            return Ok(archives);
+        }
+        debug_assert_eq!(d.unwrap().path(), path);
         while let Some(e) = lister.try_next().await? {
-            archives.push(e.path().to_string());
+            archives.push(e.path().strip_prefix(&path).unwrap_or(e.path()).to_string());
         }
         Ok(archives)
     }
@@ -24,15 +31,20 @@ impl super::MyOperation for Operator {
         archive_filename: String,
         backup_dir: &Path,
     ) -> Result<()> {
+        // create game dir first, otherwise the upload will fail 409
+        self.create_dir(&format!("{}/", game_id)).await?;
+
         let remote_path = format!("{}/{}", game_id, archive_filename);
         let uploader = self
             .writer_with(&remote_path)
             .chunk(4 * 1024 * 1024)
             .concurrent(8)
             .await?;
+        let mut writer = uploader.into_futures_async_write();
         let archive_path = backup_dir.join(game_id.to_string()).join(archive_filename);
         let file = fs::File::open(archive_path).await?;
-        futures::io::copy(file.compat(), &mut uploader.into_futures_async_write()).await?;
+        futures::io::copy(file.compat(), &mut writer).await?;
+        writer.close().await?;
         Ok(())
     }
 

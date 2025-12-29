@@ -1,3 +1,5 @@
+use std::fs;
+
 use config_file2::Storable;
 use strfmt::strfmt;
 use tauri::{AppHandle, Manager as _};
@@ -13,7 +15,6 @@ use crate::{
     sync::{init_operator, CURRENT_OPERATOR},
     utils::list_dir_all,
 };
-use std::fs;
 
 #[tauri::command]
 pub fn get_config() -> Result<Config> {
@@ -127,6 +128,10 @@ pub async fn upload_archive(app: AppHandle, game_id: u32, archive_filename: Stri
     init_operator().await?;
     let lock = CURRENT_OPERATOR.lock().await;
     let op = lock.as_ref().unwrap();
+    println!(
+        "upload archive: game_id={}, archive_filename={}",
+        game_id, archive_filename
+    );
     op.upload_archive(
         game_id,
         archive_filename,

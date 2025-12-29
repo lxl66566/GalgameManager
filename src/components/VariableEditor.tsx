@@ -1,4 +1,5 @@
 import { createMemo, createSignal, For, Show, type Component } from 'solid-js'
+import toast from 'solid-toast'
 
 interface VariableEditorProps {
   /** 变量键值对 Map */
@@ -71,10 +72,7 @@ export const VariableEditor: Component<VariableEditorProps> = props => {
     if (!trimmedNewKey) return // 不能为空（或者你可以选择 revert）
 
     if (props.variables.hasOwnProperty(trimmedNewKey)) {
-      // 如果新名字冲突，这里简单处理为重置回旧名字，或者你可以弹窗提示
-      // 实际工程中，建议用 toast 提示错误，这里为了简洁不做复杂 UI
-      console.warn(`Key "${trimmedNewKey}" already exists.`)
-      // 强制刷新 UI 回旧值（DOM 操作或依赖 Solid 响应式重绘）
+      toast.error(`Key "${trimmedNewKey}" already exists`)
       return
     }
 
@@ -123,7 +121,7 @@ export const VariableEditor: Component<VariableEditorProps> = props => {
                   (e.key === 'Enter' && handleConfirmAdd()) ||
                   (e.key === 'Escape' && handleCancelAdd())
                 }
-                class="w-1/3 bg-gray-900 text-white text-xs px-2 py-1 rounded border border-gray-600 focus:border-blue-500 outline-none font-mono uppercase placeholder-gray-600"
+                class="w-1/3 bg-gray-900 text-white text-xs px-2 py-1 rounded border border-gray-600 focus:border-blue-500 outline-none font-mono placeholder-gray-600"
                 autofocus
               />
               <input
@@ -181,7 +179,7 @@ export const VariableEditor: Component<VariableEditorProps> = props => {
                     // 失去焦点或回车时触发重命名
                     onBlur={e => handleKeyBlur(key, e.currentTarget.value)}
                     onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()}
-                    class="w-full bg-transparent text-blue-300 font-mono text-xs pl-1 pr-1 py-0.5 rounded border border-transparent hover:border-gray-600 focus:bg-gray-900 focus:border-blue-500 outline-none transition-all truncate uppercase"
+                    class="w-full bg-transparent text-blue-300 font-mono text-xs pl-1 pr-1 py-0.5 rounded border border-transparent hover:border-gray-600 focus:bg-gray-900 focus:border-blue-500 outline-none transition-all truncate"
                     title="Edit Variable Name"
                   />
                 </div>

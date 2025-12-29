@@ -44,7 +44,12 @@ pub struct WebDavConfig {
     pub endpoint: String,
     pub username: String,
     pub password: Option<String>,
+    #[serde(default = "default_root_path")]
     pub root_path: String,
+}
+
+fn default_root_path() -> String {
+    concat!("/", env!("CARGO_PKG_NAME")).to_string()
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, TS)]

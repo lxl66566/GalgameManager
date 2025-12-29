@@ -225,7 +225,7 @@ export default function GameEditModal(props: GameEditModalProps) {
           <hr class="border-gray-300 dark:border-gray-700 my-1" />
 
           <PathListEditor
-            label="存档/配置文件夹"
+            label="存档路径"
             paths={localGame.savePaths}
             onChange={newPaths => setLocalGame('savePaths', newPaths)}
           />

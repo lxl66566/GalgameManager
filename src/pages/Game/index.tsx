@@ -1,5 +1,6 @@
 import { type Game } from '@bindings/Game'
 import { DropArea } from '@components/DropArea'
+import FullScreenMask from '@components/ui/FullScreenMask'
 import { invoke } from '@tauri-apps/api/core'
 import { getParentPath } from '@utils/path'
 import { useConfig } from '~/store'
@@ -92,6 +93,10 @@ const GamePage = (): JSX.Element => {
   const handleBackup = async (index: number) => {
     const game = config.games[index]
     if (!game) return
+    if (game.savePaths.length === 0) {
+      toast.error('No save paths defined')
+      return
+    }
 
     // 防止重复点击
     if (backingUpId() === game.id) return
@@ -184,14 +189,8 @@ const GamePage = (): JSX.Element => {
 
       {/* Modal 部分保持不变 */}
       <Show when={isEditModalOpen()}>
-        <div
-          class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={closeEditModal}
-        >
-          <div
-            class="dark:bg-zinc-800 bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col p-6 overflow-hidden border border-gray-200 dark:border-gray-700"
-            onClick={e => e.stopPropagation()}
-          >
+        <FullScreenMask onClose={closeEditModal}>
+          <div class="dark:bg-zinc-800 bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col p-6 overflow-hidden border border-gray-200 dark:border-gray-700">
             <GameEditModal
               gameInfo={editingGameInfo()}
               editMode={isEditMode()}
@@ -200,23 +199,15 @@ const GamePage = (): JSX.Element => {
               onDelete={editingIndex() !== null ? handleDelete : undefined}
             />
           </div>
-        </div>
+        </FullScreenMask>
       </Show>
       <Show when={isSyncModalOpen()}>
-        <div
-          class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={closeEditModal}
-        >
-          <div
-            class="dark:bg-zinc-800 bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col p-6 overflow-hidden border border-gray-200 dark:border-gray-700"
-            onClick={e => e.stopPropagation()}
-          >
-            <ArchiveSyncModal
-              gameId={editingGameInfo()?.id ?? 0}
-              onClose={closeSyncModal}
-            />
-          </div>
-        </div>
+        <FullScreenMask onClose={closeSyncModal}>
+          <ArchiveSyncModal
+            gameId={editingGameInfo()?.id ?? 0}
+            onClose={closeSyncModal}
+          />
+        </FullScreenMask>
       </Show>
     </>
   )

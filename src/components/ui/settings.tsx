@@ -72,14 +72,15 @@ export const Input: Component<JSX.InputHTMLAttributes<HTMLInputElement>> = props
     />
   )
 }
-
 // 5. 选择框：高度固定 h-8
 export const Select: Component<
   JSX.SelectHTMLAttributes<HTMLSelectElement> & {
     options: { label: string; value: string | number }[]
   }
 > = props => {
-  const [local, others] = splitProps(props, ['class', 'options'])
+  // 在 splitProps 中把 'value' 也解构出来，这样我们在组件内部就能拿到它进行比较
+  const [local, others] = splitProps(props, ['class', 'options', 'value'])
+
   return (
     <div class="relative">
       <select
@@ -90,12 +91,21 @@ export const Select: Component<
           'pl-2.5 pr-8 py-0 appearance-none cursor-pointer transition-all',
           local.class
         )}
+        // 显式绑定 value
+        value={local.value}
         {...others}
       >
         {local.options.map(opt => (
-          <option value={opt.value}>{opt.label}</option>
+          <option
+            value={opt.value}
+            // 显式告诉浏览器哪个选项是被选中的
+            selected={opt.value === local.value}
+          >
+            {opt.label}
+          </option>
         ))}
       </select>
+
       {/* 紧凑的箭头图标 */}
       <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

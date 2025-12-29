@@ -1,11 +1,12 @@
-use crate::error::Result;
+use std::{fs, path::PathBuf, sync::LazyLock as Lazy, time::Duration};
+
 use base64::prelude::*;
 use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::fs;
-use std::{path::PathBuf, sync::LazyLock as Lazy, time::Duration};
 use ts_rs::TS;
+
+use crate::error::Result;
 
 pub static CACHE_DIR: Lazy<PathBuf> = Lazy::new(|| {
     let dir = home::home_dir()
@@ -63,6 +64,7 @@ pub async fn get_image(path_or_url: &str, hash: Option<&str>) -> Result<ImageDat
     if let Some(hash) = hash {
         let cache_path = IMAGE_CACHE_DIR.join(hash);
         if let Ok(bytes) = fs::read(&cache_path) {
+            println!("image cache hit: {}", cache_path.display());
             return Ok((bytes.into(), hash.to_string()).into());
         }
     }
@@ -82,5 +84,6 @@ pub async fn get_image(path_or_url: &str, hash: Option<&str>) -> Result<ImageDat
 }
 
 async fn download_image(url: &str) -> std::result::Result<bytes::Bytes, reqwest::Error> {
+    println!("downloading image: {}", url);
     IMAGE_CLIENT.get(url).send().await?.bytes().await
 }

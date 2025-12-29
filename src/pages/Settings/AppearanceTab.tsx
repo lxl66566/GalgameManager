@@ -17,7 +17,7 @@ export const AppearanceTab: Component = () => {
             value={config.settings.appearance.theme}
             onChange={e => {
               const newValue = e.currentTarget.value as ThemeMode
-              setColorMode(newValue as any)
+              setColorMode(newValue)
               actions.updateSettings(
                 s => (s.appearance.theme = e.currentTarget.value as ThemeMode)
               )
@@ -44,8 +44,6 @@ export const AppearanceTab: Component = () => {
           />
         </SettingRow>
       </SettingSection>
-
-      {/* 预留：如果未来有更多外观设置，如字体大小或强调色，可以在这里添加新的 Section */}
     </div>
   )
 }
