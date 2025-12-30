@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use crate::db::{Config, CONFIG};
 use futures::{AsyncWriteExt, TryStreamExt as _};
 use opendal::Operator;
 use tokio::fs;
@@ -87,5 +88,34 @@ impl super::MyOperation for Operator {
         let new_remote_path = format!("{}/{}", game_id, new_archive_filename);
         self.rename(&remote_path, &new_remote_path).await?;
         Ok(())
+    }
+
+    async fn upload_config(&self) -> Result<()> {
+        let remote_path = "config.toml";
+        let mut uploader = self
+            .writer_with(remote_path)
+            .chunk(4 * 1024 * 1024)
+            .concurrent(8)
+            .await?;
+        let config_str = toml::to_string(&*CONFIG.lock()).unwrap();
+        uploader.write(config_str).await?;
+        Ok(())
+    }
+
+    async fn get_remote_config(&self) -> Result<Option<Config>> {
+        let remote_path = "config.toml";
+        let reader = match self
+            .reader_with(remote_path)
+            .chunk(4 * 1024 * 1024)
+            .concurrent(8)
+            .await
+        {
+            Ok(r) => r,
+            Err(e) if e.kind() == opendal::ErrorKind::NotFound => return Ok(None),
+            Err(e) => return Err(e.into()),
+        };
+        let buf = reader.read(..).await?;
+        let new_config: Config = toml::from_slice(&buf.to_bytes())?;
+        Ok(Some(new_config))
     }
 }

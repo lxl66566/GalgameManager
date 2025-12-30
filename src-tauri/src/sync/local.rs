@@ -1,7 +1,9 @@
 use std::path::PathBuf;
 
+use crate::db::{Config, CONFIG};
 use crate::error::Result;
 use crate::utils::list_dir_all;
+use config_file2::{LoadConfigFile, StoreConfigFile};
 use std::path::Path;
 use std::{fs, io};
 
@@ -73,6 +75,18 @@ impl super::MyOperation for LocalUploader {
         let new_game_src = game_dst.join(&new_archive_filename);
         fs::rename(game_src, new_game_src)?;
         Ok(())
+    }
+
+    async fn upload_config(&self) -> Result<()> {
+        let dst = self.0.join("config.toml");
+        CONFIG.lock().store(&dst)?;
+        println!("config stored to {:?}", dst);
+        Ok(())
+    }
+
+    async fn get_remote_config(&self) -> Result<Option<Config>> {
+        let src = self.0.join("config.toml");
+        Ok(Config::load(src)?)
     }
 }
 

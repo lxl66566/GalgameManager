@@ -15,7 +15,7 @@ pub struct Settings {
     pub appearance: AppearanceConfig,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq, TS)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub enum StorageProvider {
@@ -26,7 +26,7 @@ pub enum StorageProvider {
 }
 
 // 2. 修改：StorageConfig 现在持有所有配置 + 当前激活的 Provider
-#[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
@@ -38,7 +38,7 @@ pub struct StorageConfig {
                                    // pub auto_sync_interval: u32, // 0 = off
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, TS)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct WebDavConfig {
@@ -64,7 +64,7 @@ impl Default for WebDavConfig {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, TS)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct S3Config {

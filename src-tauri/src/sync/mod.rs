@@ -6,7 +6,7 @@ use std::{path::Path, sync::LazyLock as Lazy};
 use local::LocalUploader;
 
 use crate::db::settings::{StorageConfig, StorageProvider};
-use crate::db::CONFIG;
+use crate::db::{Config, CONFIG};
 use crate::error::Result;
 use ::opendal::{services, Operator};
 use tokio::sync::Mutex;
@@ -47,6 +47,8 @@ pub trait MyOperation {
         archive_filename: String,
         new_archive_filename: String,
     ) -> Result<()>;
+    async fn upload_config(&self) -> Result<()>;
+    async fn get_remote_config(&self) -> Result<Option<Config>>;
 }
 
 impl StorageConfig {

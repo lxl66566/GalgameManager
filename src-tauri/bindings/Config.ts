@@ -5,7 +5,14 @@ import type { Settings } from "./Settings";
 
 export type Config = {
   dbVersion: number;
+  /**
+   * The last time the config was updated from frontend
+   */
   lastUpdated: string;
+  /**
+   * The last time the config was uploaded to remote storage
+   */
+  lastUploaded: string | null;
   games: Array<Game>;
   devices: Array<Device>;
   settings: Settings;

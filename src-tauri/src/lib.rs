@@ -8,9 +8,7 @@ pub mod sync;
 pub mod utils;
 
 use bindings::*;
-use tauri_plugin_fs::FsExt;
-
-use crate::db::CONFIG_DIR;
+use tauri::generate_context;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -34,13 +32,31 @@ pub fn run() {
             pull_archive,
             rename_remote_archive,
             clean_current_operator,
+            upload_config,
+            get_remote_config,
             exec
         ])
-        .setup(|app| {
-            let scope = app.fs_scope();
-            scope.allow_directory(CONFIG_DIR.as_path(), true)?;
-            Ok(())
-        })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .setup(|_app| Ok(()))
+        .build(generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app, event| {
+            #[allow(clippy::single_match)]
+            match event {
+                tauri::RunEvent::ExitRequested { api, code, .. } => {
+                    if code.is_none() {
+                        api.prevent_exit();
+                        tauri::async_runtime::spawn(async move {
+                            let res = upload_config().await;
+                            if let Err(e) = res {
+                                println!("failed to upload config: {e}");
+                            }
+                        });
+                        std::process::exit(0);
+                    } else {
+                        println!("exit code: {:?}", code);
+                    }
+                }
+                _ => (),
+            }
+        });
 }

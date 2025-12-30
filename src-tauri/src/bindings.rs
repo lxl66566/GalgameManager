@@ -5,7 +5,7 @@ use tauri::{AppHandle, Manager as _};
 
 use crate::{
     archive::{archive_impl, restore_impl},
-    db::{device::DEVICE_UID, Config, CONFIG},
+    db::{device::DEVICE_UID, settings::StorageConfig, Config, CONFIG},
     error::Result,
     exec::launch_game,
     http::ImageData,
@@ -174,6 +174,27 @@ pub async fn clean_current_operator() -> Result<()> {
     let mut lock = CURRENT_OPERATOR.lock().await;
     *lock = None;
     Ok(())
+}
+
+#[tauri::command(async)]
+pub async fn upload_config() -> Result<()> {
+    init_operator().await?;
+    let lock = CURRENT_OPERATOR.lock().await;
+    let op = lock.as_ref().unwrap();
+    op.upload_config().await?;
+    Ok(())
+}
+
+#[tauri::command(async)]
+pub async fn get_remote_config() -> Result<Option<Config>> {
+    // prevent downloading config if storage is not configured
+    if CONFIG.lock().settings.storage == StorageConfig::default() {
+        return Ok(None);
+    }
+    init_operator().await?;
+    let lock = CURRENT_OPERATOR.lock().await;
+    let op = lock.as_ref().unwrap();
+    op.get_remote_config().await
 }
 
 // region exec

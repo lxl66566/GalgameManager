@@ -40,6 +40,9 @@ pub enum Error {
 
     #[error("Windows API error: {0}")]
     WindowsApi(#[from] windows_result::Error),
+
+    #[error("Broken config content: {0}")]
+    BrokenConfig(#[from] toml::de::Error),
 }
 
 impl Clone for Error {

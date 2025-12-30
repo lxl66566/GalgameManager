@@ -41,7 +41,10 @@ impl Storable for Config {
 #[serde(default)]
 pub struct Config {
     pub db_version: u32,
+    /// The last time the config was updated from frontend
     pub last_updated: DateTime<Utc>,
+    /// The last time the config was uploaded to remote storage
+    pub last_uploaded: Option<DateTime<Utc>>,
     pub games: Vec<Game>,
     pub devices: Vec<Device>,
     pub settings: Settings,

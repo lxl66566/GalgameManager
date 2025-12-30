@@ -47,6 +47,7 @@ tauri-plugin-fs     = "2.4.4"
 thiserror           = "2.0.17"
 tokio               = { version = "1", features = ["fs", "macros", "process"] }
 tokio-util          = { version = "0.7", features = ["compat"] }
+toml                = "0.9.10"
 ts-rs               = { version = "11.1.0", features = ["format", "chrono-impl"] }
 walkdir             = "2.5.0"
 # tauri-plugin-sql  = { version = "2.2.0", features = ["sqlite"] }
