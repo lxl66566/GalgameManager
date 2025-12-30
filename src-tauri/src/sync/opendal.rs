@@ -99,6 +99,7 @@ impl super::MyOperation for Operator {
             .await?;
         let config_str = toml::to_string(&*CONFIG.lock()).unwrap();
         uploader.write(config_str).await?;
+        uploader.close().await?;
         Ok(())
     }
 

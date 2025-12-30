@@ -146,12 +146,12 @@ const startAutoUploadTask = () => {
       current.lastUploaded &&
       new Date(current.lastUpdated) > new Date(current.lastUploaded)
     ) {
-      await performUpload()
+      await performUpload(true)
     }
   }, 1200000)
 }
 
-const performUpload = async () => {
+export const performUpload = async (isAutoUpload?: boolean) => {
   try {
     // 调用 Rust 上传
     await invoke('upload_config')
@@ -170,9 +170,9 @@ const performUpload = async () => {
     const newConfig = { ...unwrap(config), lastUploaded: now }
     await invoke('save_config', { newConfig })
 
-    toast.success('Config auto upload successful')
+    toast.success(`Config ${isAutoUpload ? 'auto ' : ''}upload successfully`)
   } catch (e) {
-    toast.error(`Auto upload failed: ${e}`)
+    toast.error(`Config ${isAutoUpload ? 'auto ' : ''}upload failed: ${e}`)
   }
 }
 

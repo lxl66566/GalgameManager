@@ -2,6 +2,7 @@ import type { S3Config } from '@bindings/S3Config'
 import type { StorageProvider } from '@bindings/StorageProvider'
 import type { WebDavConfig } from '@bindings/WebDavConfig'
 import {
+  Button,
   Input,
   Select,
   SettingRow,
@@ -9,8 +10,9 @@ import {
   SettingSubGroup
 } from '@components/ui/settings'
 import { invoke } from '@tauri-apps/api/core'
-import { useConfig } from '~/store'
-import { createMemo, Match, Switch, type Component } from 'solid-js'
+import { performUpload, useConfig } from '~/store'
+import { FiCloud, FiLoader } from 'solid-icons/fi'
+import { createMemo, createSignal, Match, Show, Switch, type Component } from 'solid-js'
 
 // --- 子组件：WebDAV 表单 ---
 const WebDavForm: Component<{
@@ -147,6 +149,14 @@ export const StorageTab: Component = () => {
     })
   }
 
+  // 备份配置
+  const [backingUp, setBackingUp] = createSignal(false)
+  const handleBackupConfig = async () => {
+    setBackingUp(true)
+    await performUpload()
+    setBackingUp(false)
+  }
+
   return (
     <div class="max-w-4xl">
       <SettingSection title="Storage Backend">
@@ -198,6 +208,24 @@ export const StorageTab: Component = () => {
               { label: 'tar', value: 'tar' }
             ]}
           />
+        </SettingRow>
+      </SettingSection>
+
+      <SettingSection title="Data Management">
+        <SettingRow label="Backup" description="Manually upload current config to remote">
+          <Button
+            onClick={handleBackupConfig}
+            disabled={backingUp()}
+            class="min-w-[100px]" // 保证加载时宽度不跳动
+          >
+            <Show
+              when={!backingUp()}
+              fallback={<FiLoader class="animate-spin h-3.5 w-3.5 mr-1.5" />}
+            >
+              <FiCloud class="h-3.5 w-3.5 mr-1.5 text-gray-500 dark:text-gray-400" />
+            </Show>
+            {backingUp() ? 'Syncing...' : 'Backup Config'}
+          </Button>
         </SettingRow>
       </SettingSection>
     </div>

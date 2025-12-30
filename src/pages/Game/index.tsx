@@ -118,11 +118,8 @@ const GamePage = (): JSX.Element => {
   const handleDelete = () => {
     const index = editingIndex()
     if (index !== null) {
-      const confirmed = confirm(`确定要删除游戏 "${config.games[index].name}" 吗？`)
-      if (confirmed) {
-        actions.removeGame(index)
-        closeEditModal()
-      }
+      actions.removeGame(index)
+      closeEditModal()
     }
   }
 

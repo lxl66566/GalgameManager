@@ -120,3 +120,25 @@ export const Select: Component<
     </div>
   )
 }
+
+// 6. 通用按钮：高度固定 h-8，适配亮暗色
+export const Button: Component<JSX.ButtonHTMLAttributes<HTMLButtonElement>> = props => {
+  const [local, others] = splitProps(props, ['class', 'children'])
+  return (
+    <button
+      type="button"
+      class={clsx(
+        'inline-flex items-center justify-center h-8 px-3 rounded border shadow-sm transition-all',
+        'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900',
+        'text-xs font-medium text-gray-700 dark:text-gray-200',
+        'hover:bg-gray-50 dark:hover:bg-gray-800',
+        'focus:outline-none focus:ring-2 focus:ring-blue-500/50',
+        'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-gray-900',
+        local.class
+      )}
+      {...others}
+    >
+      {local.children}
+    </button>
+  )
+}

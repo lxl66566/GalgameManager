@@ -45,7 +45,8 @@ pub fn run() {
                 tauri::RunEvent::ExitRequested { api, code, .. } => {
                     if code.is_none() {
                         api.prevent_exit();
-                        tauri::async_runtime::spawn(async move {
+                        tauri::async_runtime::block_on(async move {
+                            println!("uploading config...");
                             let res = upload_config().await;
                             if let Err(e) = res {
                                 println!("failed to upload config: {e}");

@@ -126,7 +126,7 @@ export const VariableEditor: Component<VariableEditorProps> = props => {
               />
               <input
                 type="text"
-                placeholder="Value (e.g. C:/Games)"
+                placeholder="Value"
                 value={newValue()}
                 onInput={e => setNewValue(e.currentTarget.value)}
                 onKeyDown={e =>
