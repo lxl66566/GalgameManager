@@ -8,13 +8,22 @@ pub mod sync;
 pub mod utils;
 
 use bindings::*;
-use tauri::generate_context;
+use tauri::{
+    generate_context,
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Manager,
+};
+use tauri_plugin_notification::NotificationExt;
+
+use crate::db::CONFIG_DIR;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![
             device_id,
             resolve_var,
@@ -44,32 +53,100 @@ pub fn run() {
                     .handle()
                     .plugin(tauri_plugin_window_state::Builder::default().build());
             }
+            let open = MenuItem::with_id(app, "open", "Open", true, None::<&str>)?;
+            let quit_nosync = MenuItem::with_id(
+                app,
+                "quit_nosync",
+                "Quit (without sync)",
+                true,
+                None::<&str>,
+            )?;
+            let quit_sync = MenuItem::with_id(app, "quit_sync", "Quit", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&open, &quit_nosync, &quit_sync])?;
+            #[allow(clippy::single_match)]
+            let _tray = TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .menu(&menu)
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "quit_sync" => {
+                        app.exit(114514);
+                    }
+                    "quit_nosync" => {
+                        app.exit(0);
+                    }
+                    "open" => _ = app.get_webview_window("main").unwrap().unminimize(),
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| match event {
+                    TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } => {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.unminimize();
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    _ => {}
+                })
+                .build(app)?;
             Ok(())
         })
         .build(generate_context!())
         .expect("error while building tauri application")
-        .run(|_app, event| {
-            #[allow(clippy::single_match)]
-            match event {
-                tauri::RunEvent::ExitRequested { api, code, .. } => {
-                    if code.is_none() {
-                        api.prevent_exit();
-                        tauri::async_runtime::block_on(async move {
-                            println!("[exit] uploading config...");
-                            match upload_config_safe().await {
-                                Ok(true) => println!("[exit] upload config success"),
-                                Ok(false) => {
-                                    println!("[exit] remote config is newer, not uploading")
-                                }
-                                Err(e) => println!("[exit] failed to upload config: {e}"),
-                            }
-                        });
-                        std::process::exit(0);
-                    } else {
-                        println!("exit code: {:?}", code);
-                    }
+        .run(|app, event| match event {
+            tauri::RunEvent::WindowEvent {
+                event: tauri::WindowEvent::CloseRequested { api, .. },
+                ..
+            } => {
+                api.prevent_close();
+                app.get_webview_window("main").unwrap().minimize().unwrap();
+                // minimize notification
+                let seen_path = CONFIG_DIR.join("minimize_seen");
+                if !seen_path.exists() {
+                    _ = app
+                        .notification()
+                        .builder()
+                        .title("GalgameManager")
+                        .body("GalgameManager is running in the background")
+                        .show();
+                    _ = std::fs::File::create(seen_path);
                 }
-                _ => (),
+
+                // upload config
+                tauri::async_runtime::spawn(async move {
+                    println!("[minimize] uploading config...");
+                    match bindings::upload_config_safe().await {
+                        Ok(true) => println!("[minimize] upload config success"),
+                        Ok(false) => {
+                            println!("[minimize] remote config is newer, not uploading")
+                        }
+                        Err(e) => println!("[minimize] failed to upload config: {e}"),
+                    }
+                });
             }
+            tauri::RunEvent::ExitRequested { api, code, .. } => {
+                if code == Some(114514) {
+                    app.get_webview_window("main").unwrap().minimize().unwrap();
+                    api.prevent_exit();
+                    tauri::async_runtime::block_on(async move {
+                        println!("[exit] uploading config...");
+                        match bindings::upload_config_safe().await {
+                            Ok(true) => println!("[exit] upload config success"),
+                            Ok(false) => {
+                                println!("[exit] remote config is newer, not uploading")
+                            }
+                            Err(e) => println!("[exit] failed to upload config: {e}"),
+                        }
+                    });
+                    std::process::exit(0);
+                } else {
+                    println!("exit code: {:?}", code);
+                }
+            }
+            _ => (),
         });
 }
