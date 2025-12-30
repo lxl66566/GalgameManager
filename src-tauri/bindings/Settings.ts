@@ -7,4 +7,8 @@ export type Settings = {
   storage: StorageConfig;
   archive: ArchiveConfig;
   appearance: AppearanceConfig;
+  /**
+   * in secs
+   */
+  autoSyncInterval: number;
 };

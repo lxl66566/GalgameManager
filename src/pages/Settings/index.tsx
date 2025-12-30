@@ -12,7 +12,7 @@ export const SettingsPage: Component = () => {
 
   const tabs: TabItem<TabKey>[] = [
     { key: 'storage', label: 'Storage & Sync' },
-    { key: 'device', label: 'Device & Paths' },
+    { key: 'device', label: 'Device' },
     { key: 'general', label: 'Appearance' }
   ]
 

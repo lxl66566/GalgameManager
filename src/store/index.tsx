@@ -5,10 +5,10 @@ import type { Game } from '@bindings/Game'
 import type { Settings } from '@bindings/Settings'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { FiCheck, FiCloud, FiRotateCcw } from 'solid-icons/fi'
 import { onCleanup } from 'solid-js'
 import { createStore, produce, unwrap } from 'solid-js/store'
 import toast from 'solid-toast'
+import { useAutoUploadService } from './AutoUploadService'
 import { currentDeviceId } from './Singleton'
 
 // 初始空状态
@@ -44,12 +44,12 @@ const DEFAULT_CONFIG: Config = {
     appearance: {
       theme: 'system',
       language: 'zh-CN'
-    }
+    },
+    autoSyncInterval: 1200
   }
 }
 
 const [config, setConfig] = createStore<Config>(DEFAULT_CONFIG)
-let uploadTimer: number | undefined
 
 // 初始化
 export const initConfig = async () => {
@@ -66,11 +66,14 @@ export const initConfig = async () => {
   await checkAndPullRemote()
 
   // 4. 启动自动上传任务
-  startAutoUploadTask()
+  useAutoUploadService({
+    performUpload: async () => {
+      await performUpload(true)
+    }
+  })
 
   onCleanup(() => {
     unlisten()
-    if (uploadTimer) clearInterval(uploadTimer)
   })
 }
 
@@ -85,7 +88,7 @@ const refreshConfig = async () => {
 }
 
 // 核心逻辑：拉取远端并提供撤回
-export const checkAndPullRemote = async (skipCheck?: boolean) => {
+export const checkAndPullRemote = async (skipCheck?: boolean, toastMessage?: string) => {
   try {
     const remoteConfig = await invoke<Config | null>('get_remote_config')
     if (!remoteConfig) {
@@ -110,7 +113,7 @@ export const checkAndPullRemote = async (skipCheck?: boolean) => {
         t => (
           <div class="flex items-center justify-between gap-4 px-4 py-3 bg-white dark:bg-neutral-800 rounded-md shadow-md border border-neutral-200 dark:border-neutral-700 min-w-[280px]">
             <span class="text-sm text-gray-700 dark:text-gray-200">
-              Remote config is newer, applied.
+              {toastMessage || 'Remote config is newer, applied.'}
             </span>
             <button
               onClick={async () => {
@@ -137,22 +140,6 @@ export const checkAndPullRemote = async (skipCheck?: boolean) => {
   } catch (e) {
     toast.error(`Failed to check remote config: ${e}`)
   }
-}
-
-// 定时上传任务
-const startAutoUploadTask = () => {
-  // 每 1200 秒检查一次是否需要上传
-  uploadTimer = window.setInterval(async () => {
-    const current = unwrap(config)
-
-    // 逻辑：如果 本地更新时间 > 上次上传时间，说明有未同步的更改
-    if (
-      current.lastUploaded &&
-      new Date(current.lastUpdated) > new Date(current.lastUploaded)
-    ) {
-      await performUpload(true)
-    }
-  }, 1200000)
 }
 
 export const performUpload = async (isAutoUpload?: boolean) => {

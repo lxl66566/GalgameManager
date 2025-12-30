@@ -5,7 +5,7 @@ use ts_rs::TS;
 
 use crate::archive::ArchiveConfig;
 
-#[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]
+#[derive(Debug, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
@@ -13,6 +13,19 @@ pub struct Settings {
     pub storage: StorageConfig,
     pub archive: ArchiveConfig,
     pub appearance: AppearanceConfig,
+    /// in secs
+    pub auto_sync_interval: u32,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            storage: Default::default(),
+            archive: Default::default(),
+            appearance: Default::default(),
+            auto_sync_interval: 1200,
+        }
+    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, TS)]

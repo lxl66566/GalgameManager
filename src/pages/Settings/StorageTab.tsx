@@ -23,27 +23,27 @@ const WebDavForm: Component<{
     <SettingRow label="Endpoint" indent>
       <Input
         value={props.config.endpoint}
-        onInput={e => props.onChange('endpoint', e.currentTarget.value)}
+        onChange={e => props.onChange('endpoint', e.currentTarget.value)}
         placeholder="https://dav.example.com"
       />
     </SettingRow>
     <SettingRow label="Username" indent>
       <Input
         value={props.config.username}
-        onInput={e => props.onChange('username', e.currentTarget.value)}
+        onChange={e => props.onChange('username', e.currentTarget.value)}
       />
     </SettingRow>
     <SettingRow label="Password" indent>
       <Input
         type="password"
         value={props.config.password || ''}
-        onInput={e => props.onChange('password', e.currentTarget.value)}
+        onChange={e => props.onChange('password', e.currentTarget.value)}
       />
     </SettingRow>
     <SettingRow label="Root" indent>
       <Input
         value={props.config.rootPath}
-        onInput={e => props.onChange('rootPath', e.currentTarget.value)}
+        onChange={e => props.onChange('rootPath', e.currentTarget.value)}
         placeholder=""
       />
     </SettingRow>
@@ -59,7 +59,7 @@ const S3Form: Component<{
     <SettingRow label="Endpoint" description="Leave empty for AWS" indent>
       <Input
         value={props.config.endpoint || ''}
-        onInput={e => props.onChange('endpoint', e.currentTarget.value)}
+        onChange={e => props.onChange('endpoint', e.currentTarget.value)}
         placeholder=""
       />
     </SettingRow>
@@ -67,14 +67,14 @@ const S3Form: Component<{
       <Input
         class="w-32"
         value={props.config.region}
-        onInput={e => props.onChange('region', e.currentTarget.value)}
+        onChange={e => props.onChange('region', e.currentTarget.value)}
         placeholder=""
       />
     </SettingRow>
     <SettingRow label="Bucket Name" indent>
       <Input
         value={props.config.bucket}
-        onInput={e => props.onChange('bucket', e.currentTarget.value)}
+        onChange={e => props.onChange('bucket', e.currentTarget.value)}
         placeholder=""
       />
     </SettingRow>
@@ -82,14 +82,14 @@ const S3Form: Component<{
       <Input
         type="password"
         value={props.config.accessKey}
-        onInput={e => props.onChange('accessKey', e.currentTarget.value)}
+        onChange={e => props.onChange('accessKey', e.currentTarget.value)}
       />
     </SettingRow>
     <SettingRow label="Secret Key" indent>
       <Input
         type="password"
         value={props.config.secretKey}
-        onInput={e => props.onChange('secretKey', e.currentTarget.value)}
+        onChange={e => props.onChange('secretKey', e.currentTarget.value)}
       />
     </SettingRow>
   </SettingSubGroup>
@@ -104,7 +104,7 @@ const LocalForm: Component<{
     <SettingRow label="Path" description="Absolute path or path with variables" indent>
       <Input
         value={props.path}
-        onInput={e => props.onChange(e.currentTarget.value)}
+        onChange={e => props.onChange(e.currentTarget.value)}
         placeholder="(None)"
       />
     </SettingRow>
@@ -159,7 +159,7 @@ export const StorageTab: Component = () => {
   const [downloading, setDownloading] = createSignal(false)
   const handleDownloadConfig = async () => {
     setDownloading(true)
-    await checkAndPullRemote(true)
+    await checkAndPullRemote(true, 'Force updated config from remote.')
     setDownloading(false)
   }
 
@@ -218,21 +218,17 @@ export const StorageTab: Component = () => {
       </SettingSection>
 
       <SettingSection title="Config">
-        <SettingRow label="Syncing Config" description="Manage your config manually">
-          <Button
-            onClick={handleDownloadConfig}
-            disabled={downloading()}
-            class="min-w-[100px] mx-1"
-          >
-            <Show
-              when={!downloading()}
-              fallback={<FiLoader class="animate-spin h-3.5 w-3.5 mr-1.5" />}
-            >
-              <FiDownload class="h-3.5 w-3.5 mr-1.5 text-gray-500 dark:text-gray-400" />
-            </Show>
-            {downloading() ? 'Syncing...' : 'pull'}
-          </Button>
-
+        <SettingRow label="Auto Upload Interval" description="In seconds">
+          <Input
+            value={config.settings.autoSyncInterval}
+            onChange={e =>
+              actions.updateSettings(
+                s => (s.autoSyncInterval = parseInt(e.currentTarget.value))
+              )
+            }
+          />
+        </SettingRow>
+        <SettingRow label="Manual Syncing" description="Manage your config manually">
           <Button
             onClick={handleUploadConfig}
             disabled={uploading()}
@@ -245,6 +241,20 @@ export const StorageTab: Component = () => {
               <FiUpload class="h-3.5 w-3.5 mr-1.5 text-gray-500 dark:text-gray-400" />
             </Show>
             {uploading() ? 'Syncing...' : 'push'}
+          </Button>
+
+          <Button
+            onClick={handleDownloadConfig}
+            disabled={downloading()}
+            class="min-w-[100px] mx-1"
+          >
+            <Show
+              when={!downloading()}
+              fallback={<FiLoader class="animate-spin h-3.5 w-3.5 mr-1.5" />}
+            >
+              <FiDownload class="h-3.5 w-3.5 mr-1.5 text-gray-500 dark:text-gray-400" />
+            </Show>
+            {downloading() ? 'Syncing...' : 'pull'}
           </Button>
         </SettingRow>
       </SettingSection>
