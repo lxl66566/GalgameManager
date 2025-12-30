@@ -1,12 +1,14 @@
 use std::path::Path;
 
-use crate::db::{Config, CONFIG};
 use futures::{AsyncWriteExt, TryStreamExt as _};
 use opendal::Operator;
 use tokio::fs;
 use tokio_util::compat::TokioAsyncReadCompatExt;
 
-use crate::error::Result;
+use crate::{
+    db::{Config, CONFIG},
+    error::Result,
+};
 
 #[async_trait::async_trait]
 impl super::MyOperation for Operator {

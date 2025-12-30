@@ -3,7 +3,6 @@ pub mod settings;
 
 use std::{fs, path::PathBuf, sync::LazyLock as Lazy};
 
-use crate::error::Result;
 use chrono::{DateTime, Duration, Utc};
 use config_file2::{LoadConfigFile, Storable};
 use device::{Device, DEVICE_UID};
@@ -13,6 +12,8 @@ use settings::Settings;
 use strfmt::strfmt;
 use tauri::{AppHandle, Emitter as _};
 use ts_rs::TS;
+
+use crate::error::Result;
 
 pub static CONFIG_DIR: Lazy<PathBuf> = Lazy::new(|| {
     let dir = home::home_dir()

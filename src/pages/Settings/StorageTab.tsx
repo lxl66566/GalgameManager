@@ -10,9 +10,9 @@ import {
   SettingSubGroup
 } from '@components/ui/settings'
 import { invoke } from '@tauri-apps/api/core'
-import { performUpload, useConfig } from '~/store'
-import { FiCloud, FiLoader } from 'solid-icons/fi'
-import { createMemo, createSignal, Match, Show, Switch, type Component } from 'solid-js'
+import { checkAndPullRemote, performUpload, useConfig } from '~/store'
+import { FiDownload, FiLoader, FiUpload } from 'solid-icons/fi'
+import { createSignal, Match, Show, Switch, type Component } from 'solid-js'
 
 // --- 子组件：WebDAV 表单 ---
 const WebDavForm: Component<{
@@ -149,12 +149,18 @@ export const StorageTab: Component = () => {
     })
   }
 
-  // 备份配置
-  const [backingUp, setBackingUp] = createSignal(false)
-  const handleBackupConfig = async () => {
-    setBackingUp(true)
+  // 上传配置
+  const [uploading, setUploading] = createSignal(false)
+  const handleUploadConfig = async () => {
+    setUploading(true)
     await performUpload()
-    setBackingUp(false)
+    setUploading(false)
+  }
+  const [downloading, setDownloading] = createSignal(false)
+  const handleDownloadConfig = async () => {
+    setDownloading(true)
+    await checkAndPullRemote(true)
+    setDownloading(false)
   }
 
   return (
@@ -211,20 +217,34 @@ export const StorageTab: Component = () => {
         </SettingRow>
       </SettingSection>
 
-      <SettingSection title="Data Management">
-        <SettingRow label="Backup" description="Manually upload current config to remote">
+      <SettingSection title="Config">
+        <SettingRow label="Syncing Config" description="Manage your config manually">
           <Button
-            onClick={handleBackupConfig}
-            disabled={backingUp()}
-            class="min-w-[100px]" // 保证加载时宽度不跳动
+            onClick={handleDownloadConfig}
+            disabled={downloading()}
+            class="min-w-[100px] mx-1"
           >
             <Show
-              when={!backingUp()}
+              when={!downloading()}
               fallback={<FiLoader class="animate-spin h-3.5 w-3.5 mr-1.5" />}
             >
-              <FiCloud class="h-3.5 w-3.5 mr-1.5 text-gray-500 dark:text-gray-400" />
+              <FiDownload class="h-3.5 w-3.5 mr-1.5 text-gray-500 dark:text-gray-400" />
             </Show>
-            {backingUp() ? 'Syncing...' : 'Backup Config'}
+            {downloading() ? 'Syncing...' : 'pull'}
+          </Button>
+
+          <Button
+            onClick={handleUploadConfig}
+            disabled={uploading()}
+            class="min-w-[100px] mx-1" // 保证加载时宽度不跳动
+          >
+            <Show
+              when={!uploading()}
+              fallback={<FiLoader class="animate-spin h-3.5 w-3.5 mr-1.5" />}
+            >
+              <FiUpload class="h-3.5 w-3.5 mr-1.5 text-gray-500 dark:text-gray-400" />
+            </Show>
+            {uploading() ? 'Syncing...' : 'push'}
           </Button>
         </SettingRow>
       </SettingSection>

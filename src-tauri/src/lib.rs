@@ -33,10 +33,19 @@ pub fn run() {
             rename_remote_archive,
             clean_current_operator,
             upload_config,
+            upload_config_safe,
             get_remote_config,
             exec
         ])
-        .setup(|_app| Ok(()))
+        .setup(|app| {
+            #[cfg(desktop)]
+            {
+                _ = app
+                    .handle()
+                    .plugin(tauri_plugin_window_state::Builder::default().build());
+            }
+            Ok(())
+        })
         .build(generate_context!())
         .expect("error while building tauri application")
         .run(|_app, event| {
@@ -46,10 +55,13 @@ pub fn run() {
                     if code.is_none() {
                         api.prevent_exit();
                         tauri::async_runtime::block_on(async move {
-                            println!("uploading config...");
-                            let res = upload_config().await;
-                            if let Err(e) = res {
-                                println!("failed to upload config: {e}");
+                            println!("[exit] uploading config...");
+                            match upload_config_safe().await {
+                                Ok(true) => println!("[exit] upload config success"),
+                                Ok(false) => {
+                                    println!("[exit] remote config is newer, not uploading")
+                                }
+                                Err(e) => println!("[exit] failed to upload config: {e}"),
                             }
                         });
                         std::process::exit(0);

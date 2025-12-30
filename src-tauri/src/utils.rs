@@ -1,5 +1,4 @@
-use std::io;
-use std::path::Path;
+use std::{io, path::Path};
 
 pub fn list_dir_all(path: impl AsRef<Path>) -> io::Result<Vec<String>> {
     let entries = std::fs::read_dir(path)?;

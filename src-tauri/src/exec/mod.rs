@@ -4,13 +4,12 @@ mod linux;
 pub use linux::*;
 #[cfg(target_os = "windows")]
 mod windows;
+use chrono::{TimeDelta, Utc};
+use tauri::AppHandle;
 #[cfg(target_os = "windows")]
 pub use windows::*;
 
-use crate::db::CONFIG;
-use crate::error::Result;
-use chrono::{TimeDelta, Utc};
-use tauri::AppHandle;
+use crate::{db::CONFIG, error::Result};
 
 fn update_game_time(app: &AppHandle, game_id: u32, dur: TimeDelta) -> Result<()> {
     let new_config = {

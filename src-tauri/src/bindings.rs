@@ -186,6 +186,14 @@ pub async fn upload_config() -> Result<()> {
 }
 
 #[tauri::command(async)]
+pub async fn upload_config_safe() -> Result<bool> {
+    init_operator().await?;
+    let lock = CURRENT_OPERATOR.lock().await;
+    let op = lock.as_ref().unwrap();
+    op.upload_config_safe().await
+}
+
+#[tauri::command(async)]
 pub async fn get_remote_config() -> Result<Option<Config>> {
     // prevent downloading config if storage is not configured
     if CONFIG.lock().settings.storage == StorageConfig::default() {

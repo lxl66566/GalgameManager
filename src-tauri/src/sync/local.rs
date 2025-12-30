@@ -1,11 +1,15 @@
-use std::path::PathBuf;
+use std::{
+    fs, io,
+    path::{Path, PathBuf},
+};
 
-use crate::db::{Config, CONFIG};
-use crate::error::Result;
-use crate::utils::list_dir_all;
 use config_file2::{LoadConfigFile, StoreConfigFile};
-use std::path::Path;
-use std::{fs, io};
+
+use crate::{
+    db::{Config, CONFIG},
+    error::Result,
+    utils::list_dir_all,
+};
 
 pub struct LocalUploader(pub PathBuf);
 
@@ -92,8 +96,7 @@ impl super::MyOperation for LocalUploader {
 
 #[cfg(test)]
 mod tests {
-    use super::super::MyOperation;
-    use super::*;
+    use super::{super::MyOperation, *};
 
     #[tokio::test]
     async fn test_local_operator() -> io::Result<()> {

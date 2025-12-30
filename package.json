@@ -33,6 +33,7 @@
     "@tauri-apps/cli": "^2.9.6",
     "@tauri-apps/plugin-dialog": "~2",
     "@tauri-apps/plugin-fs": "^2.4.4",
+    "@tauri-apps/plugin-window-state": "^2.4.1",
     "baseline-browser-mapping": "^2.9.11",
     "caniuse-lite": "^1.0.30001761",
     "cheerio": "^1.1.2",

@@ -85,13 +85,17 @@ const refreshConfig = async () => {
 }
 
 // 核心逻辑：拉取远端并提供撤回
-const checkAndPullRemote = async () => {
+export const checkAndPullRemote = async (skipCheck?: boolean) => {
   try {
     const remoteConfig = await invoke<Config | null>('get_remote_config')
+    if (!remoteConfig) {
+      console.log('Remote config is null')
+      return
+    }
 
-    // 只有当远端配置存在，且更新时间晚于本地配置时才更新
     if (
-      remoteConfig &&
+      skipCheck ||
+      // 只有当远端配置存在，且更新时间晚于本地配置时才更新
       new Date(remoteConfig.lastUpdated) > new Date(config.lastUpdated)
     ) {
       const previousConfig = unwrap(config) // 备份当前状态

@@ -56,6 +56,9 @@ walkdir             = "2.5.0"
 windows        = { version = "0.62", features = ["Win32_System_JobObjects", "Win32_System_Threading", "Win32_Foundation", "Win32_Security"] }
 windows-result = { version = "0.4" }
 
+[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
+tauri-plugin-window-state = "2.4.1"
+
 [dev-dependencies]
 tempfile = "3"
 

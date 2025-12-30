@@ -1,21 +1,22 @@
-use crate::db::CONFIG;
-use crate::error::{Error, Result};
-use chrono::TimeDelta;
 use std::time::Duration;
-use tauri::{AppHandle, Emitter as _};
-use tokio::process::Command;
-use tokio::time;
 
+use chrono::TimeDelta;
+use tauri::{AppHandle, Emitter as _};
+use tokio::{process::Command, time};
 use windows::Win32::{
     Foundation::{CloseHandle, HANDLE},
-    System::Threading::OpenProcess,
     System::{
         JobObjects::{
             AssignProcessToJobObject, CreateJobObjectW, JobObjectBasicAccountingInformation,
             QueryInformationJobObject, JOBOBJECT_BASIC_ACCOUNTING_INFORMATION,
         },
-        Threading::{PROCESS_SET_QUOTA, PROCESS_TERMINATE},
+        Threading::{OpenProcess, PROCESS_SET_QUOTA, PROCESS_TERMINATE},
     },
+};
+
+use crate::{
+    db::CONFIG,
+    error::{Error, Result},
 };
 
 struct GameJob {

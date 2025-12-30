@@ -1,8 +1,9 @@
-use crate::error::{Error, Result};
+use std::{collections::HashMap, sync::LazyLock as Lazy};
+
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::sync::LazyLock as Lazy;
 use ts_rs::TS;
+
+use crate::error::{Error, Result};
 
 pub static DEFAULT_DEVICE: Lazy<Device> = Lazy::new(Device::default);
 

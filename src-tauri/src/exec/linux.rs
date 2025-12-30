@@ -1,10 +1,13 @@
-use crate::db::CONFIG;
-use crate::error::{Error, Result};
-use chrono::{TimeDelta, Utc};
 use std::time::Duration;
+
+use chrono::{TimeDelta, Utc};
 use tauri::{AppHandle, Emitter as _};
-use tokio::process::Command;
-use tokio::time;
+use tokio::{process::Command, time};
+
+use crate::{
+    db::CONFIG,
+    error::{Error, Result},
+};
 
 pub async fn launch_game(app: AppHandle, game_id: u32, save_interval: u32) -> Result<()> {
     let exe_path: String = {

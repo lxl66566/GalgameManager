@@ -34,8 +34,8 @@ pub struct StorageConfig {
     pub provider: StorageProvider, // 当前选中的后端
     pub local: String,             // Local 配置 (路径)
     pub webdav: WebDavConfig,      // WebDAV 配置
-    pub s3: S3Config,              // S3 配置
-                                   // pub auto_sync_interval: u32, // 0 = off
+    pub s3: S3Config,              /* S3 配置
+                                    * pub auto_sync_interval: u32, // 0 = off */
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, TS)]

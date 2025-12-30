@@ -3,15 +3,19 @@ mod opendal;
 
 use std::{path::Path, sync::LazyLock as Lazy};
 
-use local::LocalUploader;
-
-use crate::db::settings::{StorageConfig, StorageProvider};
-use crate::db::{Config, CONFIG};
-use crate::error::Result;
 use ::opendal::{services, Operator};
+use local::LocalUploader;
 use tokio::sync::Mutex;
 
-pub static CURRENT_OPERATOR: Lazy<Mutex<Option<Box<dyn MyOperation + Send>>>> =
+use crate::{
+    db::{
+        settings::{StorageConfig, StorageProvider},
+        Config, CONFIG,
+    },
+    error::Result,
+};
+
+pub static CURRENT_OPERATOR: Lazy<Mutex<Option<Box<dyn MyOperation + Send + Sync>>>> =
     Lazy::new(|| Mutex::new(None));
 
 // call this before using any operation
@@ -49,10 +53,30 @@ pub trait MyOperation {
     ) -> Result<()>;
     async fn upload_config(&self) -> Result<()>;
     async fn get_remote_config(&self) -> Result<Option<Config>>;
+    /// Only upload config if remote config is older than local config
+    ///
+    /// # Returns
+    ///
+    /// bool indicates whether config really uploaded
+    async fn upload_config_safe(&self) -> Result<bool> {
+        let remote_config = self.get_remote_config().await?;
+        let config = CONFIG.lock().clone();
+        if let Some(remote_config) = remote_config {
+            if remote_config.last_updated >= config.last_updated {
+                println!(
+                    "Remote config is newer ({} >= {}), not uploading",
+                    remote_config.last_updated, config.last_updated
+                );
+                return Ok(false);
+            }
+        }
+        self.upload_config().await?;
+        Ok(true)
+    }
 }
 
 impl StorageConfig {
-    pub fn build_operator(&self) -> Result<Box<dyn MyOperation + Send>> {
+    pub fn build_operator(&self) -> Result<Box<dyn MyOperation + Send + Sync>> {
         match self.provider {
             StorageProvider::Local => Ok(Box::new(LocalUploader::new(self.local.clone().into())?)),
             StorageProvider::WebDav => {

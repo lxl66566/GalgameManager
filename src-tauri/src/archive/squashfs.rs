@@ -225,8 +225,9 @@ impl super::Archive for SquashfsArchiver {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::path::Path;
+
+    use super::*;
 
     #[test]
     fn test_get_dest_from_fullpath() {
