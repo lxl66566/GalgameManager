@@ -22,6 +22,12 @@ use crate::db::CONFIG_DIR;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            let _ = app
+                .get_webview_window("main")
+                .expect("no main window")
+                .set_focus();
+        }))
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
@@ -49,13 +55,16 @@ pub fn run() {
             exec
         ])
         .setup(|app| {
-            _ = app
-                .handle()
-                .plugin(tauri_plugin_window_state::Builder::default().build());
-            _ = app
-                .get_webview_window("main")
-                .unwrap()
-                .restore_state(StateFlags::POSITION | StateFlags::SIZE);
+            #[cfg(desktop)]
+            {
+                _ = app
+                    .handle()
+                    .plugin(tauri_plugin_window_state::Builder::default().build());
+                _ = app
+                    .get_webview_window("main")
+                    .unwrap()
+                    .restore_state(StateFlags::POSITION | StateFlags::SIZE);
+            }
 
             let open_config_folder =
                 MenuItem::with_id(app, "open_config", "Open Config Folder", true, None::<&str>)?;

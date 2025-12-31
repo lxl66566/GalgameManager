@@ -59,7 +59,8 @@ windows        = { version = "0.62", features = ["Win32_System_JobObjects", "Win
 windows-result = { version = "0.4" }
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
-tauri-plugin-window-state = "2.4.1"
+tauri-plugin-single-instance = "2.3.6"
+tauri-plugin-window-state    = "2.4.1"
 
 [dev-dependencies]
 tempfile = "3"
