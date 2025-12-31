@@ -1,3 +1,4 @@
+import { useI18n } from '~/i18n'
 import { createMemo, createSignal, For, Show, type Component } from 'solid-js'
 import toast from 'solid-toast'
 
@@ -23,6 +24,7 @@ interface VariableEditorProps {
 }
 
 export const VariableEditor: Component<VariableEditorProps> = props => {
+  const { t } = useI18n()
   // 内部状态：是否正在添加新变量
   const [isAdding, setIsAdding] = createSignal(false)
   // 新变量的临时状态
@@ -72,7 +74,7 @@ export const VariableEditor: Component<VariableEditorProps> = props => {
     if (!trimmedNewKey) return // 不能为空（或者你可以选择 revert）
 
     if (props.variables.hasOwnProperty(trimmedNewKey)) {
-      toast.error(`Key "${trimmedNewKey}" already exists`)
+      toast.error(t('settings.device.variableAlreadyExists') + trimmedNewKey)
       return
     }
 
@@ -84,10 +86,11 @@ export const VariableEditor: Component<VariableEditorProps> = props => {
       {/* Header */}
       <div class="flex justify-between items-center">
         <div class="flex flex-col">
-          <span class="text-sm text-gray-300">{props.label || 'Variables'}</span>
+          <span class="text-sm text-gray-300">
+            {props.label || t('settings.device.variables')}
+          </span>
           <span class="text-[10px] text-gray-500">
-            Define variables for current device. This will be inserted into template
-            paths.
+            {t('settings.device.variablesDesc')}
           </span>
         </div>
         <button
@@ -99,7 +102,7 @@ export const VariableEditor: Component<VariableEditorProps> = props => {
           class="text-xs bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-2 py-1 rounded transition-colors cursor-pointer"
           type="button"
         >
-          + Add Variable
+          + {t('settings.device.addVariable')}
         </button>
       </div>
 
@@ -139,14 +142,14 @@ export const VariableEditor: Component<VariableEditorProps> = props => {
                 <button
                   onClick={handleConfirmAdd}
                   class="text-green-500 hover:text-green-300 px-1"
-                  title="Save"
+                  title={t('ui.save')}
                 >
                   ✓
                 </button>
                 <button
                   onClick={handleCancelAdd}
                   class="text-red-500 hover:text-red-300 px-1"
-                  title="Cancel"
+                  title={t('ui.cancel')}
                 >
                   ✕
                 </button>
@@ -163,7 +166,7 @@ export const VariableEditor: Component<VariableEditorProps> = props => {
           when={sortedEntries().length > 0 || isAdding()}
           fallback={
             <div class="flex-1 flex items-center justify-center text-gray-500 text-xs select-none py-4">
-              No variables defined.
+              {t('settings.device.noVariablesDefined')}
             </div>
           }
         >
@@ -180,7 +183,7 @@ export const VariableEditor: Component<VariableEditorProps> = props => {
                     onBlur={e => handleKeyBlur(key, e.currentTarget.value)}
                     onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()}
                     class="w-full bg-transparent text-blue-300 font-mono text-xs pl-1 pr-1 py-0.5 rounded border border-transparent hover:border-gray-600 focus:bg-gray-900 focus:border-blue-500 outline-none transition-all truncate"
-                    title="Edit Variable Name"
+                    title={t('settings.device.editVariableName')}
                   />
                 </div>
 
@@ -200,7 +203,7 @@ export const VariableEditor: Component<VariableEditorProps> = props => {
                 <button
                   onClick={() => props.onRemove(key)}
                   class="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity px-1"
-                  title="Remove Variable"
+                  title={t('settings.device.removeVariable')}
                   tabIndex={-1}
                 >
                   ✕

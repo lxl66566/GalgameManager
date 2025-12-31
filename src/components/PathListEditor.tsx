@@ -1,4 +1,5 @@
 import { open } from '@tauri-apps/plugin-dialog'
+import { useI18n } from '~/i18n'
 import { createSignal, For, Show } from 'solid-js'
 
 interface PathListEditorProps {
@@ -8,6 +9,7 @@ interface PathListEditorProps {
 }
 
 export default function PathListEditor(props: PathListEditorProps) {
+  const { t } = useI18n()
   // 记录当前正在编辑的索引，null 表示没有在编辑
   const [editingIndex, setEditingIndex] = createSignal<number | null>(null)
 
@@ -16,7 +18,7 @@ export default function PathListEditor(props: PathListEditorProps) {
       const selected = await open({
         directory,
         multiple: true,
-        title: '选择存档文件/文件夹'
+        title: t('hint.selectSaveArchive')
       })
 
       if (selected) {
@@ -58,21 +60,21 @@ export default function PathListEditor(props: PathListEditorProps) {
     <div class="flex flex-col gap-2 w-full">
       {/* Header */}
       <div class="flex justify-between items-center">
-        <span class="text-sm font-bold text-gray-300">{props.label || '存档路径'}</span>
+        <span class="text-sm font-bold text-gray-300">{props.label || 'Save Path'}</span>
         <div class="flex gap-2">
           <button
             onClick={() => handleAddPath(false)}
             class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded transition-colors cursor-pointer"
             type="button"
           >
-            + 添加文件
+            + {t('ui.addFile')}
           </button>
           <button
             onClick={() => handleAddPath(true)}
             class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded transition-colors cursor-pointer"
             type="button"
           >
-            + 添加文件夹
+            + {t('ui.addFolder')}
           </button>
         </div>
       </div>
@@ -85,7 +87,7 @@ export default function PathListEditor(props: PathListEditorProps) {
           fallback={
             // 改进 1: 使用 flex-1 items-center justify-center 实现垂直水平居中
             <div class="flex-1 flex items-center justify-center text-gray-500 text-xs select-none">
-              暂无路径，点击上方按钮添加
+              {t('hint.noPathPleaseAdd')}
             </div>
           }
         >
@@ -99,7 +101,7 @@ export default function PathListEditor(props: PathListEditorProps) {
                       // 显示模式：双击进入编辑
                       <span
                         class="truncate text-gray-300 mr-2 flex-1 cursor-text select-text hover:text-white transition-colors"
-                        title="双击编辑路径"
+                        title={t('hint.doubleClickToEdit')}
                         onDblClick={() => setEditingIndex(i())}
                       >
                         {path}
@@ -128,7 +130,7 @@ export default function PathListEditor(props: PathListEditorProps) {
                   <button
                     onClick={() => handleRemovePath(i())}
                     class="text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity px-1"
-                    title="移除"
+                    title={t('ui.delete')}
                     tabIndex={-1} // 防止 Tab 键误触
                   >
                     ✕
@@ -142,7 +144,9 @@ export default function PathListEditor(props: PathListEditorProps) {
 
       {/* 底部提示 (可选) */}
       <Show when={props.paths.length > 0}>
-        <div class="text-[10px] text-gray-500 text-right px-1">双击路径手动编辑</div>
+        <div class="text-[10px] text-gray-500 text-right px-1">
+          {t('hint.doubleClickToEdit')}
+        </div>
       </Show>
     </div>
   )

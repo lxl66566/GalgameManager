@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import { useI18n } from '~/i18n'
 import {
   TbArrowBackUp,
   TbCloudDownload,
@@ -28,6 +29,7 @@ interface ArchiveSyncModalProps {
 // --- 主组件 ---
 
 export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
+  const { t } = useI18n()
   const [archives, setArchives] = createSignal<ArchiveItem[]>([])
   const [loading, setLoading] = createSignal(false)
 
@@ -64,7 +66,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       setArchives(merged)
     } catch (e) {
       console.error(e)
-      toast.error(`获取存档列表失败: ${e}`)
+      toast.error(t('hint.failToGetSaveList') + e)
     } finally {
       setLoading(false)
     }
@@ -77,50 +79,50 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
   // --- 操作处理 ---
 
   const handleUpload = async (filename: string) => {
-    const toastId = toast.loading('正在上传存档...')
+    const toastId = toast.loading(t('hint.uploading') + filename + '...')
     try {
       await invoke('upload_archive', { gameId: props.gameId, archiveFilename: filename })
-      toast.success('上传成功', { id: toastId })
+      toast.success(t('hint.uploadSuccess') + filename, { id: toastId })
 
       // 上传成功：LocalOnly -> Synced
       setArchives(prev =>
         prev.map(item => (item.name === filename ? { ...item, status: 'Synced' } : item))
       )
     } catch (e) {
-      toast.error(`上传失败: ${e}`, { id: toastId })
+      toast.error(filename + ' ' + t('hint.uploadFailed') + e, { id: toastId })
     }
   }
 
   const handlePull = async (filename: string) => {
-    const toastId = toast.loading('正在下载存档...')
+    const toastId = toast.loading(t('hint.downloading') + filename + '...')
     try {
       await invoke('pull_archive', { gameId: props.gameId, archiveFilename: filename })
-      toast.success('下载成功', { id: toastId })
+      toast.success(t('hint.downloadSuccess') + filename, { id: toastId })
 
       // 下载成功：RemoteOnly -> Synced
       setArchives(prev =>
         prev.map(item => (item.name === filename ? { ...item, status: 'Synced' } : item))
       )
     } catch (e) {
-      toast.error(`下载失败: ${e}`, { id: toastId })
+      toast.error(filename + ' ' + t('hint.downloadFailed') + e, { id: toastId })
     }
   }
 
   const handleExtract = async (filename: string) => {
-    const toastId = toast.loading('正在恢复存档...')
+    const toastId = toast.loading(t('hint.reverting') + filename + '...')
     try {
       await invoke('extract', { gameId: props.gameId, archiveFilename: filename })
-      toast.success('恢复成功', { id: toastId })
+      toast.success(t('hint.revertSuccess') + filename, { id: toastId })
     } catch (e) {
-      toast.error(`恢复失败: ${e}`, { id: toastId })
+      toast.error(filename + ' ' + t('hint.revertFailed') + e, { id: toastId })
     }
   }
 
   const handleDeleteRemote = async (filename: string) => {
-    const toastId = toast.loading('正在删除云端存档...')
+    const toastId = toast.loading(t('hint.deletingRemoteArchive') + filename + '...')
     try {
       await invoke('delete_archive', { gameId: props.gameId, archiveFilename: filename })
-      toast.success('删除成功', { id: toastId })
+      toast.success(t('hint.deleteSuccess') + filename, { id: toastId })
 
       // 不重新 fetch，直接更新本地状态
       setArchives(prev =>
@@ -135,18 +137,18 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
           .filter((item): item is ArchiveItem => item !== null)
       )
     } catch (e) {
-      toast.error(`删除失败: ${e}`, { id: toastId })
+      toast.error(filename + ' ' + t('hint.deleteFailed') + e, { id: toastId })
     }
   }
 
   const handleDeleteLocal = async (filename: string) => {
-    const toastId = toast.loading('正在删除本地存档...')
+    const toastId = toast.loading(t('hint.deletingLocalArchive') + filename + '...')
     try {
       await invoke('delete_local_archive', {
         gameId: props.gameId,
         archiveFilename: filename
       })
-      toast.success('删除成功', { id: toastId })
+      toast.success(t('hint.deleteSuccess') + filename, { id: toastId })
 
       // 不重新 fetch，直接更新本地状态
       setArchives(prev =>
@@ -161,7 +163,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
           .filter((item): item is ArchiveItem => item !== null)
       )
     } catch (e) {
-      toast.error(`删除失败: ${e}`, { id: toastId })
+      toast.error(filename + ' ' + t('hint.deleteFailed') + e, { id: toastId })
     }
   }
   // --- 重命名逻辑 ---
@@ -188,13 +190,13 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
     )
 
     if (isDuplicate) {
-      toast.error('该存档名称已存在，请换一个名字')
+      toast.error(t('hint.archiveExists'))
       return
     }
 
     // 开启锁
     setIsRenaming(true)
-    const toastId = toast.loading('正在重命名...')
+    const toastId = toast.loading(t('hint.renaming') + oldName + '...')
 
     try {
       if (status === 'LocalOnly') {
@@ -246,7 +248,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       }
 
       // 成功处理
-      toast.success('重命名成功', { id: toastId })
+      toast.success(t('hint.renameSuccess'), { id: toastId })
 
       // 更新列表状态
       setArchives(prev => {
@@ -259,7 +261,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       // 只有成功时才关闭编辑框
       setEditingName(null)
     } catch (e: any) {
-      toast.error(e, { id: toastId })
+      toast.error(t('hint.renameFailed') + e, { id: toastId })
       // 注意：发生错误时，不设置 setEditingName(null)，保留用户输入以便修改重试
     } finally {
       // 无论成功失败，最后释放锁
@@ -273,9 +275,11 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       {/* Header */}
       <div class="flex justify-between items-center px-5 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex-shrink-0">
         <div class="flex items-center gap-2">
-          <h2 class="text-lg font-bold text-gray-900 dark:text-white">存档管理</h2>
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white">
+            {t('game.sync.self')}
+          </h2>
           <span class="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
-            {archives().length} 个存档
+            {archives().length} {t('game.sync.archiveNum')}
           </span>
         </div>
         <button
@@ -292,7 +296,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
           when={!loading()}
           fallback={
             <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 text-sm">
-              加载中...
+              {t('loading')}
             </div>
           }
         >
@@ -301,7 +305,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
             fallback={
               <div class="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 gap-2">
                 <TbFileZip class="w-8 h-8 opacity-50" />
-                <span class="text-sm">暂无存档记录</span>
+                <span class="text-sm">{t('game.sync.noArchive')}</span>
               </div>
             }
           >
@@ -319,13 +323,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                           'bg-yellow-500': item.status === 'LocalOnly',
                           'bg-blue-500': item.status === 'RemoteOnly'
                         }}
-                        title={
-                          item.status === 'Synced'
-                            ? '已同步'
-                            : item.status === 'LocalOnly'
-                              ? '仅本地'
-                              : '仅云端'
-                        }
+                        title={t('game.sync.status')[item.status]}
                       />
 
                       {/* Filename / Rename Input */}
@@ -346,7 +344,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                               <button
                                 onClick={() => startRename(item.name)}
                                 class="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-blue-500 transition-opacity cursor-pointer flex-shrink-0"
-                                title="重命名"
+                                title={t('ui.rename')}
                               >
                                 <TbEdit class="w-3.5 h-3.5" />
                               </button>
@@ -368,11 +366,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                           />
                         </Show>
                         <div class="text-[10px] text-gray-400 dark:text-gray-500 leading-none mt-1 truncate">
-                          {item.status === 'Synced'
-                            ? '本地 & 云端'
-                            : item.status === 'LocalOnly'
-                              ? '本地未上传'
-                              : '云端未下载'}
+                          {t('game.sync.statusLong')[item.status]}
                         </div>
                       </div>
                     </div>
@@ -385,7 +379,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                           <ActionButton
                             onClick={() => handleExtract(item.name)}
                             icon={TbArrowBackUp}
-                            tooltip="恢复此存档"
+                            tooltip={t('game.sync.recoverArchive')}
                             variant="secondary"
                           />
                         </Show>
@@ -398,7 +392,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                             <ActionButton
                               onClick={() => handleUpload(item.name)}
                               icon={TbCloudUpload}
-                              tooltip="上传到云端"
+                              tooltip={t('game.sync.upload')}
                               variant="primary"
                             />
                           </Match>
@@ -406,7 +400,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                             <ActionButton
                               onClick={() => handlePull(item.name)}
                               icon={TbCloudDownload}
-                              tooltip="下载到本地"
+                              tooltip={t('game.sync.download')}
                               variant="primary"
                             />
                           </Match>
@@ -422,19 +416,19 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                               <ActionButton
                                 onClick={() => handleDeleteLocal(item.name)}
                                 icon={TbTrash}
-                                tooltip="仅删除本地"
+                                tooltip={t('game.sync.deleteLocalArchive')}
                                 variant="danger-ghost"
                                 size="xs"
-                                label="本"
+                                label={t('game.sync.local')}
                               />
                               <div class="w-[1px] h-3 bg-gray-300 dark:bg-gray-600 flex-shrink-0"></div>
                               <ActionButton
                                 onClick={() => handleDeleteRemote(item.name)}
                                 icon={TbTrash}
-                                tooltip="仅删除云端"
+                                tooltip={t('game.sync.deleteRemoteArchive')}
                                 variant="danger-ghost"
                                 size="xs"
-                                label="云"
+                                label={t('game.sync.remote')}
                               />
                             </div>
                           </Match>
@@ -444,7 +438,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                             <ActionButton
                               onClick={() => handleDeleteLocal(item.name)}
                               icon={TbTrash}
-                              tooltip="删除本地存档"
+                              tooltip={t('game.sync.deleteLocalArchive')}
                               variant="danger"
                             />
                           </Match>
@@ -452,7 +446,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                             <ActionButton
                               onClick={() => handleDeleteRemote(item.name)}
                               icon={TbTrash}
-                              tooltip="删除云端存档"
+                              tooltip={t('game.sync.deleteRemoteArchive')}
                               variant="danger"
                             />
                           </Match>

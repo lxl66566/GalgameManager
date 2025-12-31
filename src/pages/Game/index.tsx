@@ -4,6 +4,7 @@ import FullScreenMask from '@components/ui/FullScreenMask'
 import { invoke } from '@tauri-apps/api/core'
 import { once } from '@tauri-apps/api/event'
 import { getParentPath } from '@utils/path'
+import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'
 import { AiTwotonePlusCircle } from 'solid-icons/ai'
 import { createSignal, For, Show, type JSX } from 'solid-js'
@@ -14,6 +15,7 @@ import { ArchiveSyncModal } from './SyncModal'
 
 const GamePage = (): JSX.Element => {
   const { config, actions } = useConfig()
+  const { t } = useI18n()
 
   const [isEditModalOpen, setEditModalOpen] = createSignal(false)
   const [isSyncModalOpen, setSyncModalOpen] = createSignal(false)
@@ -79,7 +81,7 @@ const GamePage = (): JSX.Element => {
       once(`game://spawn/${game.id}`, () => {
         console.log(`Game ${game.id} spawned`)
         setPlayingIds(prev => [...prev, game.id])
-        toast.success(`${game.name} is running`)
+        toast.success(game.name + t('hint.isRunning'))
       }),
 
       once<boolean>(`game://exit/${game.id}`, event => {
@@ -87,7 +89,7 @@ const GamePage = (): JSX.Element => {
         setPlayingIds(prev => prev.filter(id => id !== game.id))
 
         if (!event.payload) {
-          toast.error(`${game.name} exited abnormally`)
+          toast.error(game.name + t('hint.exitAbnormally'))
         }
       })
     ])
@@ -97,7 +99,7 @@ const GamePage = (): JSX.Element => {
       await invoke('exec', { gameId: game.id })
     } catch (error) {
       console.error('Failed to start game:', error)
-      toast.error(`Failed to start: ${error}`)
+      toast.error(game.name + t('hint.failToStart') + error)
 
       // 3. 如果启动指令本身失败，手动清理刚才注册的监听器
       unlistenSpawn()
@@ -126,11 +128,10 @@ const GamePage = (): JSX.Element => {
     try {
       const res = await invoke<boolean>('delete_archive_all', { gameId: game.id })
       actions.removeGame(index)
-      if (res)
-        toast.success(`Delete game and all archives in remote successfully: ${game.name}`)
-      else toast.success(`Delete game successfully: ${game.name}`)
+      if (res) toast.success(t('hint.deleteGameAndRemote') + game.name)
+      else toast.success(t('hint.deleteGameSuccess') + game.name)
     } catch (e) {
-      toast.error(`Failed to delete all archives in remote: ${e}`)
+      toast.error(t('hint.deleteGameFailed') + e)
     }
   }
 
@@ -144,7 +145,7 @@ const GamePage = (): JSX.Element => {
     const game = config.games[index]
     if (!game) return
     if (game.savePaths.length === 0) {
-      toast.error('No save paths defined')
+      toast.error(t('hint.noSavePaths'))
       return
     }
 
@@ -154,23 +155,23 @@ const GamePage = (): JSX.Element => {
     // 添加到备份队列
     setBackingUpIds(prev => [...prev, game.id])
 
-    const toastId = toast.loading(`Archiving: ${game.name}...`)
+    const toastId = toast.loading(t('hint.archiving') + game.name + '...')
 
     try {
       const archived_filename = await invoke<string>('archive', { gameId: game.id })
 
-      toast.loading(`Uploading: ${game.name}...`, { id: toastId })
+      toast.loading(t('hint.uploading') + game.name + '...', { id: toastId })
 
       await invoke<void>('upload_archive', {
         gameId: game.id,
         archiveFilename: archived_filename
       })
 
-      toast.success(`Sync Success: ${game.name}`, { id: toastId, duration: 3000 })
+      toast.success(t('hint.syncSuccess') + game.name, { id: toastId, duration: 3000 })
     } catch (error) {
       console.error('Backup failed:', error)
       const errMsg = error instanceof Error ? error.message : String(error)
-      toast.error(`Sync Failed: ${errMsg}`, { id: toastId, duration: 4000 })
+      toast.error(t('hint.syncFailed') + errMsg, { id: toastId, duration: 5000 })
     } finally {
       // 从备份队列中移除
       setBackingUpIds(prev => prev.filter(id => id !== game.id))
@@ -193,7 +194,7 @@ const GamePage = (): JSX.Element => {
   return (
     <>
       <div class="flex flex-col container mx-auto p-4 h-screen">
-        <h1 class="text-2xl font-bold mb-4 dark:text-white">启动游戏</h1>
+        <h1 class="text-2xl font-bold mb-4 dark:text-white">{t('game.self')}</h1>
         <div class="flex-1 grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-x-6 gap-y-6 pb-5 overflow-y-auto custom-scrollbar">
           <For each={config.games}>
             {(game, i) => (
@@ -221,9 +222,9 @@ const GamePage = (): JSX.Element => {
               >
                 <AiTwotonePlusCircle class="w-16 h-16 text-gray-400 group-hover:text-blue-500 transition-colors duration-300" />
                 <p class="text-gray-500 dark:text-gray-400 text-sm mt-2 px-4 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
-                  点击添加
+                  {t('game.clickToAdd')}
                   <br />
-                  或拖拽可执行文件至此
+                  {t('game.orDrag')}
                 </p>
               </DropArea>
             </div>

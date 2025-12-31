@@ -1,6 +1,7 @@
 import { type ImageData } from '@bindings/ImageData'
 import { invoke } from '@tauri-apps/api/core'
 import { getBase64ImageSrc } from '@utils/image'
+import { useI18n } from '~/i18n'
 import { createEffect, createResource, Show, type Component } from 'solid-js'
 import toast from 'solid-toast'
 
@@ -51,6 +52,7 @@ interface ImageProps {
 }
 
 const CachedImage: Component<ImageProps> = props => {
+  const { t } = useI18n()
   // 使用数组作为 source，同时监听 url 和 hash 的变化
   const [imageData] = createResource(
     () => [props.url, props.hash] as const,
@@ -83,7 +85,7 @@ const CachedImage: Component<ImageProps> = props => {
       } catch (e: any) {
         // 仅在非取消错误时 toast，避免快速切换路由时的干扰
         if (!String(e).includes('cancelled')) {
-          toast.error(`failed to load image: ${e}`)
+          toast.error(t('hint.loadImageFailed') + e)
         }
         throw e
       }

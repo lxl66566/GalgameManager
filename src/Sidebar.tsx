@@ -16,7 +16,7 @@ const SidebarItem = (props: { label: string; icon: JSX.Element; href: string }) 
 
 const Sidebar = (props: { children: JSX.ArrayElement }) => {
   return (
-    <div class="flex flex-col dark:bg-slate-900 text-slate-400 p-4 space-y-4 overflow-y-auto scrollbar-hide">
+    <div class="flex flex-col dark:bg-slate-900 text-slate-400 py-4 px-2 space-y-4 overflow-y-auto scrollbar-hide transition-[width] duration-300 ease-in-out">
       {props.children}
     </div>
   )

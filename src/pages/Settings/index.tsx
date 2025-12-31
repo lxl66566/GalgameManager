@@ -1,5 +1,6 @@
 // src/pages/settings/Settings.tsx
 import { Tabs, type TabItem } from '@components/ui/tabs'
+import { useI18n } from '~/i18n'
 import { createSignal, Match, Switch, type Component } from 'solid-js'
 import { AppearanceTab } from './AppearanceTab'
 import { DeviceTab } from './DeviceTab'
@@ -9,21 +10,24 @@ type TabKey = 'general' | 'storage' | 'device'
 
 export const SettingsPage: Component = () => {
   const [activeTab, setActiveTab] = createSignal<TabKey>('storage')
-
-  const tabs: TabItem<TabKey>[] = [
-    { key: 'storage', label: 'Storage & Sync' },
-    { key: 'device', label: 'Device' },
-    { key: 'general', label: 'Appearance' }
-  ]
+  const { t } = useI18n()
 
   return (
     <div class="flex flex-col h-full text-gray-900 dark:text-gray-100">
       {/* Header Section (Fixed at top) */}
       <div class="bg-white dark:bg-gray-900 px-5 pt-3 pb-0 flex flex-col flex-shrink-0">
-        <h1 class="text-2xl font-bold">Settings</h1>
+        <h1 class="text-2xl font-bold">{t('settings.self')}</h1>
 
         {/* Reusable Horizontal Tabs */}
-        <Tabs items={tabs} value={activeTab()} onChange={setActiveTab} />
+        <Tabs
+          items={[
+            { key: 'storage', label: t('settings.tabs.storageSync') },
+            { key: 'device', label: t('settings.tabs.device') },
+            { key: 'general', label: t('settings.tabs.appearance') }
+          ]}
+          value={activeTab()}
+          onChange={setActiveTab}
+        />
       </div>
 
       {/* Content Area (Scrollable) */}

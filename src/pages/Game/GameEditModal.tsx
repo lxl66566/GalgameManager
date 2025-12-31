@@ -1,10 +1,10 @@
 import { type Game } from '@bindings/Game'
 import PathListEditor from '@components/PathListEditor'
 import CachedImage from '@components/ui/CachedImage'
-import GameSettingButton from '@components/ui/StandardButton'
 import { basename, dirname } from '@tauri-apps/api/path'
 import { open } from '@tauri-apps/plugin-dialog'
 import { dateToInput, durationToForm, inputToDate } from '@utils/time'
+import { useI18n } from '~/i18n'
 import { createEffect, createSignal, Show, Suspense } from 'solid-js'
 import { createStore, unwrap } from 'solid-js/store'
 
@@ -30,6 +30,8 @@ const DEFAULT_GAME: Game = {
 }
 
 export default function GameEditModal(props: GameEditModalProps) {
+  const { t } = useI18n()
+
   const isEditMode = () => props.editMode ?? !!props.gameInfo
 
   const [localGame, setLocalGame] = createStore<Game>(
@@ -110,7 +112,7 @@ export default function GameEditModal(props: GameEditModalProps) {
         {/* Header */}
         <div class="flex justify-between items-center mb-4 flex-shrink-0">
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-            {isEditMode() ? '编辑游戏信息' : '添加新游戏'}
+            {isEditMode() ? t('game.edit.editTitle') : t('game.edit.addTitle')}
           </h1>
         </div>
 
@@ -150,21 +152,20 @@ export default function GameEditModal(props: GameEditModalProps) {
             {/* Name */}
             <div class="flex flex-col gap-1">
               <label class="text-sm font-bold text-gray-700 dark:text-gray-300">
-                游戏名称
+                {t('game.edit.gameName')}
               </label>
               <input
                 type="text"
                 class="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
                 value={localGame.name}
                 onInput={e => setLocalGame('name', e.currentTarget.value)}
-                placeholder="请输入游戏名称"
               />
             </div>
 
             {/* Image Source Input */}
             <div class="flex flex-col gap-1">
               <label class="text-sm font-bold text-gray-700 dark:text-gray-300">
-                封面图片
+                {t('game.edit.imageUrl')}
               </label>
               <div class="flex gap-2">
                 <input
@@ -184,7 +185,7 @@ export default function GameEditModal(props: GameEditModalProps) {
                   onClick={handleSelectImage}
                   class="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-800 dark:text-white px-3 py-1.5 rounded text-sm whitespace-nowrap transition-colors"
                 >
-                  浏览
+                  {t('ui.browse')}
                 </button>
                 <Show when={localGame.imageUrl}>
                   <button
@@ -195,7 +196,7 @@ export default function GameEditModal(props: GameEditModalProps) {
                     }}
                     class="bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 px-3 py-1.5 rounded text-sm whitespace-nowrap transition-colors"
                   >
-                    清除
+                    {t('ui.clear')}
                   </button>
                 </Show>
               </div>
@@ -204,7 +205,7 @@ export default function GameEditModal(props: GameEditModalProps) {
             {/* Executable Path */}
             <div class="flex flex-col gap-1">
               <label class="text-sm font-bold text-gray-700 dark:text-gray-300">
-                启动路径
+                {t('game.edit.exePath')}
               </label>
               <div class="flex gap-2">
                 <input
@@ -218,7 +219,7 @@ export default function GameEditModal(props: GameEditModalProps) {
                   onClick={handleSelectExecutable}
                   class="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-800 dark:text-white px-3 py-1.5 rounded text-sm whitespace-nowrap transition-colors"
                 >
-                  浏览
+                  {t('ui.browse')}
                 </button>
               </div>
             </div>
@@ -226,7 +227,7 @@ export default function GameEditModal(props: GameEditModalProps) {
             <hr class="border-gray-300 dark:border-gray-700 my-1" />
 
             <PathListEditor
-              label="存档路径"
+              label={t('game.edit.savePath')}
               paths={localGame.savePaths}
               onChange={newPaths => setLocalGame('savePaths', newPaths)}
             />
@@ -237,7 +238,7 @@ export default function GameEditModal(props: GameEditModalProps) {
             <div class="grid grid-cols-2 gap-4">
               <div class="flex flex-col gap-1">
                 <label class="text-xs font-bold text-gray-500 dark:text-gray-400">
-                  添加时间
+                  {t('game.edit.addedTime')}
                 </label>
                 <input
                   type="datetime-local"
@@ -253,7 +254,7 @@ export default function GameEditModal(props: GameEditModalProps) {
               </div>
               <div class="flex flex-col gap-1">
                 <label class="text-xs font-bold text-gray-500 dark:text-gray-400">
-                  最后运行
+                  {t('game.edit.lastPlayedTime')}
                 </label>
                 <input
                   type="datetime-local"
@@ -266,7 +267,7 @@ export default function GameEditModal(props: GameEditModalProps) {
               </div>
               <div class="col-span-2 flex flex-col gap-1">
                 <label class="text-xs font-bold text-gray-500 dark:text-gray-400">
-                  游玩时长
+                  {t('game.edit.useTime')}
                 </label>
                 <div class="flex items-center gap-2">
                   <div class="relative flex-1">
@@ -280,7 +281,7 @@ export default function GameEditModal(props: GameEditModalProps) {
                       }
                     />
                     <span class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400 pointer-events-none">
-                      小时
+                      {t('unit.hour')}
                     </span>
                   </div>
                   <div class="relative flex-1">
@@ -295,7 +296,7 @@ export default function GameEditModal(props: GameEditModalProps) {
                       }
                     />
                     <span class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400 pointer-events-none">
-                      分钟
+                      {t('unit.minute')}
                     </span>
                   </div>
                 </div>
@@ -313,7 +314,7 @@ export default function GameEditModal(props: GameEditModalProps) {
                 onClick={props.onDelete}
                 class="px-4 py-2 rounded text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
               >
-                删除游戏
+                {t('game.edit.deleteGame')}
               </button>
             </Show>
           </div>
@@ -324,7 +325,7 @@ export default function GameEditModal(props: GameEditModalProps) {
               onClick={props.cancel}
               class="px-4 py-2 rounded text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors"
             >
-              取消
+              {t('game.edit.cancel')}
             </button>
 
             <button
@@ -332,7 +333,7 @@ export default function GameEditModal(props: GameEditModalProps) {
               onClick={() => props.confirm(localGame)}
               class="px-4 py-2 rounded text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 shadow-sm transition-colors"
             >
-              保存更改
+              {t('game.edit.confirmSave')}
             </button>
           </div>
         </div>

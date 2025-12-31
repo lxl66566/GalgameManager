@@ -26,7 +26,7 @@ export const SettingSubGroup: Component<{ children: JSX.Element }> = props => (
 
 // 3. 单个设置行：大幅减少 Padding，使用 Flex 布局保证紧凑
 interface SettingRowProps {
-  label: string
+  label: string | JSX.Element
   description?: string
   children: JSX.Element
   class?: string
@@ -56,13 +56,15 @@ export const SettingRow: Component<SettingRowProps> = props => (
   </div>
 )
 
-// 4. 输入框：高度固定 h-8，字体更小
+// 4. 输入框
 export const Input: Component<JSX.InputHTMLAttributes<HTMLInputElement>> = props => {
   const [local, others] = splitProps(props, ['class'])
   return (
     <input
       class={clsx(
-        'block w-48 h-8 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900',
+        // 布局核心：默认占满，sm(640px)以上固定宽度，flex-none 防止被压缩
+        'block w-full sm:w-64 h-8 flex-none',
+        'rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900',
         'text-xs text-gray-900 dark:text-gray-100 shadow-sm',
         'focus:border-blue-500 focus:ring-1 focus:ring-blue-500',
         'px-2.5 py-0 placeholder-gray-400 transition-all',
@@ -72,41 +74,38 @@ export const Input: Component<JSX.InputHTMLAttributes<HTMLInputElement>> = props
     />
   )
 }
-// 5. 选择框：高度固定 h-8
+
+// 5. 选择框
 export const Select: Component<
   JSX.SelectHTMLAttributes<HTMLSelectElement> & {
     options: { label: string; value: string | number }[]
   }
 > = props => {
-  // 在 splitProps 中把 'value' 也解构出来，这样我们在组件内部就能拿到它进行比较
   const [local, others] = splitProps(props, ['class', 'options', 'value'])
 
   return (
-    <div class="relative">
+    // 外层容器：与 Input 保持完全一致的宽度逻辑 (w-full sm:w-64)
+    <div class={clsx('relative w-full sm:w-64 flex-none', local.class)}>
       <select
         class={clsx(
-          'block w-40 h-8 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900',
+          'block w-full h-8', // 内部填满外层容器
+          'rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900',
           'text-xs text-gray-900 dark:text-gray-100 shadow-sm',
           'focus:border-blue-500 focus:ring-1 focus:ring-blue-500',
           'pl-2.5 pr-8 py-0 appearance-none cursor-pointer transition-all',
-          local.class
+          'truncate' // 防止文字过长撑破
         )}
-        // 显式绑定 value
         value={local.value}
         {...others}
       >
         {local.options.map(opt => (
-          <option
-            value={opt.value}
-            // 显式告诉浏览器哪个选项是被选中的
-            selected={opt.value === local.value}
-          >
+          <option value={opt.value} selected={opt.value === local.value}>
             {opt.label}
           </option>
         ))}
       </select>
 
-      {/* 紧凑的箭头图标 */}
+      {/* 箭头图标 */}
       <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path

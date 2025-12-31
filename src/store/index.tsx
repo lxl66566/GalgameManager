@@ -183,6 +183,7 @@ export const useConfig = () => {
     refresh: refreshConfig,
     save,
     actions: {
+      initConfig,
       addGame: (game: Game) => {
         game.addedTime = new Date().toISOString()
         setConfig(

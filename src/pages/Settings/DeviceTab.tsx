@@ -1,12 +1,14 @@
 import type { Device } from '@bindings/Device'
 import { Input, SettingRow, SettingSection } from '@components/ui/settings'
 import { VariableEditor } from '@components/VariableEditor'
+import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'
 import { createResource, Show, Suspense, type Component } from 'solid-js'
 import { unwrap } from 'solid-js/store'
 
 export const DeviceTab: Component = () => {
   const { actions } = useConfig()
+  const { t } = useI18n()
 
   const [device, { mutate }] = createResource(async () => {
     return await actions.getCurrentDeviceOrDefault()
@@ -80,10 +82,10 @@ export const DeviceTab: Component = () => {
         >
           {dev => (
             <>
-              <SettingSection title="Device Identity">
+              <SettingSection title={t('settings.device.deviceIdentity')}>
                 <SettingRow
-                  label="Device Name"
-                  description="Friendly name for this machine"
+                  label={t('settings.device.deviceName')}
+                  description={t('settings.device.deviceNameAlias')}
                 >
                   <Input
                     value={dev().name}
@@ -92,7 +94,10 @@ export const DeviceTab: Component = () => {
                   />
                 </SettingRow>
 
-                <SettingRow label="UUID" description="Unique ID for sync identification">
+                <SettingRow
+                  label={t('settings.device.uuid')}
+                  description={t('settings.device.uuidDesc')}
+                >
                   <div class="flex items-center gap-2">
                     <code class="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-gray-600 dark:text-gray-400 select-all">
                       {dev().uid}
@@ -101,7 +106,7 @@ export const DeviceTab: Component = () => {
                 </SettingRow>
               </SettingSection>
 
-              <SettingSection title="Variables">
+              <SettingSection title={t('settings.device.variables')}>
                 <div class="p-4">
                   <VariableEditor
                     variables={dev().variables || {}}

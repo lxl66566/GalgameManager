@@ -2,6 +2,7 @@ import { type Game } from '@bindings/Game'
 import CachedImage from '@components/ui/CachedImage'
 import { GameActionButton } from '@components/ui/GameActionButton'
 import { displayDuration, formatTimeAgo } from '@utils/time'
+import { useI18n } from '~/i18n'
 import { AiOutlineCloudUpload, AiOutlineEdit, AiOutlineSync } from 'solid-icons/ai'
 import { FaRegularCirclePlay, FaSolidGamepad } from 'solid-icons/fa'
 import { Show, type JSX } from 'solid-js'
@@ -19,6 +20,7 @@ interface GameItemProps {
 }
 
 export const GameItem = (props: GameItemProps) => {
+  const { t } = useI18n()
   const titleSizeClass = () => {
     const len = props.game.name.length
     if (len > 12) return 'text-sm' // 字数很多，用小号
@@ -104,7 +106,7 @@ export const GameItem = (props: GameItemProps) => {
         <div class="absolute inset-0 flex items-center justify-around px-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md translate-y-full group-hover/info:translate-y-0 transition-transform duration-300 ease-out border-t dark:border-slate-600 border-gray-100">
           {/* 按钮 1: 编辑 */}
           <GameActionButton
-            title="编辑游戏"
+            title={t('game.editGame')}
             icon={<AiOutlineEdit class="w-6 h-6" />}
             colorClass="text-blue-600 dark:text-blue-400"
             onClick={props.onEdit}
@@ -112,7 +114,7 @@ export const GameItem = (props: GameItemProps) => {
 
           {/* 按钮 2: 备份 (上传) */}
           <GameActionButton
-            title="备份存档"
+            title={t('game.backupButtonHint')}
             icon={<AiOutlineCloudUpload class="w-6 h-6" />}
             colorClass="text-emerald-600 dark:text-emerald-400"
             onClick={props.onBackup}
@@ -121,7 +123,7 @@ export const GameItem = (props: GameItemProps) => {
 
           {/* 按钮 3: 同步状态 */}
           <GameActionButton
-            title="同步状态"
+            title={t('game.openSyncModal')}
             icon={<AiOutlineSync class="w-6 h-6" />}
             colorClass="text-amber-600 dark:text-amber-400"
             onClick={props.onSync}
