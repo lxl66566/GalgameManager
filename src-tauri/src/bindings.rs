@@ -129,7 +129,7 @@ pub async fn upload_archive(app: AppHandle, game_id: u32, archive_filename: Stri
     );
     op.upload_archive(
         game_id,
-        archive_filename,
+        &archive_filename,
         &app.path().app_local_data_dir()?.join("backup"),
     )
     .await
@@ -140,7 +140,7 @@ pub async fn delete_archive(game_id: u32, archive_filename: String) -> Result<()
     init_operator().await?;
     let lock = CURRENT_OPERATOR.lock().await;
     let op = lock.as_ref().unwrap();
-    op.delete_archive(game_id, archive_filename).await
+    op.delete_archive(game_id, &archive_filename).await
 }
 
 #[tauri::command(async)]
@@ -150,7 +150,7 @@ pub async fn pull_archive(app: AppHandle, game_id: u32, archive_filename: String
     let op = lock.as_ref().unwrap();
     op.pull_archive(
         game_id,
-        archive_filename,
+        &archive_filename,
         &app.path().app_local_data_dir()?.join("backup"),
     )
     .await
@@ -165,7 +165,7 @@ pub async fn rename_remote_archive(
     init_operator().await?;
     let lock = CURRENT_OPERATOR.lock().await;
     let op = lock.as_ref().unwrap();
-    op.rename_archive(game_id, archive_filename, new_archive_filename)
+    op.rename_archive(game_id, &archive_filename, &new_archive_filename)
         .await
 }
 

@@ -33,7 +33,7 @@ impl super::MyOperation for LocalUploader {
     async fn upload_archive(
         &self,
         game_id: u32,
-        archive_filename: String,
+        archive_filename: &str,
         backup_dir: &Path,
     ) -> Result<()> {
         let game_src = backup_dir.join(game_id.to_string());
@@ -41,12 +41,12 @@ impl super::MyOperation for LocalUploader {
         fs::create_dir_all(&game_dst)?;
         dbg!(&game_src, &game_dst);
         fs::copy(
-            game_src.join(&archive_filename),
-            game_dst.join(&archive_filename),
+            game_src.join(archive_filename),
+            game_dst.join(archive_filename),
         )?;
         Ok(())
     }
-    async fn delete_archive(&self, game_id: u32, archive_filename: String) -> Result<()> {
+    async fn delete_archive(&self, game_id: u32, archive_filename: &str) -> Result<()> {
         let game_dst = self.0.join(game_id.to_string());
         fs::remove_file(game_dst.join(archive_filename))?;
         Ok(())
@@ -55,15 +55,15 @@ impl super::MyOperation for LocalUploader {
     async fn pull_archive(
         &self,
         game_id: u32,
-        archive_filename: String,
+        archive_filename: &str,
         backup_dir: &Path,
     ) -> Result<()> {
         let game_dst = self.0.join(game_id.to_string());
         let game_src = backup_dir.join(game_id.to_string());
         fs::create_dir_all(&game_src)?;
         fs::copy(
-            game_dst.join(&archive_filename),
-            game_src.join(&archive_filename),
+            game_dst.join(archive_filename),
+            game_src.join(archive_filename),
         )?;
         Ok(())
     }
@@ -71,12 +71,12 @@ impl super::MyOperation for LocalUploader {
     async fn rename_archive(
         &self,
         game_id: u32,
-        archive_filename: String,
-        new_archive_filename: String,
+        archive_filename: &str,
+        new_archive_filename: &str,
     ) -> Result<()> {
         let game_dst = self.0.join(game_id.to_string());
-        let game_src = game_dst.join(&archive_filename);
-        let new_game_src = game_dst.join(&new_archive_filename);
+        let game_src = game_dst.join(archive_filename);
+        let new_game_src = game_dst.join(new_archive_filename);
         fs::rename(game_src, new_game_src)?;
         Ok(())
     }
@@ -121,22 +121,20 @@ mod tests {
         assert_eq!(ls, Vec::<String>::new());
 
         // upload
-        op.upload_archive(game_id, archive_filename.to_string(), src_path)
+        op.upload_archive(game_id, archive_filename, src_path)
             .await
             .unwrap();
         let ls = op.list_archive(game_id).await.unwrap();
-        assert_eq!(ls, vec![archive_filename.to_string()]);
+        assert_eq!(ls, vec![archive_filename]);
 
         // pull
         fs::remove_file(&src_archive)?;
-        op.pull_archive(game_id, archive_filename.to_string(), src_path)
+        op.pull_archive(game_id, archive_filename, src_path)
             .await
             .unwrap();
         assert_eq!(fs::read_to_string(&src_archive)?, "test");
 
-        op.delete_archive(game_id, archive_filename.to_string())
-            .await
-            .unwrap();
+        op.delete_archive(game_id, archive_filename).await.unwrap();
         assert!(!remote_path.join("test").join("1").exists());
 
         Ok(())

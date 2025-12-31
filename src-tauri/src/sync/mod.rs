@@ -35,21 +35,21 @@ pub trait MyOperation {
     async fn upload_archive(
         &self,
         game_id: u32,
-        archive_filename: String,
+        archive_filename: &str,
         backup_dir: &Path,
     ) -> Result<()>;
-    async fn delete_archive(&self, game_id: u32, archive_filename: String) -> Result<()>;
+    async fn delete_archive(&self, game_id: u32, archive_filename: &str) -> Result<()>;
     async fn pull_archive(
         &self,
         game_id: u32,
-        archive_filename: String,
+        archive_filename: &str,
         backup_dir: &Path,
     ) -> Result<()>;
     async fn rename_archive(
         &self,
         game_id: u32,
-        archive_filename: String,
-        new_archive_filename: String,
+        archive_filename: &str,
+        new_archive_filename: &str,
     ) -> Result<()>;
     async fn upload_config(&self) -> Result<()>;
     async fn get_remote_config(&self) -> Result<Option<Config>>;
@@ -103,5 +103,58 @@ impl StorageConfig {
                 Ok(Box::new(operator))
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::tempdir;
+
+    async fn test_big_file(op: impl MyOperation + Send + Sync) -> Result<()> {
+        let game_id = 1;
+        let archive_filename = "big_file.tar";
+
+        let backup_dir = tempdir()?;
+        let game_dir = backup_dir.path().join(game_id.to_string());
+        fs::create_dir(&game_dir)?;
+        let archive_path = game_dir.join(archive_filename);
+        fs::write(&archive_path, [0; 20 * 1024 * 1024].as_ref())?;
+
+        op.upload_archive(game_id, archive_filename, backup_dir.as_ref())
+            .await
+            .unwrap();
+        let ls = op.list_archive(game_id).await.unwrap();
+        dbg!(&ls);
+        assert!(ls.iter().any(|s| s == archive_filename));
+
+        fs::remove_file(&archive_path)?;
+        op.pull_archive(game_id, archive_filename, backup_dir.as_ref())
+            .await
+            .unwrap();
+        assert_eq!(fs::read(&archive_path)?, [0; 20 * 1024 * 1024].as_ref());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_local_operator() -> Result<()> {
+        let remote_dir = tempdir()?;
+        test_big_file(LocalUploader::new(remote_dir.path().to_path_buf())?).await
+    }
+
+    #[ignore = "please build a local webdav server yourself and run this test manually"]
+    #[tokio::test]
+    async fn test_webdav_operator() -> Result<()> {
+        let op = Operator::new(
+            services::Webdav::default()
+                .endpoint("http://172.23.50.50:4918/webdav/")
+                .username("webdav")
+                .password("")
+                .root("/test"),
+        )?
+        .finish();
+        test_big_file(op).await
     }
 }

@@ -10,6 +10,9 @@ use crate::{
     error::Result,
 };
 
+// https://t.me/withabsolutex/2598
+const WRITER_MAX_BUFFER_SIZE: usize = 1024 * 1024 * 1024 * 1024;
+
 #[async_trait::async_trait]
 impl super::MyOperation for Operator {
     async fn list_archive(&self, game_id: u32) -> Result<Vec<String>> {
@@ -31,7 +34,7 @@ impl super::MyOperation for Operator {
     async fn upload_archive(
         &self,
         game_id: u32,
-        archive_filename: String,
+        archive_filename: &str,
         backup_dir: &Path,
     ) -> Result<()> {
         // create game dir first, otherwise the upload will fail 409
@@ -40,8 +43,7 @@ impl super::MyOperation for Operator {
         let remote_path = format!("{}/{}", game_id, archive_filename);
         let uploader = self
             .writer_with(&remote_path)
-            .chunk(4 * 1024 * 1024)
-            .concurrent(8)
+            .chunk(WRITER_MAX_BUFFER_SIZE)
             .await?;
         let mut writer = uploader.into_futures_async_write();
         let archive_path = backup_dir.join(game_id.to_string()).join(archive_filename);
@@ -51,17 +53,18 @@ impl super::MyOperation for Operator {
         Ok(())
     }
 
-    async fn delete_archive(&self, game_id: u32, archive_filename: String) -> Result<()> {
+    async fn delete_archive(&self, game_id: u32, archive_filename: &str) -> Result<()> {
         let remote_path = format!("{}/{}", game_id, archive_filename);
         let mut deleter = self.deleter().await?;
         deleter.delete(remote_path).await?;
+        deleter.close().await?;
         Ok(())
     }
 
     async fn pull_archive(
         &self,
         game_id: u32,
-        archive_filename: String,
+        archive_filename: &str,
         backup_dir: &Path,
     ) -> Result<()> {
         let remote_path = format!("{}/{}", game_id, archive_filename);
@@ -83,8 +86,8 @@ impl super::MyOperation for Operator {
     async fn rename_archive(
         &self,
         game_id: u32,
-        archive_filename: String,
-        new_archive_filename: String,
+        archive_filename: &str,
+        new_archive_filename: &str,
     ) -> Result<()> {
         let remote_path = format!("{}/{}", game_id, archive_filename);
         let new_remote_path = format!("{}/{}", game_id, new_archive_filename);
@@ -96,7 +99,7 @@ impl super::MyOperation for Operator {
         let remote_path = "config.toml";
         let mut uploader = self
             .writer_with(remote_path)
-            .chunk(4 * 1024 * 1024)
+            .chunk(WRITER_MAX_BUFFER_SIZE)
             .concurrent(8)
             .await?;
         let config_str = toml::to_string(&*CONFIG.lock()).unwrap();
