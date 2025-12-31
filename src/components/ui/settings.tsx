@@ -1,3 +1,4 @@
+import * as Switch from '@kobalte/core/switch' // 引入 Kobalte Switch
 import { clsx } from 'clsx'
 import { Show, splitProps, type Component, type JSX } from 'solid-js'
 
@@ -133,6 +134,103 @@ export const Button: Component<JSX.ButtonHTMLAttributes<HTMLButtonElement>> = pr
         'hover:bg-gray-50 dark:hover:bg-gray-800',
         'focus:outline-none focus:ring-2 focus:ring-blue-500/50',
         'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-gray-900',
+        local.class
+      )}
+      {...others}
+    >
+      {local.children}
+    </button>
+  )
+}
+
+// 7. 滑动开关 (Switch)：细条透明风格
+export const SwitchToggle: Component<
+  Switch.SwitchRootProps & {
+    class?: string
+  }
+> = props => {
+  const [local, others] = splitProps(props, ['class'])
+  return (
+    <Switch.Root
+      class={clsx(
+        'group inline-flex items-center', // 保持行内布局且垂直居中
+        local.class
+      )}
+      {...others}
+    >
+      <Switch.Input />
+      <Switch.Control
+        class={clsx(
+          // 布局与尺寸：细条轨道
+          'relative w-9 h-3 rounded-full transition-colors duration-200 cursor-pointer',
+
+          // 颜色与透明度：默认灰色半透明，选中时品牌色半透明
+          'bg-gray-300/50 dark:bg-gray-600/50',
+          'group-data-[checked]:bg-blue-500/60',
+
+          // 聚焦状态：外圈光环
+          'group-data-[focus-visible]:ring-2 group-data-[focus-visible]:ring-blue-500/50 group-data-[focus-visible]:ring-offset-2 dark:group-data-[focus-visible]:ring-offset-gray-900',
+
+          // 禁用状态
+          'group-data-[disabled]:opacity-50 group-data-[disabled]:cursor-not-allowed'
+        )}
+      >
+        <Switch.Thumb
+          class={clsx(
+            // 滑块样式：白色实心，带阴影，比轨道大
+            'block size-4 rounded-full bg-white shadow-md ring-0 transition-transform duration-200',
+
+            // 定位：绝对定位实现垂直居中
+            'absolute top-1/2 left-0 -translate-y-1/2',
+
+            // 动画：选中时向右移动 (w-9=36px, size-4=16px, 差值20px=translate-x-5)
+            'group-data-[checked]:translate-x-5',
+
+            // 禁用时的滑块颜色调整
+            'group-data-[disabled]:bg-gray-100 dark:group-data-[disabled]:bg-gray-400'
+          )}
+        />
+      </Switch.Control>
+    </Switch.Root>
+  )
+}
+
+// 8. 多行文本输入框 (Textarea)
+export const Textarea: Component<
+  JSX.TextareaHTMLAttributes<HTMLTextAreaElement>
+> = props => {
+  const [local, others] = splitProps(props, ['class'])
+  return (
+    <textarea
+      class={clsx(
+        // 布局核心：默认占满，min-h-20，flex-none 防止被压缩
+        'block w-full min-h-20 flex-none',
+        'rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900',
+        'text-xs text-gray-900 dark:text-gray-100 shadow-sm',
+        'focus:border-blue-500 focus:ring-1 focus:ring-blue-500',
+        'px-2.5 py-2 placeholder-gray-400 transition-all', // 增加垂直 padding
+        'resize-y', // 允许垂直方向调整大小
+        local.class
+      )}
+      {...others}
+    />
+  )
+}
+
+// 9. 链接样式按钮 (LinkButton)
+export const LinkButton: Component<
+  JSX.ButtonHTMLAttributes<HTMLButtonElement>
+> = props => {
+  const [local, others] = splitProps(props, ['class', 'children'])
+  return (
+    <button
+      type="button"
+      class={clsx(
+        'inline-flex items-center justify-center h-8 px-1 transition-colors', // 减少 padding
+        'text-xs font-medium text-blue-600 dark:text-blue-400',
+        'hover:underline hover:text-blue-700 dark:hover:text-blue-300',
+        'focus:outline-none focus:ring-2 focus:ring-blue-500/50',
+        'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:no-underline',
         local.class
       )}
       {...others}
