@@ -2,6 +2,7 @@ import { type Game } from '@bindings/Game'
 import CachedImage from '@components/ui/CachedImage'
 import { GameActionButton } from '@components/ui/GameActionButton'
 import { displayDuration, formatTimeAgo } from '@utils/time'
+import { createRelativeTime } from '@utils/time/createRelativeTime'
 import { useI18n } from '~/i18n'
 import { AiOutlineCloudUpload, AiOutlineEdit, AiOutlineSync } from 'solid-icons/ai'
 import { FaRegularCirclePlay, FaSolidGamepad } from 'solid-icons/fa'
@@ -21,6 +22,8 @@ interface GameItemProps {
 
 export const GameItem = (props: GameItemProps) => {
   const { t } = useI18n()
+  const timeAgo = createRelativeTime(() => props.game.lastPlayedTime)
+
   const titleSizeClass = () => {
     const len = props.game.name.length
     if (len > 12) return 'text-sm' // 字数很多，用小号
@@ -89,7 +92,7 @@ export const GameItem = (props: GameItemProps) => {
               title={`Last played: ${props.game.lastPlayedTime || 'Never'}`}
             >
               {/* <History class="w-3 h-3 mr-1" /> */}
-              <span>{formatTimeAgo(props.game.lastPlayedTime)}</span>
+              <span>{timeAgo()}</span>
             </div>
 
             {/* 右侧：总游玩时长 */}
