@@ -1,5 +1,5 @@
-name: Update NodeJS Dependencies
-on: 
+name: Update Bun Dependencies
+on:
   push:
     branches:
       - 'renovate/**'
@@ -10,16 +10,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout 🛎️
-        uses: actions/checkout@v4
-        
-      - name: Setup Bun
+      - name: Checkout repository 🛎️
+        uses: actions/checkout@v6
+
+      - name: Setup Bun runtime
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-        
-      - name: Install dependencies
+
+      - name: Install frontend dependencies
         run: bun install
 
-      - name: Build 🔧
+      - name: Build frontend application 🔧
         run: bun run build

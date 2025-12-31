@@ -6,7 +6,6 @@
       "name": "tauri-solid-tailwind-ts-vite-template",
       "dependencies": {
         "@kobalte/core": "^0.13.11",
-        "@solid-primitives/i18n": "^2.2.1",
         "@tauri-apps/api": "^2.9.1",
         "@tauri-apps/cli": "^2.9.6",
         "@tauri-apps/plugin-dialog": "~2",
@@ -25,6 +24,7 @@
       },
       "devDependencies": {
         "@ianvs/prettier-plugin-sort-imports": "4.4.0",
+        "@solid-primitives/i18n": "^2.2.1",
         "@solidjs/router": "^0.15.4",
         "@types/node": "^25.0.3",
         "@unocss/preset-wind4": "^66.5.10",

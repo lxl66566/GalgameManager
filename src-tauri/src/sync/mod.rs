@@ -109,9 +109,11 @@ impl StorageConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::fs;
+
     use tempfile::tempdir;
+
+    use super::*;
 
     async fn test_big_file(op: impl MyOperation + Send + Sync) -> Result<()> {
         let game_id = 1;

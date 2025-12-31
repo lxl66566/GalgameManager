@@ -1,7 +1,7 @@
 {
-  "name": "tauri-solid-tailwind-ts-vite-template",
-  "version": "2.0.0",
-  "author": "AR10",
+  "name": "GalgameManager",
+  "version": "0.1.0",
+  "author": "lxl66566",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
@@ -45,6 +45,5 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "unocss-preset-scrollbar-hide": "^1.0.1"
-  },
-  "packageManager": "pnpm@9.15.2+sha512.93e57b0126f0df74ce6bff29680394c0ba54ec47246b9cf321f0121d8d9bb03f750a705f24edc3c1180853afd7c2c3b94196d0a3d53d3e069d9e2793ef11f321"
+  }
 }
