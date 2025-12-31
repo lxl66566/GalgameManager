@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{path::Path, time::Duration};
 
 use chrono::TimeDelta;
 use tauri::{AppHandle, Emitter as _};
@@ -96,7 +96,11 @@ pub async fn launch_game(app: AppHandle, game_id: u32, save_interval: u32) -> Re
     };
 
     // 1. 启动进程
-    let child = Command::new(&exe_path).spawn()?;
+    let mut cmd = Command::new(&exe_path);
+    if let Some(parent) = Path::new(&exe_path).parent() {
+        cmd.current_dir(parent);
+    }
+    let child = cmd.spawn()?;
     let child_pid = child.id().ok_or(Error::Launch)?;
 
     app.emit(&format!("game://spawn/{}", game_id), ())?;
