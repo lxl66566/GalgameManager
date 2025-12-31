@@ -199,7 +199,8 @@ impl super::Archive for SquashfsArchiver {
                         fs::create_dir_all(&dest_path)?;
                     }
                 }
-                InnerNode::Symlink(_link) => {
+                #[allow(unused_variables)]
+                InnerNode::Symlink(link) => {
                     #[cfg(unix)]
                     {
                         if dest_path.is_symlink() || dest_path.exists() {

@@ -1,13 +1,14 @@
-#[cfg(target_os = "linux")]
-mod linux;
-#[cfg(target_os = "linux")]
-pub use linux::*;
-#[cfg(target_os = "windows")]
+#[cfg(not(windows))]
+mod unix;
+#[cfg(not(windows))]
+pub use unix::*;
+#[cfg(windows)]
 mod windows;
+#[cfg(windows)]
+pub use windows::*;
+
 use chrono::{TimeDelta, Utc};
 use tauri::AppHandle;
-#[cfg(target_os = "windows")]
-pub use windows::*;
 
 use crate::{db::CONFIG, error::Result};
 

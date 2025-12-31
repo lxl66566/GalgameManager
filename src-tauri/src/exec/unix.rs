@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use chrono::{TimeDelta, Utc};
+use chrono::TimeDelta;
 use tauri::{AppHandle, Emitter as _};
 use tokio::{process::Command, time};
 

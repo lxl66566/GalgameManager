@@ -38,6 +38,7 @@ pub enum Error {
     #[error("Launch error: executable not found")]
     Launch,
 
+    #[cfg(target_os = "windows")]
     #[error("Windows API error: {0}")]
     WindowsApi(#[from] windows_result::Error),
 
