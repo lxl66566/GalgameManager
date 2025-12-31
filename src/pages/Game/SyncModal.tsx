@@ -34,6 +34,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
   // 重命名状态
   const [editingName, setEditingName] = createSignal<string | null>(null)
   const [tempName, setTempName] = createSignal('')
+  const [isRenaming, setIsRenaming] = createSignal(false)
 
   // 加载数据
   const fetchData = async () => {
@@ -163,7 +164,6 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       toast.error(`删除失败: ${e}`, { id: toastId })
     }
   }
-
   // --- 重命名逻辑 ---
   const startRename = (name: string) => {
     setEditingName(name)
@@ -171,6 +171,9 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
   }
 
   const commitRename = async (oldName: string, status: ArchiveStatus) => {
+    // 0. 防重复提交锁：如果正在重命名中，直接忽略后续调用
+    if (isRenaming()) return
+
     const newName = tempName().trim()
 
     // 1. 基础校验：名称为空或未修改
@@ -180,12 +183,19 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
     }
 
     // 2. 冲突校验：检查新名称是否已存在于列表中
-    if (archives().some(a => a.name === newName)) {
+    const isDuplicate = archives().some(
+      a => a.name.toLowerCase() === newName.toLowerCase()
+    )
+
+    if (isDuplicate) {
       toast.error('该存档名称已存在，请换一个名字')
       return
     }
 
+    // 开启锁
+    setIsRenaming(true)
     const toastId = toast.loading('正在重命名...')
+
     try {
       if (status === 'LocalOnly') {
         await invoke('rename_local_archive', {
@@ -200,7 +210,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
           newArchiveFilename: newName
         })
       } else {
-        // Synced: 需要同时修改
+        // Synced: 原子性操作模拟
         // 1. 先改本地
         await invoke('rename_local_archive', {
           gameId: props.gameId,
@@ -216,32 +226,44 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
             newArchiveFilename: newName
           })
         } catch (remoteErr) {
-          // 3. 如果远程失败，回滚本地
+          // 3. 远程失败，回滚本地
           console.error('Remote rename failed, rolling back local...', remoteErr)
-          await invoke('rename_local_archive', {
-            gameId: props.gameId,
-            archiveFilename: newName,
-            newArchiveFilename: oldName
-          })
-          // 抛出错误，中断后续的状态更新
-          throw new Error(`云端重命名失败，已回滚本地更改: ${remoteErr}`)
+          try {
+            await invoke('rename_local_archive', {
+              gameId: props.gameId,
+              archiveFilename: newName, // 注意：这里要把新名字改回旧名字
+              newArchiveFilename: oldName
+            })
+            // 抛出特定错误信息给外层 catch
+            throw new Error(`云端同步失败，已恢复本地文件名。错误: ${remoteErr}`)
+          } catch (rollbackErr) {
+            // 极端的灾难性错误：本地回滚也失败了（文件被占用等）
+            throw new Error(
+              `严重错误：云端重命名失败且本地回滚失败。请手动检查文件。Remote: ${remoteErr}, Rollback: ${rollbackErr}`
+            )
+          }
         }
       }
 
+      // 成功处理
       toast.success('重命名成功', { id: toastId })
-      setEditingName(null)
 
-      // 3. 状态更新：修改名称并重新排序
+      // 更新列表状态
       setArchives(prev => {
         const updatedList = prev.map(item =>
           item.name === oldName ? { ...item, name: newName } : item
         )
-        // 保持原本的倒序排列 (Z-A)
         return updatedList.sort((a, b) => b.name.localeCompare(a.name))
       })
-    } catch (e) {
-      toast.error(`${e}`, { id: toastId })
-      // 发生错误时保持编辑状态，方便用户修改后重试
+
+      // 只有成功时才关闭编辑框
+      setEditingName(null)
+    } catch (e: any) {
+      toast.error(e, { id: toastId })
+      // 注意：发生错误时，不设置 setEditingName(null)，保留用户输入以便修改重试
+    } finally {
+      // 无论成功失败，最后释放锁
+      setIsRenaming(false)
     }
   }
 
