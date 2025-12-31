@@ -143,6 +143,24 @@ pub async fn delete_archive(game_id: u32, archive_filename: String) -> Result<()
     op.delete_archive(game_id, &archive_filename).await
 }
 
+/// Delete all archives of the game
+///
+/// # Returns
+///
+/// bool indicates whether config really deleted
+#[tauri::command(async)]
+pub async fn delete_archive_all(game_id: u32) -> Result<bool> {
+    // prevent deleting all if storage is not configured
+    if CONFIG.lock().settings.storage == StorageConfig::default() {
+        return Ok(false);
+    }
+    init_operator().await?;
+    let lock = CURRENT_OPERATOR.lock().await;
+    let op = lock.as_ref().unwrap();
+    op.delete_archive_all(game_id).await?;
+    Ok(true)
+}
+
 #[tauri::command(async)]
 pub async fn pull_archive(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
     init_operator().await?;

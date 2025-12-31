@@ -38,6 +38,7 @@ pub fn run() {
             list_archive,
             upload_archive,
             delete_archive,
+            delete_archive_all,
             pull_archive,
             rename_remote_archive,
             clean_current_operator,

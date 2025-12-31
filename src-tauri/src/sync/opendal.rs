@@ -61,6 +61,12 @@ impl super::MyOperation for Operator {
         Ok(())
     }
 
+    async fn delete_archive_all(&self, game_id: u32) -> Result<()> {
+        let remote_path = format!("{}/", game_id);
+        self.remove_all(&remote_path).await?;
+        Ok(())
+    }
+
     async fn pull_archive(
         &self,
         game_id: u32,

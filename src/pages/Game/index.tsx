@@ -115,11 +115,22 @@ const GamePage = (): JSX.Element => {
     closeEditModal()
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     const index = editingIndex()
-    if (index !== null) {
+    if (index === null) {
+      toast.error('Internal error: Cannot delete game without index!!')
+      return
+    }
+    const game = config.games[index]
+    closeEditModal()
+    try {
+      const res = await invoke<boolean>('delete_archive_all', { gameId: game.id })
       actions.removeGame(index)
-      closeEditModal()
+      if (res)
+        toast.success(`Delete game and all archives in remote successfully: ${game.name}`)
+      else toast.success(`Delete game successfully: ${game.name}`)
+    } catch (e) {
+      toast.error(`Failed to delete all archives in remote: ${e}`)
     }
   }
 
@@ -227,7 +238,7 @@ const GamePage = (): JSX.Element => {
             editMode={isEditMode()}
             cancel={closeEditModal}
             confirm={handleSave}
-            onDelete={editingIndex() !== null ? handleDelete : undefined}
+            onDelete={() => handleDelete()}
           />
         </FullScreenMask>
       </Show>

@@ -46,9 +46,16 @@ impl super::MyOperation for LocalUploader {
         )?;
         Ok(())
     }
+
     async fn delete_archive(&self, game_id: u32, archive_filename: &str) -> Result<()> {
         let game_dst = self.0.join(game_id.to_string());
         fs::remove_file(game_dst.join(archive_filename))?;
+        Ok(())
+    }
+
+    async fn delete_archive_all(&self, game_id: u32) -> Result<()> {
+        let game_dst = self.0.join(game_id.to_string());
+        fs::remove_dir_all(game_dst)?;
         Ok(())
     }
 

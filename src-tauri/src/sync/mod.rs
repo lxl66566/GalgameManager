@@ -39,6 +39,7 @@ pub trait MyOperation {
         backup_dir: &Path,
     ) -> Result<()>;
     async fn delete_archive(&self, game_id: u32, archive_filename: &str) -> Result<()>;
+    async fn delete_archive_all(&self, game_id: u32) -> Result<()>;
     async fn pull_archive(
         &self,
         game_id: u32,
