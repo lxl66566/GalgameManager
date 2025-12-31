@@ -54,7 +54,8 @@ pub fn run() {
                     .handle()
                     .plugin(tauri_plugin_window_state::Builder::default().build());
             }
-            let open = MenuItem::with_id(app, "open", "Open", true, None::<&str>)?;
+            let open_config_folder =
+                MenuItem::with_id(app, "open", "Open Config Folder", true, None::<&str>)?;
             let quit_nosync = MenuItem::with_id(
                 app,
                 "quit_nosync",
@@ -63,7 +64,7 @@ pub fn run() {
                 None::<&str>,
             )?;
             let quit_sync = MenuItem::with_id(app, "quit_sync", "Quit", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&open, &quit_nosync, &quit_sync])?;
+            let menu = Menu::with_items(app, &[&open_config_folder, &quit_nosync, &quit_sync])?;
             #[allow(clippy::single_match)]
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
@@ -75,7 +76,7 @@ pub fn run() {
                     "quit_nosync" => {
                         app.exit(0);
                     }
-                    "open" => _ = app.get_webview_window("main").unwrap().unminimize(),
+                    "open" => _ = opener::open(CONFIG_DIR.as_os_str()),
                     _ => {}
                 })
                 .on_tray_icon_event(|tray, event| match event {
