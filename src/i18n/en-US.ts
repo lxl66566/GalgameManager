@@ -166,7 +166,10 @@ export const dict = {
     configUploadSuccess: 'Config upload successfully',
     configAutoUploadSuccess: 'Config auto upload successfully',
     configUploadFailed: 'Config upload failed',
-    configAutoUploadFailed: 'Config auto upload failed'
+    configAutoUploadFailed: 'Config auto upload failed',
+    localIsTheNewest: 'Local config is the newest!',
+    checkRemoteConfigFailed: 'Failed to check remote config',
+    saveConfigFailed: 'Failed to save config'
   }
 }
 

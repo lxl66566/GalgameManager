@@ -1,7 +1,7 @@
 import { type Game } from '@bindings/Game'
 import { DropArea } from '@components/DropArea'
 import FullScreenMask from '@components/ui/FullScreenMask'
-import { myToast, myToast as toastWithButton } from '@components/ui/myToast'
+import { myToast } from '@components/ui/myToast'
 import { invoke } from '@tauri-apps/api/core'
 import { once } from '@tauri-apps/api/event'
 import { getParentPath } from '@utils/path'
@@ -276,7 +276,8 @@ const GamePage = (): JSX.Element => {
       <Show when={isSyncModalOpen()}>
         <FullScreenMask onClose={closeSyncModal}>
           <ArchiveSyncModal
-            gameId={editingGameInfo()?.id ?? 0}
+            gameId={editingGameInfo()!.id}
+            gameInfo={editingGameInfo()!}
             onClose={closeSyncModal}
           />
         </FullScreenMask>

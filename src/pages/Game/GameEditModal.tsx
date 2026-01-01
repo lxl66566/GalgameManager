@@ -90,16 +90,16 @@ export default function GameEditModal(props: GameEditModalProps) {
   const handleDelete = () => {
     myToast({
       variant: 'warning',
-      title: '删除游戏',
-      message: '确认删除？',
+      title: t('game.edit.deleteGame'),
+      message: t('ui.confirm') + ' ' + t('game.edit.deleteGame') + '?',
       actions: [
         {
-          label: '取消',
+          label: t('ui.cancel'),
           variant: 'secondary',
           onClick: () => {}
         },
         {
-          label: '确认',
+          label: t('ui.confirm'),
           variant: 'danger',
           onClick: () => {
             props.onDelete()

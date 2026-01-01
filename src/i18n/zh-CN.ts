@@ -169,6 +169,9 @@ export const dict: DeepPartial<RawDictionary> = {
     configUploadSuccess: '配置上传成功',
     configAutoUploadSuccess: '配置自动上传成功',
     configUploadFailed: '配置上传失败',
-    configAutoUploadFailed: '配置自动上传失败'
+    configAutoUploadFailed: '配置自动上传失败',
+    localIsTheNewest: '本地配置已是最新！',
+    checkRemoteConfigFailed: '检查远端配置失败',
+    saveConfigFailed: '保存配置失败'
   }
 }

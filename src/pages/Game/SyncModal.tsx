@@ -1,5 +1,7 @@
+import type { Game } from '@bindings/Game'
 import { invoke } from '@tauri-apps/api/core'
 import { useI18n } from '~/i18n'
+import { useConfig } from '~/store'
 import {
   TbArrowBackUp,
   TbCloudDownload,
@@ -23,6 +25,7 @@ interface ArchiveItem {
 
 interface ArchiveSyncModalProps {
   gameId: number
+  gameInfo: Game
   onClose: () => void
 }
 
@@ -42,10 +45,24 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [localList, remoteList] = await Promise.all([
-        invoke<string[]>('list_local_archive', { gameId: props.gameId }),
-        invoke<string[]>('list_archive', { gameId: props.gameId })
-      ])
+      const remotePromise =
+        props.gameInfo.savePaths.length === 0
+          ? Promise.resolve([])
+          : invoke<string[]>('list_archive', {
+              gameId: props.gameId
+            }).catch(e => {
+              console.error('Remote fetch failed:', e)
+              toast.error(t('hint.failToGetSaveList') + `: ${e}`)
+              return [] as string[] // 失败时视为远端列表为空
+            })
+
+      // 本地请求失败则直接抛出到外层 catch，因为本地都无法读取说明功能不可用
+      const localPromise = invoke<string[]>('list_local_archive', {
+        gameId: props.gameId
+      })
+
+      // 并行执行，remotePromise 永远不会 reject
+      const [localList, remoteList] = await Promise.all([localPromise, remotePromise])
 
       console.log('localList:', localList)
       console.log('remoteList:', remoteList)
@@ -65,7 +82,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       merged.sort((a, b) => b.name.localeCompare(a.name))
       setArchives(merged)
     } catch (e) {
-      console.error(e)
+      console.error('Archive fetch failed:', e)
       toast.error(t('hint.failToGetSaveList') + e)
     } finally {
       setLoading(false)

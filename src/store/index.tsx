@@ -139,10 +139,10 @@ export const checkAndPullRemote = async (skipCheck?: boolean, toastMessage?: str
         ]
       })
     } else {
-      toast.success('Local config is the newest!')
+      toast.success(t('hint.localIsTheNewest'))
     }
   } catch (e) {
-    toast.error(`Failed to check remote config: ${e}`)
+    toast.error(t('hint.checkRemoteConfigFailed') + ': ' + e)
   }
 }
 
@@ -180,11 +180,12 @@ export const performUpload = async (isAutoUpload?: boolean) => {
 
 // 用户触发的保存操作
 const save = async () => {
+  const { t } = useI18n()
   try {
     setConfig('lastUpdated', new Date().toISOString())
     await invoke('save_config', { newConfig: unwrap(config) })
   } catch (e) {
-    toast.error(`Failed to save config: ${e}`)
+    toast.error(t('hint.saveConfigFailed') + ': ' + e)
   }
 }
 
