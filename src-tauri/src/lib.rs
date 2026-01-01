@@ -53,7 +53,9 @@ pub fn run() {
             upload_config,
             upload_config_safe,
             get_remote_config,
-            exec
+            exec,
+            is_game_running,
+            running_game_ids,
         ])
         .setup(|app| {
             #[cfg(desktop)]

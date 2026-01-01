@@ -1,7 +1,8 @@
-use std::fs;
+use std::{collections::HashMap, fs, sync::LazyLock as Lazy};
 
 use config_file2::Storable;
-use tauri::{AppHandle, Manager as _};
+use parking_lot::Mutex;
+use tauri::{async_runtime::JoinHandle, AppHandle, Manager as _};
 
 use crate::{
     archive::{archive_impl, restore_impl},
@@ -229,7 +230,31 @@ pub async fn get_remote_config() -> Result<Option<Config>> {
 
 // region exec
 
+static GAME_HANDLES: Lazy<Mutex<HashMap<u32, JoinHandle<Result<()>>>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+
 #[tauri::command(async)]
 pub async fn exec(app: AppHandle, game_id: u32) {
-    _ = tauri::async_runtime::spawn(async move { launch_game(app, game_id).await });
+    let handle = tauri::async_runtime::spawn(async move { launch_game(app, game_id).await });
+    _ = GAME_HANDLES.lock().insert(game_id, handle);
+}
+
+// currently not used
+#[tauri::command]
+pub fn is_game_running(game_id: u32) -> bool {
+    let handles = GAME_HANDLES.lock();
+    if let Some(handle) = handles.get(&game_id) {
+        !handle.inner().is_finished()
+    } else {
+        false
+    }
+}
+
+#[tauri::command]
+pub fn running_game_ids() -> Vec<u32> {
+    let handles = GAME_HANDLES.lock();
+    handles
+        .iter()
+        .filter_map(|(id, handle)| (!handle.inner().is_finished()).then_some(*id))
+        .collect()
 }

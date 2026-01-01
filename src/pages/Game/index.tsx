@@ -8,7 +8,7 @@ import { getParentPath } from '@utils/path'
 import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'
 import { AiTwotonePlusCircle } from 'solid-icons/ai'
-import { createSignal, For, Show, type JSX } from 'solid-js'
+import { createSignal, For, onMount, Show, type JSX } from 'solid-js'
 import toast from 'solid-toast'
 import GameEditModal from './GameEditModal'
 import { GameItem, GameItemWrapper } from './GameItem'
@@ -27,6 +27,22 @@ const GamePage = (): JSX.Element => {
   // 使用数组存储多个正在操作的游戏 ID
   const [backingUpIds, setBackingUpIds] = createSignal<number[]>([])
   const [playingIds, setPlayingIds] = createSignal<number[]>([])
+
+  // 避免切换路由后丢失游戏状态
+  onMount(() => {
+    invoke<number[]>('running_game_ids').then(ids => {
+      setPlayingIds(ids)
+      for (const id of playingIds()) {
+        once<boolean>(`game://exit/${id}`, event => {
+          console.log(`Game ${id} exited, success: ${event.payload}`)
+          setPlayingIds(prev => prev.filter(id => id !== id))
+          if (!event.payload) {
+            toast.error(name + t('hint.exitAbnormally'))
+          }
+        })
+      }
+    })
+  })
 
   const findNextGameId = () => {
     const nextId = config.games.reduce((maxId, game) => {
