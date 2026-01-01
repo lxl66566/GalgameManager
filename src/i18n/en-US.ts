@@ -21,7 +21,8 @@ export const dict = {
     confirm: 'Confirm',
     save: 'Save',
     pull: 'Pull',
-    push: 'Push'
+    push: 'Push',
+    withdraw: 'Withdraw'
   },
   game: {
     edit: {
@@ -77,6 +78,7 @@ export const dict = {
     },
     storage: {
       self: 'Storage backend',
+      none: '(Not set)',
       provider: 'Provider',
       Endpoint: 'Endpoint',
       Username: 'Username',
@@ -121,6 +123,8 @@ export const dict = {
   WIP: 'Wait in progress...',
   loading: 'Loading...',
   hint: {
+    supportVar: 'support template like {var_name}',
+    remoteNotConfigured: 'Remote provider is not configured',
     selectSaveArchive: 'Select save archive file/folder',
     noPathPleaseAdd: 'No path, please add one by clicking the button above',
     doubleClickToEdit: 'Double click to edit the path',
@@ -130,12 +134,14 @@ export const dict = {
     failToStart: ' failed to start: ',
     deleteGameAndRemote: 'Delete game and all archives in remote successfully: ',
     deleteGameSuccess: 'Delete game successfully: ',
-    deleteGameFailed: 'Failed to delete game/archives: ',
+    deleteGameFailed: 'Delete game failed',
+    deleteArchiveFailed: 'Delete related archives failed: ',
+    deleteGameFailedConfirm: 'Still delete local game?',
     noSavePaths: 'No save paths defined',
     archiving: 'Archiving: ',
     uploading: 'Uploading: ',
     downloading: 'Downloading: ',
-    syncSuccess: 'Sync Success: ',
+    syncSuccess: 'Sync Success',
     syncFailed: 'Sync Failed: ',
     failToGetSaveList: 'Failed to get save list: ',
     uploadSuccess: 'Upload Success: ',
@@ -153,7 +159,14 @@ export const dict = {
     renaming: 'Rename: ',
     renameSuccess: 'Rename Success',
     renameFailed: 'Rename Failed: ',
-    archiveExists: 'Archive already exists'
+    archiveExists: 'Archive already exists',
+    appliedNewConfig: 'Applied remote configuration',
+    restorePreviousConfigSuccess: 'Restored previous configuration',
+    failToLoadLocalConfig: 'Failed to load local configuration',
+    configUploadSuccess: 'Config upload successfully',
+    configAutoUploadSuccess: 'Config auto upload successfully',
+    configUploadFailed: 'Config upload failed',
+    configAutoUploadFailed: 'Config auto upload failed'
   }
 }
 

@@ -38,6 +38,7 @@ pub fn run() {
             save_config,
             list_local_archive,
             delete_local_archive,
+            delete_local_archive_all,
             rename_local_archive,
             archive,
             extract,

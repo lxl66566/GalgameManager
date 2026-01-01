@@ -64,6 +64,14 @@ pub fn delete_local_archive(app: AppHandle, game_id: u32, archive_filename: Stri
 }
 
 #[tauri::command]
+pub fn delete_local_archive_all(app: AppHandle, game_id: u32) -> Result<()> {
+    let data_dir = app.path().app_local_data_dir()?;
+    let game_backup_dir = data_dir.join("backup").join(game_id.to_string());
+    fs::remove_dir_all(game_backup_dir)?;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn rename_local_archive(
     app: AppHandle,
     game_id: u32,
@@ -151,10 +159,6 @@ pub async fn delete_archive(game_id: u32, archive_filename: String) -> Result<()
 /// bool indicates whether config really deleted
 #[tauri::command(async)]
 pub async fn delete_archive_all(game_id: u32) -> Result<bool> {
-    // prevent deleting all if storage is not configured
-    if CONFIG.lock().settings.storage.is_not_set() {
-        return Ok(false);
-    }
     build_operator_with_varmap()?
         .delete_archive_all(game_id)
         .await?;

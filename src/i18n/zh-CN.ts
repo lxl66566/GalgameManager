@@ -25,7 +25,8 @@ export const dict: DeepPartial<RawDictionary> = {
     confirm: '确定',
     save: '保存',
     pull: '下载',
-    push: '上传'
+    push: '上传',
+    withdraw: '撤销'
   },
   game: {
     edit: {
@@ -81,6 +82,7 @@ export const dict: DeepPartial<RawDictionary> = {
     },
     storage: {
       self: '云存储后端',
+      none: '（未设置）',
       provider: '服务提供方',
       Endpoint: 'URL',
       Username: '用户名',
@@ -124,6 +126,8 @@ export const dict: DeepPartial<RawDictionary> = {
   WIP: '开发中...',
   loading: '加载中...',
   hint: {
+    supportVar: '支持插入花括号模板，类似 {变量名}',
+    remoteNotConfigured: '远端存储未配置',
     selectSaveArchive: '选择存档文件/文件夹',
     noPathPleaseAdd: '暂无路径，点击上方按钮添加',
     doubleClickToEdit: '双击路径手动编辑',
@@ -133,7 +137,9 @@ export const dict: DeepPartial<RawDictionary> = {
     failToStart: ' 启动失败: ',
     deleteGameAndRemote: '删除游戏和所有存档成功: ',
     deleteGameSuccess: '删除游戏成功: ',
-    deleteGameFailed: '删除游戏/存档失败: ',
+    deleteGameFailed: '删除游戏失败',
+    deleteArchiveFailed: '删除关联的存档失败: ',
+    deleteGameFailedConfirm: '仍然删除本地游戏？',
     noSavePaths: '未添加存档路径',
     archiving: '正在归档: ',
     uploading: '正在上传: ',
@@ -156,6 +162,13 @@ export const dict: DeepPartial<RawDictionary> = {
     renaming: '正在重命名: ',
     renameSuccess: '重命名成功',
     renameFailed: '重命名失败: ',
-    archiveExists: '存档已存在'
+    archiveExists: '存档已存在',
+    appliedNewConfig: '已应用远端最新配置',
+    restorePreviousConfigSuccess: '成功恢复到之前的配置',
+    failToLoadLocalConfig: '加载本地配置失败',
+    configUploadSuccess: '配置上传成功',
+    configAutoUploadSuccess: '配置自动上传成功',
+    configUploadFailed: '配置上传失败',
+    configAutoUploadFailed: '配置自动上传失败'
   }
 }

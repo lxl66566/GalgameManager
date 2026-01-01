@@ -14,11 +14,13 @@ import Game from './pages/Game'
 import Plugin from './pages/Plugin'
 import Settings from './pages/Settings'
 import { Sidebar, SidebarItem } from './Sidebar'
-import { initConfig, useConfig } from './store'
+import { postInitConfig, useConfig } from './store'
 
 const MainLayout: Component = () => {
   const { config } = useConfig()
   const { t, setLocale } = useI18n()
+
+  postInitConfig()
 
   createEffect(() => {
     const lang = config.settings?.appearance?.language

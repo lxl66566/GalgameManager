@@ -120,7 +120,7 @@ const LocalForm: Component<{
         <Input
           value={props.path}
           onChange={e => props.onChange(e.currentTarget.value)}
-          placeholder="(None)"
+          placeholder={t('hint.supportVar')}
         />
       </SettingRow>
     </SettingSubGroup>
@@ -237,6 +237,7 @@ export const StorageTab: Component = () => {
     actions.updateSettings(s => {
       s.storage.webdav[key] = value
     })
+    invoke('clean_current_operator')
   }
 
   // 更新 S3 配置
@@ -244,6 +245,7 @@ export const StorageTab: Component = () => {
     actions.updateSettings(s => {
       s.storage.s3[key] = value
     })
+    invoke('clean_current_operator')
   }
 
   // 更新 Local 配置
@@ -251,6 +253,7 @@ export const StorageTab: Component = () => {
     actions.updateSettings(s => {
       s.storage.local.path = value
     })
+    invoke('clean_current_operator')
   }
 
   // 上传配置
@@ -275,6 +278,7 @@ export const StorageTab: Component = () => {
             value={currentProvider()}
             onChange={handleProviderChange}
             options={[
+              { label: t('settings.storage.none'), value: 'none' },
               { label: t('settings.storage.localStorage'), value: 'local' },
               { label: 'WebDAV', value: 'webDav' },
               { label: 'S3', value: 's3' }

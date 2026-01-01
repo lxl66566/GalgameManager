@@ -1,6 +1,7 @@
 import { type Game } from '@bindings/Game'
 import PathListEditor from '@components/PathListEditor'
 import CachedImage from '@components/ui/CachedImage'
+import { myToast } from '@components/ui/myToast'
 import { basename, dirname } from '@tauri-apps/api/path'
 import { open } from '@tauri-apps/plugin-dialog'
 import { dateToInput, durationToForm, inputToDate } from '@utils/time'
@@ -13,7 +14,7 @@ interface GameEditModalProps {
   editMode?: boolean
   confirm: (game: Game) => void
   cancel: () => void
-  onDelete?: () => void
+  onDelete: () => void
 }
 
 const DEFAULT_GAME: Game = {
@@ -84,6 +85,28 @@ export default function GameEditModal(props: GameEditModalProps) {
     } catch (e) {
       console.error(e)
     }
+  }
+
+  const handleDelete = () => {
+    myToast({
+      variant: 'warning',
+      title: '删除游戏',
+      message: '确认删除？',
+      actions: [
+        {
+          label: '取消',
+          variant: 'secondary',
+          onClick: () => {}
+        },
+        {
+          label: '确认',
+          variant: 'danger',
+          onClick: () => {
+            props.onDelete()
+          }
+        }
+      ]
+    })
   }
 
   const handleSelectExecutable = async () => {
@@ -311,7 +334,7 @@ export default function GameEditModal(props: GameEditModalProps) {
             <Show when={isEditMode()}>
               <button
                 type="button"
-                onClick={props.onDelete}
+                onClick={handleDelete}
                 class="px-4 py-2 rounded text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
               >
                 {t('game.edit.deleteGame')}

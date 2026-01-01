@@ -3,8 +3,10 @@ import { type Config } from '@bindings/Config'
 import type { Device } from '@bindings/Device'
 import type { Game } from '@bindings/Game'
 import type { Settings } from '@bindings/Settings'
+import { myToast } from '@components/ui/myToast'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
+import { useI18n } from '~/i18n'
 import { onCleanup } from 'solid-js'
 import { createStore, produce, unwrap } from 'solid-js/store'
 import toast from 'solid-toast'
@@ -62,6 +64,12 @@ export const initConfig = async () => {
   // 2. 获取本地最新配置
   await refreshConfig()
 
+  onCleanup(() => {
+    unlisten()
+  })
+}
+
+export const postInitConfig = async () => {
   // 3. 检查远端配置
   await checkAndPullRemote()
 
@@ -70,10 +78,6 @@ export const initConfig = async () => {
     performUpload: async () => {
       await performUpload(true)
     }
-  })
-
-  onCleanup(() => {
-    unlisten()
   })
 }
 
@@ -89,6 +93,12 @@ const refreshConfig = async () => {
 
 // 核心逻辑：拉取远端并提供撤回
 export const checkAndPullRemote = async (skipCheck?: boolean, toastMessage?: string) => {
+  const { t } = useI18n()
+  // skipCheck 为 false 为自动拉取，不提醒
+  if (!skipCheck && config.settings.storage.provider === 'none') {
+    toast(t('hint.remoteNotConfigured'))
+    return
+  }
   try {
     const remoteConfig = await invoke<Config | null>('get_remote_config')
     if (!remoteConfig) {
@@ -109,31 +119,25 @@ export const checkAndPullRemote = async (skipCheck?: boolean, toastMessage?: str
       await invoke('save_config', { newConfig: remoteConfig })
 
       // 弹出带撤回按钮的 Toast
-      toast.custom(
-        t => (
-          <div class="flex items-center justify-between gap-4 px-4 py-3 bg-white dark:bg-neutral-800 rounded-md shadow-md border border-neutral-200 dark:border-neutral-700 min-w-[280px]">
-            <span class="text-sm text-gray-700 dark:text-gray-200">
-              {toastMessage || 'Remote config is newer, applied.'}
-            </span>
-            <button
-              onClick={async () => {
-                toast.dismiss(t.id)
-                setConfig(previousConfig)
-                // 恢复旧配置到磁盘
-                await invoke('save_config', { newConfig: previousConfig })
-                toast.success('Restored previous configuration')
-              }}
-              class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-            >
-              Undo
-            </button>
-          </div>
-        ),
-        {
-          duration: 10000,
-          position: 'bottom-left'
-        }
-      )
+      myToast({
+        variant: 'success',
+        title: t('hint.syncSuccess'),
+        message: toastMessage || t('hint.appliedNewConfig'),
+        actions: [
+          {
+            label: t('ui.withdraw'),
+            variant: 'secondary',
+            onClick: () => {
+              setConfig(previousConfig)
+              // 恢复旧配置到磁盘
+              ;(async () => {
+                invoke('save_config', { newConfig: previousConfig })
+                toast.success(t('hint.restorePreviousConfigSuccess'))
+              })()
+            }
+          }
+        ]
+      })
     } else {
       toast.success('Local config is the newest!')
     }
@@ -143,6 +147,7 @@ export const checkAndPullRemote = async (skipCheck?: boolean, toastMessage?: str
 }
 
 export const performUpload = async (isAutoUpload?: boolean) => {
+  const { t } = useI18n()
   try {
     // 调用 Rust 上传
     await invoke('upload_config')
@@ -161,9 +166,15 @@ export const performUpload = async (isAutoUpload?: boolean) => {
     const newConfig = { ...unwrap(config), lastUploaded: now }
     await invoke('save_config', { newConfig })
 
-    toast.success(`Config ${isAutoUpload ? 'auto ' : ''}upload successfully`)
+    toast.success(
+      isAutoUpload ? t('hint.configAutoUploadSuccess') : t('hint.configUploadSuccess')
+    )
   } catch (e) {
-    toast.error(`Config ${isAutoUpload ? 'auto ' : ''}upload failed: ${e}`)
+    toast.error(
+      isAutoUpload
+        ? t('hint.configAutoUploadFailed')
+        : t('hint.configUploadFailed') + ': ' + e
+    )
   }
 }
 

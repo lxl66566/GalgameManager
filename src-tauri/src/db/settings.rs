@@ -7,7 +7,7 @@ use super::migration::deserialize_local_config_compat;
 use crate::{
     archive::ArchiveConfig,
     db::device::VarMap,
-    error::Result,
+    error::{Error, Result},
     sync::{BuildOperator, LocalOperator, MyOperation},
 };
 
@@ -39,6 +39,7 @@ impl Default for Settings {
 #[serde(rename_all = "camelCase")]
 pub enum StorageProvider {
     #[default]
+    None,
     Local,
     WebDav,
     S3,
@@ -60,7 +61,7 @@ pub struct StorageConfig {
 impl StorageConfig {
     #[inline]
     pub fn is_not_set(&self) -> bool {
-        matches!(self.provider, StorageProvider::Local) && self.local.path.is_empty()
+        matches!(self.provider, StorageProvider::None)
     }
 
     pub fn build_operator(&self, varmap: &VarMap) -> Result<Box<dyn MyOperation + Send + Sync>> {
@@ -68,6 +69,7 @@ impl StorageConfig {
             StorageProvider::Local => self.local.get_operator_or_init(varmap),
             StorageProvider::WebDav => self.webdav.get_operator_or_init(&()),
             StorageProvider::S3 => self.s3.get_operator_or_init(&()),
+            _ => Err(Error::ProviderNotSet),
         }
     }
 
@@ -76,6 +78,7 @@ impl StorageConfig {
             StorageProvider::Local => self.local.remove_operator(),
             StorageProvider::WebDav => self.webdav.remove_operator(),
             StorageProvider::S3 => self.s3.remove_operator(),
+            _ => {}
         }
     }
 }

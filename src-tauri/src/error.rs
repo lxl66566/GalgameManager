@@ -44,6 +44,9 @@ pub enum Error {
 
     #[error("Broken config content: {0}")]
     BrokenConfig(#[from] toml::de::Error),
+
+    #[error("Storage provider not set")]
+    ProviderNotSet,
 }
 
 impl Clone for Error {

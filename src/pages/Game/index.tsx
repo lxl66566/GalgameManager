@@ -1,6 +1,7 @@
 import { type Game } from '@bindings/Game'
 import { DropArea } from '@components/DropArea'
 import FullScreenMask from '@components/ui/FullScreenMask'
+import { myToast, myToast as toastWithButton } from '@components/ui/myToast'
 import { invoke } from '@tauri-apps/api/core'
 import { once } from '@tauri-apps/api/event'
 import { getParentPath } from '@utils/path'
@@ -126,12 +127,38 @@ const GamePage = (): JSX.Element => {
     const game = config.games[index]
     closeEditModal()
     try {
-      const res = await invoke<boolean>('delete_archive_all', { gameId: game.id })
+      if (game.savePaths.length !== 0) {
+        invoke('delete_local_archive_all', { gameId: game.id })
+        if (config.settings.storage.provider === 'none') {
+          actions.removeGame(index)
+          toast.success(t('hint.deleteGameSuccess') + game.name)
+          return
+        }
+        await invoke('delete_archive_all', { gameId: game.id })
+      }
       actions.removeGame(index)
-      if (res) toast.success(t('hint.deleteGameAndRemote') + game.name)
-      else toast.success(t('hint.deleteGameSuccess') + game.name)
+      toast.success(t('hint.deleteGameAndRemote') + game.name)
     } catch (e) {
-      toast.error(t('hint.deleteGameFailed') + e)
+      toast.error(t('hint.deleteArchiveFailed') + e)
+      myToast({
+        variant: 'error',
+        title: t('hint.deleteGameFailed'),
+        message: t('hint.deleteGameFailedConfirm'),
+        actions: [
+          {
+            label: t('ui.cancel'),
+            variant: 'secondary',
+            onClick: () => {}
+          },
+          {
+            label: t('ui.delete'),
+            variant: 'danger',
+            onClick: () => {
+              actions.removeGame(index)
+            }
+          }
+        ]
+      })
     }
   }
 
@@ -167,7 +194,10 @@ const GamePage = (): JSX.Element => {
         archiveFilename: archived_filename
       })
 
-      toast.success(t('hint.syncSuccess') + game.name, { id: toastId, duration: 3000 })
+      toast.success(t('hint.syncSuccess') + ': ' + game.name, {
+        id: toastId,
+        duration: 3000
+      })
     } catch (error) {
       console.error('Backup failed:', error)
       const errMsg = error instanceof Error ? error.message : String(error)
