@@ -37,7 +37,6 @@ export const AppearanceTab: Component = () => {
           <Select
             value={config.settings.appearance.language}
             onChange={e => {
-              setLocale(e.currentTarget.value as Locale)
               actions.updateSettings(s => (s.appearance.language = e.currentTarget.value))
             }}
             options={[

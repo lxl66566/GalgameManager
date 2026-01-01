@@ -103,7 +103,7 @@ export const dict = {
       forceOp: 'Forced Operation'
     },
     appearance: {
-      theme: 'Theme (WIP)'
+      theme: 'Theme'
     },
     device: {
       deviceIdentity: 'Device Identity',

@@ -107,7 +107,7 @@ export const dict: DeepPartial<RawDictionary> = {
       forceOp: '强制上传/下载'
     },
     appearance: {
-      theme: '主题（暂不可用）'
+      theme: '主题'
     },
     device: {
       deviceIdentity: '设备信息',

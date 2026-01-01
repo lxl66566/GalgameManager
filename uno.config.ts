@@ -15,6 +15,10 @@ export default defineConfig({
         button {
           cursor: pointer;
         }
+
+        * {
+          scrollbar-width: thin;
+        }
       `
     }
   ]

@@ -32,3 +32,7 @@ bun run tauri dev
 用户可以开关 rust features，以控制某些应用行为。（需要自行编译）
 
 - config-daily-backup（默认开启）：云端将存储 config 的每日快照。
+
+## 关于主题
+
+v0.1.1 开始支持 light 主题，但是本人使用的是 dark，说不定哪天改 UI 会把 light 的 UI 改炸了。所以如果您遇到了不同主题下的问题，欢迎反馈。

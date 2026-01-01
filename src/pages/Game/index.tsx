@@ -223,7 +223,7 @@ const GamePage = (): JSX.Element => {
 
   return (
     <>
-      <div class="flex flex-col container mx-auto p-4 h-screen">
+      <div class="flex flex-col container mx-auto p-4 h-full">
         <h1 class="text-2xl font-bold mb-4 dark:text-white">{t('game.self')}</h1>
         <div class="flex-1 grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-x-6 gap-y-6 pb-5 overflow-y-auto custom-scrollbar">
           <For each={config.games}>

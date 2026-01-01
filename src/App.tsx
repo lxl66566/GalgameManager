@@ -1,14 +1,14 @@
 import {
   ColorModeProvider,
   ColorModeScript,
-  createLocalStorageManager
+  createLocalStorageManager,
+  useColorMode // [新增] 引入 hook
 } from '@kobalte/core'
-import { Route, Router } from '@solidjs/router'
-import clsx from 'clsx'
+import { Route, Router, useLocation } from '@solidjs/router'
 import { BiRegularExtension } from 'solid-icons/bi'
 import { CgGames } from 'solid-icons/cg'
 import { IoSettingsOutline } from 'solid-icons/io'
-import { createEffect, onMount, type Component } from 'solid-js'
+import { createEffect, createMemo, type Component } from 'solid-js'
 import { Toaster } from 'solid-toast'
 import { I18nProvider, useI18n, type Locale } from './i18n'
 import Game from './pages/Game'
@@ -20,9 +20,20 @@ import { postInitConfig, useConfig } from './store'
 const MainLayout: Component = () => {
   const { config, actions } = useConfig()
   const { t, setLocale } = useI18n()
+  const { colorMode } = useColorMode()
 
   actions.initConfig()
   postInitConfig(t)
+
+  // 同步 Kobalte 状态到 HTML class
+  createEffect(() => {
+    const root = document.documentElement
+    if (colorMode() === 'dark') {
+      root.classList.add('dark')
+    } else {
+      root.classList.remove('dark')
+    }
+  })
 
   createEffect(() => {
     const lang = config.settings?.appearance?.language
@@ -51,11 +62,7 @@ const MainLayout: Component = () => {
         />
       </Sidebar>
 
-      <div
-        class={clsx(
-          'flex-1 p-0 overflow-y-auto dark:bg-slate-800 dark:text-gray-400 min-h-screen'
-        )}
-      >
+      <div class="flex-1 p-0 overflow-y-auto dark:bg-slate-800 dark:text-gray-400 min-h-screen transition-colors duration-200">
         <Router>
           <Route path={['/Game', '/', '']} component={Game} />
           <Route path="/Plugin" component={Plugin} />
@@ -70,7 +77,7 @@ const App: Component = () => {
   const storageManager = createLocalStorageManager('vite-ui-theme')
 
   return (
-    <div class="flex min-h-screen dark h-screen">
+    <div class="flex min-h-screen h-screen bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100">
       <ColorModeScript storageType={storageManager.type} />
       <ColorModeProvider storageManager={storageManager}>
         <I18nProvider>
@@ -79,11 +86,11 @@ const App: Component = () => {
             position="bottom-left"
             toastOptions={{
               className: `
-            !bg-white !text-gray-900 
-            dark:!bg-slate-800 dark:!text-gray-100
-            border border-gray-200 dark:border-slate-700
-            shadow-lg rounded-md
-          `,
+                !bg-white !text-gray-900 
+                dark:!bg-slate-800 dark:!text-gray-100
+                border border-gray-200 dark:border-slate-700
+                shadow-lg rounded-md
+              `,
               style: {
                 background: 'transparent',
                 'box-shadow': 'none'
@@ -97,3 +104,6 @@ const App: Component = () => {
 }
 
 export default App
+function parsePath(pathname: string): any {
+  throw new Error('Function not implemented.')
+}
