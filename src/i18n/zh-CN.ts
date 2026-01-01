@@ -172,6 +172,7 @@ export const dict: DeepPartial<RawDictionary> = {
     syncSuccess: '同步成功: ',
     uploadFailed: '上传失败: ',
     uploading: '正在上传: ',
-    uploadSuccess: '上传成功: '
+    uploadSuccess: '上传成功: ',
+    forceUpdatedConfig: '成功下载并应用远端配置'
   }
 }

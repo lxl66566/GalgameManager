@@ -169,7 +169,8 @@ export const dict = {
     syncSuccess: 'Sync Success',
     uploadFailed: 'Upload Failed: ',
     uploading: 'Uploading: ',
-    uploadSuccess: 'Upload Success: '
+    uploadSuccess: 'Upload Success: ',
+    forceUpdatedConfig: 'Force updated config from remote.'
   }
 }
 

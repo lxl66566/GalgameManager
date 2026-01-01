@@ -266,7 +266,7 @@ export const StorageTab: Component = () => {
   const [downloading, setDownloading] = createSignal(false)
   const handleDownloadConfig = async () => {
     setDownloading(true)
-    await checkAndPullRemote(t, true, 'Force updated config from remote.')
+    await checkAndPullRemote(t, true, t('hint.forceUpdatedConfig'))
     setDownloading(false)
   }
 
