@@ -313,7 +313,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
           when={!loading()}
           fallback={
             <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 text-sm">
-              {t('loading')}
+              {t('ui.loading')}
             </div>
           }
         >
