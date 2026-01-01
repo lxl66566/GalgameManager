@@ -85,7 +85,9 @@ export const dict: DeepPartial<RawDictionary> = {
       Endpoint: 'URL',
       Username: '用户名',
       Password: '密码',
-      Root: '根目录'
+      Root: '根目录',
+      localPath: '本地文件夹路径',
+      localStorage: '本地备份'
     },
     compression: {
       self: '归档',

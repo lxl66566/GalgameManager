@@ -112,17 +112,20 @@ const S3Form: Component<{
 const LocalForm: Component<{
   path: string
   onChange: (value: string) => void
-}> = props => (
-  <SettingSubGroup>
-    <SettingRow label="Path" description="Absolute path or path with variables" indent>
-      <Input
-        value={props.path}
-        onChange={e => props.onChange(e.currentTarget.value)}
-        placeholder="(None)"
-      />
-    </SettingRow>
-  </SettingSubGroup>
-)
+}> = props => {
+  const { t } = useI18n()
+  return (
+    <SettingSubGroup>
+      <SettingRow label={t('settings.storage.localPath')} indent>
+        <Input
+          value={props.path}
+          onChange={e => props.onChange(e.currentTarget.value)}
+          placeholder="(None)"
+        />
+      </SettingRow>
+    </SettingSubGroup>
+  )
+}
 
 const CompressionForm: Component<{
   config: ArchiveConfig
@@ -272,7 +275,7 @@ export const StorageTab: Component = () => {
             value={currentProvider()}
             onChange={handleProviderChange}
             options={[
-              { label: 'Local Storage', value: 'local' },
+              { label: t('settings.storage.localStorage'), value: 'local' },
               { label: 'WebDAV', value: 'webDav' },
               { label: 'S3', value: 's3' }
             ]}

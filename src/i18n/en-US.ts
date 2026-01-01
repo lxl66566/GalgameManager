@@ -81,7 +81,9 @@ export const dict = {
       Endpoint: 'Endpoint',
       Username: 'Username',
       Password: 'Password',
-      Root: 'Root'
+      Root: 'Root',
+      localPath: 'Local Dir Path',
+      localStorage: 'Local Storage'
     },
     compression: {
       self: 'Archive',
