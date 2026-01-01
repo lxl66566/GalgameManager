@@ -40,14 +40,14 @@ pub trait MyOperation {
         archive_filename: &str,
         new_archive_filename: &str,
     ) -> Result<()>;
-    async fn upload_config(&self) -> Result<()>;
+    async fn upload_config(&self, filename: &str) -> Result<()>;
     async fn get_remote_config(&self) -> Result<Option<Config>>;
     /// Only upload config if remote config is older than local config
     ///
     /// # Returns
     ///
     /// bool indicates whether config really uploaded
-    async fn upload_config_safe(&self) -> Result<bool> {
+    async fn upload_config_safe(&self, filename: &str) -> Result<bool> {
         let remote_config = self.get_remote_config().await?;
         let config = CONFIG.lock().clone();
         if let Some(remote_config) = remote_config {
@@ -59,7 +59,7 @@ pub trait MyOperation {
                 return Ok(false);
             }
         }
-        self.upload_config().await?;
+        self.upload_config(filename).await?;
         Ok(true)
     }
 }

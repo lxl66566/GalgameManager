@@ -66,8 +66,9 @@ tauri-plugin-window-state    = "2.4.1"
 tempfile = "3"
 
 [features]
-custom-protocol = ["tauri/custom-protocol"]
-default         = ["custom-protocol"]
+config-daily-backup = []
+custom-protocol     = ["tauri/custom-protocol"]
+default             = ["custom-protocol", "config-daily-backup"]
 
 [profile.dev]
 incremental = true # Compile your binary in smaller steps.

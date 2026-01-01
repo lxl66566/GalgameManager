@@ -26,3 +26,9 @@ bun run tauri dev
 ## 测试
 
 - 存档上传备份：仅测试了 local 和 webdav。如果您在使用 S3 或其他存储后端时遇到问题，欢迎反馈。
+
+## features
+
+用户可以开关 rust features，以控制某些应用行为。（需要自行编译）
+
+- config-daily-backup（默认开启）：云端将存储 config 的每日快照。

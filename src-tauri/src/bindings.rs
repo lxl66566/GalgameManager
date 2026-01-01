@@ -152,17 +152,11 @@ pub async fn delete_archive(game_id: u32, archive_filename: String) -> Result<()
         .await
 }
 
-/// Delete all archives of the game
-///
-/// # Returns
-///
-/// bool indicates whether config really deleted
 #[tauri::command(async)]
-pub async fn delete_archive_all(game_id: u32) -> Result<bool> {
+pub async fn delete_archive_all(game_id: u32) -> Result<()> {
     build_operator_with_varmap()?
         .delete_archive_all(game_id)
-        .await?;
-    Ok(true)
+        .await
 }
 
 #[tauri::command(async)]
@@ -187,6 +181,8 @@ pub async fn rename_remote_archive(
         .await
 }
 
+/// Operator needs to be cleaned every time the config of storage backend is
+/// changed
 #[tauri::command]
 pub fn clean_current_operator() {
     CONFIG.lock().settings.storage.clean_current_operator()
@@ -194,13 +190,32 @@ pub fn clean_current_operator() {
 
 #[tauri::command(async)]
 pub async fn upload_config() -> Result<()> {
-    build_operator_with_varmap()?.upload_config().await?;
+    let op = build_operator_with_varmap()?;
+    op.upload_config("config.toml").await?;
+    #[cfg(feature = "config-daily-backup")]
+    {
+        _ = tauri::async_runtime::spawn(async move {
+            let time = chrono::Local::now().format("%Y%m%d");
+            let filename = format!("config_{}.toml", time);
+            _ = op.upload_config(&filename).await;
+        });
+    }
     Ok(())
 }
 
 #[tauri::command(async)]
 pub async fn upload_config_safe() -> Result<bool> {
-    build_operator_with_varmap()?.upload_config_safe().await
+    let op = build_operator_with_varmap()?;
+    let res = op.upload_config_safe("config.toml").await?;
+    #[cfg(feature = "config-daily-backup")]
+    {
+        _ = tauri::async_runtime::spawn(async move {
+            let time = chrono::Local::now().format("%Y%m%d");
+            let filename = format!("config_{}.toml", time);
+            _ = op.upload_config_safe(&filename).await;
+        });
+    }
+    Ok(res)
 }
 
 #[tauri::command(async)]

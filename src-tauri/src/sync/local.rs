@@ -89,8 +89,8 @@ impl super::MyOperation for LocalOperator {
         Ok(())
     }
 
-    async fn upload_config(&self) -> Result<()> {
-        let dst = self.0.join("config.toml");
+    async fn upload_config(&self, filename: &str) -> Result<()> {
+        let dst = self.0.join(filename);
         CONFIG.lock().store(&dst)?;
         println!("config stored to {:?}", dst);
         Ok(())

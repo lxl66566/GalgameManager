@@ -101,10 +101,9 @@ impl super::MyOperation for Operator {
         Ok(())
     }
 
-    async fn upload_config(&self) -> Result<()> {
-        let remote_path = "config.toml";
+    async fn upload_config(&self, filename: &str) -> Result<()> {
         let mut uploader = self
-            .writer_with(remote_path)
+            .writer_with(filename)
             .chunk(WRITER_MAX_BUFFER_SIZE)
             .concurrent(8)
             .await?;
