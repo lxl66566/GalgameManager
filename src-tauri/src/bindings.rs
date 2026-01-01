@@ -5,11 +5,11 @@ use tauri::{AppHandle, Manager as _};
 
 use crate::{
     archive::{archive_impl, restore_impl},
-    db::{device::DEVICE_UID, settings::StorageConfig, Config, CONFIG},
+    db::{device::DEVICE_UID, Config, CONFIG},
     error::Result,
     exec::launch_game,
     http::ImageData,
-    sync::{init_operator, CURRENT_OPERATOR},
+    sync::MyOperation,
     utils::list_dir_all,
 };
 
@@ -110,37 +110,38 @@ pub fn extract(app: AppHandle, game_id: u32, archive_filename: String) -> Result
 
 // region sync
 
+#[inline]
+fn build_operator_with_varmap() -> Result<Box<dyn MyOperation + Send + Sync>> {
+    let lock = CONFIG.lock();
+    let varmap = lock.varmap()?;
+    lock.settings.storage.build_operator(varmap)
+}
+
 #[tauri::command(async)]
 pub async fn list_archive(game_id: u32) -> Result<Vec<String>> {
-    init_operator().await?;
-    let lock = CURRENT_OPERATOR.lock().await;
-    let op = lock.as_ref().unwrap();
-    op.list_archive(game_id).await
+    build_operator_with_varmap()?.list_archive(game_id).await
 }
 
 #[tauri::command(async)]
 pub async fn upload_archive(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
-    init_operator().await?;
-    let lock = CURRENT_OPERATOR.lock().await;
-    let op = lock.as_ref().unwrap();
     println!(
-        "upload archive: game_id={}, archive_filename={}",
+        "uploading archive: game_id={}, archive_filename={}",
         game_id, archive_filename
     );
-    op.upload_archive(
-        game_id,
-        &archive_filename,
-        &app.path().app_local_data_dir()?.join("backup"),
-    )
-    .await
+    build_operator_with_varmap()?
+        .upload_archive(
+            game_id,
+            &archive_filename,
+            &app.path().app_local_data_dir()?.join("backup"),
+        )
+        .await
 }
 
 #[tauri::command(async)]
 pub async fn delete_archive(game_id: u32, archive_filename: String) -> Result<()> {
-    init_operator().await?;
-    let lock = CURRENT_OPERATOR.lock().await;
-    let op = lock.as_ref().unwrap();
-    op.delete_archive(game_id, &archive_filename).await
+    build_operator_with_varmap()?
+        .delete_archive(game_id, &archive_filename)
+        .await
 }
 
 /// Delete all archives of the game
@@ -151,27 +152,24 @@ pub async fn delete_archive(game_id: u32, archive_filename: String) -> Result<()
 #[tauri::command(async)]
 pub async fn delete_archive_all(game_id: u32) -> Result<bool> {
     // prevent deleting all if storage is not configured
-    if CONFIG.lock().settings.storage == StorageConfig::default() {
+    if CONFIG.lock().settings.storage.is_not_set() {
         return Ok(false);
     }
-    init_operator().await?;
-    let lock = CURRENT_OPERATOR.lock().await;
-    let op = lock.as_ref().unwrap();
-    op.delete_archive_all(game_id).await?;
+    build_operator_with_varmap()?
+        .delete_archive_all(game_id)
+        .await?;
     Ok(true)
 }
 
 #[tauri::command(async)]
 pub async fn pull_archive(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
-    init_operator().await?;
-    let lock = CURRENT_OPERATOR.lock().await;
-    let op = lock.as_ref().unwrap();
-    op.pull_archive(
-        game_id,
-        &archive_filename,
-        &app.path().app_local_data_dir()?.join("backup"),
-    )
-    .await
+    build_operator_with_varmap()?
+        .pull_archive(
+            game_id,
+            &archive_filename,
+            &app.path().app_local_data_dir()?.join("backup"),
+        )
+        .await
 }
 
 #[tauri::command(async)]
@@ -180,47 +178,34 @@ pub async fn rename_remote_archive(
     archive_filename: String,
     new_archive_filename: String,
 ) -> Result<()> {
-    init_operator().await?;
-    let lock = CURRENT_OPERATOR.lock().await;
-    let op = lock.as_ref().unwrap();
-    op.rename_archive(game_id, &archive_filename, &new_archive_filename)
+    build_operator_with_varmap()?
+        .rename_archive(game_id, &archive_filename, &new_archive_filename)
         .await
 }
 
-#[tauri::command(async)]
-pub async fn clean_current_operator() -> Result<()> {
-    let mut lock = CURRENT_OPERATOR.lock().await;
-    *lock = None;
-    Ok(())
+#[tauri::command]
+pub fn clean_current_operator() {
+    CONFIG.lock().settings.storage.clean_current_operator()
 }
 
 #[tauri::command(async)]
 pub async fn upload_config() -> Result<()> {
-    init_operator().await?;
-    let lock = CURRENT_OPERATOR.lock().await;
-    let op = lock.as_ref().unwrap();
-    op.upload_config().await?;
+    build_operator_with_varmap()?.upload_config().await?;
     Ok(())
 }
 
 #[tauri::command(async)]
 pub async fn upload_config_safe() -> Result<bool> {
-    init_operator().await?;
-    let lock = CURRENT_OPERATOR.lock().await;
-    let op = lock.as_ref().unwrap();
-    op.upload_config_safe().await
+    build_operator_with_varmap()?.upload_config_safe().await
 }
 
 #[tauri::command(async)]
 pub async fn get_remote_config() -> Result<Option<Config>> {
     // prevent downloading config if storage is not configured
-    if CONFIG.lock().settings.storage == StorageConfig::default() {
+    if CONFIG.lock().settings.storage.is_not_set() {
         return Ok(None);
     }
-    init_operator().await?;
-    let lock = CURRENT_OPERATOR.lock().await;
-    let op = lock.as_ref().unwrap();
-    op.get_remote_config().await
+    build_operator_with_varmap()?.get_remote_config().await
 }
 
 // region exec

@@ -1,19 +1,20 @@
 pub mod device;
+mod migration;
 pub mod settings;
 
 use std::{fs, path::PathBuf, sync::LazyLock as Lazy};
 
 use chrono::{DateTime, Duration, Utc};
 use config_file2::{LoadConfigFile, Storable};
+pub use device::ResolveVar;
 use device::{Device, DEVICE_UID};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use settings::Settings;
-use strfmt::strfmt;
 use tauri::{AppHandle, Emitter as _};
 use ts_rs::TS;
 
-use crate::error::Result;
+use crate::{db::device::VarMap, error::Result};
 
 pub static CONFIG_DIR: Lazy<PathBuf> = Lazy::new(|| {
     let dir = home::home_dir()
@@ -80,11 +81,16 @@ impl Config {
     }
 
     #[inline]
-    pub fn resolve_var(&self, s: &str) -> Result<String> {
+    pub fn varmap(&self) -> Result<&VarMap> {
         let device = self
             .get_device()
             .ok_or_else(|| crate::error::Error::Device("No device found".to_string()))?;
-        Ok(strfmt(s, &device.variables)?)
+        Ok(&device.variables)
+    }
+
+    #[inline]
+    pub fn resolve_var(&self, s: &str) -> Result<String> {
+        self.varmap()?.resolve_var(s)
     }
 
     #[inline]

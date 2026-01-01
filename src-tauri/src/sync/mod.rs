@@ -1,36 +1,24 @@
 mod local;
 mod opendal;
-
-use std::{path::Path, sync::LazyLock as Lazy};
+use std::path::{Path, PathBuf};
 
 use ::opendal::{services, Operator};
-use local::LocalUploader;
-use tokio::sync::Mutex;
+pub use local::LocalOperator;
 
 use crate::{
     db::{
-        settings::{StorageConfig, StorageProvider},
+        device::{ResolveVar, VarMap},
+        settings::{LocalConfig, S3Config, WebDavConfig},
         Config, CONFIG,
     },
     error::Result,
 };
 
-pub static CURRENT_OPERATOR: Lazy<Mutex<Option<Box<dyn MyOperation + Send + Sync>>>> =
-    Lazy::new(|| Mutex::new(None));
-
-// call this before using any operation
-pub async fn init_operator() -> Result<()> {
-    let mut op = CURRENT_OPERATOR.lock().await;
-    if op.is_none() {
-        let lock = CONFIG.lock();
-        let new_operator = lock.settings.storage.build_operator()?;
-        *op = Some(new_operator);
-    }
-    Ok(())
-}
-
 #[async_trait::async_trait]
 pub trait MyOperation {
+    async fn chunkable(&self) -> bool {
+        false
+    }
     async fn list_archive(&self, game_id: u32) -> Result<Vec<String>>;
     async fn upload_archive(
         &self,
@@ -76,34 +64,91 @@ pub trait MyOperation {
     }
 }
 
-impl StorageConfig {
-    pub fn build_operator(&self) -> Result<Box<dyn MyOperation + Send + Sync>> {
-        match self.provider {
-            StorageProvider::Local => Ok(Box::new(LocalUploader::new(self.local.clone().into())?)),
-            StorageProvider::WebDav => {
-                let config = &self.webdav;
-                let operator = Operator::new(
-                    services::Webdav::default()
-                        .endpoint(&config.endpoint)
-                        .username(&config.username)
-                        .password(config.password.as_deref().unwrap_or_default())
-                        .root(&config.root_path),
-                )?
-                .finish();
-                Ok(Box::new(operator))
-            }
-            StorageProvider::S3 => {
-                let config = &self.s3;
-                let operator = Operator::new(
-                    services::S3::default()
-                        .bucket(&config.bucket)
-                        .access_key_id(&config.access_key)
-                        .secret_access_key(&config.secret_key),
-                )?
-                .finish();
-                Ok(Box::new(operator))
-            }
+pub trait BuildOperator {
+    type CTX;
+    fn get_operator(&self) -> Option<Box<dyn MyOperation + Send + Sync>>;
+    /// Must ensure that `get_operator` is `Some` if `build_operator` is called
+    fn build_operator(&self, ctx: &Self::CTX) -> Result<()>;
+    fn remove_operator(&self);
+    fn get_operator_or_init(&self, ctx: &Self::CTX) -> Result<Box<dyn MyOperation + Send + Sync>> {
+        if let Some(op) = self.get_operator() {
+            Ok(op)
+        } else {
+            self.build_operator(ctx)?;
+            Ok(self.get_operator().unwrap())
         }
+    }
+}
+
+impl BuildOperator for LocalConfig {
+    type CTX = VarMap;
+    fn get_operator(&self) -> Option<Box<dyn MyOperation + Send + Sync>> {
+        self.operator
+            .borrow()
+            .as_ref()
+            .map(|o| Box::new(o.clone()) as Box<dyn MyOperation + Send + Sync>)
+    }
+    fn build_operator(&self, ctx: &VarMap) -> Result<()> {
+        let resolved = ctx.resolve_var(&self.path)?;
+        let path = PathBuf::from(resolved);
+        std::fs::create_dir_all(&path)?;
+        let operator = LocalOperator::new(path);
+        *self.operator.borrow_mut() = Some(operator);
+        Ok(())
+    }
+    fn remove_operator(&self) {
+        *self.operator.borrow_mut() = None;
+    }
+}
+
+impl BuildOperator for WebDavConfig {
+    type CTX = ();
+    fn get_operator(&self) -> Option<Box<dyn MyOperation + Send + Sync>> {
+        self.operator
+            .borrow()
+            .as_ref()
+            .map(|o| Box::new(o.clone()) as Box<dyn MyOperation + Send + Sync>)
+    }
+    fn build_operator(&self, _ctx: &Self::CTX) -> Result<()> {
+        let operator = Operator::new(
+            services::Webdav::default()
+                .endpoint(&self.endpoint)
+                .username(&self.username)
+                .password(self.password.as_deref().unwrap_or_default())
+                .root(&self.root_path),
+        )?
+        .finish();
+        *self.operator.borrow_mut() = Some(operator);
+        Ok(())
+    }
+
+    fn remove_operator(&self) {
+        *self.operator.borrow_mut() = None;
+    }
+}
+
+impl BuildOperator for S3Config {
+    type CTX = ();
+    fn get_operator(&self) -> Option<Box<dyn MyOperation + Send + Sync>> {
+        self.operator
+            .borrow()
+            .as_ref()
+            .map(|o| Box::new(o.clone()) as Box<dyn MyOperation + Send + Sync>)
+    }
+    fn build_operator(&self, _ctx: &Self::CTX) -> Result<()> {
+        let operator = Operator::new(
+            services::S3::default()
+                .bucket(&self.bucket)
+                .access_key_id(&self.access_key)
+                .secret_access_key(&self.secret_key),
+        )?
+        .finish();
+        *self.operator.borrow_mut() = Some(operator);
+        Ok(())
+    }
+
+    fn remove_operator(&self) {
+        *self.operator.borrow_mut() = None;
     }
 }
 
@@ -144,7 +189,7 @@ mod tests {
     #[tokio::test]
     async fn test_local_operator() -> Result<()> {
         let remote_dir = tempdir()?;
-        test_big_file(LocalUploader::new(remote_dir.path().to_path_buf())?).await
+        test_big_file(LocalOperator::new(remote_dir.path().to_path_buf())).await
     }
 
     #[ignore = "please build a local webdav server yourself and run this test manually"]

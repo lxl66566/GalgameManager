@@ -249,7 +249,7 @@ export const StorageTab: Component = () => {
   // 更新 Local 配置
   const updateLocal = (value: string) => {
     actions.updateSettings(s => {
-      s.storage.local = value
+      s.storage.local.path = value
     })
   }
 
@@ -285,7 +285,7 @@ export const StorageTab: Component = () => {
         <Switch>
           {/* Local Case */}
           <Match when={currentProvider() === 'local'}>
-            <LocalForm path={config.settings.storage.local} onChange={updateLocal} />
+            <LocalForm path={config.settings.storage.local.path} onChange={updateLocal} />
           </Match>
 
           {/* WebDAV Case */}

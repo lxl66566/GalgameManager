@@ -1,6 +1,7 @@
 use std::{
-    fs, io,
+    fs,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use config_file2::{LoadConfigFile, StoreConfigFile};
@@ -11,17 +12,17 @@ use crate::{
     utils::list_dir_all,
 };
 
-pub struct LocalUploader(pub PathBuf);
+#[derive(Debug, Clone)]
+pub struct LocalOperator(pub Arc<PathBuf>);
 
-impl LocalUploader {
-    pub fn new(path: PathBuf) -> io::Result<Self> {
-        fs::create_dir_all(&path)?;
-        Ok(Self(path))
+impl LocalOperator {
+    pub fn new(path: PathBuf) -> Self {
+        Self(Arc::new(path))
     }
 }
 
 #[async_trait::async_trait]
-impl super::MyOperation for LocalUploader {
+impl super::MyOperation for LocalOperator {
     async fn list_archive(&self, game_id: u32) -> Result<Vec<String>> {
         let remote_game_dir = self.0.join(game_id.to_string());
         if !remote_game_dir.exists() {
@@ -106,7 +107,7 @@ mod tests {
     use super::{super::MyOperation, *};
 
     #[tokio::test]
-    async fn test_local_operator() -> io::Result<()> {
+    async fn test_local_operator() -> std::io::Result<()> {
         let game_id = 1;
         let archive_filename = "test.txt";
 
@@ -121,7 +122,7 @@ mod tests {
         fs::create_dir(src_archive.parent().unwrap())?;
         fs::write(&src_archive, "test")?;
 
-        let op = LocalUploader::new(remote_path.clone())?;
+        let op = LocalOperator::new(remote_path.clone());
 
         // initial state
         let ls = op.list_archive(game_id).await.unwrap();

@@ -21,7 +21,7 @@ const DEFAULT_CONFIG: Config = {
   settings: {
     storage: {
       provider: 'local',
-      local: '',
+      local: { path: '' },
       webdav: {
         endpoint: '',
         username: '',
