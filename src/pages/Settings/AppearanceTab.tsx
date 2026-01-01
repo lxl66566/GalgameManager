@@ -2,7 +2,7 @@
 import { type ThemeMode } from '@bindings/ThemeMode'
 import { Select, SettingRow, SettingSection } from '@components/ui/settings'
 import { useColorMode } from '@kobalte/core/color-mode'
-import { useI18n, type Locale } from '~/i18n'
+import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'
 import { IoLanguage } from 'solid-icons/io'
 import { type Component } from 'solid-js'
@@ -10,11 +10,11 @@ import { type Component } from 'solid-js'
 export const AppearanceTab: Component = () => {
   const { config, actions } = useConfig()
   const { setColorMode } = useColorMode()
-  const { t, setLocale } = useI18n()
+  const { t } = useI18n()
 
   return (
     <div class="max-w-4xl">
-      <SettingSection title="Interface">
+      <SettingSection title={t('ui.interface')}>
         <SettingRow label={t('settings.appearance.theme')}>
           <Select
             value={config.settings.appearance.theme}

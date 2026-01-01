@@ -19,6 +19,7 @@ pub struct Settings {
     pub storage: StorageConfig,
     pub archive: ArchiveConfig,
     pub appearance: AppearanceConfig,
+    pub launch: LaunchConfig,
     /// in secs
     pub auto_sync_interval: u32,
 }
@@ -29,6 +30,7 @@ impl Default for Settings {
             storage: Default::default(),
             archive: Default::default(),
             appearance: Default::default(),
+            launch: Default::default(),
             auto_sync_interval: 1200,
         }
     }
@@ -86,6 +88,7 @@ impl StorageConfig {
 #[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[serde(default)]
 pub struct LocalConfig {
     pub path: String,
 
@@ -96,6 +99,7 @@ pub struct LocalConfig {
 #[derive(Debug, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[serde(default)]
 pub struct WebDavConfig {
     pub endpoint: String,
     pub username: String,
@@ -121,6 +125,7 @@ impl Default for WebDavConfig {
 #[derive(Debug, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[serde(default)]
 pub struct S3Config {
     pub bucket: String,
     pub region: String,
@@ -145,6 +150,23 @@ impl Default for S3Config {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, TS)]
+#[ts(export)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
+pub struct LaunchConfig {
+    /// 统计游玩时长启用精确模式
+    pub precision_mode: bool,
+}
+
+impl Default for LaunchConfig {
+    fn default() -> Self {
+        Self {
+            precision_mode: true,
+        }
+    }
+}
+
 #[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
@@ -158,6 +180,7 @@ pub enum ThemeMode {
 #[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[serde(default)]
 pub struct AppearanceConfig {
     pub theme: ThemeMode,
     pub language: String,
@@ -166,6 +189,7 @@ pub struct AppearanceConfig {
 #[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[serde(default)]
 pub struct DeviceIdentity {
     pub name: String,
     pub uuid: String,

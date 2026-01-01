@@ -231,5 +231,5 @@ pub async fn get_remote_config() -> Result<Option<Config>> {
 
 #[tauri::command(async)]
 pub async fn exec(app: AppHandle, game_id: u32) {
-    _ = tauri::async_runtime::spawn(async move { launch_game(app, game_id, 30).await });
+    _ = tauri::async_runtime::spawn(async move { launch_game(app, game_id).await });
 }

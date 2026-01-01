@@ -48,6 +48,9 @@ const DEFAULT_CONFIG: Config = {
       theme: 'system',
       language: 'zh-CN'
     },
+    launch: {
+      precisionMode: true
+    },
     autoSyncInterval: 1200
   }
 }

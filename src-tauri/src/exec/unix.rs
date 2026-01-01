@@ -9,7 +9,7 @@ use crate::{
     error::{Error, Result},
 };
 
-pub async fn launch_game(app: AppHandle, game_id: u32, save_interval: u32) -> Result<()> {
+pub async fn launch_game(app: AppHandle, game_id: u32) -> Result<()> {
     let exe_path: String = {
         let lock = CONFIG.lock();
         lock.resolve_var(
@@ -29,6 +29,7 @@ pub async fn launch_game(app: AppHandle, game_id: u32, save_interval: u32) -> Re
     app.emit(&format!("game://spawn/{}", game_id), ())?;
 
     let mut interval = time::interval(Duration::from_secs(60));
+    let mut last_time_saved = chrono::Utc::now();
     // 第一个 tick 是立即执行的，跳过
     interval.tick().await;
 
@@ -41,11 +42,13 @@ pub async fn launch_game(app: AppHandle, game_id: u32, save_interval: u32) -> Re
                     Ok(s) => println!("Game exited with status: {}", s),
                     Err(e) => eprintln!("Error waiting for game process: {}", e),
                 }
+                super::update_game_time(&app, game_id, chrono::Utc::now() - last_time_saved)?;
                 break Ok(()); // 退出循环
             }
             // 分支 B: 定时器触发 (每分钟)
             _ = interval.tick() => {
-                super::update_game_time(&app, game_id, TimeDelta::seconds(save_interval as i64))?;
+                super::update_game_time(&app, game_id, chrono::Utc::now() - last_time_saved)?;
+                last_time_saved = chrono::Utc::now();
             }
         }
     }

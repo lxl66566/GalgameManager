@@ -20,6 +20,7 @@ pub static DEVICE_UID: Lazy<&'static str> = Lazy::new(|| {
 #[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[serde(default)]
 pub struct Device {
     pub name: String,
     pub uid: String,

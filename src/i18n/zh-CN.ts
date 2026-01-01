@@ -28,7 +28,8 @@ export const dict: DeepPartial<RawDictionary> = {
     push: '上传',
     withdraw: '撤销',
     WIP: '开发中...',
-    loading: '加载中...'
+    loading: '加载中...',
+    interface: '界面'
   },
   game: {
     edit: {
@@ -78,7 +79,8 @@ export const dict: DeepPartial<RawDictionary> = {
   settings: {
     self: '设置',
     tabs: {
-      storageSync: '存储与同步',
+      general: '通用',
+      launch: '启动',
       device: '设备',
       appearance: '外观'
     },
@@ -108,6 +110,11 @@ export const dict: DeepPartial<RawDictionary> = {
     },
     appearance: {
       theme: '主题'
+    },
+    launch: {
+      timestat: '时长统计',
+      precisionMode: '精确模式',
+      precisionModeDesc: '开启后只计算游戏在前台游玩的时长（窗口焦点时长），仅限 Windows'
     },
     device: {
       deviceIdentity: '设备信息',

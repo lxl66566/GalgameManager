@@ -4,9 +4,10 @@ import { useI18n } from '~/i18n'
 import { createSignal, Match, Switch, type Component } from 'solid-js'
 import { AppearanceTab } from './AppearanceTab'
 import { DeviceTab } from './DeviceTab'
+import { LaunchTab } from './LaunchTab'
 import { StorageTab } from './StorageTab'
 
-type TabKey = 'general' | 'storage' | 'device'
+type TabKey = 'general' | 'storage' | 'device' | 'launch'
 
 export const SettingsPage: Component = () => {
   const [activeTab, setActiveTab] = createSignal<TabKey>('storage')
@@ -21,7 +22,8 @@ export const SettingsPage: Component = () => {
         {/* Reusable Horizontal Tabs */}
         <Tabs
           items={[
-            { key: 'storage', label: t('settings.tabs.storageSync') },
+            { key: 'storage', label: t('settings.tabs.general') },
+            { key: 'launch', label: t('settings.tabs.launch') },
             { key: 'device', label: t('settings.tabs.device') },
             { key: 'general', label: t('settings.tabs.appearance') }
           ]}
@@ -36,6 +38,9 @@ export const SettingsPage: Component = () => {
           <Switch>
             <Match when={activeTab() === 'storage'}>
               <StorageTab />
+            </Match>
+            <Match when={activeTab() === 'launch'}>
+              <LaunchTab />
             </Match>
             <Match when={activeTab() === 'device'}>
               <DeviceTab />

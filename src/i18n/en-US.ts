@@ -24,7 +24,8 @@ export const dict = {
     push: 'Push',
     withdraw: 'Withdraw',
     WIP: 'Wait in progress...',
-    loading: 'Loading...'
+    loading: 'Loading...',
+    interface: 'Interface'
   },
   game: {
     edit: {
@@ -74,7 +75,8 @@ export const dict = {
   settings: {
     self: 'Settings',
     tabs: {
-      storageSync: 'Storage & Sync',
+      general: 'General',
+      launch: 'Launch',
       device: 'Device',
       appearance: 'Appearance'
     },
@@ -104,6 +106,12 @@ export const dict = {
     },
     appearance: {
       theme: 'Theme'
+    },
+    launch: {
+      timestat: 'Time Stat',
+      precisionMode: 'Precision Mode',
+      precisionModeDesc:
+        'Only count time spent in foreground when window is focused. (Windows only)'
     },
     device: {
       deviceIdentity: 'Device Identity',

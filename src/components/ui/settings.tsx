@@ -149,13 +149,15 @@ export const SwitchToggle: Component<
     class?: string
   }
 > = props => {
-  const [local, others] = splitProps(props, ['class'])
+  const [local, others] = splitProps(props, ['class', 'onChange', 'checked'])
   return (
     <Switch.Root
       class={clsx(
         'group inline-flex items-center', // 保持行内布局且垂直居中
         local.class
       )}
+      onChange={local.onChange}
+      checked={local.checked}
       {...others}
     >
       <Switch.Input />
