@@ -4,9 +4,10 @@ import type { Device } from '@bindings/Device'
 import type { Game } from '@bindings/Game'
 import type { Settings } from '@bindings/Settings'
 import { myToast } from '@components/ui/myToast'
+import * as i18n from '@solid-primitives/i18n'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { useI18n } from '~/i18n'
+import { type Dictionary } from '~/i18n'
 import { onCleanup } from 'solid-js'
 import { createStore, produce, unwrap } from 'solid-js/store'
 import toast from 'solid-toast'
@@ -69,14 +70,14 @@ export const initConfig = async () => {
   })
 }
 
-export const postInitConfig = async () => {
+export const postInitConfig = async (t: i18n.Translator<Dictionary>) => {
   // 3. 检查远端配置
-  await checkAndPullRemote()
+  await checkAndPullRemote(t)
 
   // 4. 启动自动上传任务
   useAutoUploadService({
     performUpload: async () => {
-      await performUpload(true)
+      await performUpload(t, true)
     }
   })
 }
@@ -92,8 +93,11 @@ const refreshConfig = async () => {
 }
 
 // 核心逻辑：拉取远端并提供撤回
-export const checkAndPullRemote = async (skipCheck?: boolean, toastMessage?: string) => {
-  const { t } = useI18n()
+export const checkAndPullRemote = async (
+  t: i18n.Translator<Dictionary>,
+  skipCheck?: boolean,
+  toastMessage?: string
+) => {
   // skipCheck 为 false 为自动拉取，不提醒
   if (!skipCheck && config.settings.storage.provider === 'none') {
     toast(t('hint.remoteNotConfigured'))
@@ -146,8 +150,10 @@ export const checkAndPullRemote = async (skipCheck?: boolean, toastMessage?: str
   }
 }
 
-export const performUpload = async (isAutoUpload?: boolean) => {
-  const { t } = useI18n()
+export const performUpload = async (
+  t: i18n.Translator<Dictionary>,
+  isAutoUpload?: boolean
+) => {
   try {
     // 调用 Rust 上传
     await invoke('upload_config')
@@ -180,12 +186,11 @@ export const performUpload = async (isAutoUpload?: boolean) => {
 
 // 用户触发的保存操作
 const save = async () => {
-  const { t } = useI18n()
   try {
     setConfig('lastUpdated', new Date().toISOString())
     await invoke('save_config', { newConfig: unwrap(config) })
   } catch (e) {
-    toast.error(t('hint.saveConfigFailed') + ': ' + e)
+    toast.error(`Failed to save config: ${e}`)
   }
 }
 

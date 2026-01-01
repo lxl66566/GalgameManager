@@ -4,6 +4,7 @@ import {
   createLocalStorageManager
 } from '@kobalte/core'
 import { Route, Router } from '@solidjs/router'
+import clsx from 'clsx'
 import { BiRegularExtension } from 'solid-icons/bi'
 import { CgGames } from 'solid-icons/cg'
 import { IoSettingsOutline } from 'solid-icons/io'
@@ -17,10 +18,11 @@ import { Sidebar, SidebarItem } from './Sidebar'
 import { postInitConfig, useConfig } from './store'
 
 const MainLayout: Component = () => {
-  const { config } = useConfig()
+  const { config, actions } = useConfig()
   const { t, setLocale } = useI18n()
 
-  postInitConfig()
+  actions.initConfig()
+  postInitConfig(t)
 
   createEffect(() => {
     const lang = config.settings?.appearance?.language
@@ -49,7 +51,11 @@ const MainLayout: Component = () => {
         />
       </Sidebar>
 
-      <div class="flex-1 p-0 overflow-y-auto dark:bg-slate-800 dark:text-gray-400 min-h-screen">
+      <div
+        class={clsx(
+          'flex-1 p-0 overflow-y-auto dark:bg-slate-800 dark:text-gray-400 min-h-screen'
+        )}
+      >
         <Router>
           <Route path={['/Game', '/', '']} component={Game} />
           <Route path="/Plugin" component={Plugin} />
@@ -62,37 +68,30 @@ const MainLayout: Component = () => {
 
 const App: Component = () => {
   const storageManager = createLocalStorageManager('vite-ui-theme')
-  const { actions } = useConfig()
-
-  onMount(() => {
-    actions.initConfig()
-  })
 
   return (
     <div class="flex min-h-screen dark h-screen">
       <ColorModeScript storageType={storageManager.type} />
       <ColorModeProvider storageManager={storageManager}>
-        {/* I18nProvider 包裹住 MainLayout */}
         <I18nProvider>
           <MainLayout />
-        </I18nProvider>
-      </ColorModeProvider>
-
-      <Toaster
-        position="bottom-left"
-        toastOptions={{
-          className: `
+          <Toaster
+            position="bottom-left"
+            toastOptions={{
+              className: `
             !bg-white !text-gray-900 
             dark:!bg-slate-800 dark:!text-gray-100
             border border-gray-200 dark:border-slate-700
             shadow-lg rounded-md
           `,
-          style: {
-            background: 'transparent',
-            'box-shadow': 'none'
-          }
-        }}
-      />
+              style: {
+                background: 'transparent',
+                'box-shadow': 'none'
+              }
+            }}
+          />
+        </I18nProvider>
+      </ColorModeProvider>
     </div>
   )
 }

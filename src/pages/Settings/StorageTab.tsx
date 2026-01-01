@@ -260,13 +260,13 @@ export const StorageTab: Component = () => {
   const [uploading, setUploading] = createSignal(false)
   const handleUploadConfig = async () => {
     setUploading(true)
-    await performUpload()
+    await performUpload(t, false)
     setUploading(false)
   }
   const [downloading, setDownloading] = createSignal(false)
   const handleDownloadConfig = async () => {
     setDownloading(true)
-    await checkAndPullRemote(true, 'Force updated config from remote.')
+    await checkAndPullRemote(t, true, 'Force updated config from remote.')
     setDownloading(false)
   }
 
