@@ -22,17 +22,27 @@ const dictmap = {
   'zh-CN': zh.dict
 }
 
-async function fetchDictionary(locale: Locale): Promise<Dictionary> {
-  const enDict = i18n.flatten(en.dict)
+let cachedEnDict: Dictionary | null = null
 
-  if (locale === 'en-US') {
+function getEnDict(): Dictionary {
+  if (!cachedEnDict) {
+    cachedEnDict = i18n.flatten(en.dict)
+  }
+  return cachedEnDict
+}
+
+async function fetchDictionary(locale: string): Promise<Dictionary> {
+  const enDict = getEnDict()
+
+  const hasDict = Object.prototype.hasOwnProperty.call(dictmap, locale)
+
+  if (locale === 'en-US' || !hasDict) {
     return enDict
   }
 
-  // 2. 加载目标语言
-  const targetDict = i18n.flatten(dictmap[locale] as RawDictionary)
-
-  // 3. 合并字典实现回退 (Fallback)
+  // 确定 locale 存在于 dictmap 中
+  const rawTargetDict = dictmap[locale as keyof typeof dictmap] as RawDictionary
+  const targetDict = i18n.flatten(rawTargetDict)
   return { ...enDict, ...targetDict }
 }
 

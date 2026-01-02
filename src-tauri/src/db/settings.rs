@@ -177,13 +177,22 @@ pub enum ThemeMode {
     System,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]
+#[derive(Debug, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
 pub struct AppearanceConfig {
     pub theme: ThemeMode,
     pub language: String,
+}
+
+impl Default for AppearanceConfig {
+    fn default() -> Self {
+        Self {
+            theme: ThemeMode::System,
+            language: sys_locale::get_locale().unwrap_or_else(|| "en-US".to_string()),
+        }
+    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]

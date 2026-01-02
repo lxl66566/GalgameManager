@@ -40,8 +40,8 @@ export const AppearanceTab: Component = () => {
               actions.updateSettings(s => (s.appearance.language = e.currentTarget.value))
             }}
             options={[
-              { label: '简体中文', value: 'zh-CN' },
-              { label: 'English', value: 'en-US' }
+              { label: 'English', value: 'en-US' },
+              { label: '简体中文', value: 'zh-CN' }
             ]}
           />
         </SettingRow>
