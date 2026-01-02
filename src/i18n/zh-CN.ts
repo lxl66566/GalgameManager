@@ -123,7 +123,7 @@ export const dict: DeepPartial<RawDictionary> = {
       uuid: 'UUID',
       uuidDesc: '设备唯一标识',
       variables: '变量',
-      variablesDesc: '定义此设备关联的变量，将插入到路径中的 {name} 占位符中',
+      variablesDesc: '定义此设备关联的变量，将插入到路径中的 {...} 模板中',
       addVariable: '添加变量',
       removeVariable: '移除变量',
       editVariableName: '编辑变量名称',

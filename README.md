@@ -31,12 +31,12 @@
 
 ## Changelog
 
-### v0.1.3
+### unstable
 
 - 修复：游戏 playing 状态在切换页面后丢失
 - 支持更加精确的游玩时长记录（Windows only）
 
-### v0.1.2
+### v0.1.1
 
 - 关键修复：部分依赖 current directory 的游戏无法启动
 - 修复：上次游玩时间前端不自动更新

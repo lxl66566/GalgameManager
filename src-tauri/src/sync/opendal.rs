@@ -13,8 +13,47 @@ use crate::{
 // https://t.me/withabsolutex/2598
 const WRITER_MAX_BUFFER_SIZE: usize = 1024 * 1024 * 1024 * 1024;
 
+const WRITER_NORMAL_CHUNK_SIZE: usize = 4 * 1024 * 1024;
+
+#[derive(Debug, Clone)]
+pub struct LocalOperator(pub Operator);
+#[derive(Debug, Clone)]
+pub struct WebdavOperator(pub Operator);
+#[derive(Debug, Clone)]
+pub struct S3Operator(pub Operator);
+
+impl super::MyOperation for LocalOperator {
+    fn inner(&self) -> &Operator {
+        &self.0
+    }
+    fn chunkable(&self) -> bool {
+        true
+    }
+}
+
+impl super::MyOperation for WebdavOperator {
+    fn inner(&self) -> &Operator {
+        &self.0
+    }
+    fn chunkable(&self) -> bool {
+        false
+    }
+}
+
+impl super::MyOperation for S3Operator {
+    fn inner(&self) -> &Operator {
+        &self.0
+    }
+    fn chunkable(&self) -> bool {
+        true
+    }
+}
+
 #[async_trait::async_trait]
 impl super::MyOperation for Operator {
+    fn inner(&self) -> &Operator {
+        self
+    }
     async fn list_archive(&self, game_id: u32) -> Result<Vec<String>> {
         let path = format!("{}/", game_id);
         let mut lister = self.lister_with(&path).recursive(false).await?;
@@ -43,7 +82,11 @@ impl super::MyOperation for Operator {
         let remote_path = format!("{}/{}", game_id, archive_filename);
         let uploader = self
             .writer_with(&remote_path)
-            .chunk(WRITER_MAX_BUFFER_SIZE)
+            .chunk(if self.chunkable() {
+                WRITER_NORMAL_CHUNK_SIZE
+            } else {
+                WRITER_MAX_BUFFER_SIZE
+            })
             .await?;
         let mut writer = uploader.into_futures_async_write();
         let archive_path = backup_dir.join(game_id.to_string()).join(archive_filename);
@@ -104,7 +147,11 @@ impl super::MyOperation for Operator {
     async fn upload_config(&self, filename: &str) -> Result<()> {
         let mut uploader = self
             .writer_with(filename)
-            .chunk(WRITER_MAX_BUFFER_SIZE)
+            .chunk(if self.chunkable() {
+                WRITER_NORMAL_CHUNK_SIZE
+            } else {
+                WRITER_MAX_BUFFER_SIZE
+            })
             .concurrent(8)
             .await?;
         let config_str = toml::to_string(&*CONFIG.lock()).unwrap();

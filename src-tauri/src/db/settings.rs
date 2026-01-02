@@ -8,7 +8,7 @@ use crate::{
     archive::ArchiveConfig,
     db::device::VarMap,
     error::{Error, Result},
-    sync::{BuildOperator, LocalOperator, MyOperation},
+    sync::{BuildOperator, LocalOperator, MyOperation, S3Operator, WebdavOperator},
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, TS)]
@@ -107,7 +107,7 @@ pub struct WebDavConfig {
     pub root_path: String,
 
     #[serde(skip)]
-    pub operator: RefCell<Option<opendal::Operator>>,
+    pub operator: RefCell<Option<WebdavOperator>>,
 }
 
 impl Default for WebDavConfig {
@@ -134,7 +134,7 @@ pub struct S3Config {
     pub secret_key: String,
 
     #[serde(skip)]
-    pub operator: RefCell<Option<opendal::Operator>>,
+    pub operator: RefCell<Option<S3Operator>>,
 }
 
 impl Default for S3Config {

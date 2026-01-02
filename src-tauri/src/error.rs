@@ -47,6 +47,9 @@ pub enum Error {
 
     #[error("Storage provider not set")]
     ProviderNotSet,
+
+    #[error("Invalid path")]
+    InvalidPath,
 }
 
 impl Clone for Error {
