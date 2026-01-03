@@ -50,6 +50,12 @@ pub enum Error {
 
     #[error("Invalid path")]
     InvalidPath,
+
+    #[error("Invalid launch command: {0}")]
+    InvalidCommand(String),
+
+    #[error("Internal error: Invalid channel: {0}")]
+    InvalidChannel(&'static str),
 }
 
 impl Clone for Error {

@@ -5,6 +5,7 @@ pub mod error;
 pub mod exec;
 pub mod http;
 mod logging;
+pub mod plugin;
 pub mod sync;
 pub mod utils;
 

@@ -2,7 +2,11 @@ pub mod device;
 mod migration;
 pub mod settings;
 
-use std::{fs, path::PathBuf, sync::LazyLock as Lazy};
+use std::{
+    fs,
+    path::PathBuf,
+    sync::{Arc, LazyLock as Lazy},
+};
 
 use chrono::{DateTime, Duration, Utc};
 use config_file2::{LoadConfigFile, Storable};
@@ -14,7 +18,11 @@ use settings::Settings;
 use tauri::{AppHandle, Emitter as _};
 use ts_rs::TS;
 
-use crate::{db::device::VarMap, error::Result};
+use crate::{
+    db::device::VarMap,
+    error::Result,
+    plugin::{PluginConfig, PluginMetadatas},
+};
 
 pub static CONFIG_DIR: Lazy<PathBuf> = Lazy::new(|| {
     let dir = home::home_dir()
@@ -51,6 +59,7 @@ pub struct Config {
     pub games: Vec<Game>,
     pub devices: Vec<Device>,
     pub settings: Settings,
+    pub plugin_metadatas: PluginMetadatas,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
@@ -69,6 +78,8 @@ pub struct Game {
     pub use_time: Duration,
     pub last_played_time: Option<DateTime<Utc>>,
     pub last_upload_time: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub plugins: Arc<Vec<PluginConfig>>,
 }
 
 impl Config {
