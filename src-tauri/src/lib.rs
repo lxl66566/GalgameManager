@@ -4,6 +4,7 @@ pub mod db;
 pub mod error;
 pub mod exec;
 pub mod http;
+pub mod plugin;
 pub mod sync;
 pub mod utils;
 
