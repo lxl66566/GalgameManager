@@ -64,6 +64,7 @@ pub struct Game {
     pub image_url: Option<String>,
     pub image_sha256: Option<String>,
     pub added_time: DateTime<Utc>,
+    /// [secs, nanos]
     pub use_time: Duration,
     pub last_played_time: Option<DateTime<Utc>>,
     pub last_upload_time: Option<DateTime<Utc>>,

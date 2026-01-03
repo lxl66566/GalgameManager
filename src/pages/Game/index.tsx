@@ -1,14 +1,30 @@
 import { type Game } from '@bindings/Game'
+import { type SortType } from '@bindings/SortType'
 import { DropArea } from '@components/DropArea'
 import FullScreenMask from '@components/ui/FullScreenMask'
 import { myToast } from '@components/ui/myToast'
 import { invoke } from '@tauri-apps/api/core'
 import { once } from '@tauri-apps/api/event'
 import { getParentPath } from '@utils/path'
+import { durationToSecs } from '@utils/time'
 import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'
 import { AiTwotonePlusCircle } from 'solid-icons/ai'
-import { createSignal, For, onMount, Show, type JSX } from 'solid-js'
+import {
+  TbClockPlay,
+  TbHourglassHigh,
+  TbSortAscendingLetters,
+  TbSortAscendingNumbers
+} from 'solid-icons/tb'
+import {
+  createMemo,
+  createSignal,
+  For,
+  onMount,
+  Show,
+  type Accessor,
+  type JSX
+} from 'solid-js'
 import toast from 'solid-toast'
 import GameEditModal from './GameEditModal'
 import { GameItem, GameItemWrapper } from './GameItem'
@@ -28,6 +44,8 @@ const GamePage = (): JSX.Element => {
   const [backingUpIds, setBackingUpIds] = createSignal<number[]>([])
   const [playingIds, setPlayingIds] = createSignal<number[]>([])
 
+  const [sortType, setSortType] = createSignal<SortType>('id')
+
   // 避免切换路由后丢失游戏状态
   onMount(() => {
     invoke<number[]>('running_game_ids').then(ids => {
@@ -42,7 +60,42 @@ const GamePage = (): JSX.Element => {
         })
       }
     })
+    try {
+      invoke<SortType>('get_sort_type').then(type => {
+        setSortType(type)
+      })
+    } catch {}
   })
+
+  const sortedGames = createMemo(() => {
+    // 浅拷贝数组以避免修改 Store
+    const games = [...config.games]
+    const type = sortType()
+
+    return games.sort((a, b) => {
+      switch (type) {
+        case 'name':
+          return a.name.localeCompare(
+            b.name,
+            config.settings.appearance.language || 'zh-CN'
+          )
+        case 'lastPlayed':
+          // 处理 null 情况，未游玩的排在后面
+          const timeA = a.lastPlayedTime ? new Date(a.lastPlayedTime).getTime() : 0
+          const timeB = b.lastPlayedTime ? new Date(b.lastPlayedTime).getTime() : 0
+          return timeB - timeA
+        case 'playTime':
+          return durationToSecs(b.useTime) - durationToSecs(a.useTime)
+        case 'id':
+        default:
+          return a.id - b.id
+      }
+    })
+  })
+
+  const getRealIndex = (gameId: number) => {
+    return config.games.findIndex(g => g.id === gameId)
+  }
 
   const findNextGameId = () => {
     const nextId = config.games.reduce((maxId, game) => {
@@ -240,21 +293,39 @@ const GamePage = (): JSX.Element => {
   return (
     <>
       <div class="flex flex-col container mx-auto p-4 h-full">
-        <h1 class="text-2xl font-bold mb-4 dark:text-white">{t('game.self')}</h1>
+        {/* 头部区域：标题 + 排序控件 */}
+        <div class="flex flex-row justify-between items-center mb-4">
+          <h1 class="text-2xl font-bold dark:text-white">{t('game.self')}</h1>
+
+          <SortOptions
+            sortType={sortType}
+            onChange={s => {
+              setSortType(s)
+              try {
+                invoke('set_sort_type', { sortType: s })
+              } catch {}
+            }}
+          />
+        </div>
         <div class="flex-1 grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-x-6 gap-y-6 pb-5 overflow-y-auto custom-scrollbar">
-          <For each={config.games}>
-            {(game, i) => (
-              <GameItem
-                game={game}
-                onStart={() => handleStart(i())}
-                onEdit={() => openEditModal(i())}
-                onBackup={() => handleBackup(i())}
-                onSync={() => openSyncModal(i())}
-                // 根据 ID 数组判断状态
-                isBackingUp={backingUpIds().includes(game.id)}
-                isPlaying={playingIds().includes(game.id)}
-              />
-            )}
+          <For each={sortedGames()}>
+            {game => {
+              // 获取真实索引用于操作
+              const realIndex = () => getRealIndex(game.id)
+
+              return (
+                <GameItem
+                  game={game}
+                  // 所有的操作回调都使用 realIndex()
+                  onStart={() => handleStart(realIndex())}
+                  onEdit={() => openEditModal(realIndex())}
+                  onBackup={() => handleBackup(realIndex())}
+                  onSync={() => openSyncModal(realIndex())}
+                  isBackingUp={backingUpIds().includes(game.id)}
+                  isPlaying={playingIds().includes(game.id)}
+                />
+              )
+            }}
           </For>
 
           <GameItemWrapper extra_class="border-2 border-dashed border-gray-300 dark:border-gray-600 bg-transparent shadow-none hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
@@ -303,3 +374,57 @@ const GamePage = (): JSX.Element => {
 }
 
 export default GamePage
+
+const SortOptions = (props: {
+  sortType: Accessor<SortType>
+  onChange: (type: SortType) => void
+}): JSX.Element => {
+  const { t } = useI18n()
+  const sortOptions: Accessor<{ type: SortType; icon: any; label: string }[]> =
+    createMemo(() => [
+      {
+        type: 'id' as SortType,
+        icon: TbSortAscendingNumbers,
+        label: t('game.sortType.id')
+      },
+      {
+        type: 'name' as SortType,
+        icon: TbSortAscendingLetters,
+        label: t('game.sortType.name')
+      },
+      {
+        type: 'lastPlayed' as SortType,
+        icon: TbClockPlay,
+        label: t('game.sortType.lastPlayed')
+      },
+      {
+        type: 'playTime' as SortType,
+        icon: TbHourglassHigh,
+        label: t('game.sortType.playTime')
+      }
+    ])
+
+  return (
+    <div class="flex bg-gray-200 dark:bg-gray-900 p-0.5 rounded-md">
+      <For each={sortOptions()}>
+        {option => (
+          <button
+            onClick={() => props.onChange(option.type)}
+            class={`
+                flex items-center justify-center px-2 py-1 rounded text-xs font-medium transition-all duration-200
+                ${
+                  props.sortType() === option.type
+                    ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-300 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300/50 dark:hover:bg-gray-700/50'
+                }
+              `}
+            title={option.label}
+          >
+            <option.icon class="w-3.5 h-3.5" />
+            <span class="ml-1 hidden md:inline">{option.label}</span>
+          </button>
+        )}
+      </For>
+    </div>
+  )
+}

@@ -8,6 +8,9 @@ export type Game = {
   imageUrl: string | null;
   imageSha256: string | null;
   addedTime: string;
+  /**
+   * [secs, nanos]
+   */
   useTime: [number, number];
   lastPlayedTime: string | null;
   lastUploadTime: string | null;

@@ -23,6 +23,10 @@ const durationToForm = (useTime: [number, number]) => {
   return { h, m }
 }
 
+const durationToSecs = (useTime: [number, number]) => {
+  return useTime[0] + useTime[1] / 1e9
+}
+
 const displayDuration = (d: [number, number]) => {
   const form = durationToForm(d)
   return `${form.h}h${form.m}m`
@@ -54,4 +58,11 @@ const formatTimeAgo = (dateStr: string | null) => {
   return `${diffYears}y ago`
 }
 
-export { dateToInput, inputToDate, durationToForm, displayDuration, formatTimeAgo }
+export {
+  dateToInput,
+  inputToDate,
+  durationToForm,
+  durationToSecs,
+  displayDuration,
+  formatTimeAgo
+}

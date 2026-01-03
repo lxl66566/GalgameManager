@@ -32,6 +32,12 @@ export const dict: DeepPartial<RawDictionary> = {
     interface: '界面'
   },
   game: {
+    sortType: {
+      id: '默认',
+      name: '名称',
+      lastPlayed: '最近',
+      playTime: '时长'
+    },
     edit: {
       editTitle: '编辑游戏信息',
       addTitle: '添加新游戏',

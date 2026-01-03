@@ -28,6 +28,12 @@ export const dict = {
     interface: 'Interface'
   },
   game: {
+    sortType: {
+      id: 'Default',
+      name: 'Name',
+      lastPlayed: 'Last Played',
+      playTime: 'Play Time'
+    },
     edit: {
       editTitle: 'Edit Game',
       addTitle: 'Add Game',

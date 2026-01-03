@@ -198,9 +198,32 @@ impl Default for AppearanceConfig {
 #[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
-#[serde(default)]
-pub struct DeviceIdentity {
-    pub name: String,
-    pub uuid: String,
-    pub variables: VarMap,
+pub enum SortType {
+    #[default]
+    Id,
+    Name,
+    LastPlayed,
+    PlayTime,
+}
+
+impl SortType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            SortType::Id => "id",
+            SortType::Name => "name",
+            SortType::LastPlayed => "lastPlayed",
+            SortType::PlayTime => "playTime",
+        }
+    }
+
+    #[allow(clippy::should_implement_trait)]
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "id" => Some(SortType::Id),
+            "name" => Some(SortType::Name),
+            "lastPlayed" => Some(SortType::LastPlayed),
+            "playTime" => Some(SortType::PlayTime),
+            _ => None,
+        }
+    }
 }

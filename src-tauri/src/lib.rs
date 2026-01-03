@@ -34,6 +34,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             device_id,
             resolve_var,
+            set_sort_type,
+            get_sort_type,
             get_config,
             save_config,
             list_local_archive,

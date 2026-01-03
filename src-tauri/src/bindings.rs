@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs, sync::LazyLock as Lazy};
+use std::{collections::HashMap, fs, path::PathBuf, sync::LazyLock as Lazy};
 
 use config_file2::Storable;
 use parking_lot::Mutex;
@@ -6,7 +6,7 @@ use tauri::{async_runtime::JoinHandle, AppHandle, Manager as _};
 
 use crate::{
     archive::{archive_impl, restore_impl},
-    db::{device::DEVICE_UID, Config, CONFIG},
+    db::{device::DEVICE_UID, settings::SortType, Config, CONFIG, CONFIG_DIR},
     error::Result,
     exec::launch_game,
     http::ImageData,
@@ -37,6 +37,20 @@ pub fn device_id() -> &'static str {
 #[tauri::command]
 pub fn resolve_var(s: &str) -> Result<String> {
     CONFIG.lock().resolve_var(s)
+}
+
+static SORT_TYPE_PATH: Lazy<PathBuf> = Lazy::new(|| CONFIG_DIR.join("sort_type"));
+
+#[tauri::command]
+pub fn set_sort_type(sort_type: SortType) -> Result<()> {
+    fs::write(SORT_TYPE_PATH.as_path(), sort_type.as_str())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_sort_type() -> Result<SortType> {
+    let sort_type = SortType::from_str(&fs::read_to_string(SORT_TYPE_PATH.as_path())?);
+    Ok(sort_type.unwrap_or_default())
 }
 
 // region http
