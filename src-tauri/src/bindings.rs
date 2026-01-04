@@ -66,6 +66,9 @@ pub async fn get_image(url: String, hash: Option<String>) -> Result<ImageData> {
 pub fn list_local_archive(app: AppHandle, game_id: u32) -> Result<Vec<String>> {
     let data_dir = app.path().app_local_data_dir()?;
     let game_backup_dir = data_dir.join("backup").join(game_id.to_string());
+    if !game_backup_dir.exists() {
+        return Ok(vec![]);
+    }
     Ok(list_dir_all(game_backup_dir)?)
 }
 

@@ -122,7 +122,9 @@ impl super::MyOperation for Operator {
             .chunk(4 * 1024 * 1024)
             .concurrent(8)
             .await?;
-        let archive_path = backup_dir.join(game_id.to_string()).join(archive_filename);
+        let archive_dir = backup_dir.join(game_id.to_string());
+        fs::create_dir_all(&archive_dir).await?;
+        let archive_path = archive_dir.join(archive_filename);
         let file = fs::File::create(archive_path).await?;
         futures::io::copy(
             downloader.into_futures_async_read(..).await?,
