@@ -63,6 +63,8 @@ const Sidebar = (props: { children: JSX.Element; class?: string }) => {
         'dark:bg-slate-900 dark:border-slate-800',
         // 宽度过渡
         'transition-[width,background-color,border-color] duration-300 ease-in-out',
+        // 禁止拖拽
+        'drag-none',
         props.class
       )}
     >

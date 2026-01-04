@@ -9,6 +9,7 @@ import { getParentPath } from '@utils/path'
 import { durationToSecs } from '@utils/time'
 import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'
+import clsx from 'clsx'
 import { AiTwotonePlusCircle } from 'solid-icons/ai'
 import {
   TbClockPlay,
@@ -292,12 +293,13 @@ const GamePage = (): JSX.Element => {
 
   return (
     <>
-      <div class="flex flex-col container mx-auto p-4 h-full">
+      <div class="flex flex-col py-4 pl-4 pr-0 w-full h-full">
         {/* 头部区域：标题 + 排序控件 */}
         <div class="flex flex-row justify-between items-center mb-4">
           <h1 class="text-2xl font-bold dark:text-white">{t('game.self')}</h1>
 
           <SortOptions
+            class="mr-4 p-0.5"
             sortType={sortType}
             onChange={s => {
               setSortType(s)
@@ -307,7 +309,7 @@ const GamePage = (): JSX.Element => {
             }}
           />
         </div>
-        <div class="flex-1 grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-x-6 gap-y-6 pb-5 overflow-y-auto custom-scrollbar">
+        <div class="flex-1 grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-x-6 gap-y-6 pb-5 pr-4 overflow-y-auto custom-scrollbar">
           <For each={sortedGames()}>
             {game => {
               // 获取真实索引用于操作
@@ -378,6 +380,7 @@ export default GamePage
 const SortOptions = (props: {
   sortType: Accessor<SortType>
   onChange: (type: SortType) => void
+  class?: string
 }): JSX.Element => {
   const { t } = useI18n()
   const sortOptions: Accessor<{ type: SortType; icon: any; label: string }[]> =
@@ -405,7 +408,7 @@ const SortOptions = (props: {
     ])
 
   return (
-    <div class="flex bg-gray-200 dark:bg-gray-900 p-0.5 rounded-md">
+    <div class={clsx('flex bg-gray-200 dark:bg-gray-900 rounded-md', props.class)}>
       <For each={sortOptions()}>
         {option => (
           <button

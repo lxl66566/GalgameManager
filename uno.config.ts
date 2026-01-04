@@ -19,6 +19,12 @@ export default defineConfig({
         * {
           scrollbar-width: thin;
         }
+
+        .drag-none, .drag-none * {
+          -webkit-user-drag: none,
+          user-drag: none,
+          user-select: none,
+        },
       `
     }
   ]
