@@ -165,11 +165,13 @@ export const dict: DeepPartial<RawDictionary> = {
     failToGetSaveList: '获取存档列表失败: ',
     failToLoadLocalConfig: '加载本地配置失败',
     failToStart: ' 启动失败: ',
+    forceUpdatedConfig: '成功下载并应用远端配置',
     isRunning: ' 正在运行',
     loadImageFailed: '加载图片失败: ',
     localIsTheNewest: '本地配置已是最新！',
     noPathPleaseAdd: '暂无路径，点击上方按钮添加',
     noSavePaths: '未添加存档路径',
+    remoteConfigNotFound: '未找到远端配置',
     remoteNotConfigured: '远端存储未配置',
     renameFailed: '重命名失败: ',
     renameSuccess: '重命名成功',
@@ -185,7 +187,6 @@ export const dict: DeepPartial<RawDictionary> = {
     syncSuccess: '同步成功: ',
     uploadFailed: '上传失败: ',
     uploading: '正在上传: ',
-    uploadSuccess: '上传成功: ',
-    forceUpdatedConfig: '成功下载并应用远端配置'
+    uploadSuccess: '上传成功: '
   }
 }

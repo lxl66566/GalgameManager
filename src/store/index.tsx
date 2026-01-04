@@ -110,6 +110,11 @@ export const checkAndPullRemote = async (
     const remoteConfig = await invoke<Config | null>('get_remote_config')
     if (!remoteConfig) {
       console.log('Remote config is null')
+
+      // 如果是手动拉取，则 toast 提示
+      if (skipCheck) {
+        toast.error(t('hint.remoteConfigNotFound'))
+      }
       return
     }
 
@@ -180,9 +185,9 @@ export const performUpload = async (
     )
   } catch (e) {
     toast.error(
-      isAutoUpload
-        ? t('hint.configAutoUploadFailed')
-        : t('hint.configUploadFailed') + ': ' + e
+      (isAutoUpload ? t('hint.configAutoUploadFailed') : t('hint.configUploadFailed')) +
+        ': ' +
+        e
     )
   }
 }

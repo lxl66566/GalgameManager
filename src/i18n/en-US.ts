@@ -163,11 +163,13 @@ export const dict = {
     failToGetSaveList: 'Failed to get save list: ',
     failToLoadLocalConfig: 'Failed to load local configuration',
     failToStart: ' failed to start: ',
+    forceUpdatedConfig: 'Force updated config from remote.',
     isRunning: ' is running',
     loadImageFailed: 'Failed to load image: ',
     localIsTheNewest: 'Local config is the newest!',
     noPathPleaseAdd: 'No path, please add one by clicking the button above',
     noSavePaths: 'No save paths defined',
+    remoteConfigNotFound: 'Remote config not found',
     remoteNotConfigured: 'Remote provider is not configured',
     renameFailed: 'Rename Failed: ',
     renameSuccess: 'Rename Success',
@@ -183,8 +185,7 @@ export const dict = {
     syncSuccess: 'Sync Success',
     uploadFailed: 'Upload Failed: ',
     uploading: 'Uploading: ',
-    uploadSuccess: 'Upload Success: ',
-    forceUpdatedConfig: 'Force updated config from remote.'
+    uploadSuccess: 'Upload Success: '
   }
 }
 

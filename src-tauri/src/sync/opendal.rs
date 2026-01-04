@@ -162,17 +162,17 @@ impl super::MyOperation for Operator {
 
     async fn get_remote_config(&self) -> Result<Option<Config>> {
         let remote_path = "config.toml";
-        let reader = match self
+        let reader = self
             .reader_with(remote_path)
             .chunk(4 * 1024 * 1024)
             .concurrent(8)
-            .await
-        {
-            Ok(r) => r,
+            .await?;
+
+        let buf = match reader.read(..).await {
+            Ok(b) => b,
             Err(e) if e.kind() == opendal::ErrorKind::NotFound => return Ok(None),
             Err(e) => return Err(e.into()),
         };
-        let buf = reader.read(..).await?;
         let new_config: Config = toml::from_slice(&buf.to_bytes())?;
         Ok(Some(new_config))
     }
