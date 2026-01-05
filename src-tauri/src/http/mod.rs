@@ -1,6 +1,7 @@
 use std::{fs, path::PathBuf, sync::LazyLock as Lazy, time::Duration};
 
 use base64::prelude::*;
+use log::{debug, info};
 use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -64,7 +65,7 @@ pub async fn get_image(path_or_url: &str, hash: Option<&str>) -> Result<ImageDat
     if let Some(hash) = hash {
         let cache_path = IMAGE_CACHE_DIR.join(hash);
         if let Ok(bytes) = fs::read(&cache_path) {
-            println!("image cache hit: {}", cache_path.display());
+            debug!("image cache hit: {}", cache_path.display());
             return Ok((bytes.into(), hash.to_string()).into());
         }
     }
@@ -84,6 +85,6 @@ pub async fn get_image(path_or_url: &str, hash: Option<&str>) -> Result<ImageDat
 }
 
 async fn download_image(url: &str) -> std::result::Result<bytes::Bytes, reqwest::Error> {
-    println!("downloading image: {}", url);
+    info!("downloading image: {}", url);
     IMAGE_CLIENT.get(url).send().await?.bytes().await
 }

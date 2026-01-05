@@ -1,6 +1,7 @@
 use std::{path::Path, time::Duration};
 
 use chrono::TimeDelta;
+use log::{error, info, trace};
 use tauri::{AppHandle, Emitter as _};
 use tokio::{process::Command, time};
 use windows::Win32::{
@@ -150,6 +151,7 @@ pub async fn launch_game(app: AppHandle, game_id: u32) -> Result<()> {
     let child_pid = child.id().ok_or(Error::Launch)?;
 
     app.emit(&format!("game://spawn/{}", game_id), ())?;
+    info!("Game spawned: game_id={}", game_id);
 
     // 2. 创建 Job 并绑定
 
@@ -158,7 +160,7 @@ pub async fn launch_game(app: AppHandle, game_id: u32) -> Result<()> {
         // 关键点：将启动器加入 Job。
         // 之后启动器生成的任何子进程（游戏本体）都会自动继承进入这个 Job。
         if let Err(e) = j.assign_process(child_pid) {
-            eprintln!("Failed to assign process to job: {:?}", e);
+            error!("Failed to assign process to job: {:?}", e);
         }
         j
     };
@@ -171,7 +173,7 @@ pub async fn launch_game(app: AppHandle, game_id: u32) -> Result<()> {
         interval.tick().await;
 
         if !job.has_active_processes() {
-            println!("Job object is empty. Game exited.");
+            info!("Game exited: game_id={}", game_id);
             app.emit(&format!("game://exit/{}", game_id), true)?;
             super::update_game_time(&app, game_id, time_counter)?;
             break;
@@ -181,8 +183,7 @@ pub async fn launch_game(app: AppHandle, game_id: u32) -> Result<()> {
         // 如果没有启用精确模式，或者游戏进程处于前台，则算作有效游玩时间
         if !precision_mode || job.is_focused() {
             time_counter += now - last_time_saved;
-            #[cfg(debug_assertions)]
-            println!("time_counter: {time_counter}");
+            trace!("time_counter: {time_counter}");
         }
         last_time_saved = now;
 

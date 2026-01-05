@@ -1,7 +1,8 @@
 mod opendal;
 use std::path::{Path, PathBuf};
 
-use ::opendal::{services, Operator};
+use ::opendal::{layers::LoggingLayer, services, Operator};
+use log::{info, warn};
 pub use opendal::{LocalOperator, S3Operator, WebdavOperator};
 
 use crate::{
@@ -67,12 +68,12 @@ pub trait MyOperation {
             .await
     }
     #[inline]
-    async fn upload_config(&self, filename: &str) -> Result<()> {
-        self.inner().upload_config(filename).await
-    }
-    #[inline]
     async fn get_remote_config(&self) -> Result<Option<Config>> {
         self.inner().get_remote_config().await
+    }
+    #[inline]
+    async fn upload_config(&self, filename: &str) -> Result<()> {
+        self.inner().upload_config(filename).await
     }
     /// Only upload config if remote config is older than local config
     ///
@@ -84,15 +85,65 @@ pub trait MyOperation {
         let config = CONFIG.lock().clone();
         if let Some(remote_config) = remote_config {
             if remote_config.last_updated >= config.last_updated {
-                println!(
-                    "Remote config is newer ({} >= {}), not uploading",
+                warn!(
+                    "Remote config is newer ({} >= {}), do not uploading",
                     remote_config.last_updated, config.last_updated
                 );
                 return Ok(false);
             }
+            info!(
+                "remote config is older ({} < {}), uploading",
+                remote_config.last_updated, config.last_updated
+            );
+            info!(
+                "diff: {}",
+                prettydiff::diff_lines(
+                    &toml::to_string(&remote_config).unwrap(),
+                    &toml::to_string(&config).unwrap(),
+                )
+            );
+        } else {
+            info!("remote config is null, uploading");
         }
         self.upload_config(filename).await?;
         Ok(true)
+    }
+
+    /// Apply remote config to local config
+    ///
+    /// # Parameters
+    ///
+    /// - safe: if true, will not apply config if remote config is older than
+    ///   local config
+    ///
+    /// # Returns
+    ///
+    /// - config, false: the old config if applied successfully
+    /// - None, false: if remote config is older than local config, not applied
+    /// - None, true: if remote config is None
+    async fn apply_remote_config(&self, safe: bool) -> Result<(Option<Config>, bool)> {
+        let remote_config = self.get_remote_config().await?;
+        let mut config = CONFIG.lock();
+        if let Some(remote_config) = remote_config {
+            if safe && remote_config.last_updated <= config.last_updated {
+                warn!(
+                    "Remote config is older ({} <= {}), do not applying",
+                    remote_config.last_updated, config.last_updated
+                );
+                return Ok((None, false));
+            }
+            info!(
+                "applying remote config, diff: {}",
+                prettydiff::diff_lines(
+                    &toml::to_string(&*config).unwrap(),
+                    &toml::to_string(&remote_config).unwrap(),
+                )
+            );
+
+            let old = std::mem::replace(&mut *config, remote_config);
+            return Ok((Some(old), false));
+        }
+        Ok((None, true))
     }
 }
 
@@ -127,6 +178,7 @@ impl BuildOperator for LocalConfig {
         let operator = Operator::new(
             services::Fs::default().root(path.as_os_str().to_str().ok_or(Error::InvalidPath)?),
         )?
+        .layer(LoggingLayer::default())
         .finish();
         *self.operator.borrow_mut() = Some(LocalOperator(operator));
         Ok(())
@@ -152,6 +204,7 @@ impl BuildOperator for WebDavConfig {
                 .password(self.password.as_deref().unwrap_or_default())
                 .root(&self.root_path),
         )?
+        .layer(LoggingLayer::default())
         .finish();
         *self.operator.borrow_mut() = Some(WebdavOperator(operator));
         Ok(())
@@ -177,6 +230,7 @@ impl BuildOperator for S3Config {
                 .access_key_id(&self.access_key)
                 .secret_access_key(&self.secret_key),
         )?
+        .layer(LoggingLayer::default())
         .finish();
         *self.operator.borrow_mut() = Some(S3Operator(operator));
         Ok(())

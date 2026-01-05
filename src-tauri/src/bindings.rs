@@ -1,6 +1,7 @@
 use std::{collections::HashMap, fs, path::PathBuf, sync::LazyLock as Lazy};
 
 use config_file2::Storable;
+use log::info;
 use parking_lot::Mutex;
 use tauri::{async_runtime::JoinHandle, AppHandle, Manager as _};
 
@@ -10,6 +11,7 @@ use crate::{
     error::Result,
     exec::launch_game,
     http::ImageData,
+    logging::LogLevel,
     sync::MyOperation,
     utils::list_dir_all,
 };
@@ -53,6 +55,11 @@ pub fn get_sort_type() -> Result<SortType> {
     Ok(sort_type.unwrap_or_default())
 }
 
+#[tauri::command]
+pub fn log(level: LogLevel, msg: String) {
+    log::log!(level.into(), "{}", msg);
+}
+
 // region http
 
 #[tauri::command(async)]
@@ -77,7 +84,8 @@ pub fn delete_local_archive(app: AppHandle, game_id: u32, archive_filename: Stri
     let data_dir = app.path().app_local_data_dir()?;
     let game_backup_dir = data_dir.join("backup").join(game_id.to_string());
     let archive_path = game_backup_dir.join(archive_filename);
-    fs::remove_file(archive_path)?;
+    fs::remove_file(&archive_path)?;
+    info!("delete local archive: {}", archive_path.display());
     Ok(())
 }
 
@@ -85,7 +93,8 @@ pub fn delete_local_archive(app: AppHandle, game_id: u32, archive_filename: Stri
 pub fn delete_local_archive_all(app: AppHandle, game_id: u32) -> Result<()> {
     let data_dir = app.path().app_local_data_dir()?;
     let game_backup_dir = data_dir.join("backup").join(game_id.to_string());
-    fs::remove_dir_all(game_backup_dir)?;
+    fs::remove_dir_all(&game_backup_dir)?;
+    info!("delete all local archive: {}", game_backup_dir.display());
     Ok(())
 }
 
@@ -100,7 +109,12 @@ pub fn rename_local_archive(
     let game_backup_dir = data_dir.join("backup").join(game_id.to_string());
     let archive_path = game_backup_dir.join(archive_filename);
     let new_archive_path = game_backup_dir.join(new_archive_filename);
-    fs::rename(archive_path, new_archive_path)?;
+    fs::rename(&archive_path, &new_archive_path)?;
+    info!(
+        "rename local archive: {} -> {}",
+        archive_path.display(),
+        new_archive_path.display()
+    );
     Ok(())
 }
 
@@ -118,6 +132,7 @@ pub fn archive(app: AppHandle, game_id: u32) -> Result<String> {
         .unwrap_or(format!("Unknown{}", lock.devices.len()));
     drop(lock);
 
+    // logged inner
     archive_impl(&device_name, &archive_conf, game_backup_dir, paths)
 }
 
@@ -131,6 +146,7 @@ pub fn extract(app: AppHandle, game_id: u32, archive_filename: String) -> Result
     let paths = lock.get_game_by_id(game_id)?.save_paths.clone();
     drop(lock);
 
+    // logged inner
     restore_impl(&archive_conf, game_backup_dir, archive_filename, paths)
 }
 
@@ -150,7 +166,7 @@ pub async fn list_archive(game_id: u32) -> Result<Vec<ArchiveInfo>> {
 
 #[tauri::command(async)]
 pub async fn upload_archive(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
-    println!(
+    info!(
         "uploading archive: game_id={}, archive_filename={}",
         game_id, archive_filename
     );
@@ -215,6 +231,7 @@ pub async fn upload_config() -> Result<()> {
         _ = tauri::async_runtime::spawn(async move {
             let time = chrono::Local::now().format("%Y%m%d");
             let filename = format!("config_{}.toml", time);
+            info!("also upload to: {}", filename);
             _ = op.upload_config(&filename).await;
         });
     }
@@ -223,6 +240,7 @@ pub async fn upload_config() -> Result<()> {
 
 #[tauri::command(async)]
 pub async fn upload_config_safe() -> Result<bool> {
+    info!("config auto upload triggered");
     let op = build_operator_with_varmap()?;
     let res = op.upload_config_safe("config.toml").await?;
     #[cfg(feature = "config-daily-backup")]
@@ -230,12 +248,14 @@ pub async fn upload_config_safe() -> Result<bool> {
         _ = tauri::async_runtime::spawn(async move {
             let time = chrono::Local::now().format("%Y%m%d");
             let filename = format!("config_{}.toml", time);
+            info!("also upload to: {}", filename);
             _ = op.upload_config_safe(&filename).await;
         });
     }
     Ok(res)
 }
 
+// currently not used. please use apply_remote_config instead.
 #[tauri::command(async)]
 pub async fn get_remote_config() -> Result<Option<Config>> {
     // prevent downloading config if storage is not configured
@@ -243,6 +263,13 @@ pub async fn get_remote_config() -> Result<Option<Config>> {
         return Ok(None);
     }
     build_operator_with_varmap()?.get_remote_config().await
+}
+
+#[tauri::command(async)]
+pub async fn apply_remote_config(safe: bool) -> Result<(Option<Config>, bool)> {
+    build_operator_with_varmap()?
+        .apply_remote_config(safe)
+        .await
 }
 
 // region exec

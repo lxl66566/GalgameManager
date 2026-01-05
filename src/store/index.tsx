@@ -98,8 +98,7 @@ const refreshConfig = async () => {
 // 核心逻辑：拉取远端并提供撤回
 export const checkAndPullRemote = async (
   t: i18n.Translator<Dictionary>,
-  skipCheck?: boolean,
-  toastMessage?: string
+  skipCheck?: boolean
 ) => {
   // skipCheck 为 false 为自动拉取，不提醒
   if (!skipCheck && config.settings.storage.provider === 'none') {
@@ -107,43 +106,30 @@ export const checkAndPullRemote = async (
     return
   }
   try {
-    const remoteConfig = await invoke<Config | null>('get_remote_config')
-    if (!remoteConfig) {
-      console.log('Remote config is null')
-
-      // 如果是手动拉取，则 toast 提示
-      if (skipCheck) {
-        toast.error(t('hint.remoteConfigNotFound'))
-      }
+    const [oldConfig, remoteIsNone] = await invoke<[Config | null, boolean]>(
+      'apply_remote_config',
+      { safe: !skipCheck }
+    )
+    // 如果是手动拉取，则 toast 提示
+    if (skipCheck && remoteIsNone) {
+      toast.error(t('hint.remoteConfigNotFound'))
       return
     }
-
-    if (
-      skipCheck ||
-      // 只有当远端配置存在，且更新时间晚于本地配置时才更新
-      new Date(remoteConfig.lastUpdated) > new Date(config.lastUpdated)
-    ) {
-      const previousConfig = unwrap(config) // 备份当前状态
-
-      // 应用新配置
-      setConfig(remoteConfig)
-      // 持久化到本地磁盘 (不更新 lastUpdated，因为这是同步操作)
-      await invoke('save_config', { newConfig: remoteConfig })
-
+    if (oldConfig) {
       // 弹出带撤回按钮的 Toast
       myToast({
         variant: 'success',
         title: t('hint.syncSuccess'),
-        message: toastMessage || t('hint.appliedNewConfig'),
+        message: skipCheck ? t('hint.forceUpdatedConfig') : t('hint.appliedNewConfig'),
         actions: [
           {
             label: t('ui.withdraw'),
             variant: 'secondary',
             onClick: () => {
-              setConfig(previousConfig)
+              setConfig(oldConfig)
               // 恢复旧配置到磁盘
               ;(async () => {
-                invoke('save_config', { newConfig: previousConfig })
+                invoke('save_config', { newConfig: oldConfig })
                 toast.success(t('hint.restorePreviousConfigSuccess'))
               })()
             }

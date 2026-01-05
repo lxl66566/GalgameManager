@@ -4,10 +4,12 @@ pub mod db;
 pub mod error;
 pub mod exec;
 pub mod http;
+mod logging;
 pub mod sync;
 pub mod utils;
 
 use bindings::*;
+use log::{error, info, warn};
 use tauri::{
     generate_context,
     menu::{Menu, MenuItem},
@@ -17,7 +19,10 @@ use tauri::{
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_window_state::{AppHandleExt, StateFlags, WindowExt};
 
-use crate::db::CONFIG_DIR;
+use crate::{
+    db::CONFIG_DIR,
+    logging::{init_logger, LOG_HANDLE},
+};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -32,12 +37,13 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![
+            get_config,
+            save_config,
             device_id,
             resolve_var,
             set_sort_type,
             get_sort_type,
-            get_config,
-            save_config,
+            log,
             list_local_archive,
             delete_local_archive,
             delete_local_archive_all,
@@ -55,11 +61,16 @@ pub fn run() {
             upload_config,
             upload_config_safe,
             get_remote_config,
+            apply_remote_config,
             exec,
             is_game_running,
             running_game_ids,
         ])
         .setup(|app| {
+            let handle = init_logger(app.path().app_log_dir()?)?;
+            let res = LOG_HANDLE.set(handle);
+            debug_assert!(res.is_ok());
+
             #[cfg(desktop)]
             {
                 _ = app
@@ -75,6 +86,8 @@ pub fn run() {
                 MenuItem::with_id(app, "open_config", "Open Config Folder", true, None::<&str>)?;
             let open_save_folder =
                 MenuItem::with_id(app, "open_save", "Open Save Folder", true, None::<&str>)?;
+            let open_log_folder =
+                MenuItem::with_id(app, "open_log", "Open Log Folder", true, None::<&str>)?;
             let quit_nosync = MenuItem::with_id(
                 app,
                 "quit_nosync",
@@ -88,6 +101,7 @@ pub fn run() {
                 &[
                     &open_config_folder,
                     &open_save_folder,
+                    &open_log_folder,
                     &quit_nosync,
                     &quit_sync,
                 ],
@@ -110,6 +124,11 @@ pub fn run() {
                                 .app_local_data_dir()
                                 .expect("failed to get app local data dir")
                                 .join("backup"),
+                        )
+                    }
+                    "open_log" => {
+                        _ = opener::open(
+                            app.path().app_log_dir().expect("failed to get app log dir"),
                         )
                     }
                     _ => {}
@@ -155,13 +174,13 @@ pub fn run() {
 
                 // upload config
                 tauri::async_runtime::spawn(async move {
-                    println!("[minimize] uploading config...");
+                    info!("[minimize] uploading config...");
                     match bindings::upload_config_safe().await {
-                        Ok(true) => println!("[minimize] upload config success"),
+                        Ok(true) => info!("[minimize] upload config success"),
                         Ok(false) => {
-                            println!("[minimize] remote config is newer, not uploading")
+                            warn!("[minimize] remote config is newer, not uploading")
                         }
-                        Err(e) => println!("[minimize] failed to upload config: {e}"),
+                        Err(e) => error!("[minimize] failed to upload config: {e}"),
                     }
                 });
             }
@@ -170,17 +189,17 @@ pub fn run() {
                 if code == Some(114514) {
                     app.get_webview_window("main").unwrap().minimize().unwrap();
                     api.prevent_exit();
-                    println!("[exit] uploading config...");
+                    info!("[exit] uploading config...");
                     let res = tauri::async_runtime::block_on(async move {
                         bindings::upload_config_safe().await
                     });
                     match res {
-                        Ok(true) => println!("[exit] upload config success"),
+                        Ok(true) => info!("[exit] upload config success"),
                         Ok(false) => {
-                            println!("[exit] remote config is newer, not uploading")
+                            warn!("[exit] remote config is newer, not uploading")
                         }
                         Err(e) => {
-                            println!("[exit] failed to upload config: {e}");
+                            error!("[exit] failed to upload config: {e}");
                             _ = app
                                 .notification()
                                 .builder()
@@ -188,14 +207,22 @@ pub fn run() {
                                 .body(format!("Failed to upload config on exit: {e}"))
                                 .show();
                             std::thread::sleep(std::time::Duration::from_secs(1)); // needed for notification to show
+                            before_exit();
                             std::process::exit(1);
                         }
                     }
+                    before_exit();
                     std::process::exit(0);
                 } else {
-                    println!("exit code: {:?}", code);
+                    info!("exit code: {:?}", code);
                 }
             }
             _ => (),
         });
+}
+
+fn before_exit() {
+    if let Some(handle) = LOG_HANDLE.get() {
+        handle.flush();
+    }
 }

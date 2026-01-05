@@ -28,14 +28,17 @@ base64                    = "0.22.1"
 bytes                     = "1.11.0"
 chrono                    = { version = "0.4", features = ["serde"] }
 config-file2              = "0.4.1"
+flexi_logger              = { version = "0.31.7", features = ["compress"] }
 futures                   = "0.3.31"
 hex                       = "0.4.3"
 home                      = "0.5.12"
+log                       = "0.4.29"
 machine-uid               = "0.5.4"
 opendal                   = { version = "0.55.0", features = ["services-webdav", "services-s3", "services-fs"] }
 opener                    = "0.8.3"
 parking_lot               = "0.12.5"
 pathdiff                  = "0.2.3"
+prettydiff                = { version = "0.9.0", default-features = false }
 reqwest                   = { version = "0.12.28", default-features = false, features = ["json", "rustls-tls", "http2", "charset", "system-proxy"] }
 serde                     = { version = "1.0", features = ["derive"] }
 serde_json                = "1.0"

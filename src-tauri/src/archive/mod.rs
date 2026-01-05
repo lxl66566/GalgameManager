@@ -6,6 +6,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use log::info;
 use serde::{Deserialize, Serialize};
 use squashfs::SquashfsArchiver;
 use tar::TarArchiver;
@@ -38,6 +39,7 @@ impl ArchiveAlgo {
 pub struct ArchiveConfig {
     pub algorithm: ArchiveAlgo,
     pub level: u8,
+    // currently not used
     pub backup_before_restore: bool,
 }
 
@@ -161,6 +163,11 @@ pub fn archive_impl(
 
     let file = fs::File::create(&file_path)?;
 
+    info!(
+        "creating archive: from_paths={:?}, to_path={}",
+        paths,
+        file_path.display()
+    );
     archive_conf.archive(target_paths, file)?;
 
     Ok(filename)
@@ -184,6 +191,12 @@ pub fn restore_impl(
     }
 
     let file = fs::File::open(&archive_path)?;
+
+    info!(
+        "restoring archive: from_path={}, to_paths={:?}",
+        archive_path.display(),
+        target_paths
+    );
 
     archive_conf.extract(file, target_paths)?;
 

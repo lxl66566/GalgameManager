@@ -1,6 +1,7 @@
 use std::{path::Path, time::Duration};
 
 use chrono::TimeDelta;
+use log::{error, info};
 use tauri::{AppHandle, Emitter as _};
 use tokio::{process::Command, time};
 
@@ -39,8 +40,8 @@ pub async fn launch_game(app: AppHandle, game_id: u32) -> Result<()> {
             status = child.wait() => {
                 app.emit(&format!("game://exit/{}", game_id), status.is_ok())?;
                 match status {
-                    Ok(s) => println!("Game exited with status: {}", s),
-                    Err(e) => eprintln!("Error waiting for game process: {}", e),
+                    Ok(s) => info!("Game exited with status: {}", s),
+                    Err(e) => error!("Error waiting for game process: {}", e),
                 }
                 super::update_game_time(&app, game_id, chrono::Utc::now() - last_time_saved)?;
                 break Ok(()); // 退出循环
