@@ -1,4 +1,5 @@
 import { open } from '@tauri-apps/plugin-dialog'
+import { fuckBackslash } from '@utils/path'
 import { useI18n } from '~/i18n'
 import { createSignal, For, Show } from 'solid-js'
 
@@ -23,8 +24,10 @@ export default function PathListEditor(props: PathListEditorProps) {
 
       if (selected) {
         const newPaths = Array.isArray(selected) ? selected : [selected]
-        // 过滤重复路径
-        const uniquePaths = newPaths.filter(p => !props.paths.includes(p))
+        // 转换反斜杠，并过滤重复路径
+        const uniquePaths = newPaths
+          .map(p => fuckBackslash(p))
+          .filter(p => !props.paths.includes(p))
         if (uniquePaths.length > 0) {
           props.onChange([...props.paths, ...uniquePaths])
         }

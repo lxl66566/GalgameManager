@@ -5,7 +5,7 @@ import FullScreenMask from '@components/ui/FullScreenMask'
 import { myToast } from '@components/ui/myToast'
 import { invoke } from '@tauri-apps/api/core'
 import { once } from '@tauri-apps/api/event'
-import { getParentPath } from '@utils/path'
+import { fuckBackslash, getParentPath } from '@utils/path'
 import { durationToSecs } from '@utils/time'
 import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'
@@ -234,7 +234,7 @@ const GamePage = (): JSX.Element => {
 
   const handleDropAdd = (paths: string[]) => {
     console.log('Dropped paths:', paths)
-    openGameAddModal(paths.at(0))
+    openGameAddModal(paths.at(0) ? fuckBackslash(paths[0]) : undefined)
   }
 
   // 并发备份处理

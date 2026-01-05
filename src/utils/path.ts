@@ -53,3 +53,7 @@ export function getParentPath(pathStr: string): string | undefined {
   // 返回最后一个斜杠之后的部分
   return parentPath.substring(lastSlashBeforeParent + 1)
 }
+
+export function fuckBackslash(path: string): string {
+  return path.replace(/\\/g, '/')
+}

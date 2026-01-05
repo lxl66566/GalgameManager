@@ -2,8 +2,8 @@ import { type Game } from '@bindings/Game'
 import PathListEditor from '@components/PathListEditor'
 import CachedImage from '@components/ui/CachedImage'
 import { myToast } from '@components/ui/myToast'
-import { basename, dirname } from '@tauri-apps/api/path'
 import { open } from '@tauri-apps/plugin-dialog'
+import { fuckBackslash, getParentPath } from '@utils/path'
 import { dateToInput, durationToForm, inputToDate } from '@utils/time'
 import { useI18n } from '~/i18n'
 import { createEffect, createSignal, Show, Suspense } from 'solid-js'
@@ -79,7 +79,7 @@ export default function GameEditModal(props: GameEditModalProps) {
       })
       if (selected && typeof selected === 'string') {
         // 浏览选择直接更新 Store，createEffect 会自动同步 tempImageUrl
-        setLocalGame('imageUrl', selected)
+        setLocalGame('imageUrl', fuckBackslash(selected))
         setLocalGame('imageSha256', null)
       }
     } catch (e) {
@@ -117,11 +117,10 @@ export default function GameEditModal(props: GameEditModalProps) {
         filters: [{ name: 'Executables', extensions: ['exe', 'lnk', 'bat', 'cmd'] }]
       })
       if (selected && typeof selected === 'string') {
-        setLocalGame('excutablePath', selected)
+        setLocalGame('excutablePath', fuckBackslash(selected))
         if (!localGame.name) {
-          const parentDir = await dirname(selected)
-          const name = await basename(parentDir)
-          setLocalGame('name', name)
+          const parentDir = getParentPath(selected)
+          setLocalGame('name', parentDir || '')
         }
       }
     } catch (e) {
