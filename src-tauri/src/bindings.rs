@@ -5,7 +5,7 @@ use parking_lot::Mutex;
 use tauri::{async_runtime::JoinHandle, AppHandle, Manager as _};
 
 use crate::{
-    archive::{archive_impl, restore_impl},
+    archive::{archive_impl, restore_impl, ArchiveInfo},
     db::{device::DEVICE_UID, settings::SortType, Config, CONFIG, CONFIG_DIR},
     error::Result,
     exec::launch_game,
@@ -63,7 +63,7 @@ pub async fn get_image(url: String, hash: Option<String>) -> Result<ImageData> {
 // region archive
 
 #[tauri::command]
-pub fn list_local_archive(app: AppHandle, game_id: u32) -> Result<Vec<String>> {
+pub fn list_local_archive(app: AppHandle, game_id: u32) -> Result<Vec<ArchiveInfo>> {
     let data_dir = app.path().app_local_data_dir()?;
     let game_backup_dir = data_dir.join("backup").join(game_id.to_string());
     if !game_backup_dir.exists() {
@@ -144,7 +144,7 @@ fn build_operator_with_varmap() -> Result<Box<dyn MyOperation + Send + Sync>> {
 }
 
 #[tauri::command(async)]
-pub async fn list_archive(game_id: u32) -> Result<Vec<String>> {
+pub async fn list_archive(game_id: u32) -> Result<Vec<ArchiveInfo>> {
     build_operator_with_varmap()?.list_archive(game_id).await
 }
 

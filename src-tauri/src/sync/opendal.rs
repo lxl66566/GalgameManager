@@ -6,6 +6,7 @@ use tokio::fs;
 use tokio_util::compat::TokioAsyncReadCompatExt;
 
 use crate::{
+    archive::ArchiveInfo,
     db::{Config, CONFIG},
     error::Result,
 };
@@ -22,28 +23,55 @@ pub struct WebdavOperator(pub Operator);
 #[derive(Debug, Clone)]
 pub struct S3Operator(pub Operator);
 
+#[async_trait::async_trait]
 impl super::MyOperation for LocalOperator {
+    #[inline]
     fn inner(&self) -> &Operator {
         &self.0
     }
+    #[inline]
     fn chunkable(&self) -> bool {
         true
+    }
+    // opendal Fs lister Entry does not implement content_length, so we need to get
+    // file size by ourselves
+    async fn list_archive(&self, game_id: u32) -> Result<Vec<ArchiveInfo>> {
+        let path = format!("{}/", game_id);
+        let mut lister = self.inner().lister_with(&path).recursive(false).await?;
+        let mut archives = vec![];
+        let d = lister.try_next().await?;
+        // empty dir
+        if d.is_none() {
+            return Ok(archives);
+        }
+        debug_assert_eq!(d.unwrap().path(), path);
+        while let Some(e) = lister.try_next().await? {
+            let size = self.inner().stat(e.path()).await?.content_length();
+            let mut archive_info = ArchiveInfo::from(e).strip_prefix(&path);
+            archive_info.size = size;
+            archives.push(archive_info);
+        }
+        Ok(archives)
     }
 }
 
 impl super::MyOperation for WebdavOperator {
+    #[inline]
     fn inner(&self) -> &Operator {
         &self.0
     }
+    #[inline]
     fn chunkable(&self) -> bool {
         false
     }
 }
 
 impl super::MyOperation for S3Operator {
+    #[inline]
     fn inner(&self) -> &Operator {
         &self.0
     }
+    #[inline]
     fn chunkable(&self) -> bool {
         true
     }
@@ -51,10 +79,11 @@ impl super::MyOperation for S3Operator {
 
 #[async_trait::async_trait]
 impl super::MyOperation for Operator {
+    #[inline]
     fn inner(&self) -> &Operator {
         self
     }
-    async fn list_archive(&self, game_id: u32) -> Result<Vec<String>> {
+    async fn list_archive(&self, game_id: u32) -> Result<Vec<ArchiveInfo>> {
         let path = format!("{}/", game_id);
         let mut lister = self.lister_with(&path).recursive(false).await?;
         let mut archives = vec![];
@@ -65,7 +94,8 @@ impl super::MyOperation for Operator {
         }
         debug_assert_eq!(d.unwrap().path(), path);
         while let Some(e) = lister.try_next().await? {
-            archives.push(e.path().strip_prefix(&path).unwrap_or(e.path()).to_string());
+            let archive_info = ArchiveInfo::from(e).strip_prefix(&path);
+            archives.push(archive_info);
         }
         Ok(archives)
     }

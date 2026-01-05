@@ -1,7 +1,8 @@
+import { type ArchiveInfo } from '@bindings/ArchiveInfo'
 import type { Game } from '@bindings/Game'
 import { invoke } from '@tauri-apps/api/core'
+import { formatBytes } from '@utils/file'
 import { useI18n } from '~/i18n'
-import { useConfig } from '~/store'
 import {
   TbArrowBackUp,
   TbCloudDownload,
@@ -18,8 +19,7 @@ import toast from 'solid-toast'
 
 type ArchiveStatus = 'LocalOnly' | 'RemoteOnly' | 'Synced'
 
-interface ArchiveItem {
-  name: string
+interface ArchiveItem extends ArchiveInfo {
   status: ArchiveStatus
 }
 
@@ -48,34 +48,52 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       const remotePromise =
         props.gameInfo.savePaths.length === 0
           ? Promise.resolve([])
-          : invoke<string[]>('list_archive', {
+          : invoke<ArchiveInfo[]>('list_archive', {
               gameId: props.gameId
             }).catch(e => {
               console.error('Remote fetch failed:', e)
               toast.error(t('hint.failToGetSaveList') + `: ${e}`)
-              return [] as string[] // 失败时视为远端列表为空
+              return [] as ArchiveInfo[] // 失败时视为远端列表为空
             })
 
-      // 本地请求失败则直接抛出到外层 catch，因为本地都无法读取说明功能不可用
-      const localPromise = invoke<string[]>('list_local_archive', {
+      // 本地请求失败则直接抛出到外层 catch
+      const localPromise = invoke<ArchiveInfo[]>('list_local_archive', {
         gameId: props.gameId
       })
 
-      // 并行执行，remotePromise 永远不会 reject
+      // 并行执行
       const [localList, remoteList] = await Promise.all([localPromise, remotePromise])
 
       console.log('localList:', localList)
       console.log('remoteList:', remoteList)
 
-      const localSet = new Set(localList)
-      const remoteSet = new Set(remoteList)
-      const allNames = new Set([...localList, ...remoteList])
+      // 1. 将 List 转换为 Map，key 为 name，value 为完整的 ArchiveInfo 对象
+      // 这样我们可以通过 name 快速查找对象是否存在
+      const localMap = new Map(localList.map(item => [item.name, item]))
+      const remoteMap = new Map(remoteList.map(item => [item.name, item]))
 
+      // 2. 获取所有唯一的 name 集合
+      const allNames = new Set([...localMap.keys(), ...remoteMap.keys()])
+
+      // 3. 遍历所有 name，生成最终的 merged 数组
       const merged: ArchiveItem[] = Array.from(allNames).map(name => {
+        const localItem = localMap.get(name)
+        const remoteItem = remoteMap.get(name)
+
+        // 确定基础信息：优先使用本地的数据，如果本地没有则使用远端的数据
+        // 因为 allNames 来源于两者之和，所以 baseInfo 一定存在
+        const baseInfo = (localItem || remoteItem)!
+
         let status: ArchiveStatus = 'Synced'
-        if (localSet.has(name) && !remoteSet.has(name)) status = 'LocalOnly'
-        else if (!localSet.has(name) && remoteSet.has(name)) status = 'RemoteOnly'
-        return { name, status }
+
+        if (localItem && !remoteItem) {
+          status = 'LocalOnly'
+        } else if (!localItem && remoteItem) {
+          status = 'RemoteOnly'
+        }
+        // 如果两者都有 (localItem && remoteItem)，则保持默认的 'Synced'
+
+        return { ...baseInfo, status }
       })
 
       // 按名称倒序排序
@@ -343,8 +361,8 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                         title={t('game.sync.status')[item.status]}
                       />
 
-                      {/* Filename / Rename Input */}
-                      <div class="flex-1 min-w-0">
+                      {/* Filename / Rename Input / Meta Info */}
+                      <div class="flex-1 min-w-0 flex flex-col justify-center">
                         <Show
                           when={editingName() === item.name}
                           fallback={
@@ -368,7 +386,6 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                             </div>
                           }
                         >
-                          {/* 修改 2: Input 增加 min-w-0 和 stopPropagation */}
                           <input
                             type="text"
                             class="w-full min-w-0 bg-white dark:bg-gray-900 border border-blue-500 rounded px-2 py-0.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
@@ -382,8 +399,23 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                             autofocus
                           />
                         </Show>
-                        <div class="text-[10px] text-gray-400 dark:text-gray-500 leading-none mt-1 truncate">
-                          {t('game.sync.statusLong')[item.status]}
+
+                        {/* 修改部分：元数据行 (状态文本 + 文件大小) */}
+                        <div class="flex items-center gap-2 mt-0.5 min-w-0">
+                          {/* 状态文本 */}
+                          <span class="text-[10px] text-gray-400 dark:text-gray-500 leading-none truncate flex-shrink-1">
+                            {t('game.sync.statusLong')[item.status]}
+                          </span>
+
+                          {/* 分隔符 (仅在有状态文本时显示，视具体翻译长度而定，这里默认显示) */}
+                          <span class="text-[10px] text-gray-300 dark:text-gray-600 leading-none select-none">
+                            •
+                          </span>
+
+                          {/* 文件大小 */}
+                          <span class="text-[11px] text-gray-400 dark:text-gray-500 leading-none font-mono whitespace-nowrap flex-shrink-0">
+                            {formatBytes(item.size)}
+                          </span>
                         </div>
                       </div>
                     </div>

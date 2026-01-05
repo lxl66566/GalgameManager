@@ -51,6 +51,46 @@ impl Default for ArchiveConfig {
     }
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, TS)]
+#[ts(export)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchiveInfo {
+    pub name: String,
+    pub size: u64,
+}
+
+impl ArchiveInfo {
+    /// Strip prefix from name
+    #[inline]
+    pub fn strip_prefix(mut self, prefix: &str) -> Self {
+        self.name = self
+            .name
+            .strip_prefix(prefix)
+            .unwrap_or(&self.name)
+            .to_string();
+        self
+    }
+}
+
+impl From<opendal::Entry> for ArchiveInfo {
+    fn from(value: opendal::Entry) -> Self {
+        let (name, metadata) = value.into_parts();
+        Self {
+            name,
+            size: metadata.content_length(),
+        }
+    }
+}
+
+impl From<std::fs::DirEntry> for ArchiveInfo {
+    fn from(value: std::fs::DirEntry) -> Self {
+        Self {
+            name: value.file_name().to_string_lossy().to_string(),
+            size: value.metadata().map(|m| m.len()).unwrap_or_default(),
+        }
+    }
+}
+
 // region interface
 
 pub trait Archive {

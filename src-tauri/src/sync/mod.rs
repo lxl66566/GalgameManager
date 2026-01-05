@@ -5,6 +5,7 @@ use ::opendal::{services, Operator};
 pub use opendal::{LocalOperator, S3Operator, WebdavOperator};
 
 use crate::{
+    archive::ArchiveInfo,
     db::{
         device::{ResolveVar, VarMap},
         settings::{LocalConfig, S3Config, WebDavConfig},
@@ -15,13 +16,13 @@ use crate::{
 
 #[async_trait::async_trait]
 pub trait MyOperation {
+    fn inner(&self) -> &Operator;
     #[inline]
     fn chunkable(&self) -> bool {
         false
     }
-    fn inner(&self) -> &Operator;
     #[inline]
-    async fn list_archive(&self, game_id: u32) -> Result<Vec<String>> {
+    async fn list_archive(&self, game_id: u32) -> Result<Vec<ArchiveInfo>> {
         self.inner().list_archive(game_id).await
     }
     #[inline]
@@ -218,14 +219,20 @@ mod tests {
 
         // initial state
         let ls = op.list_archive(game_id).await.unwrap();
-        assert_eq!(ls, Vec::<String>::new());
+        assert_eq!(ls, Vec::<ArchiveInfo>::new());
 
         // upload
         op.upload_archive(game_id, archive_filename, src_path)
             .await
             .unwrap();
         let ls = op.list_archive(game_id).await.unwrap();
-        assert_eq!(ls, vec![archive_filename]);
+        assert_eq!(
+            ls,
+            vec![ArchiveInfo {
+                name: archive_filename.to_string(),
+                size: 4
+            }]
+        );
 
         // pull
         fs::remove_file(&src_archive)?;
@@ -255,7 +262,7 @@ mod tests {
             .unwrap();
         let ls = op.list_archive(game_id).await.unwrap();
         dbg!(&ls);
-        assert!(ls.iter().any(|s| s == archive_filename));
+        assert!(ls.iter().any(|s| s.name == archive_filename));
 
         fs::remove_file(&archive_path)?;
         op.pull_archive(game_id, archive_filename, backup_dir.as_ref())

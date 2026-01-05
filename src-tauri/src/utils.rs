@@ -1,11 +1,12 @@
 use std::{io, path::Path};
 
-pub fn list_dir_all(path: impl AsRef<Path>) -> io::Result<Vec<String>> {
+use crate::archive::ArchiveInfo;
+
+pub fn list_dir_all(path: impl AsRef<Path>) -> io::Result<Vec<ArchiveInfo>> {
     let entries = std::fs::read_dir(path)?;
     let mut ret = vec![];
     for entry in entries {
-        let entry = entry?;
-        ret.push(entry.file_name().to_string_lossy().to_string());
+        ret.push(ArchiveInfo::from(entry?));
     }
     Ok(ret)
 }
