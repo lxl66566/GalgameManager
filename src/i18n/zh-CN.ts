@@ -110,6 +110,7 @@ export const dict: DeepPartial<RawDictionary> = {
       self: '配置',
       autoSyncInterval: '自动上传间隔',
       autoSyncIntervalDesc: '仅上传配置，暂不支持自动存档同步',
+      autoSyncIntervalPlaceholder: '单位：秒，设为 0 禁用自动上传',
       inSecs: '（秒）',
       manualSync: '管理配置',
       forceOp: '强制上传/下载'

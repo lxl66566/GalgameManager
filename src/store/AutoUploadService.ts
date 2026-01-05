@@ -15,7 +15,10 @@ export function useAutoUploadService({ performUpload }: AutoUploadOptions) {
 
   createEffect(() => {
     let intervalSecs = config.settings.autoSyncInterval
-    if (intervalSecs < 1) intervalSecs = 1
+    if (intervalSecs < 1) {
+      console.warn(`[AutoUpload] interval set to 0, do not start auto upload service.`)
+      return
+    }
 
     const intervalMs = intervalSecs * 1000
     console.log(`[AutoUpload] Service started. Interval: ${intervalSecs}s`)

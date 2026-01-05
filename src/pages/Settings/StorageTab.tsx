@@ -318,6 +318,7 @@ export const StorageTab: Component = () => {
                 s => (s.autoSyncInterval = parseInt(e.currentTarget.value))
               )
             }
+            placeholder={t('settings.config.autoSyncIntervalPlaceholder')}
           />
         </SettingRow>
         <SettingRow

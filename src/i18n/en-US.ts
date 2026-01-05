@@ -106,6 +106,7 @@ export const dict = {
       self: 'Config',
       autoSyncInterval: 'Config Auto Sync Interval',
       autoSyncIntervalDesc: 'Config Only, not saves',
+      autoSyncIntervalPlaceholder: 'seconds, 0 to disable',
       inSecs: 'In seconds',
       manualSync: 'Manual Syncing',
       forceOp: 'Forced Operation'
