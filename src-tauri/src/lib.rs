@@ -147,7 +147,7 @@ pub fn run() {
                     _ = app
                         .notification()
                         .builder()
-                        .title("GalgameManager")
+                        .title(env!("CARGO_PKG_NAME"))
                         .body("GalgameManager is running in the background")
                         .show();
                     _ = std::fs::File::create(seen_path);
@@ -170,16 +170,27 @@ pub fn run() {
                 if code == Some(114514) {
                     app.get_webview_window("main").unwrap().minimize().unwrap();
                     api.prevent_exit();
-                    tauri::async_runtime::block_on(async move {
-                        println!("[exit] uploading config...");
-                        match bindings::upload_config_safe().await {
-                            Ok(true) => println!("[exit] upload config success"),
-                            Ok(false) => {
-                                println!("[exit] remote config is newer, not uploading")
-                            }
-                            Err(e) => println!("[exit] failed to upload config: {e}"),
-                        }
+                    println!("[exit] uploading config...");
+                    let res = tauri::async_runtime::block_on(async move {
+                        bindings::upload_config_safe().await
                     });
+                    match res {
+                        Ok(true) => println!("[exit] upload config success"),
+                        Ok(false) => {
+                            println!("[exit] remote config is newer, not uploading")
+                        }
+                        Err(e) => {
+                            println!("[exit] failed to upload config: {e}");
+                            _ = app
+                                .notification()
+                                .builder()
+                                .title(env!("CARGO_PKG_NAME"))
+                                .body(format!("Failed to upload config on exit: {e}"))
+                                .show();
+                            std::thread::sleep(std::time::Duration::from_secs(1)); // needed for notification to show
+                            std::process::exit(1);
+                        }
+                    }
                     std::process::exit(0);
                 } else {
                     println!("exit code: {:?}", code);
