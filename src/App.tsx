@@ -2,28 +2,39 @@ import {
   ColorModeProvider,
   ColorModeScript,
   createLocalStorageManager,
-  useColorMode // [新增] 引入 hook
+  useColorMode
 } from '@kobalte/core'
 import { Route, Router, useLocation } from '@solidjs/router'
 import { BiRegularExtension } from 'solid-icons/bi'
 import { CgGames } from 'solid-icons/cg'
 import { IoSettingsOutline } from 'solid-icons/io'
-import { createEffect, createMemo, type Component } from 'solid-js'
+import { createEffect, createMemo, createSignal, onMount, type Component } from 'solid-js'
 import { Toaster } from 'solid-toast'
 import { I18nProvider, useI18n, type Locale } from './i18n'
 import Game from './pages/Game'
 import Plugin from './pages/Plugin'
 import Settings from './pages/Settings'
 import { Sidebar, SidebarItem } from './Sidebar'
-import { postInitConfig, useConfig } from './store'
+import { checkAndPullRemote, performAutoUpload, useConfig, useConfigInit } from './store'
+import { useAutoUploadService } from './store/AutoUploadService'
 
 const MainLayout: Component = () => {
-  const { config, actions } = useConfig()
+  const { config } = useConfig()
   const { t, setLocale } = useI18n()
   const { colorMode } = useColorMode()
+  const [isServiceReady, setServiceReady] = createSignal(false)
 
-  actions.initConfig()
-  postInitConfig(t)
+  useConfigInit()
+
+  checkAndPullRemote(t).finally(() => {
+    setServiceReady(true)
+  })
+  useAutoUploadService({
+    enabled: isServiceReady,
+    execUploadFunc: async () => {
+      await performAutoUpload(t)
+    }
+  })
 
   // 同步 Kobalte 状态到 HTML class
   createEffect(() => {

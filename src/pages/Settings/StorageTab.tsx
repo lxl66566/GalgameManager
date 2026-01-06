@@ -13,7 +13,7 @@ import {
 } from '@components/ui/settings'
 import { invoke } from '@tauri-apps/api/core'
 import { useI18n } from '~/i18n'
-import { checkAndPullRemote, performUpload, useConfig } from '~/store'
+import { checkAndPullRemote, performManualUpload, useConfig } from '~/store'
 import { FiDownload, FiLoader, FiUpload } from 'solid-icons/fi'
 import { createMemo, createSignal, Match, Show, Switch, type Component } from 'solid-js'
 
@@ -260,7 +260,7 @@ export const StorageTab: Component = () => {
   const [uploading, setUploading] = createSignal(false)
   const handleUploadConfig = async () => {
     setUploading(true)
-    await performUpload(t, false)
+    await performManualUpload(t)
     setUploading(false)
   }
   const [downloading, setDownloading] = createSignal(false)

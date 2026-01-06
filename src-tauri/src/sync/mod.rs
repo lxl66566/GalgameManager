@@ -11,9 +11,10 @@ use crate::{
     db::{
         device::{ResolveVar, VarMap},
         settings::{LocalConfig, S3Config, WebDavConfig},
-        Config, CONFIG,
+        Config, CONFIG, CONFIG_FILENAME,
     },
     error::{Error, Result},
+    utils,
 };
 
 #[async_trait::async_trait]
@@ -72,41 +73,56 @@ pub trait MyOperation {
     async fn get_remote_config(&self) -> Result<Option<Config>> {
         self.inner().get_remote_config().await
     }
+
+    #[cfg(feature = "config-daily-backup")]
     #[inline]
-    async fn upload_config(&self, filename: &str) -> Result<()> {
-        self.inner().upload_config(filename).await
+    async fn replicate_config(&self) -> Result<()> {
+        self.inner().replicate_config().await
     }
-    /// Only upload config if remote config is older than local config
+
+    /// upload config to remote, do not check anything or print log. should not
+    /// be used outside this mod.
+    #[inline]
+    async fn upload_config_inner(&self, filename: &str) -> Result<()> {
+        self.inner().upload_config_inner(filename).await
+    }
+
+    /// upload config to remote
+    ///
+    /// # Parameters
+    ///
+    /// - safe: if true, will not upload config if remote config is newer than
+    ///   local config
     ///
     /// # Returns
     ///
-    /// bool indicates whether config really uploaded
-    async fn upload_config_safe(&self, filename: &str) -> Result<bool> {
+    /// bool indicates whether config really uploaded. If unsafe, it'll always
+    /// return true.
+    async fn upload_config(&self, safe: bool) -> Result<bool> {
         let remote_config = self.get_remote_config().await?;
         let config = CONFIG.lock().clone();
         if let Some(remote_config) = remote_config {
-            if remote_config.last_updated >= config.last_updated {
+            if safe && remote_config.last_updated >= config.last_updated {
                 warn!(
                     "Remote config is newer ({} >= {}), do not uploading",
                     remote_config.last_updated, config.last_updated
                 );
                 return Ok(false);
             }
-            info!(
-                "remote config is older ({} < {}), uploading",
-                remote_config.last_updated, config.last_updated
-            );
-            info!(
-                "diff: {}",
-                prettydiff::diff_lines(
-                    &toml::to_string(&remote_config).unwrap(),
-                    &toml::to_string(&config).unwrap(),
-                )
-            );
+            if safe {
+                info!(
+                    "remote config is older ({} < {}), uploading",
+                    remote_config.last_updated, config.last_updated
+                );
+            } else {
+                info!("force uploading config");
+            }
+            info!("diff:\n{}", utils::diff(&remote_config, &config));
         } else {
             info!("remote config is null, uploading");
         }
-        self.upload_config(filename).await?;
+        self.upload_config_inner(CONFIG_FILENAME).await?;
+        info!("upload config success");
         Ok(true)
     }
 
@@ -138,11 +154,8 @@ pub trait MyOperation {
                 return Ok((None, false));
             }
             info!(
-                "applying remote config, diff: {}",
-                prettydiff::diff_lines(
-                    &toml::to_string(&*config).unwrap(),
-                    &toml::to_string(&remote_config).unwrap(),
-                )
+                "applying remote config, diff:\n{}",
+                utils::diff(&config, &remote_config)
             );
 
             let old = std::mem::replace(&mut *config, remote_config);

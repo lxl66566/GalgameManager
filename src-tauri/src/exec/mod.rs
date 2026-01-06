@@ -1,6 +1,5 @@
 #[cfg(not(windows))]
 mod unix;
-use log::info;
 #[cfg(not(windows))]
 pub use unix::*;
 #[cfg(windows)]
@@ -15,9 +14,10 @@ fn update_game_time(app: &tauri::AppHandle, game_id: u32, dur: chrono::TimeDelta
     let game = lock.get_game_by_id_mut(game_id).unwrap();
     game.use_time += dur;
     game.last_played_time = Some(chrono::Utc::now());
-    info!(
+    log::info!(
         "update use_time: game_id={}, use_time updated to {}",
-        game_id, game.use_time
+        game_id,
+        game.use_time
     );
     lock.save_and_emit(app)
 }

@@ -18,6 +18,7 @@ pub enum LogLevel {
     Warn,
     Error,
     Debug,
+    Trace,
 }
 
 impl From<LogLevel> for log::Level {
@@ -27,6 +28,7 @@ impl From<LogLevel> for log::Level {
             LogLevel::Warn => log::Level::Warn,
             LogLevel::Error => log::Level::Error,
             LogLevel::Debug => log::Level::Debug,
+            LogLevel::Trace => log::Level::Trace,
         }
     }
 }

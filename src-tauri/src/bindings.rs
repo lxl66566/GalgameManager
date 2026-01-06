@@ -223,34 +223,15 @@ pub fn clean_current_operator() {
 }
 
 #[tauri::command(async)]
-pub async fn upload_config() -> Result<()> {
-    let op = build_operator_with_varmap()?;
-    op.upload_config("config.toml").await?;
-    #[cfg(feature = "config-daily-backup")]
-    {
-        _ = tauri::async_runtime::spawn(async move {
-            let time = chrono::Local::now().format("%Y%m%d");
-            let filename = format!("config_{}.toml", time);
-            info!("also upload to: {}", filename);
-            _ = op.upload_config(&filename).await;
-        });
-    }
-    Ok(())
-}
-
-#[tauri::command(async)]
-pub async fn upload_config_safe() -> Result<bool> {
+pub async fn upload_config(safe: bool) -> Result<bool> {
     info!("config auto upload triggered");
     let op = build_operator_with_varmap()?;
-    let res = op.upload_config_safe("config.toml").await?;
+    let res = op.upload_config(safe).await?;
     #[cfg(feature = "config-daily-backup")]
-    {
-        _ = tauri::async_runtime::spawn(async move {
-            let time = chrono::Local::now().format("%Y%m%d");
-            let filename = format!("config_{}.toml", time);
-            info!("also upload to: {}", filename);
-            _ = op.upload_config_safe(&filename).await;
-        });
+    if res {
+        if let Err(e) = op.replicate_config().await {
+            log::error!("Failed to replicate config: {e}");
+        }
     }
     Ok(res)
 }

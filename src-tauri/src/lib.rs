@@ -59,7 +59,6 @@ pub fn run() {
             rename_remote_archive,
             clean_current_operator,
             upload_config,
-            upload_config_safe,
             get_remote_config,
             apply_remote_config,
             exec,
@@ -175,7 +174,7 @@ pub fn run() {
                 // upload config
                 tauri::async_runtime::spawn(async move {
                     info!("[minimize] uploading config...");
-                    match bindings::upload_config_safe().await {
+                    match bindings::upload_config(true).await {
                         Ok(true) => info!("[minimize] upload config success"),
                         Ok(false) => {
                             warn!("[minimize] remote config is newer, not uploading")
@@ -191,7 +190,7 @@ pub fn run() {
                     api.prevent_exit();
                     info!("[exit] uploading config...");
                     let res = tauri::async_runtime::block_on(async move {
-                        bindings::upload_config_safe().await
+                        bindings::upload_config(true).await
                     });
                     match res {
                         Ok(true) => info!("[exit] upload config success"),

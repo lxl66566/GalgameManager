@@ -1,27 +1,33 @@
-import { createEffect, onCleanup } from 'solid-js'
+import { log } from '@utils/log'
+import { createEffect, onCleanup, type Accessor } from 'solid-js'
 import { unwrap } from 'solid-js/store'
 import { useConfig } from '.'
 
 // 假设的 Config 类型定义补充，确保类型安全
 interface AutoUploadOptions {
-  performUpload: () => Promise<void>
+  enabled: Accessor<boolean>
+  execUploadFunc: () => Promise<void>
 }
 
-export function useAutoUploadService({ performUpload }: AutoUploadOptions) {
+// must be used in sync context
+export function useAutoUploadService({ enabled, execUploadFunc }: AutoUploadOptions) {
   const { config } = useConfig()
-
-  // 使用 Ref 或简单的变量来防止在上传过程中重复触发（防重入）
   let isUploading = false
 
   createEffect(() => {
-    let intervalSecs = config.settings.autoSyncInterval
+    if (!enabled()) {
+      log.info('[AutoUploadService] Waiting for remote sync to finish...')
+      return
+    }
+
+    const intervalSecs = config.settings?.autoSyncInterval ?? 0
     if (intervalSecs < 1) {
-      console.warn(`[AutoUpload] interval set to 0, do not start auto upload service.`)
+      log.warn(`[AutoUploadService] interval set to 0, do not start auto upload service.`)
       return
     }
 
     const intervalMs = intervalSecs * 1000
-    console.log(`[AutoUpload] Service started. Interval: ${intervalSecs}s`)
+    log.info(`[AutoUploadService] Service started. Interval: ${intervalSecs}s`)
 
     // 3. 启动定时器
     const timerId = setInterval(async () => {
@@ -45,13 +51,17 @@ export function useAutoUploadService({ performUpload }: AutoUploadOptions) {
         // 5. 比较逻辑：本地更新时间 > 上次上传时间
         if (lastUpdated > lastUploaded) {
           isUploading = true
-          console.log('[AutoUpload] Changes detected, starting upload...')
+          log.info(
+            '[AutoUploadService] Changes detected (lastUpdated > lastUploaded), trying to upload...'
+          )
 
           // 执行上传
-          await performUpload()
+          await execUploadFunc()
+        } else {
+          log.info('[AutoUploadService] No changes detected, skipping upload...')
         }
       } catch (error) {
-        console.error('[AutoUpload] Check failed:', error)
+        log.error(`[AutoUploadService] Check failed: ${error}`)
       } finally {
         isUploading = false
       }
@@ -60,7 +70,7 @@ export function useAutoUploadService({ performUpload }: AutoUploadOptions) {
     // 6. 清理函数
     // 当 intervalMinutes 变化导致 effect 重新运行，或组件卸载时调用
     onCleanup(() => {
-      console.log('[AutoUpload] Timer cleared')
+      log.info('[AutoUploadService] Timer cleared')
       clearInterval(timerId)
     })
   })

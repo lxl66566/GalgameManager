@@ -5,6 +5,7 @@ import FullScreenMask from '@components/ui/FullScreenMask'
 import { myToast } from '@components/ui/myToast'
 import { invoke } from '@tauri-apps/api/core'
 import { once } from '@tauri-apps/api/event'
+import { log } from '@utils/log'
 import { fuckBackslash, getParentPath } from '@utils/path'
 import { durationToSecs } from '@utils/time'
 import { useI18n } from '~/i18n'
@@ -118,7 +119,7 @@ const GamePage = (): JSX.Element => {
       lastPlayedTime: null,
       lastUploadTime: null
     }
-    console.log('add newGame:', newGame)
+    log.info(`add newGame: ${newGame}`)
     setEditingIndex(null)
     setEditingGameInfo(newGame)
     setEditMode(false)
@@ -169,7 +170,7 @@ const GamePage = (): JSX.Element => {
       // 2. 调用后端启动命令
       await invoke('exec', { gameId: game.id })
     } catch (error) {
-      console.error('Failed to start game:', error)
+      log.error(`Failed to start game ${game.name}: ${error}`)
       toast.error(game.name + t('hint.failToStart') + error)
 
       // 3. 如果启动指令本身失败，手动清理刚才注册的监听器
@@ -269,7 +270,7 @@ const GamePage = (): JSX.Element => {
         duration: 3000
       })
     } catch (error) {
-      console.error('Backup failed:', error)
+      log.error(`Failed to backup game ${game.name}: ${error}`)
       const errMsg = error instanceof Error ? error.message : String(error)
       toast.error(t('hint.syncFailed') + errMsg, { id: toastId, duration: 5000 })
     } finally {

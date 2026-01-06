@@ -2,6 +2,7 @@ import { type ArchiveInfo } from '@bindings/ArchiveInfo'
 import type { Game } from '@bindings/Game'
 import { invoke } from '@tauri-apps/api/core'
 import { formatBytes } from '@utils/file'
+import { log } from '@utils/log'
 import { useI18n } from '~/i18n'
 import {
   TbArrowBackUp,
@@ -64,8 +65,8 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       // 并行执行
       const [localList, remoteList] = await Promise.all([localPromise, remotePromise])
 
-      console.log('localList:', localList)
-      console.log('remoteList:', remoteList)
+      log.info(`localList: ${localList}`)
+      log.info(`remoteList: ${remoteList}`)
 
       // 1. 将 List 转换为 Map，key 为 name，value 为完整的 ArchiveInfo 对象
       // 这样我们可以通过 name 快速查找对象是否存在
@@ -264,7 +265,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
           })
         } catch (remoteErr) {
           // 3. 远程失败，回滚本地
-          console.error('Remote rename failed, rolling back local...', remoteErr)
+          log.error(`Remote rename failed, rolling back local...: ${remoteErr}`)
           try {
             await invoke('rename_local_archive', {
               gameId: props.gameId,

@@ -1,6 +1,7 @@
 import { type ImageData } from '@bindings/ImageData'
 import { invoke } from '@tauri-apps/api/core'
 import { getBase64ImageSrc } from '@utils/image'
+import { log } from '@utils/log'
 import { useI18n } from '~/i18n'
 import { createEffect, createResource, Show, type Component } from 'solid-js'
 import toast from 'solid-toast'
@@ -95,7 +96,7 @@ const CachedImage: Component<ImageProps> = props => {
   // 错误日志
   createEffect(() => {
     if (imageData.error) {
-      console.warn(`[Image Load Failed] ${props.url}:`, imageData.error)
+      log.warn(`[Image Load Failed] ${props.url}: ${imageData.error}`)
     }
   })
 

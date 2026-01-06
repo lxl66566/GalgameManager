@@ -7,8 +7,9 @@ import { myToast } from '@components/ui/myToast'
 import * as i18n from '@solid-primitives/i18n'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
+import { log } from '@utils/log'
 import { type Dictionary } from '~/i18n'
-import { onCleanup } from 'solid-js'
+import { onCleanup, onMount } from 'solid-js'
 import { createStore, produce, unwrap } from 'solid-js/store'
 import toast from 'solid-toast'
 import { useAutoUploadService } from './AutoUploadService'
@@ -57,31 +58,36 @@ const DEFAULT_CONFIG: Config = {
 
 const [config, setConfig] = createStore<Config>(DEFAULT_CONFIG)
 
-// 初始化
-export const initConfig = async () => {
-  // 1. 监听 Rust 端的主动推送
-  const unlisten = await listen<Config>('config://updated', event => {
-    console.log('Config updated from Rust:', event.payload)
-    setConfig(event.payload)
-  })
+export const useConfigInit = () => {
+  onMount(() => {
+    let unlisten: (() => void) | undefined
+    let mounted = true
 
-  // 2. 获取本地最新配置
-  await refreshConfig()
+    const init = async () => {
+      // 1. 监听 Rust 端的主动推送
+      const fn = await listen<Config>('config://updated', event => {
+        console.log('Config updated from Rust:', event.payload)
+        setConfig(event.payload)
+      })
 
-  onCleanup(() => {
-    unlisten()
-  })
-}
+      // 如果 await 期间组件已卸载，立即注销监听，防止内存泄漏
+      if (!mounted) {
+        fn()
+        return
+      }
 
-export const postInitConfig = async (t: i18n.Translator<Dictionary>) => {
-  // 3. 检查远端配置
-  await checkAndPullRemote(t)
+      unlisten = fn
 
-  // 4. 启动自动上传任务
-  useAutoUploadService({
-    performUpload: async () => {
-      await performUpload(t, true)
+      // 2. 获取本地最新配置 (监听建立后再拉取，确保不漏消息)
+      await refreshConfig()
     }
+
+    init()
+
+    onCleanup(() => {
+      mounted = false
+      unlisten?.()
+    })
   })
 }
 
@@ -144,28 +150,31 @@ export const checkAndPullRemote = async (
   }
 }
 
-export const performUpload = async (
-  t: i18n.Translator<Dictionary>,
-  isAutoUpload?: boolean
-) => {
+export const performAutoUpload = async (t: i18n.Translator<Dictionary>) => {
+  log.info('[ConfigAutoUpload] Triggered')
   try {
-    // 调用 Rust 上传
-    await invoke('upload_config')
+    const res = await invoke<boolean>('upload_config', { safe: true })
 
-    const now = new Date().toISOString()
-
-    setConfig('lastUploaded', now)
-    save()
-
-    toast.success(
-      isAutoUpload ? t('hint.configAutoUploadSuccess') : t('hint.configUploadSuccess')
-    )
+    // 成功自动上传
+    if (res) {
+      setConfig('lastUploaded', new Date().toISOString())
+      save()
+      toast.success(t('hint.configAutoUploadSuccess'))
+    }
   } catch (e) {
-    toast.error(
-      (isAutoUpload ? t('hint.configAutoUploadFailed') : t('hint.configUploadFailed')) +
-        ': ' +
-        e
-    )
+    toast.error(t('hint.configAutoUploadFailed') + ': ' + e)
+  }
+}
+
+export const performManualUpload = async (t: i18n.Translator<Dictionary>) => {
+  log.info('[ConfigManualUpload] Triggered')
+  try {
+    await invoke<boolean>('upload_config', { safe: false })
+    setConfig('lastUploaded', new Date().toISOString())
+    save()
+    toast.success(t('hint.configUploadSuccess'))
+  } catch (e) {
+    toast.error(t('hint.configUploadFailed') + ': ' + e)
   }
 }
 
@@ -185,7 +194,6 @@ export const useConfig = () => {
     refresh: refreshConfig,
     save,
     actions: {
-      initConfig,
       addGame: (game: Game) => {
         game.addedTime = new Date().toISOString()
         setConfig(

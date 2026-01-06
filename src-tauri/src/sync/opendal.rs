@@ -1,13 +1,14 @@
 use std::path::Path;
 
 use futures::{AsyncWriteExt, TryStreamExt as _};
+use log::info;
 use opendal::Operator;
 use tokio::fs;
 use tokio_util::compat::TokioAsyncReadCompatExt;
 
 use crate::{
     archive::ArchiveInfo,
-    db::{Config, CONFIG},
+    db::{Config, CONFIG, CONFIG_FILENAME},
     error::Result,
 };
 
@@ -176,7 +177,7 @@ impl super::MyOperation for Operator {
         Ok(())
     }
 
-    async fn upload_config(&self, filename: &str) -> Result<()> {
+    async fn upload_config_inner(&self, filename: &str) -> Result<()> {
         let mut uploader = self
             .writer_with(filename)
             .chunk(if self.chunkable() {
@@ -193,9 +194,8 @@ impl super::MyOperation for Operator {
     }
 
     async fn get_remote_config(&self) -> Result<Option<Config>> {
-        let remote_path = "config.toml";
         let reader = self
-            .reader_with(remote_path)
+            .reader_with(CONFIG_FILENAME)
             .chunk(4 * 1024 * 1024)
             .concurrent(8)
             .await?;
@@ -207,5 +207,13 @@ impl super::MyOperation for Operator {
         };
         let new_config: Config = toml::from_slice(&buf.to_bytes())?;
         Ok(Some(new_config))
+    }
+
+    #[cfg(feature = "config-daily-backup")]
+    async fn replicate_config(&self) -> Result<()> {
+        let to = &format!("config_{}.toml", chrono::Local::now().format("%Y%m%d"));
+        info!("replicate config from {} to {}", CONFIG_FILENAME, to);
+        self.copy(CONFIG_FILENAME, to).await?;
+        Ok(())
     }
 }

@@ -25,7 +25,8 @@ pub static CONFIG_DIR: Lazy<PathBuf> = Lazy::new(|| {
     dir
 });
 
-pub static CONFIG_PATH: Lazy<PathBuf> = Lazy::new(|| CONFIG_DIR.join("config.toml"));
+pub static CONFIG_FILENAME: &str = "config.toml";
+pub static CONFIG_PATH: Lazy<PathBuf> = Lazy::new(|| CONFIG_DIR.join(CONFIG_FILENAME));
 
 pub static CONFIG: Lazy<Mutex<Config>> = Lazy::new(|| {
     Mutex::new(Config::load_or_default(CONFIG_PATH.as_path()).expect("load config file failed!"))

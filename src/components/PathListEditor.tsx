@@ -1,4 +1,5 @@
 import { open } from '@tauri-apps/plugin-dialog'
+import { log } from '@utils/log'
 import { fuckBackslash } from '@utils/path'
 import { useI18n } from '~/i18n'
 import { createSignal, For, Show } from 'solid-js'
@@ -33,7 +34,7 @@ export default function PathListEditor(props: PathListEditorProps) {
         }
       }
     } catch (err) {
-      console.error('Failed to open dialog:', err)
+      log.error(`Failed to open dialog: ${err}`)
     }
   }
 
