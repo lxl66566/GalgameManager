@@ -24,7 +24,7 @@ export default defineConfig({
           -webkit-user-drag: none,
           user-drag: none,
           user-select: none,
-        },
+        }
       `
     }
   ]
