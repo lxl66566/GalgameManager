@@ -111,9 +111,10 @@ impl Config {
     }
 
     #[inline]
-    pub fn save_and_emit(&self, app_handle: &AppHandle) -> Result<()> {
+    pub fn save_and_emit(&mut self, app_handle: &AppHandle) -> Result<()> {
+        self.last_updated = Utc::now();
         self.store()?;
-        app_handle.emit("config://updated", self)?;
+        app_handle.emit("config://updated", &self)?;
         Ok(())
     }
 }

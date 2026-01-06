@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use ::opendal::{layers::LoggingLayer, services, Operator};
 use log::{info, warn};
 pub use opendal::{LocalOperator, S3Operator, WebdavOperator};
+use tauri::AppHandle;
 
 use crate::{
     archive::ArchiveInfo,
@@ -121,7 +122,11 @@ pub trait MyOperation {
     /// - config, false: the old config if applied successfully
     /// - None, false: if remote config is older than local config, not applied
     /// - None, true: if remote config is None
-    async fn apply_remote_config(&self, safe: bool) -> Result<(Option<Config>, bool)> {
+    async fn apply_remote_config(
+        &self,
+        app: &AppHandle,
+        safe: bool,
+    ) -> Result<(Option<Config>, bool)> {
         let remote_config = self.get_remote_config().await?;
         let mut config = CONFIG.lock();
         if let Some(remote_config) = remote_config {
@@ -141,6 +146,7 @@ pub trait MyOperation {
             );
 
             let old = std::mem::replace(&mut *config, remote_config);
+            config.save_and_emit(app)?;
             return Ok((Some(old), false));
         }
         Ok((None, true))

@@ -266,9 +266,9 @@ pub async fn get_remote_config() -> Result<Option<Config>> {
 }
 
 #[tauri::command(async)]
-pub async fn apply_remote_config(safe: bool) -> Result<(Option<Config>, bool)> {
+pub async fn apply_remote_config(app: AppHandle, safe: bool) -> Result<(Option<Config>, bool)> {
     build_operator_with_varmap()?
-        .apply_remote_config(safe)
+        .apply_remote_config(&app, safe)
         .await
 }
 

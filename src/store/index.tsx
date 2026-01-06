@@ -152,19 +152,10 @@ export const performUpload = async (
     // 调用 Rust 上传
     await invoke('upload_config')
 
-    // 上传成功后，更新本地的 lastUploaded 状态
-    // 注意：这里我们假设 Rust 上传成功就是以上次保存的状态为准
-    // 或者 Rust 可能会返回一个新的 Config，视你的 Rust 实现而定。
-    // 这里采用最稳妥的方式：更新 lastUploaded 为当前时间
     const now = new Date().toISOString()
 
     setConfig('lastUploaded', now)
-
-    // 同时需要把这个 lastUploaded 的变更保存到本地磁盘，
-    // 否则下次重启 app 又会觉得需要上传。
-    // 这里调用 save 但不更新 lastUpdated (避免死循环：保存->更新时间->触发上传->保存->更新时间...)
-    const newConfig = { ...unwrap(config), lastUploaded: now }
-    await invoke('save_config', { newConfig })
+    save()
 
     toast.success(
       isAutoUpload ? t('hint.configAutoUploadSuccess') : t('hint.configUploadSuccess')
