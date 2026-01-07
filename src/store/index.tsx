@@ -146,7 +146,10 @@ export const checkAndPullRemote = async (
       toast.success(t('hint.localIsTheNewest'))
     }
   } catch (e) {
-    toast.error(t('hint.checkRemoteConfigFailed') + ': ' + e)
+    // 只在自动拉取且配置了存储后端时提示，提升首次启动的体验
+    if (skipCheck || !(e as Error).message.includes('Storage provider not set')) {
+      toast.error(t('hint.checkRemoteConfigFailed') + ': ' + e)
+    }
   }
 }
 

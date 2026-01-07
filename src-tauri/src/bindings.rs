@@ -155,7 +155,7 @@ pub fn extract(app: AppHandle, game_id: u32, archive_filename: String) -> Result
 #[inline]
 fn build_operator_with_varmap() -> Result<Box<dyn MyOperation + Send + Sync>> {
     let lock = CONFIG.lock();
-    let varmap = lock.varmap()?;
+    let varmap = lock.varmap();
     lock.settings.storage.build_operator(varmap)
 }
 

@@ -83,16 +83,16 @@ impl Config {
     }
 
     #[inline]
-    pub fn varmap(&self) -> Result<&VarMap> {
-        let device = self
-            .get_device()
-            .ok_or_else(|| crate::error::Error::Device("No device found".to_string()))?;
-        Ok(&device.variables)
+    pub fn varmap(&self) -> &VarMap {
+        static DEFAULT_VARMAP: Lazy<VarMap> = Lazy::new(VarMap::default);
+        self.get_device()
+            .map(|d| &d.variables)
+            .unwrap_or(&DEFAULT_VARMAP)
     }
 
     #[inline]
     pub fn resolve_var(&self, s: &str) -> Result<String> {
-        self.varmap()?.resolve_var(s)
+        self.varmap().resolve_var(s)
     }
 
     #[inline]
