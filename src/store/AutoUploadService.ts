@@ -1,5 +1,5 @@
 import { log } from '@utils/log'
-import { createEffect, onCleanup, type Accessor } from 'solid-js'
+import { createEffect, createMemo, onCleanup, type Accessor } from 'solid-js'
 import { unwrap } from 'solid-js/store'
 import { useConfig } from '.'
 
@@ -20,14 +20,14 @@ export function useAutoUploadService({ enabled, execUploadFunc }: AutoUploadOpti
       return
     }
 
-    const intervalSecs = config.settings?.autoSyncInterval ?? 0
-    if (intervalSecs < 1) {
+    const intervalSecs = createMemo(() => config.settings.autoSyncInterval)
+    if (intervalSecs() < 1) {
       log.warn(`[AutoUploadService] interval set to 0, do not start auto upload service.`)
       return
     }
 
-    const intervalMs = intervalSecs * 1000
-    log.info(`[AutoUploadService] Service started. Interval: ${intervalSecs}s`)
+    const intervalMs = intervalSecs() * 1000
+    log.info(`[AutoUploadService] Service started. Interval: ${intervalSecs()}s`)
 
     // 3. 启动定时器
     const timerId = setInterval(async () => {
