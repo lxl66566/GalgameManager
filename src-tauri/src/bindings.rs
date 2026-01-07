@@ -3,11 +3,11 @@ use std::{collections::HashMap, fs, path::PathBuf, sync::LazyLock as Lazy};
 use config_file2::Storable;
 use log::info;
 use parking_lot::Mutex;
-use tauri::{async_runtime::JoinHandle, AppHandle, Manager as _};
+use tauri::{AppHandle, Manager as _, async_runtime::JoinHandle};
 
 use crate::{
-    archive::{archive_impl, restore_impl, ArchiveInfo},
-    db::{device::DEVICE_UID, settings::SortType, Config, CONFIG, CONFIG_DIR},
+    archive::{ArchiveInfo, archive_impl, restore_impl},
+    db::{CONFIG, CONFIG_DIR, Config, device::DEVICE_UID, settings::SortType},
     error::Result,
     exec::launch_game,
     http::ImageData,
@@ -228,10 +228,8 @@ pub async fn upload_config(safe: bool) -> Result<bool> {
     let op = build_operator_with_varmap()?;
     let res = op.upload_config(safe).await?;
     #[cfg(feature = "config-daily-backup")]
-    if res {
-        if let Err(e) = op.replicate_config().await {
-            log::error!("Failed to replicate config: {e}");
-        }
+    if res && let Err(e) = op.replicate_config().await {
+        log::error!("Failed to replicate config: {e}");
     }
     Ok(res)
 }
