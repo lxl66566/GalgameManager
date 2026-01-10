@@ -33,9 +33,8 @@ export const VariableEditor: Component<VariableEditorProps> = props => {
   // 错误提示（如 Key 重复）
   const [error, setError] = createSignal<string | null>(null)
 
-  // 将对象转换为数组并排序，保证渲染顺序稳定（按 Key 字母序）
-  const sortedEntries = createMemo(() =>
-    Object.entries(props.variables).sort(([a], [b]) => a.localeCompare(b))
+  const sortedKeys = createMemo(() =>
+    Object.keys(props.variables).sort((a, b) => a.localeCompare(b))
   )
 
   // 处理添加逻辑
@@ -164,7 +163,7 @@ export const VariableEditor: Component<VariableEditorProps> = props => {
 
         {/* Empty State */}
         <Show
-          when={sortedEntries().length > 0 || isAdding()}
+          when={sortedKeys().length > 0 || isAdding()}
           fallback={
             <div class="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs select-none py-4">
               {t('settings.device.noVariablesDefined')}
@@ -172,10 +171,10 @@ export const VariableEditor: Component<VariableEditorProps> = props => {
           }
         >
           {/* Variable List */}
-          <For each={sortedEntries()}>
-            {([key, value]) => (
+          <For each={sortedKeys()}>
+            {key => (
               <div class="flex items-center gap-2 bg-white dark:bg-gray-700/50 border border-gray-200 dark:border-transparent px-2 py-1 rounded group hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                {/* Key Input (Editable but distinct) */}
+                {/* Key Input */}
                 <div class="w-1/3 min-w-[80px] relative">
                   <input
                     type="text"
@@ -194,7 +193,7 @@ export const VariableEditor: Component<VariableEditorProps> = props => {
                 {/* Value Input */}
                 <input
                   type="text"
-                  value={value}
+                  value={props.variables[key] || ''}
                   onInput={e => props.onUpdateValue(key, e.currentTarget.value)}
                   class="flex-1 bg-transparent text-gray-800 dark:text-gray-200 text-xs px-1 py-0.5 rounded border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:bg-gray-100 dark:focus:bg-gray-900 focus:border-blue-500 outline-none transition-all min-w-0 placeholder-gray-400 dark:placeholder-gray-600"
                   placeholder="Value..."

@@ -1,6 +1,7 @@
 import type { Device } from '@bindings/Device'
 import { Input, SettingRow, SettingSection } from '@components/ui/settings'
 import { VariableEditor } from '@components/VariableEditor'
+import { log } from '@utils/log'
 import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'
 import { createResource, Show, Suspense, type Component } from 'solid-js'
@@ -45,18 +46,21 @@ export const DeviceTab: Component = () => {
       if (!d.variables) d.variables = {}
       d.variables[key] = value
     })
+    log.info('Added variable ', key, ' with value ', value)
   }
 
   const handleRemoveVar = (key: string) => {
     modifyDevice(d => {
       if (d.variables) delete d.variables[key]
     })
+    log.info('Removed variable ', key)
   }
 
   const handleUpdateVarValue = (key: string, val: string) => {
     modifyDevice(d => {
       if (d.variables) d.variables[key] = val
     })
+    log.info('Updated variable value ', key, ' to ', val)
   }
 
   const handleRenameVarKey = (oldKey: string, newKey: string) => {
@@ -69,6 +73,7 @@ export const DeviceTab: Component = () => {
         d.variables[newKey] = val
       }
     })
+    log.info('Renamed variable key ', oldKey, ' to ', newKey)
   }
 
   return (
