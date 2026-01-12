@@ -9,7 +9,7 @@ use crate::{
     archive::{ArchiveInfo, archive_impl, restore_impl},
     db::{CONFIG, CONFIG_DIR, Config, device::DEVICE_UID, settings::SortType},
     error::Result,
-    exec::launch_game,
+    exec::{game_loop, launch_game},
     http::ImageData,
     logging::LogLevel,
     sync::MyOperation,
@@ -257,9 +257,12 @@ static GAME_HANDLES: Lazy<Mutex<HashMap<u32, JoinHandle<Result<()>>>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
 #[tauri::command(async)]
-pub async fn exec(app: AppHandle, game_id: u32) {
-    let handle = tauri::async_runtime::spawn(async move { launch_game(app, game_id).await });
+pub async fn exec(app: AppHandle, game_id: u32) -> Result<()> {
+    let res = launch_game(app.clone(), game_id).await?;
+
+    let handle = tauri::async_runtime::spawn(async move { game_loop(res, game_id, app).await });
     _ = GAME_HANDLES.lock().insert(game_id, handle);
+    Ok(())
 }
 
 // currently not used

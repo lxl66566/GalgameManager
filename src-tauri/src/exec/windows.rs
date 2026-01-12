@@ -9,8 +9,8 @@ use windows::Win32::{
     System::{
         JobObjects::{
             AssignProcessToJobObject, CreateJobObjectW, IsProcessInJob,
-            JobObjectBasicAccountingInformation, QueryInformationJobObject,
-            JOBOBJECT_BASIC_ACCOUNTING_INFORMATION,
+            JOBOBJECT_BASIC_ACCOUNTING_INFORMATION, JobObjectBasicAccountingInformation,
+            QueryInformationJobObject,
         },
         Threading::{
             OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SET_QUOTA, PROCESS_TERMINATE,
@@ -25,7 +25,7 @@ use crate::{
     error::{Error, Result},
 };
 
-struct GameJob {
+pub struct GameJob {
     handle: HANDLE,
 }
 
@@ -128,8 +128,10 @@ impl Drop for GameJob {
 
 const SAVE_INTERVAL: TimeDelta = TimeDelta::seconds(60);
 
-pub async fn launch_game(app: AppHandle, game_id: u32) -> Result<()> {
-    let (exe_path, precision_mode) = {
+pub type GameLaunchRes = GameJob;
+
+pub async fn launch_game(app: AppHandle, game_id: u32) -> Result<GameLaunchRes> {
+    let exe_path = {
         let lock = CONFIG.lock();
         let exe_path: String = lock.resolve_var(
             &lock
@@ -138,8 +140,7 @@ pub async fn launch_game(app: AppHandle, game_id: u32) -> Result<()> {
                 .clone()
                 .ok_or(Error::Launch)?,
         )?;
-        let precision_mode = lock.settings.launch.precision_mode;
-        (exe_path, precision_mode)
+        exe_path
     };
 
     // 1. 启动进程
@@ -165,9 +166,14 @@ pub async fn launch_game(app: AppHandle, game_id: u32) -> Result<()> {
         j
     };
 
+    Ok(job)
+}
+
+pub async fn game_loop(job: GameLaunchRes, game_id: u32, app: AppHandle) -> Result<()> {
     let mut interval = time::interval(Duration::from_secs(1));
     let mut last_time_saved = chrono::Utc::now();
     let mut time_counter = TimeDelta::milliseconds(0);
+    let precision_mode = CONFIG.lock().settings.launch.precision_mode;
 
     loop {
         interval.tick().await;

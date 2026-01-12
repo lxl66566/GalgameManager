@@ -1,6 +1,5 @@
 use std::{path::Path, time::Duration};
 
-use chrono::TimeDelta;
 use log::{error, info};
 use tauri::{AppHandle, Emitter as _};
 use tokio::{process::Command, time};
@@ -10,7 +9,9 @@ use crate::{
     error::{Error, Result},
 };
 
-pub async fn launch_game(app: AppHandle, game_id: u32) -> Result<()> {
+pub type GameLaunchRes = tokio::process::Child;
+
+pub async fn launch_game(app: AppHandle, game_id: u32) -> Result<GameLaunchRes> {
     let exe_path: String = {
         let lock = CONFIG.lock();
         lock.resolve_var(
@@ -26,9 +27,13 @@ pub async fn launch_game(app: AppHandle, game_id: u32) -> Result<()> {
     if let Some(parent) = Path::new(&exe_path).parent() {
         cmd.current_dir(parent);
     }
-    let mut child = cmd.spawn()?;
+    let child = cmd.spawn()?;
     app.emit(&format!("game://spawn/{}", game_id), ())?;
 
+    Ok(child)
+}
+
+pub async fn game_loop(mut child: GameLaunchRes, game_id: u32, app: AppHandle) -> Result<()> {
     let mut interval = time::interval(Duration::from_secs(60));
     let mut last_time_saved = chrono::Utc::now();
     // 第一个 tick 是立即执行的，跳过
