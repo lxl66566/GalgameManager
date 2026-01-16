@@ -6,7 +6,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use log::info;
+use log::{error, info};
 use serde::{Deserialize, Serialize};
 use squashfs::SquashfsArchiver;
 use tar::TarArchiver;
@@ -168,9 +168,17 @@ pub fn archive_impl(
         paths,
         file_path.display()
     );
-    archive_conf.archive(target_paths, file)?;
 
-    Ok(filename)
+    match archive_conf.archive(target_paths, file) {
+        Ok(_) => Ok(filename),
+        Err(e) => {
+            error!("Failed to archive saves: {e}");
+            if let Err(e) = fs::remove_file(&file_path) {
+                error!("Failed to revert previous created archive file: {e}");
+            }
+            Err(e.into())
+        }
+    }
 }
 
 pub fn restore_impl(

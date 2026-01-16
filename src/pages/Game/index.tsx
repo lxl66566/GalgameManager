@@ -248,7 +248,10 @@ const GamePage = (): JSX.Element => {
     }
 
     // 检查该游戏是否正在备份中
-    if (backingUpIds().includes(game.id)) return
+    if (backingUpIds().includes(game.id)) {
+      log.warn('Game is already backing up')
+      return
+    }
 
     // 添加到备份队列
     setBackingUpIds(prev => [...prev, game.id])
