@@ -188,6 +188,7 @@ export const dict: DeepPartial<RawDictionary> = {
     syncSuccess: '同步成功: ',
     uploadFailed: '上传失败: ',
     uploading: '正在上传: ',
-    uploadSuccess: '上传成功: '
+    uploadSuccess: '上传成功: ',
+    duplicateGameId: '疑似配置损坏: 检测到重复的游戏 ID! 请手动修复配置。'
   }
 }

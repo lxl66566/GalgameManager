@@ -27,6 +27,7 @@ import {
   type Accessor,
   type JSX
 } from 'solid-js'
+import { unwrap } from 'solid-js/store'
 import toast from 'solid-toast'
 import GameEditModal from './GameEditModal'
 import { GameItem, GameItemWrapper } from './GameItem'
@@ -72,6 +73,11 @@ const GamePage = (): JSX.Element => {
   const sortedGames = createMemo(() => {
     // 浅拷贝数组以避免修改 Store
     const games = [...config.games]
+    const ids = games.map(g => g.id)
+    // 检查重复 ID
+    if (ids.length !== new Set(ids).size) {
+      toast.error(t('hint.duplicateGameId'))
+    }
     const type = sortType()
 
     return games.sort((a, b) => {
@@ -139,6 +145,14 @@ const GamePage = (): JSX.Element => {
     setEditingGameInfo(null)
   }
 
+  const handleImageHashUpdate = (index: number, newHash: string) => {
+    console.log('handleImageHashUpdate', index, newHash)
+    const game = config.games[index]
+    if (!game) return
+    game.imageSha256 = newHash
+    actions.replaceGame(index, game)
+  }
+
   // 游戏启动逻辑
   const handleStart = async (index: number) => {
     const game = config.games[index]
@@ -184,7 +198,7 @@ const GamePage = (): JSX.Element => {
     if (index === null) {
       actions.addGame(game)
     } else {
-      actions.updateGame(index, game)
+      actions.replaceGame(index, game)
     }
     closeEditModal()
   }
@@ -327,6 +341,9 @@ const GamePage = (): JSX.Element => {
                   onEdit={() => openEditModal(realIndex())}
                   onBackup={() => handleBackup(realIndex())}
                   onSync={() => openSyncModal(realIndex())}
+                  onImageHashUpdate={newhash =>
+                    handleImageHashUpdate(realIndex(), newhash)
+                  }
                   isBackingUp={backingUpIds().includes(game.id)}
                   isPlaying={playingIds().includes(game.id)}
                 />

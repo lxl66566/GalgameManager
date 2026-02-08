@@ -2,7 +2,7 @@ use std::{fs, path::PathBuf, sync::LazyLock as Lazy, time::Duration};
 
 use base64::prelude::*;
 use log::{debug, info};
-use reqwest::{header, Client};
+use reqwest::{Client, header};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use ts_rs::TS;
@@ -62,6 +62,7 @@ fn hash_image(bytes: &[u8]) -> String {
 }
 
 pub async fn get_image(path_or_url: &str, hash: Option<&str>) -> Result<ImageData> {
+    debug!("get image: {}, hash: {:?}", path_or_url, hash);
     if let Some(hash) = hash {
         let cache_path = IMAGE_CACHE_DIR.join(hash);
         if let Ok(bytes) = fs::read(&cache_path) {
@@ -80,11 +81,11 @@ pub async fn get_image(path_or_url: &str, hash: Option<&str>) -> Result<ImageDat
     let bytes = download_image(path_or_url).await?;
     let hash = Sha256::digest(&bytes);
     let hash = hex::encode(hash)[..32].to_string();
+    info!("downloaded image: {}, hash: {}", path_or_url, hash);
     fs::write(IMAGE_CACHE_DIR.join(&hash), &bytes)?;
     Ok((bytes, hash).into())
 }
 
 async fn download_image(url: &str) -> std::result::Result<bytes::Bytes, reqwest::Error> {
-    info!("downloading image: {}", url);
     IMAGE_CLIENT.get(url).send().await?.bytes().await
 }

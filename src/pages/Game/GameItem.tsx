@@ -15,6 +15,7 @@ interface GameItemProps {
   onEdit: () => void
   onBackup: () => void
   onSync: () => void
+  onImageHashUpdate: (newHash: string) => void
   // 接收状态
   isBackingUp?: boolean
   isPlaying?: boolean
@@ -42,6 +43,7 @@ export const GameItem = (props: GameItemProps) => {
           hash={props.game.imageSha256}
           alt={props.game.name}
           class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          onHashUpdate={props.onImageHashUpdate}
         />
 
         {/* 状态层：使用 Show 进行互斥显示 */}

@@ -186,7 +186,8 @@ export const dict = {
     syncSuccess: 'Sync Success',
     uploadFailed: 'Upload Failed: ',
     uploading: 'Uploading: ',
-    uploadSuccess: 'Upload Success: '
+    uploadSuccess: 'Upload Success: ',
+    duplicateGameId: 'CRITICAL: Duplicate game id detected!'
   }
 }
 

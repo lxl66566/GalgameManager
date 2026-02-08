@@ -201,7 +201,7 @@ export const useConfig = () => {
         game.addedTime = new Date().toISOString()
         setConfig(
           produce(state => {
-            state.games.push(game)
+            state.games.push(unwrap(game))
           })
         )
         save()
@@ -214,11 +214,11 @@ export const useConfig = () => {
         )
         save()
       },
-      updateGame: (index: number, game: Game) => {
+      replaceGame: (index: number, game: Game) => {
         setConfig(
           produce(state => {
             if (state.games[index]) {
-              state.games[index] = game
+              state.games[index] = unwrap(game)
             }
           })
         )
@@ -254,15 +254,16 @@ export const useConfig = () => {
       },
       updateCurrentDevice: async (device: Device) => {
         const uid = await currentDeviceId()
+        const deviceUnwrap = unwrap(device)
         setConfig(
           produce(state => {
             const index = state.devices.findIndex(d => d.uid === uid)
             if (index !== -1) {
-              state.devices[index] = device
+              state.devices[index] = deviceUnwrap
             }
             // 如果没有找到，则添加
             else {
-              state.devices.push(device)
+              state.devices.push(deviceUnwrap)
             }
           })
         )
