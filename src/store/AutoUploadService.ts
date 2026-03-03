@@ -40,26 +40,7 @@ export function useAutoUploadService({ enabled, execUploadFunc }: AutoUploadOpti
         // 使用 unwrap 获取纯数据对象，避免在异步操作中产生意外的代理开销
         const current = unwrap(config)
 
-        // 检查必要字段是否存在
-        if (!current.lastUpdated) return
-
-        const lastUpdated = new Date(current.lastUpdated)
-        const lastUploaded = current.lastUploaded
-          ? new Date(current.lastUploaded)
-          : new Date(0)
-
-        // 5. 比较逻辑：本地更新时间 > 上次上传时间
-        if (lastUpdated > lastUploaded) {
-          isUploading = true
-          log.info(
-            '[AutoUploadService] Changes detected (lastUpdated > lastUploaded), trying to upload...'
-          )
-
-          // 执行上传
-          await execUploadFunc()
-        } else {
-          log.info('[AutoUploadService] No changes detected, skipping upload...')
-        }
+        execUploadFunc()
       } catch (error) {
         log.error(`[AutoUploadService] Check failed: ${error}`)
       } finally {

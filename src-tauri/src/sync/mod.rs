@@ -1,7 +1,7 @@
 mod opendal;
 use std::path::{Path, PathBuf};
 
-use ::opendal::{layers::LoggingLayer, services, Operator};
+use ::opendal::{Operator, layers::LoggingLayer, services};
 use log::{info, warn};
 pub use opendal::{LocalOperator, S3Operator, WebdavOperator};
 use tauri::AppHandle;
@@ -9,9 +9,9 @@ use tauri::AppHandle;
 use crate::{
     archive::ArchiveInfo,
     db::{
+        CONFIG, CONFIG_FILENAME, Config,
         device::{ResolveVar, VarMap},
         settings::{LocalConfig, S3Config, WebDavConfig},
-        Config, CONFIG, CONFIG_FILENAME,
     },
     error::{Error, Result},
     utils,
@@ -91,38 +91,47 @@ pub trait MyOperation {
     ///
     /// # Parameters
     ///
-    /// - safe: if true, will not upload config if remote config is newer than
-    ///   local config
+    /// - safe=true: will not upload config if local is clean or remote config
+    ///   is newer
     ///
     /// # Returns
     ///
     /// bool indicates whether config really uploaded. If unsafe, it'll always
     /// return true.
-    async fn upload_config(&self, safe: bool) -> Result<bool> {
+    async fn upload_config(&self, app: &AppHandle, safe: bool) -> Result<bool> {
+        // Local Clean Check
+        let local_config = CONFIG.lock().clone();
+        let local_last_sync = local_config.last_sync.unwrap_or_default();
+        if safe && local_config.last_updated <= local_last_sync {
+            warn!(
+                "Local clean (updated {} <= sync {}), skip upload",
+                local_config.last_updated, local_last_sync
+            );
+            return Ok(false);
+        }
+
+        // Remote Newer Check
         let remote_config = self.get_remote_config().await?;
-        let config = CONFIG.lock().clone();
         if let Some(remote_config) = remote_config {
-            if safe && remote_config.last_updated >= config.last_updated {
+            if safe && remote_config.last_updated > local_last_sync {
                 warn!(
-                    "Remote config is newer ({} >= {}), do not uploading",
-                    remote_config.last_updated, config.last_updated
+                    "Conflict detected! Remote ({}) > Local Base Sync ({}). Please pull first.",
+                    remote_config.last_updated, local_last_sync
                 );
                 return Ok(false);
             }
-            if safe {
-                info!(
-                    "remote config is older ({} < {}), uploading",
-                    remote_config.last_updated, config.last_updated
-                );
-            } else {
-                info!("force uploading config");
-            }
-            info!("diff:\n{}", utils::diff(&remote_config, &config));
+            info!("diff:\n{}", utils::diff(&remote_config, &local_config));
         } else {
             info!("remote config is null, uploading");
         }
         self.upload_config_inner(CONFIG_FILENAME).await?;
         info!("upload config success");
+        // Update local last_sync
+        {
+            let mut locked_config = CONFIG.lock();
+            locked_config.last_sync = Some(local_config.last_updated);
+            locked_config.save_and_emit_no_update(app)?;
+        }
         Ok(true)
     }
 
@@ -130,8 +139,8 @@ pub trait MyOperation {
     ///
     /// # Parameters
     ///
-    /// - safe: if true, will not apply config if remote config is older than
-    ///   local config
+    /// - safe=true: will not apply config if local is dirty or remote config is
+    ///   older
     ///
     /// # Returns
     ///
@@ -143,26 +152,40 @@ pub trait MyOperation {
         app: &AppHandle,
         safe: bool,
     ) -> Result<(Option<Config>, bool)> {
-        let remote_config = self.get_remote_config().await?;
-        let mut config = CONFIG.lock();
-        if let Some(remote_config) = remote_config {
-            if safe && remote_config.last_updated <= config.last_updated {
-                warn!(
-                    "Remote config is older ({} <= {}), do not applying",
-                    remote_config.last_updated, config.last_updated
-                );
-                return Ok((None, false));
-            }
-            info!(
-                "applying remote config, diff:\n{}",
-                utils::diff(&config, &remote_config)
-            );
+        let remote_config_opt = self.get_remote_config().await?;
+        // remote config is None, do nothing
+        let Some(remote_config) = remote_config_opt else {
+            return Ok((None, true));
+        };
 
-            let old = std::mem::replace(&mut *config, remote_config);
-            config.save_and_emit(app)?;
-            return Ok((Some(old), false));
+        let mut local_config = CONFIG.lock();
+        let local_last_sync = local_config.last_sync.unwrap_or_default();
+
+        // Local Clean Check
+        if safe && local_config.last_updated > local_last_sync {
+            warn!(
+                "Local dirty (updated {} > sync {}), cannot overwrite. Please upload or revert first.",
+                local_config.last_updated, local_last_sync
+            );
+            return Ok((None, false));
         }
-        Ok((None, true))
+
+        // Remote Newer Check
+        if safe && remote_config.last_updated <= local_last_sync {
+            warn!(
+                "Remote not newer (remote {} <= sync {}), skip download.",
+                remote_config.last_updated, local_last_sync
+            );
+            return Ok((None, false));
+        }
+
+        info!("Applying remote config...");
+
+        let mut new_config = remote_config.clone();
+        new_config.last_sync = Some(remote_config.last_updated);
+        let old = std::mem::replace(&mut *local_config, new_config);
+        local_config.save_and_emit_no_update(app)?;
+        Ok((Some(old), false))
     }
 }
 

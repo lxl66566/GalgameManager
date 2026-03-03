@@ -1,5 +1,6 @@
 use std::{collections::HashMap, fs, path::PathBuf, sync::LazyLock as Lazy};
 
+use chrono::Utc;
 use config_file2::Storable;
 use log::info;
 use parking_lot::Mutex;
@@ -27,6 +28,7 @@ pub fn get_config() -> Result<Config> {
 pub fn save_config(new_config: Config) -> Result<()> {
     let mut lock = CONFIG.lock();
     *lock = new_config;
+    lock.last_updated = Utc::now();
     lock.store()?;
     Ok(())
 }
@@ -223,10 +225,10 @@ pub fn clean_current_operator() {
 }
 
 #[tauri::command(async)]
-pub async fn upload_config(safe: bool) -> Result<bool> {
-    info!("config auto upload triggered");
+pub async fn upload_config(app: AppHandle, safe: bool) -> Result<bool> {
+    info!("upload_config triggered, safe: {}", safe);
     let op = build_operator_with_varmap()?;
-    let res = op.upload_config(safe).await?;
+    let res = op.upload_config(&app, safe).await?;
     #[cfg(feature = "config-daily-backup")]
     if res && let Err(e) = op.replicate_config().await {
         log::error!("Failed to replicate config: {e}");

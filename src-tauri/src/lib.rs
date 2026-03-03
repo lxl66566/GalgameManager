@@ -11,17 +11,16 @@ pub mod utils;
 use bindings::*;
 use log::{error, info, warn};
 use tauri::{
-    generate_context,
+    Manager, generate_context,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager,
 };
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_window_state::{AppHandleExt, StateFlags, WindowExt};
 
 use crate::{
     db::CONFIG_DIR,
-    logging::{init_logger, LOG_HANDLE},
+    logging::{LOG_HANDLE, init_logger},
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -172,9 +171,10 @@ pub fn run() {
                 }
 
                 // upload config
+                let app = app.clone();
                 tauri::async_runtime::spawn(async move {
                     info!("[minimize] uploading config...");
-                    match bindings::upload_config(true).await {
+                    match bindings::upload_config(app, true).await {
                         Ok(true) => info!("[minimize] upload config success"),
                         Ok(false) => {
                             warn!("[minimize] remote config is newer, not uploading")
@@ -190,7 +190,7 @@ pub fn run() {
                     api.prevent_exit();
                     info!("[exit] uploading config...");
                     let res = tauri::async_runtime::block_on(async move {
-                        bindings::upload_config(true).await
+                        bindings::upload_config(app.clone(), true).await
                     });
                     match res {
                         Ok(true) => info!("[exit] upload config success"),

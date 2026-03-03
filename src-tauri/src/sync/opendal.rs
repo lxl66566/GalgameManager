@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use chrono::Utc;
 use futures::{AsyncWriteExt, TryStreamExt as _};
 use log::info;
 use opendal::Operator;
@@ -8,7 +9,7 @@ use tokio_util::compat::TokioAsyncReadCompatExt;
 
 use crate::{
     archive::ArchiveInfo,
-    db::{Config, CONFIG, CONFIG_FILENAME},
+    db::{CONFIG, CONFIG_FILENAME, Config},
     error::Result,
 };
 
@@ -205,7 +206,8 @@ impl super::MyOperation for Operator {
             Err(e) if e.kind() == opendal::ErrorKind::NotFound => return Ok(None),
             Err(e) => return Err(e.into()),
         };
-        let new_config: Config = toml::from_slice(&buf.to_bytes())?;
+        let mut new_config: Config = toml::from_slice(&buf.to_bytes())?;
+        new_config.last_sync = Some(Utc::now());
         Ok(Some(new_config))
     }
 

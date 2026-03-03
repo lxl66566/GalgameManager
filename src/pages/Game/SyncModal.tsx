@@ -65,8 +65,8 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       // 并行执行
       const [localList, remoteList] = await Promise.all([localPromise, remotePromise])
 
-      log.info(`localList: ${localList}`)
-      log.info(`remoteList: ${remoteList}`)
+      log.info(`localList: ${JSON.stringify(localList)}`)
+      log.info(`remoteList: ${JSON.stringify(remoteList)}`)
 
       // 1. 将 List 转换为 Map，key 为 name，value 为完整的 ArchiveInfo 对象
       // 这样我们可以通过 name 快速查找对象是否存在

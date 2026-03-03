@@ -7,14 +7,17 @@ use std::{fs, path::PathBuf, sync::LazyLock as Lazy};
 use chrono::{DateTime, Duration, Utc};
 use config_file2::{LoadConfigFile, Storable};
 pub use device::ResolveVar;
-use device::{Device, DEVICE_UID};
+use device::{DEVICE_UID, Device};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use settings::Settings;
 use tauri::{AppHandle, Emitter as _};
 use ts_rs::TS;
 
-use crate::{db::device::VarMap, error::Result};
+use crate::{
+    db::{device::VarMap, migration::migrate},
+    error::Result,
+};
 
 pub static CONFIG_DIR: Lazy<PathBuf> = Lazy::new(|| {
     let dir = home::home_dir()
@@ -29,7 +32,9 @@ pub static CONFIG_FILENAME: &str = "config.toml";
 pub static CONFIG_PATH: Lazy<PathBuf> = Lazy::new(|| CONFIG_DIR.join(CONFIG_FILENAME));
 
 pub static CONFIG: Lazy<Mutex<Config>> = Lazy::new(|| {
-    Mutex::new(Config::load_or_default(CONFIG_PATH.as_path()).expect("load config file failed!"))
+    Mutex::new(migrate(
+        Config::load_or_default(CONFIG_PATH.as_path()).expect("load config file failed!"),
+    ))
 });
 
 impl Storable for Config {
@@ -38,7 +43,7 @@ impl Storable for Config {
     }
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
@@ -46,7 +51,10 @@ pub struct Config {
     pub db_version: u32,
     /// The last time the config was updated from frontend
     pub last_updated: DateTime<Utc>,
-    /// The last time the config was uploaded to remote storage
+    /// The last time the config was uploaded to remote or downloaded from
+    /// remote
+    pub last_sync: Option<DateTime<Utc>>,
+    #[deprecated(note = "use last_sync instead")]
     pub last_uploaded: Option<DateTime<Utc>>,
     pub games: Vec<Game>,
     pub devices: Vec<Device>,
@@ -114,6 +122,12 @@ impl Config {
     #[inline]
     pub fn save_and_emit(&mut self, app_handle: &AppHandle) -> Result<()> {
         self.last_updated = Utc::now();
+        self.save_and_emit_no_update(app_handle)
+    }
+
+    /// Save config without updating last_updated. This is useful in some cases.
+    #[inline]
+    pub fn save_and_emit_no_update(&mut self, app_handle: &AppHandle) -> Result<()> {
         self.store()?;
         app_handle.emit("config://updated", &self)?;
         Ok(())

@@ -1,6 +1,21 @@
 use serde::{Deserialize, Deserializer};
 
-use super::settings::LocalConfig;
+use super::{Config, settings::LocalConfig};
+
+impl Default for Config {
+    #[allow(deprecated)]
+    fn default() -> Self {
+        Self {
+            db_version: 1,
+            last_updated: Default::default(),
+            last_sync: Default::default(),
+            last_uploaded: Default::default(),
+            games: Default::default(),
+            devices: Default::default(),
+            settings: Default::default(),
+        }
+    }
+}
 
 pub fn deserialize_local_config_compat<'de, D>(deserializer: D) -> Result<LocalConfig, D::Error>
 where
@@ -29,4 +44,15 @@ where
         // 如果已经是结构体，直接返回
         LocalConfigOrString::Config(config) => Ok(config),
     }
+}
+
+#[allow(deprecated)]
+pub fn migrate(mut config: Config) -> Config {
+    if config.db_version == 0 {
+        if config.last_sync.is_none() {
+            std::mem::swap(&mut config.last_sync, &mut config.last_uploaded);
+        }
+        config.db_version = 1;
+    }
+    config
 }

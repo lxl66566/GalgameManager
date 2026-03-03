@@ -10,8 +10,10 @@ export type Config = {
    */
   lastUpdated: string;
   /**
-   * The last time the config was uploaded to remote storage
+   * The last time the config was uploaded to remote or downloaded from
+   * remote
    */
+  lastSync: string | null;
   lastUploaded: string | null;
   games: Array<Game>;
   devices: Array<Device>;

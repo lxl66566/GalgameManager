@@ -12,13 +12,13 @@ import { type Dictionary } from '~/i18n'
 import { onCleanup, onMount } from 'solid-js'
 import { createStore, produce, unwrap } from 'solid-js/store'
 import toast from 'solid-toast'
-import { useAutoUploadService } from './AutoUploadService'
 import { currentDeviceId } from './Singleton'
 
 // 初始空状态
 const DEFAULT_CONFIG: Config = {
   dbVersion: 0,
   lastUpdated: new Date().toISOString(),
+  lastSync: null,
   lastUploaded: null,
   games: [],
   devices: [],
@@ -157,11 +157,7 @@ export const performAutoUpload = async (t: i18n.Translator<Dictionary>) => {
   log.info('[ConfigAutoUpload] Triggered')
   try {
     const res = await invoke<boolean>('upload_config', { safe: true })
-
-    // 成功自动上传
     if (res) {
-      setConfig('lastUploaded', new Date().toISOString())
-      save()
       toast.success(t('hint.configAutoUploadSuccess'))
     }
   } catch (e) {
@@ -173,8 +169,6 @@ export const performManualUpload = async (t: i18n.Translator<Dictionary>) => {
   log.info('[ConfigManualUpload] Triggered')
   try {
     await invoke<boolean>('upload_config', { safe: false })
-    setConfig('lastUploaded', new Date().toISOString())
-    save()
     toast.success(t('hint.configUploadSuccess'))
   } catch (e) {
     toast.error(t('hint.configUploadFailed') + ': ' + e)
@@ -184,7 +178,6 @@ export const performManualUpload = async (t: i18n.Translator<Dictionary>) => {
 // 用户触发的保存操作
 const save = async () => {
   try {
-    setConfig('lastUpdated', new Date().toISOString())
     await invoke('save_config', { newConfig: unwrap(config) })
   } catch (e) {
     toast.error(`Failed to save config: ${e}`)
