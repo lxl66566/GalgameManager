@@ -155,15 +155,17 @@ pub fn extract(app: AppHandle, game_id: u32, archive_filename: String) -> Result
 // region sync
 
 #[inline]
-fn build_operator_with_varmap() -> Result<Box<dyn MyOperation + Send + Sync>> {
+fn build_operator_with_varmap(app: &AppHandle) -> Result<Box<dyn MyOperation + Send + Sync>> {
     let lock = CONFIG.lock();
     let varmap = lock.varmap();
-    lock.settings.storage.build_operator(varmap)
+    lock.settings.storage.build_operator(app, varmap)
 }
 
 #[tauri::command(async)]
-pub async fn list_archive(game_id: u32) -> Result<Vec<ArchiveInfo>> {
-    build_operator_with_varmap()?.list_archive(game_id).await
+pub async fn list_archive(app: AppHandle, game_id: u32) -> Result<Vec<ArchiveInfo>> {
+    build_operator_with_varmap(&app)?
+        .list_archive(game_id)
+        .await
 }
 
 #[tauri::command(async)]
@@ -172,7 +174,7 @@ pub async fn upload_archive(app: AppHandle, game_id: u32, archive_filename: Stri
         "uploading archive: game_id={}, archive_filename={}",
         game_id, archive_filename
     );
-    build_operator_with_varmap()?
+    build_operator_with_varmap(&app)?
         .upload_archive(
             game_id,
             &archive_filename,
@@ -182,22 +184,22 @@ pub async fn upload_archive(app: AppHandle, game_id: u32, archive_filename: Stri
 }
 
 #[tauri::command(async)]
-pub async fn delete_archive(game_id: u32, archive_filename: String) -> Result<()> {
-    build_operator_with_varmap()?
+pub async fn delete_archive(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
+    build_operator_with_varmap(&app)?
         .delete_archive(game_id, &archive_filename)
         .await
 }
 
 #[tauri::command(async)]
-pub async fn delete_archive_all(game_id: u32) -> Result<()> {
-    build_operator_with_varmap()?
+pub async fn delete_archive_all(app: AppHandle, game_id: u32) -> Result<()> {
+    build_operator_with_varmap(&app)?
         .delete_archive_all(game_id)
         .await
 }
 
 #[tauri::command(async)]
 pub async fn pull_archive(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
-    build_operator_with_varmap()?
+    build_operator_with_varmap(&app)?
         .pull_archive(
             game_id,
             &archive_filename,
@@ -208,11 +210,12 @@ pub async fn pull_archive(app: AppHandle, game_id: u32, archive_filename: String
 
 #[tauri::command(async)]
 pub async fn rename_remote_archive(
+    app: AppHandle,
     game_id: u32,
     archive_filename: String,
     new_archive_filename: String,
 ) -> Result<()> {
-    build_operator_with_varmap()?
+    build_operator_with_varmap(&app)?
         .rename_archive(game_id, &archive_filename, &new_archive_filename)
         .await
 }
@@ -227,7 +230,7 @@ pub fn clean_current_operator() {
 #[tauri::command(async)]
 pub async fn upload_config(app: AppHandle, safe: bool) -> Result<bool> {
     info!("upload_config triggered, safe: {}", safe);
-    let op = build_operator_with_varmap()?;
+    let op = build_operator_with_varmap(&app)?;
     let res = op.upload_config(&app, safe).await?;
     #[cfg(feature = "config-daily-backup")]
     if res && let Err(e) = op.replicate_config().await {
@@ -238,17 +241,17 @@ pub async fn upload_config(app: AppHandle, safe: bool) -> Result<bool> {
 
 // currently not used. please use apply_remote_config instead.
 #[tauri::command(async)]
-pub async fn get_remote_config() -> Result<Option<Config>> {
+pub async fn get_remote_config(app: AppHandle) -> Result<Option<Config>> {
     // prevent downloading config if storage is not configured
     if CONFIG.lock().settings.storage.is_not_set() {
         return Ok(None);
     }
-    build_operator_with_varmap()?.get_remote_config().await
+    build_operator_with_varmap(&app)?.get_remote_config().await
 }
 
 #[tauri::command(async)]
 pub async fn apply_remote_config(app: AppHandle, safe: bool) -> Result<(Option<Config>, bool)> {
-    build_operator_with_varmap()?
+    build_operator_with_varmap(&app)?
         .apply_remote_config(&app, safe)
         .await
 }

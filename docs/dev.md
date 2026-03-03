@@ -17,11 +17,12 @@ bun run tauri dev
 
 所有 rust 端可能 emit 的事件如下：
 
-| key                    | value  | description                              |
-| ---------------------- | ------ | ---------------------------------------- |
-| game://exit/{game_id}  | bool   | 游戏退出时触发（value 代表是否正常退出） |
-| game://spawn/{game_id} | ()     | 游戏启动时触发                           |
-| config://updated       | Config | Rust 侧更新配置时触发                    |
+| key                    | value  | description                                                    |
+| ---------------------- | ------ | -------------------------------------------------------------- |
+| game://exit/{game_id}  | bool   | 游戏退出时触发（value 代表是否正常退出）                       |
+| game://spawn/{game_id} | ()     | 游戏启动时触发                                                 |
+| config://updated       | Config | Rust 侧更新配置时触发                                          |
+| sync://failed          | String | 与远端交互（上传/下载，存档/配置）失败时触发，value 为错误信息 |
 
 ## 测试
 

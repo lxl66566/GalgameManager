@@ -1,10 +1,17 @@
 mod opendal;
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
-use ::opendal::{Operator, layers::LoggingLayer, services};
+use ::opendal::{
+    Operator,
+    layers::{LoggingLayer, RetryLayer, TimeoutLayer},
+    services,
+};
 use log::{info, warn};
 pub use opendal::{LocalOperator, S3Operator, WebdavOperator};
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter as _};
 
 use crate::{
     archive::ArchiveInfo,
@@ -16,6 +23,11 @@ use crate::{
     error::{Error, Result},
     utils,
 };
+
+const IO_TIMEOUT: Duration = Duration::from_secs(10);
+const NON_IO_TIMEOUT: Duration = Duration::from_secs(5);
+const MAX_RETRY_DELAY: Duration = Duration::from_secs(5);
+const RETRY_TIMES: usize = 3;
 
 #[async_trait::async_trait]
 pub trait MyOperation {
@@ -231,14 +243,20 @@ impl BuildOperator for LocalConfig {
 }
 
 impl BuildOperator for WebDavConfig {
-    type CTX = ();
+    type CTX = AppHandle;
     fn get_operator(&self) -> Option<Box<dyn MyOperation + Send + Sync>> {
         self.operator
             .borrow()
             .as_ref()
             .map(|o| Box::new(o.clone()) as Box<dyn MyOperation + Send + Sync>)
     }
-    fn build_operator(&self, _ctx: &Self::CTX) -> Result<()> {
+    fn build_operator(&self, ctx: &Self::CTX) -> Result<()> {
+        let ctx = ctx.clone();
+        let notify = move |err: &::opendal::Error, _dur: Duration| {
+            log::warn!("webdav sync failed: {err}");
+            ctx.emit("sync://failed", err.to_string()).unwrap();
+        };
+
         let operator = Operator::new(
             services::Webdav::default()
                 .endpoint(&self.endpoint)
@@ -246,6 +264,18 @@ impl BuildOperator for WebDavConfig {
                 .password(self.password.as_deref().unwrap_or_default())
                 .root(&self.root_path),
         )?
+        .layer(
+            TimeoutLayer::new()
+                .with_io_timeout(IO_TIMEOUT)
+                .with_timeout(NON_IO_TIMEOUT),
+        )
+        .layer(
+            RetryLayer::new()
+                .with_max_times(RETRY_TIMES)
+                .with_max_delay(MAX_RETRY_DELAY)
+                .with_jitter()
+                .with_notify(notify),
+        )
         .layer(LoggingLayer::default())
         .finish();
         *self.operator.borrow_mut() = Some(WebdavOperator(operator));
@@ -258,20 +288,38 @@ impl BuildOperator for WebDavConfig {
 }
 
 impl BuildOperator for S3Config {
-    type CTX = ();
+    type CTX = AppHandle;
     fn get_operator(&self) -> Option<Box<dyn MyOperation + Send + Sync>> {
         self.operator
             .borrow()
             .as_ref()
             .map(|o| Box::new(o.clone()) as Box<dyn MyOperation + Send + Sync>)
     }
-    fn build_operator(&self, _ctx: &Self::CTX) -> Result<()> {
+    fn build_operator(&self, ctx: &Self::CTX) -> Result<()> {
+        let ctx = ctx.clone();
+        let notify = move |err: &::opendal::Error, _dur: Duration| {
+            log::warn!("s3 sync failed: {err}");
+            ctx.emit("sync://failed", err.to_string()).unwrap();
+        };
+
         let operator = Operator::new(
             services::S3::default()
                 .bucket(&self.bucket)
                 .access_key_id(&self.access_key)
                 .secret_access_key(&self.secret_key),
         )?
+        .layer(
+            TimeoutLayer::new()
+                .with_io_timeout(IO_TIMEOUT)
+                .with_timeout(NON_IO_TIMEOUT),
+        )
+        .layer(
+            RetryLayer::new()
+                .with_max_times(RETRY_TIMES)
+                .with_max_delay(MAX_RETRY_DELAY)
+                .with_jitter()
+                .with_notify(notify),
+        )
         .layer(LoggingLayer::default())
         .finish();
         *self.operator.borrow_mut() = Some(S3Operator(operator));

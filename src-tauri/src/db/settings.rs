@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 
 use serde::{Deserialize, Serialize};
+use tauri::AppHandle;
 use ts_rs::TS;
 
 use super::migration::deserialize_local_config_compat;
@@ -66,11 +67,15 @@ impl StorageConfig {
         matches!(self.provider, StorageProvider::None)
     }
 
-    pub fn build_operator(&self, varmap: &VarMap) -> Result<Box<dyn MyOperation + Send + Sync>> {
+    pub fn build_operator(
+        &self,
+        app: &AppHandle,
+        varmap: &VarMap,
+    ) -> Result<Box<dyn MyOperation + Send + Sync>> {
         match self.provider {
             StorageProvider::Local => self.local.get_operator_or_init(varmap),
-            StorageProvider::WebDav => self.webdav.get_operator_or_init(&()),
-            StorageProvider::S3 => self.s3.get_operator_or_init(&()),
+            StorageProvider::WebDav => self.webdav.get_operator_or_init(app),
+            StorageProvider::S3 => self.s3.get_operator_or_init(app),
             _ => Err(Error::ProviderNotSet),
         }
     }

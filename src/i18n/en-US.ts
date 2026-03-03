@@ -187,7 +187,8 @@ export const dict = {
     uploadFailed: 'Upload Failed: ',
     uploading: 'Uploading: ',
     uploadSuccess: 'Upload Success: ',
-    duplicateGameId: 'CRITICAL: Duplicate game id detected!'
+    duplicateGameId: 'CRITICAL: Duplicate game id detected!',
+    retryError: 'An error occurred, retrying'
   }
 }
 

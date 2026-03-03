@@ -59,7 +59,6 @@ interface ImageProps {
 }
 
 const CachedImage: Component<ImageProps> = props => {
-  const { t } = useI18n()
   // 使用数组作为 source，同时监听 url 和 hash 的变化
   const [imageData] = createResource(
     () => [props.url, props.hash] as const,

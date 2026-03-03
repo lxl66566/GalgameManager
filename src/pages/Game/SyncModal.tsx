@@ -1,6 +1,7 @@
 import { type ArchiveInfo } from '@bindings/ArchiveInfo'
 import type { Game } from '@bindings/Game'
 import { invoke } from '@tauri-apps/api/core'
+import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { formatBytes } from '@utils/file'
 import { log } from '@utils/log'
 import { useI18n } from '~/i18n'
@@ -116,7 +117,19 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
 
   const handleUpload = async (filename: string) => {
     const toastId = toast.loading(t('hint.uploading') + filename + '...')
+    let unlistenUploadError: UnlistenFn | undefined
+
     try {
+      unlistenUploadError = await listen<String>('sync://failed', event => {
+        const { payload } = event
+        toast.loading(
+          `${t('hint.uploading')}${filename}...\n${t('hint.retryError')}: ${payload}`,
+          {
+            id: toastId
+          }
+        )
+      })
+
       await invoke('upload_archive', { gameId: props.gameId, archiveFilename: filename })
       toast.success(t('hint.uploadSuccess') + filename, { id: toastId })
 
@@ -126,6 +139,10 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       )
     } catch (e) {
       toast.error(filename + ' ' + t('hint.uploadFailed') + e, { id: toastId })
+    } finally {
+      if (unlistenUploadError) {
+        unlistenUploadError()
+      }
     }
   }
 

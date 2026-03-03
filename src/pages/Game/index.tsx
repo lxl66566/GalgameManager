@@ -4,7 +4,7 @@ import { DropArea } from '@components/DropArea'
 import FullScreenMask from '@components/ui/FullScreenMask'
 import { myToast } from '@components/ui/myToast'
 import { invoke } from '@tauri-apps/api/core'
-import { once } from '@tauri-apps/api/event'
+import { listen, once, type UnlistenFn } from '@tauri-apps/api/event'
 import { log } from '@utils/log'
 import { fuckBackslash, getParentPath } from '@utils/path'
 import { durationToSecs } from '@utils/time'
@@ -271,11 +271,20 @@ const GamePage = (): JSX.Element => {
     setBackingUpIds(prev => [...prev, game.id])
 
     const toastId = toast.loading(t('hint.archiving') + game.name + '...')
+    let unlistenUploadError: UnlistenFn | undefined
 
     try {
       const archived_filename = await invoke<string>('archive', { gameId: game.id })
 
       toast.loading(t('hint.uploading') + game.name + '...', { id: toastId })
+
+      unlistenUploadError = await listen<String>('sync://failed', event => {
+        const { payload } = event
+        toast.loading(
+          `${t('hint.uploading')} ${game.name}...\n${t('hint.retryError')}: ${payload}`,
+          { id: toastId }
+        )
+      })
 
       await invoke<void>('upload_archive', {
         gameId: game.id,
@@ -291,6 +300,9 @@ const GamePage = (): JSX.Element => {
       const errMsg = error instanceof Error ? error.message : String(error)
       toast.error(t('hint.syncFailed') + errMsg, { id: toastId, duration: 5000 })
     } finally {
+      if (unlistenUploadError) {
+        unlistenUploadError()
+      }
       // 从备份队列中移除
       setBackingUpIds(prev => prev.filter(id => id !== game.id))
     }
