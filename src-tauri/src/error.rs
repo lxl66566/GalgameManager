@@ -50,6 +50,9 @@ pub enum Error {
 
     #[error("Invalid path")]
     InvalidPath,
+
+    #[error("Game time check failed: {0}")]
+    GameTimeCheckFailed(String),
 }
 
 impl Clone for Error {

@@ -177,7 +177,7 @@ pub fn run() {
                     match bindings::upload_config(app, true).await {
                         Ok(true) => info!("[minimize] upload config success"),
                         Ok(false) => {
-                            warn!("[minimize] remote config is newer, not uploading")
+                            warn!("[minimize] not upload")
                         }
                         Err(e) => error!("[minimize] failed to upload config: {e}"),
                     }
@@ -195,7 +195,7 @@ pub fn run() {
                     match res {
                         Ok(true) => info!("[exit] upload config success"),
                         Ok(false) => {
-                            warn!("[exit] remote config is newer, not uploading")
+                            warn!("[exit] not upload")
                         }
                         Err(e) => {
                             error!("[exit] failed to upload config: {e}");

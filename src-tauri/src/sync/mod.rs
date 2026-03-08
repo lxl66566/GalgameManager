@@ -16,7 +16,7 @@ use tauri::{AppHandle, Emitter as _};
 use crate::{
     archive::ArchiveInfo,
     db::{
-        CONFIG, CONFIG_FILENAME, Config,
+        CONFIG, CONFIG_FILENAME, Config, TimeCmp,
         device::{ResolveVar, VarMap},
         settings::{LocalConfig, S3Config, WebDavConfig},
     },
@@ -122,9 +122,9 @@ pub trait MyOperation {
             return Ok(false);
         }
 
-        // Remote Newer Check
         let remote_config = self.get_remote_config().await?;
         if let Some(remote_config) = remote_config {
+            // Remote Newer Check
             if safe && remote_config.last_updated > local_last_sync {
                 warn!(
                     "Conflict detected! Remote ({}) > Local Base Sync ({}). Please pull first.",
@@ -132,10 +132,17 @@ pub trait MyOperation {
                 );
                 return Ok(false);
             }
+
+            // Games times check
+            if safe {
+                local_config.check_games_time_compare(&remote_config, TimeCmp::GreaterOrEqual)?;
+            }
+
             info!("diff:\n{}", utils::diff(&remote_config, &local_config));
         } else {
             info!("remote config is null, uploading");
         }
+
         self.upload_config_inner(CONFIG_FILENAME).await?;
         info!("upload config success");
         // Update local last_sync
@@ -157,7 +164,7 @@ pub trait MyOperation {
     /// # Returns
     ///
     /// - config, false: the old config if applied successfully
-    /// - None, false: if remote config is older than local config, not applied
+    /// - None, false: if check failed, not applied
     /// - None, true: if remote config is None
     async fn apply_remote_config(
         &self,
@@ -189,6 +196,11 @@ pub trait MyOperation {
                 remote_config.last_updated, local_last_sync
             );
             return Ok((None, false));
+        }
+
+        // Games times check
+        if safe {
+            local_config.check_games_time_compare(&remote_config, TimeCmp::LessOrEqual)?;
         }
 
         info!("Applying remote config...");

@@ -8,6 +8,7 @@ use chrono::{DateTime, Duration, Utc};
 use config_file2::{LoadConfigFile, Storable};
 pub use device::ResolveVar;
 use device::{DEVICE_UID, Device};
+use log::warn;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use settings::Settings;
@@ -119,6 +120,70 @@ impl Config {
             .ok_or_else(|| crate::error::Error::GameNotFound)
     }
 
+    /// Check if games last_played_time and use_time are not older than
+    /// other_config
+    ///
+    /// # Parameters
+    ///
+    /// - other_config: the other config to compare with
+    /// - cmp: the **expected** comparison of time.
+    ///
+    /// # Returns
+    ///
+    /// - Ok(()): if check passed
+    /// - Err(Error::GameTimeCheckFailed): if check failed
+    pub fn check_games_time_compare(&self, other_config: &Config, cmp: TimeCmp) -> Result<()> {
+        let mut self_games = self.games.iter().collect::<Vec<_>>();
+        let mut other_games = other_config.games.iter().collect::<Vec<_>>();
+        self_games.sort_by_key(|g| g.id);
+        other_games.sort_by_key(|g| g.id);
+        let (mut idx_self, mut idx_other) = (0, 0);
+
+        while idx_self < self_games.len() && idx_other < other_games.len() {
+            let self_game = &self_games[idx_self];
+            let other_game = &other_games[idx_other];
+            if self_game.id == other_game.id {
+                if let Some(self_time) = self_game.last_played_time
+                    && let Some(other_time) = other_game.last_played_time
+                    && !cmp.cmp(self_time, other_time)
+                {
+                    let error_msg = format!(
+                        "game {}, last_played_time check failed: {} {} other: {}",
+                        self_game.name,
+                        self_time,
+                        cmp.as_str(),
+                        other_time
+                    );
+                    warn!("{}", error_msg);
+                    return Err(Error::GameTimeCheckFailed(
+                        error_msg
+                            + "\nIf you still want to continue, please manually upload/download config in settings page.",
+                    ));
+                }
+                if !cmp.cmp(&self_game.use_time, &other_game.use_time) {
+                    let error_msg = format!(
+                        "game {}, use_time: {} {} other config: {}",
+                        self_game.id,
+                        self_game.use_time,
+                        cmp.as_str(),
+                        other_game.use_time
+                    );
+                    return Err(Error::GameTimeCheckFailed(
+                        error_msg
+                            + "\nIf you still want to continue, please manually upload/download config in settings page.",
+                    ));
+                }
+                idx_self += 1;
+                idx_other += 1;
+            } else if self_game.id < other_game.id {
+                idx_self += 1;
+            } else {
+                idx_other += 1;
+            }
+        }
+        Ok(())
+    }
+
     #[inline]
     pub fn save_and_emit(&mut self, app_handle: &AppHandle) -> Result<()> {
         self.last_updated = Utc::now();
@@ -131,5 +196,37 @@ impl Config {
         self.store()?;
         app_handle.emit("config://updated", &self)?;
         Ok(())
+    }
+}
+
+pub enum TimeCmp {
+    LessOrEqual,
+    GreaterOrEqual,
+    Equal,
+    Less,
+    Greater,
+}
+
+impl TimeCmp {
+    #[inline]
+    pub fn cmp<T: PartialOrd>(&self, a: T, b: T) -> bool {
+        match self {
+            TimeCmp::LessOrEqual => a <= b,
+            TimeCmp::GreaterOrEqual => a >= b,
+            TimeCmp::Equal => a == b,
+            TimeCmp::Less => a < b,
+            TimeCmp::Greater => a > b,
+        }
+    }
+
+    #[inline]
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            TimeCmp::LessOrEqual => "<=",
+            TimeCmp::GreaterOrEqual => ">=",
+            TimeCmp::Equal => "==",
+            TimeCmp::Less => "<",
+            TimeCmp::Greater => ">",
+        }
     }
 }
