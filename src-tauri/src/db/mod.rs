@@ -17,7 +17,7 @@ use ts_rs::TS;
 
 use crate::{
     db::{device::VarMap, migration::migrate},
-    error::Result,
+    error::{Error, Result},
 };
 
 pub static CONFIG_DIR: Lazy<PathBuf> = Lazy::new(|| {

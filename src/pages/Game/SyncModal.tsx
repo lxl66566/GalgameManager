@@ -6,13 +6,13 @@ import { formatBytes } from '@utils/file'
 import { log } from '@utils/log'
 import { useI18n } from '~/i18n'
 import {
-  TbArrowBackUp,
-  TbCloudDownload,
-  TbCloudUpload,
-  TbEdit,
-  TbFileZip,
-  TbTrash,
-  TbX
+  TbOutlineArrowBackUp,
+  TbOutlineCloudDownload,
+  TbOutlineCloudUpload,
+  TbOutlineEdit,
+  TbOutlineFileZip,
+  TbOutlineTrash,
+  TbOutlineX
 } from 'solid-icons/tb'
 import { createSignal, For, Match, onMount, Show, Switch } from 'solid-js'
 import toast from 'solid-toast'
@@ -339,7 +339,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
           onClick={props.onClose}
           class="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors cursor-pointer"
         >
-          <TbX class="w-5 h-5" />
+          <TbOutlineX class="w-5 h-5" />
         </button>
       </div>
 
@@ -357,7 +357,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
             when={archives().length > 0}
             fallback={
               <div class="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 gap-2">
-                <TbFileZip class="w-8 h-8 opacity-50" />
+                <TbOutlineFileZip class="w-8 h-8 opacity-50" />
                 <span class="text-sm">{t('game.sync.noArchive')}</span>
               </div>
             }
@@ -399,7 +399,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                                 class="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-blue-500 transition-opacity cursor-pointer flex-shrink-0"
                                 title={t('ui.rename')}
                               >
-                                <TbEdit class="w-3.5 h-3.5" />
+                                <TbOutlineEdit class="w-3.5 h-3.5" />
                               </button>
                             </div>
                           }
@@ -445,7 +445,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                         <Show when={item.status !== 'RemoteOnly'}>
                           <ActionButton
                             onClick={() => handleExtract(item.name)}
-                            icon={TbArrowBackUp}
+                            icon={TbOutlineArrowBackUp}
                             tooltip={t('game.sync.recoverArchive')}
                             variant="secondary"
                           />
@@ -458,7 +458,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                           <Match when={item.status === 'LocalOnly'}>
                             <ActionButton
                               onClick={() => handleUpload(item.name)}
-                              icon={TbCloudUpload}
+                              icon={TbOutlineCloudUpload}
                               tooltip={t('game.sync.upload')}
                               variant="primary"
                             />
@@ -466,7 +466,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                           <Match when={item.status === 'RemoteOnly'}>
                             <ActionButton
                               onClick={() => handlePull(item.name)}
-                              icon={TbCloudDownload}
+                              icon={TbOutlineCloudDownload}
                               tooltip={t('game.sync.download')}
                               variant="primary"
                             />
@@ -482,7 +482,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                             <div class="flex items-center bg-gray-200 dark:bg-gray-800 rounded-md p-0.5 gap-0.5 w-full justify-between">
                               <ActionButton
                                 onClick={() => handleDeleteLocal(item.name)}
-                                icon={TbTrash}
+                                icon={TbOutlineTrash}
                                 tooltip={t('game.sync.deleteLocalArchive')}
                                 variant="danger-ghost"
                                 size="xs"
@@ -491,7 +491,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                               <div class="w-[1px] h-3 bg-gray-300 dark:bg-gray-600 flex-shrink-0"></div>
                               <ActionButton
                                 onClick={() => handleDeleteRemote(item.name)}
-                                icon={TbTrash}
+                                icon={TbOutlineTrash}
                                 tooltip={t('game.sync.deleteRemoteArchive')}
                                 variant="danger-ghost"
                                 size="xs"
@@ -504,7 +504,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                           <Match when={item.status === 'LocalOnly'}>
                             <ActionButton
                               onClick={() => handleDeleteLocal(item.name)}
-                              icon={TbTrash}
+                              icon={TbOutlineTrash}
                               tooltip={t('game.sync.deleteLocalArchive')}
                               variant="danger"
                             />
@@ -512,7 +512,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                           <Match when={item.status === 'RemoteOnly'}>
                             <ActionButton
                               onClick={() => handleDeleteRemote(item.name)}
-                              icon={TbTrash}
+                              icon={TbOutlineTrash}
                               tooltip={t('game.sync.deleteRemoteArchive')}
                               variant="danger"
                             />
@@ -540,7 +540,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
 
 interface ActionButtonProps {
   onClick: () => void
-  icon: typeof TbCloudUpload // 使用 solid-icons 的类型
+  icon: typeof TbOutlineCloudUpload // 使用 solid-icons 的类型
   tooltip: string
   variant: 'primary' | 'secondary' | 'danger' | 'danger-ghost'
   size?: 'sm' | 'xs'

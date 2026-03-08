@@ -10,10 +10,10 @@ use std::{
 };
 
 use backhand::{
+    DEFAULT_BLOCK_SIZE, FilesystemCompressor, FilesystemReader, FilesystemWriter, InnerNode,
+    NodeHeader,
     compression::{CompressionOptions, Compressor, Zstd},
     kind::{self, Kind},
-    FilesystemCompressor, FilesystemReader, FilesystemWriter, InnerNode, NodeHeader,
-    DEFAULT_BLOCK_SIZE,
 };
 use pathdiff::diff_paths;
 use walkdir::WalkDir;

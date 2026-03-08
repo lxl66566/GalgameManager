@@ -13,10 +13,10 @@ import { useConfig } from '~/store'
 import clsx from 'clsx'
 import { AiTwotonePlusCircle } from 'solid-icons/ai'
 import {
-  TbClockPlay,
-  TbHourglassHigh,
-  TbSortAscendingLetters,
-  TbSortAscendingNumbers
+  TbOutlineClockPlay,
+  TbOutlineHourglassHigh,
+  TbOutlineSortAscendingLetters,
+  TbOutlineSortAscendingNumbers
 } from 'solid-icons/tb'
 import {
   createMemo,
@@ -420,22 +420,22 @@ const SortOptions = (props: {
     createMemo(() => [
       {
         type: 'id' as SortType,
-        icon: TbSortAscendingNumbers,
+        icon: TbOutlineSortAscendingNumbers,
         label: t('game.sortType.id')
       },
       {
         type: 'name' as SortType,
-        icon: TbSortAscendingLetters,
+        icon: TbOutlineSortAscendingLetters,
         label: t('game.sortType.name')
       },
       {
         type: 'lastPlayed' as SortType,
-        icon: TbClockPlay,
+        icon: TbOutlineClockPlay,
         label: t('game.sortType.lastPlayed')
       },
       {
         type: 'playTime' as SortType,
-        icon: TbHourglassHigh,
+        icon: TbOutlineHourglassHigh,
         label: t('game.sortType.playTime')
       }
     ])
