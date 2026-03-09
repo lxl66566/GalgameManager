@@ -62,20 +62,12 @@ impl super::MyOperation for WebdavOperator {
     fn inner(&self) -> &Operator {
         &self.0
     }
-    #[inline]
-    fn chunkable(&self) -> bool {
-        false
-    }
 }
 
 impl super::MyOperation for S3Operator {
     #[inline]
     fn inner(&self) -> &Operator {
         &self.0
-    }
-    #[inline]
-    fn chunkable(&self) -> bool {
-        true
     }
 }
 
@@ -84,6 +76,10 @@ impl super::MyOperation for Operator {
     #[inline]
     fn inner(&self) -> &Operator {
         self
+    }
+    #[inline]
+    fn chunkable(&self) -> bool {
+        self.info().full_capability().write_can_multi
     }
     async fn list_archive(&self, game_id: u32) -> Result<Vec<ArchiveInfo>> {
         let path = format!("{}/", game_id);

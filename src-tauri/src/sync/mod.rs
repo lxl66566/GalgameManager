@@ -34,7 +34,7 @@ pub trait MyOperation {
     fn inner(&self) -> &Operator;
     #[inline]
     fn chunkable(&self) -> bool {
-        false
+        self.inner().chunkable()
     }
     #[inline]
     async fn list_archive(&self, game_id: u32) -> Result<Vec<ArchiveInfo>> {
