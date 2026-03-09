@@ -3,5 +3,5 @@
 export type Device = {
   name: string;
   uid: string;
-  variables: { [key in string]?: string };
+  variables: { [key in string]: string };
 };

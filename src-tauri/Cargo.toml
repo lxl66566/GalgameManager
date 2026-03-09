@@ -6,7 +6,7 @@ edition     = "2024"
 license     = "MIT"
 name        = "GalgameManager"
 repository  = "https://github.com/lxl66566/GalgameManager"
-version     = "0.1.4"
+version     = "0.1.5"
 
 [lib]
 # The `_lib` suffix may seem redundant but it is necessary
@@ -23,7 +23,7 @@ tauri-build = { version = "2.0.2", features = [] }
 
 [dependencies]
 async-trait               = "0.1.89"
-backhand                  = "0.24.0"
+backhand                  = "0.25.1"
 base64                    = "0.22.1"
 bytes                     = "1.11.0"
 chrono                    = { version = "0.4", features = ["serde"] }
@@ -51,11 +51,11 @@ tauri                     = { version = "2.0.6", features = ["tray-icon"] }
 tauri-plugin-dialog       = "2"
 tauri-plugin-fs           = "2.4.4"
 tauri-plugin-notification = "2.3.3"
-thiserror                 = "2.0.17"
+thiserror                 = "2.0.18"
 tokio                     = { version = "1", features = ["fs", "macros", "process"] }
 tokio-util                = { version = "0.7", features = ["compat"] }
-toml                      = "0.9.10"
-ts-rs                     = { version = "11.1.0", features = ["format", "chrono-impl", "indexmap-impl", "no-serde-warnings"] }
+toml                      = "1.0.6"
+ts-rs                     = { version = "12.0", features = ["format", "chrono-impl", "indexmap-impl", "no-serde-warnings"] }
 walkdir                   = "2.5.0"
 # tauri-plugin-sql  = { version = "2.2.0", features = ["sqlite"] }
 
