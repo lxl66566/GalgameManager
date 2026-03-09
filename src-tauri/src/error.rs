@@ -18,7 +18,7 @@ pub enum Error {
     Clone,
 
     #[error("Could not resolve var: {0}")]
-    ResolveVar(#[from] strfmt::FmtError),
+    ResolveVar(#[from] easy_strfmt::Error),
 
     #[error("Tauri error: {0}")]
     Tauri(#[from] tauri::Error),

@@ -194,10 +194,8 @@ impl super::Archive for SquashfsArchiver {
                         SystemTime::UNIX_EPOCH + Duration::from_secs(node.header.mtime as u64);
                     let _ = dest_file.set_modified(mtime);
                 }
-                InnerNode::Dir(_) => {
-                    if !dest_path.exists() {
-                        fs::create_dir_all(&dest_path)?;
-                    }
+                InnerNode::Dir(_) if !dest_path.exists() => {
+                    fs::create_dir_all(&dest_path)?;
                 }
                 #[allow(unused_variables)]
                 InnerNode::Symlink(link) => {

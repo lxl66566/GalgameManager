@@ -12,10 +12,12 @@ dependencies = [
  "bytes",
  "chrono",
  "config-file2",
+ "easy_strfmt",
  "flexi_logger",
  "futures",
  "hex",
  "home",
+ "indexmap 2.13.0",
  "log",
  "machine-uid",
  "opendal",
@@ -27,7 +29,6 @@ dependencies = [
  "serde_json",
  "sha2",
  "similar",
- "strfmt",
  "sys-locale",
  "tar",
  "tauri",
@@ -1236,6 +1237,14 @@ name = "dyn-clone"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
+
+[[package]]
+name = "easy_strfmt"
+version = "0.1.0"
+dependencies = [
+ "indexmap 2.13.0",
+ "thiserror 2.0.18",
+]
 
 [[package]]
 name = "either"
@@ -4609,12 +4618,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
-name = "strfmt"
-version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29fdc163db75f7b5ffa3daf0c5a7136fb0d4b2f35523cd1769da05e034159feb"
-
-[[package]]
 name = "string_cache"
 version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5719,6 +5722,7 @@ checksum = "4994acea2522cd2b3b85c1d9529a55991e3ad5e25cdcd3de9d505972c4379424"
 dependencies = [
  "chrono",
  "dprint-plugin-typescript",
+ "indexmap 2.13.0",
  "thiserror 2.0.18",
  "ts-rs-macros",
 ]

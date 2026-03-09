@@ -1,0 +1,14 @@
+[package]
+authors     = ["lxl66566 <lxl66566@gmail.com>"]
+description = "A fast and flexible string formatting crate for maps and custom types"
+edition     = "2024"
+name        = "easy_strfmt"
+version     = "0.1.0"
+
+[features]
+default  = []
+indexmap = ["dep:indexmap"]
+
+[dependencies]
+indexmap  = { version = "2", optional = true }
+thiserror = "2"

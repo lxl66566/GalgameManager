@@ -25,7 +25,7 @@ use crate::{
 };
 
 const IO_TIMEOUT: Duration = Duration::from_secs(10);
-const NON_IO_TIMEOUT: Duration = Duration::from_secs(5);
+const NON_IO_TIMEOUT: Duration = Duration::from_secs(20);
 const MAX_RETRY_DELAY: Duration = Duration::from_secs(5);
 const RETRY_TIMES: usize = 3;
 

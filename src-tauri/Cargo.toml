@@ -28,10 +28,12 @@ base64                    = "0.22.1"
 bytes                     = "1.11.0"
 chrono                    = { version = "0.4", features = ["serde"] }
 config-file2              = "0.4.1"
+easy_strfmt               = { path = "./easy_strfmt", features = ["indexmap"] }
 flexi_logger              = { version = "0.31.7", features = ["compress"] }
 futures                   = "0.3.31"
 hex                       = "0.4.3"
 home                      = "0.5.12"
+indexmap                  = { version = "2.13.0", features = ["serde"] }
 log                       = "0.4.29"
 machine-uid               = "0.5.4"
 opendal                   = { version = "0.55.0", features = ["services-webdav", "services-s3", "services-fs"] }
@@ -43,7 +45,6 @@ serde                     = { version = "1.0", features = ["derive"] }
 serde_json                = "1.0"
 sha2                      = "0.10.9"
 similar                   = "2.7.0"
-strfmt                    = "0.2.5"
 sys-locale                = "0.3.2"
 tar                       = "0.4.44"
 tauri                     = { version = "2.0.6", features = ["tray-icon"] }
@@ -54,7 +55,7 @@ thiserror                 = "2.0.17"
 tokio                     = { version = "1", features = ["fs", "macros", "process"] }
 tokio-util                = { version = "0.7", features = ["compat"] }
 toml                      = "0.9.10"
-ts-rs                     = { version = "11.1.0", features = ["format", "chrono-impl", "no-serde-warnings"] }
+ts-rs                     = { version = "11.1.0", features = ["format", "chrono-impl", "indexmap-impl", "no-serde-warnings"] }
 walkdir                   = "2.5.0"
 # tauri-plugin-sql  = { version = "2.2.0", features = ["sqlite"] }
 

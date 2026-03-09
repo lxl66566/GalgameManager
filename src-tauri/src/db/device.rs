@@ -1,12 +1,13 @@
-use std::{collections::HashMap, sync::LazyLock as Lazy};
+use std::sync::LazyLock as Lazy;
 
+use easy_strfmt::strfmt;
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use strfmt::strfmt;
 use ts_rs::TS;
 
 use crate::error::{Error, Result};
 
-pub type VarMap = HashMap<String, String>;
+pub type VarMap = IndexMap<String, String>;
 
 pub static DEFAULT_DEVICE: Lazy<Device> = Lazy::new(Device::default);
 

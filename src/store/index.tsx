@@ -178,6 +178,7 @@ export const performManualUpload = async (t: i18n.Translator<Dictionary>) => {
 // 用户触发的保存操作
 const save = async () => {
   try {
+    console.log('save invoked')
     await invoke('save_config', { newConfig: unwrap(config) })
   } catch (e) {
     toast.error(`Failed to save config: ${e}`)

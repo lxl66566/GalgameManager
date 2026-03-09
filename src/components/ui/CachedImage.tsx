@@ -2,12 +2,10 @@ import { type ImageData } from '@bindings/ImageData'
 import { invoke } from '@tauri-apps/api/core'
 import { getBase64ImageSrc } from '@utils/image'
 import { log } from '@utils/log'
-import { useI18n } from '~/i18n'
 import {
   createEffect,
   createResource,
   ErrorBoundary,
-  Show,
   Suspense,
   type Component
 } from 'solid-js'
@@ -85,7 +83,11 @@ const CachedImage: Component<ImageProps> = props => {
 
         // 3. 存入缓存
         cacheImage(data)
-        props.onHashUpdate?.(data.hash)
+
+        // 只有当 hash 存在，且与当前的 hash 不一致时，才触发更新事件
+        if (data.hash && data.hash !== currentHash) {
+          props.onHashUpdate?.(data.hash)
+        }
 
         return data
       } catch (e: any) {

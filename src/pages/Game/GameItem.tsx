@@ -1,7 +1,7 @@
 import { type Game } from '@bindings/Game'
 import CachedImage from '@components/ui/CachedImage'
 import { GameActionButton } from '@components/ui/GameActionButton'
-import { displayDuration, formatTimeAgo } from '@utils/time'
+import { displayDuration } from '@utils/time'
 import { createRelativeTime } from '@utils/time/createRelativeTime'
 import { useI18n } from '~/i18n'
 import { AiOutlineCloudUpload, AiOutlineEdit, AiOutlineSync } from 'solid-icons/ai'
