@@ -27,10 +27,10 @@ use crate::{
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            let _ = app
-                .get_webview_window("main")
-                .expect("no main window")
-                .set_focus();
+            let handle = app.get_webview_window("main").expect("no main window");
+            let _ = handle.show();
+            let _ = handle.unminimize();
+            let _ = handle.set_focus();
         }))
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
