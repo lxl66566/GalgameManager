@@ -51,8 +51,10 @@ export default function GameEditModal(props: GameEditModalProps) {
 
   const updateDuration = (h: number, m: number) => {
     setPlayTime({ h, m })
-    const totalSecs = h * 3600 + m * 60
-    setLocalGame('useTime', [totalSecs, 0])
+    const [origTotalSecs = 0, origNanos = 0] = localGame.useTime || [0, 0]
+    const remainingSecs = origTotalSecs % 60
+    const totalSecs = h * 3600 + m * 60 + remainingSecs
+    setLocalGame('useTime', [totalSecs, origNanos])
   }
 
   // 提交图片更改的逻辑
