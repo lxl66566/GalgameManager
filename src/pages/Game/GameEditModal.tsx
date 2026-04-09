@@ -5,8 +5,10 @@ import { myToast } from '@components/ui/myToast'
 import { open } from '@tauri-apps/plugin-dialog'
 import { fuckBackslash, getParentPath } from '@utils/path'
 import { dateToInput, durationToForm, inputToDate } from '@utils/time'
+import { fetchVnCover } from '@utils/vndb'
 import { useI18n } from '~/i18n'
-import { createEffect, createSignal, Show, Suspense } from 'solid-js'
+import { FiRefreshCw, FiSearch } from 'solid-icons/fi'
+import { createEffect, createSignal, onMount, Show, Suspense } from 'solid-js'
 import { createStore, unwrap } from 'solid-js/store'
 
 interface GameEditModalProps {
@@ -39,15 +41,26 @@ export default function GameEditModal(props: GameEditModalProps) {
     structuredClone(unwrap(props.gameInfo ?? DEFAULT_GAME))
   )
 
-  // 1. 新增：临时存储输入框的内容，避免每次按键都触发图片加载
+  // 临时存储输入框的内容，避免每次按键都触发图片加载
   const [tempImageUrl, setTempImageUrl] = createSignal(localGame.imageUrl || '')
 
-  // 2. 新增：当 store 中的 imageUrl 发生变化（例如通过浏览按钮或清除按钮）时，同步到输入框
+  // VNDB 搜索相关状态与逻辑
+  const [isSearching, setIsSearching] = createSignal(false)
+  const [searchId, setSearchId] = createSignal(0)
+
+  const [playTime, setPlayTime] = createSignal(durationToForm(localGame.useTime))
+
+  // 自动触发逻辑：如果不是编辑模式，并且创建时带了游戏名称，则自动搜索 VNDB 封面
+  onMount(() => {
+    if (!isEditMode() && localGame.name) {
+      handleSearchVnCover()
+    }
+  })
+
+  // 当 store 中的 imageUrl 发生变化（例如通过浏览按钮或清除按钮）时，同步到输入框
   createEffect(() => {
     setTempImageUrl(localGame.imageUrl || '')
   })
-
-  const [playTime, setPlayTime] = createSignal(durationToForm(localGame.useTime))
 
   const updateDuration = (h: number, m: number) => {
     setPlayTime({ h, m })
@@ -130,6 +143,52 @@ export default function GameEditModal(props: GameEditModalProps) {
     }
   }
 
+  const handleSearchVnCover = async () => {
+    if (!localGame.name) return
+
+    if (isSearching()) {
+      // 再次点击取消搜索
+      setIsSearching(false)
+      setSearchId(id => id + 1) // 自增使接下来的返回结果失效
+      return
+    }
+
+    const currentSearchId = searchId() + 1
+    setSearchId(currentSearchId)
+    setIsSearching(true)
+
+    try {
+      const url = await fetchVnCover(localGame.name)
+      // 如果本次搜索没有被手动取消
+      if (isSearching() && searchId() === currentSearchId) {
+        if (url) {
+          setTempImageUrl(url)
+          setLocalGame('imageUrl', url)
+          setLocalGame('imageSha256', null) // 重置 Hash
+        } else {
+          myToast({
+            variant: 'warning',
+            title: t('game.edit.searchNotFound'),
+            message: t('game.edit.searchNotFoundMsg')
+          })
+        }
+      }
+    } catch (e) {
+      if (isSearching() && searchId() === currentSearchId) {
+        myToast({
+          variant: 'error',
+          title: t('game.edit.searchFailed'),
+          message: t('game.edit.searchFailedMsg')
+        })
+      }
+    } finally {
+      // 只有当前搜索仍在进行时才置空状态，防止干扰可能发起的新搜索
+      if (searchId() === currentSearchId) {
+        setIsSearching(false)
+      }
+    }
+  }
+
   return (
     <div class="dark:bg-zinc-800 bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col p-6 overflow-hidden border border-gray-200 dark:border-gray-700">
       <div class="flex flex-col w-full h-full max-h-[85vh]">
@@ -165,7 +224,9 @@ export default function GameEditModal(props: GameEditModalProps) {
                   class="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
                   onClick={handleSelectImage}
                 >
-                  <span class="text-gray-400 text-xs">点击选择图片</span>
+                  <span class="text-gray-400 text-xs">
+                    {t('game.edit.clickToSelectImage')}
+                  </span>
                 </div>
               </Show>
             </div>
@@ -194,7 +255,7 @@ export default function GameEditModal(props: GameEditModalProps) {
               <div class="flex gap-2">
                 <input
                   type="text"
-                  class="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  class="flex-1 min-w-0 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   // 绑定到 tempImageUrl
                   value={tempImageUrl()}
                   // 输入时只更新临时变量
@@ -203,26 +264,34 @@ export default function GameEditModal(props: GameEditModalProps) {
                   onBlur={commitImageChange}
                   // 按下回车时提交
                   onKeyDown={e => e.key === 'Enter' && commitImageChange()}
-                  placeholder="https://... 或 C:/..."
+                  placeholder={t('game.edit.imageUrlPlaceholder')}
+                  disabled={isSearching()}
                 />
+
+                {/* VNDB 搜索 / 取消按钮 - 高对比度带图标 */}
                 <button
-                  onClick={handleSelectImage}
-                  class="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-800 dark:text-white px-3 py-1.5 rounded text-sm whitespace-nowrap transition-colors"
+                  onClick={handleSearchVnCover}
+                  disabled={!localGame.name && !isSearching()}
+                  class="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium whitespace-nowrap transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  classList={{
+                    'bg-red-500 hover:bg-red-600 text-white dark:bg-red-600 dark:hover:bg-red-700':
+                      isSearching(),
+                    'bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-500':
+                      !isSearching()
+                  }}
                 >
-                  {t('ui.browse')}
+                  {isSearching() ? (
+                    <>
+                      <FiRefreshCw class="w-4 h-4 animate-spin" />
+                      {t('ui.cancel')}
+                    </>
+                  ) : (
+                    <>
+                      <FiSearch class="w-4 h-4" />
+                      VNDB
+                    </>
+                  )}
                 </button>
-                <Show when={localGame.imageUrl}>
-                  <button
-                    onClick={() => {
-                      setLocalGame('imageUrl', null)
-                      setLocalGame('imageSha256', null)
-                      // createEffect 会自动处理 tempImageUrl 的清空
-                    }}
-                    class="bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 px-3 py-1.5 rounded text-sm whitespace-nowrap transition-colors"
-                  >
-                    {t('ui.clear')}
-                  </button>
-                </Show>
               </div>
             </div>
 
@@ -237,7 +306,7 @@ export default function GameEditModal(props: GameEditModalProps) {
                   class="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 truncate transition-colors"
                   value={localGame.excutablePath || ''}
                   onInput={e => setLocalGame('excutablePath', e.currentTarget.value)}
-                  placeholder="选择可执行文件"
+                  placeholder={t('game.edit.exePathPlaceholder')}
                 />
                 <button
                   onClick={handleSelectExecutable}

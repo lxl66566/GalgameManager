@@ -46,7 +46,14 @@ export const dict = {
       lastPlayedTime: 'Last Played Time',
       deleteGame: 'Delete Game',
       cancel: 'Cancel',
-      confirmSave: 'Save'
+      confirmSave: 'Save',
+      searchNotFound: 'Cover Not Found',
+      searchNotFoundMsg: 'No related game cover found on VNDB',
+      searchFailed: 'Search Failed',
+      searchFailedMsg: 'Error fetching VNDB cover',
+      clickToSelectImage: 'Click to select image',
+      imageUrlPlaceholder: 'https://... or C:/...',
+      exePathPlaceholder: 'Select executable file'
     },
     sync: {
       self: 'Manage Archives',

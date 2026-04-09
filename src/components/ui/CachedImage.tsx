@@ -128,11 +128,15 @@ const CachedImage: Component<ImageProps> = props => {
             </div>
           }
         >
-          <img
-            src={getBase64ImageSrc(imageData()?.base64 || '')}
-            alt={props.alt || 'Game cover'}
-            class="w-full h-full object-cover animate-in fade-in duration-300"
-          />
+          {imageData()?.base64 ? (
+            <img
+              src={getBase64ImageSrc(imageData()?.base64)}
+              alt={props.alt}
+              class="w-full h-full object-cover animate-in fade-in duration-300"
+            />
+          ) : (
+            <div class="w-full h-full bg-transparent" />
+          )}
         </Suspense>
       </ErrorBoundary>
     </div>

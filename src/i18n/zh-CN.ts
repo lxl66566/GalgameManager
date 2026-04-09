@@ -50,7 +50,14 @@ export const dict: DeepPartial<RawDictionary> = {
       lastPlayedTime: '最后游玩时间',
       deleteGame: '删除游戏',
       cancel: '取消',
-      confirmSave: '保存更改'
+      confirmSave: '保存更改',
+      searchNotFound: '未找到封面',
+      searchNotFoundMsg: '在 VNDB 未找到相关游戏封面',
+      searchFailed: '搜索失败',
+      searchFailedMsg: '获取 VNDB 封面出错',
+      clickToSelectImage: '点击选择图片',
+      imageUrlPlaceholder: 'https://... 或 C:/...',
+      exePathPlaceholder: '选择可执行文件'
     },
     sync: {
       self: '存档管理',

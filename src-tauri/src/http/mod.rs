@@ -24,7 +24,7 @@ pub static IMAGE_CACHE_DIR: Lazy<PathBuf> = Lazy::new(|| {
     dir
 });
 
-static USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+static USER_AGENT: &str = "github:lxl66566/GalgameManager";
 
 pub static IMAGE_CLIENT: Lazy<Client> = Lazy::new(|| {
     let mut header_map = header::HeaderMap::with_capacity(1);

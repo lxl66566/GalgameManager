@@ -3,9 +3,10 @@
  * @param {string} base64Str - 纯 Base64 字符串 (不带 data:前缀)
  * @returns {string} 完整的 Data URI
  */
-export const getBase64ImageSrc = (base64Str: string) => {
+export const getBase64ImageSrc = (base64Str?: string): string => {
   // 1. 去除可能存在的空格或换行
-  const str = base64Str.trim()
+  const str = base64Str?.trim?.() || ''
+  if (!str) return ''
 
   // 2. 定义常见图片格式的 Base64 签名映射
   // 注意：这里只判断前几个字符即可区分
