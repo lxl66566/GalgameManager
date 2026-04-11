@@ -8,8 +8,6 @@ version = "0.1.5"
 dependencies = [
  "async-trait",
  "backhand",
- "base64 0.22.1",
- "bytes",
  "chrono",
  "config-file2",
  "easy_strfmt",

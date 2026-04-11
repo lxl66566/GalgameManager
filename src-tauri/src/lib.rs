@@ -49,7 +49,7 @@ pub fn run() {
             rename_local_archive,
             archive,
             extract,
-            get_image,
+            prepare_image,
             list_archive,
             upload_archive,
             delete_archive,
@@ -64,6 +64,9 @@ pub fn run() {
             is_game_running,
             running_game_ids,
         ])
+        .register_uri_scheme_protocol("galimg", |_, request| {
+            crate::http::image_protocol_handler(request)
+        })
         .setup(|app| {
             let handle = init_logger(app.path().app_log_dir()?)?;
             let res = LOG_HANDLE.set(handle);

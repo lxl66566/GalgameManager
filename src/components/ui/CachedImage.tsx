@@ -1,6 +1,4 @@
-import { type ImageData } from '@bindings/ImageData'
 import { invoke } from '@tauri-apps/api/core'
-import { getBase64ImageSrc } from '@utils/image'
 import { log } from '@utils/log'
 import {
   createEffect,
@@ -10,44 +8,6 @@ import {
   type Component
 } from 'solid-js'
 
-// 缓存最大容量，防止 Base64 占用过多内存
-const MAX_CACHE_SIZE = 50
-const imageCache = new Map<string, ImageData>()
-
-/**
- * 将图片存入缓存 (LRU 策略)
- */
-const cacheImage = (data: ImageData) => {
-  if (!data.hash) return
-
-  // 如果已存在，先删除再重新添加，使其变为"最近使用"
-  if (imageCache.has(data.hash)) {
-    imageCache.delete(data.hash)
-  } else if (imageCache.size >= MAX_CACHE_SIZE) {
-    // 缓存已满，删除最早插入的元素 (Map 的迭代器顺序即插入顺序)
-    const firstKey = imageCache.keys().next().value
-    if (firstKey) imageCache.delete(firstKey)
-  }
-
-  imageCache.set(data.hash, data)
-}
-
-/**
- * 尝试从缓存获取
- */
-const getCachedImage = (hash?: string | null): ImageData | undefined => {
-  if (!hash) return undefined
-  const data = imageCache.get(hash)
-  if (data) {
-    // 命中缓存，刷新其在 LRU 中的位置
-    imageCache.delete(hash)
-    imageCache.set(hash, data)
-  }
-  return data
-}
-
-// --- Component ---
-
 interface ImageProps {
   url?: string | null | undefined
   hash?: string | null | undefined
@@ -56,54 +16,49 @@ interface ImageProps {
   onHashUpdate?: (newHash: string) => void
 }
 
+/**
+ * Image component backed by the `galimg` custom protocol.
+ *
+ * - If a `hash` is already known, the image is served directly via the custom
+ *   protocol with **zero IPC** — the browser handles HTTP-level caching.
+ * - If no hash exists, `prepare_image` is called once to download/cache the
+ *   image on disk; subsequent renders use the cached hash.
+ * - No in-memory cache is kept; images are always served from the filesystem
+ *   through the custom protocol, keeping JS heap usage minimal.
+ */
 const CachedImage: Component<ImageProps> = props => {
-  // 使用数组作为 source，同时监听 url 和 hash 的变化
-  const [imageData] = createResource(
+  const [imageHash] = createResource(
     () => [props.url, props.hash] as const,
     async ([rawUrl, currentHash]) => {
-      // 1. 优先检查缓存 (根据 Hash)
-      // 如果有 Hash 且缓存命中，直接返回，无需任何 IPC 通信
-      const cached = getCachedImage(currentHash)
-      if (cached) {
-        return cached
-      }
+      // Fast path: hash already known — serve directly via custom protocol.
+      // No IPC call needed; the browser will request the image from Rust.
+      if (currentHash) return currentHash
 
       if (!rawUrl) return null
 
       try {
-        // 2. 缓存未命中，执行 Rust 通信
-        // 第一步：解析变量
         const resolvedUrl = await invoke<string>('resolve_var', { s: rawUrl })
-
-        // 第二步：加载图片
-        const data = await invoke<ImageData>('get_image', {
+        const hash = await invoke<string>('prepare_image', {
           url: resolvedUrl,
           hash: currentHash
         })
 
-        // 3. 存入缓存
-        cacheImage(data)
-
         // 只有当 hash 存在，且与当前的 hash 不一致时，才触发更新事件
-        if (data.hash && data.hash !== currentHash) {
-          props.onHashUpdate?.(data.hash)
+        if (hash !== currentHash) {
+          props.onHashUpdate?.(hash)
         }
 
-        return data
+        return hash
       } catch (e: any) {
-        // 仅在非取消错误时 toast，避免快速切换路由时的干扰
-        // if (!String(e).includes('cancelled')) {
-        //   toast.error(t('hint.loadImageFailed') + e)
-        // }
         throw e
       }
     }
   )
 
-  // 错误日志
+  // Error logging
   createEffect(() => {
-    if (imageData.error) {
-      log.warn(`[Image Load Failed] ${props.url}: ${imageData.error}`)
+    if (imageHash.error) {
+      log.warn(`[Image Load Failed] ${props.url}: ${imageHash.error}`)
     }
   })
 
@@ -128,9 +83,9 @@ const CachedImage: Component<ImageProps> = props => {
             </div>
           }
         >
-          {imageData()?.base64 ? (
+          {imageHash() ? (
             <img
-              src={getBase64ImageSrc(imageData()?.base64)}
+              src={`http://galimg.localhost/${imageHash()!}`}
               alt={props.alt}
               class="w-full h-full object-cover animate-in fade-in duration-300"
             />

@@ -11,7 +11,6 @@ use crate::{
     db::{CONFIG, CONFIG_DIR, Config, device::DEVICE_UID, settings::SortType},
     error::Result,
     exec::{game_loop, launch_game},
-    http::ImageData,
     logging::LogLevel,
     sync::MyOperation,
     utils::list_dir_all,
@@ -65,8 +64,8 @@ pub fn log(level: LogLevel, msg: String) {
 // region http
 
 #[tauri::command(async)]
-pub async fn get_image(url: String, hash: Option<String>) -> Result<ImageData> {
-    crate::http::get_image(&url, hash.as_deref()).await
+pub async fn prepare_image(url: String, hash: Option<String>) -> Result<String> {
+    crate::http::prepare_image(&url, hash.as_deref()).await
 }
 
 // region archive

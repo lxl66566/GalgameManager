@@ -24,8 +24,6 @@ tauri-build = { version = "2.0.2", features = [] }
 [dependencies]
 async-trait               = "0.1.89"
 backhand                  = "0.25.1"
-base64                    = "0.22.1"
-bytes                     = "1.11.0"
 chrono                    = { version = "0.4", features = ["serde"] }
 config-file2              = "0.4.1"
 easy_strfmt               = { path = "./easy_strfmt", features = ["indexmap"] }
