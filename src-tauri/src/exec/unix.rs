@@ -2,7 +2,7 @@ use std::{path::Path, time::Duration};
 
 use log::{error, info};
 use tauri::{AppHandle, Emitter as _};
-use tokio::{process::Command, time};
+use tokio::{process::Command, sync::oneshot, time};
 
 use crate::{
     db::CONFIG,
@@ -13,9 +13,9 @@ use crate::{
 pub type GameLaunchRes = tokio::process::Child;
 
 pub async fn launch_game(
-    app: AppHandle,
     game_id: u32,
-    _game_start_sender: tokio::sync::oneshot::Sender<()>,
+    app: AppHandle,
+    game_start_sender: oneshot::Sender<()>,
     launch_override: Option<StartCtx>,
 ) -> Result<GameLaunchRes> {
     let child = if let Some(ctx) = launch_override {
@@ -39,20 +39,29 @@ pub async fn launch_game(
         }
         cmd.spawn()?
     };
+
     app.emit(&format!("game://spawn/{}", game_id), ())?;
+    game_start_sender
+        .send(())
+        .map_err(|_| Error::InvalidChannel("game_start_sender"))?;
 
     Ok(child)
 }
 
-pub async fn game_loop(mut child: GameLaunchRes, game_id: u32, app: AppHandle) -> Result<()> {
+pub async fn game_loop(
+    mut child: GameLaunchRes,
+    game_id: u32,
+    app: AppHandle,
+    game_exit_sender: oneshot::Sender<()>,
+) -> Result<()> {
     let mut interval = time::interval(Duration::from_secs(60));
     let mut last_time_saved = chrono::Utc::now();
-    // 第一个 tick 是立即执行的，跳过
+    // The first tick fires immediately, so skip it.
     interval.tick().await;
 
     loop {
         tokio::select! {
-            // 分支 A: 进程退出
+            // Branch A: process exited
             status = child.wait() => {
                 app.emit(&format!("game://exit/{}", game_id), status.is_ok())?;
                 match status {
@@ -60,9 +69,12 @@ pub async fn game_loop(mut child: GameLaunchRes, game_id: u32, app: AppHandle) -
                     Err(e) => error!("Error waiting for game process: {}", e),
                 }
                 super::update_game_time(&app, game_id, chrono::Utc::now() - last_time_saved)?;
-                break Ok(()); // 退出循环
+                game_exit_sender
+                    .send(())
+                    .map_err(|_| Error::InvalidChannel("game_exit_sender"))?;
+                break Ok(());
             }
-            // 分支 B: 定时器触发 (每分钟)
+            // Branch B: timer tick (every 60s)
             _ = interval.tick() => {
                 super::update_game_time(&app, game_id, chrono::Utc::now() - last_time_saved)?;
                 last_time_saved = chrono::Utc::now();
