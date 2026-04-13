@@ -1,17 +1,17 @@
-use std::{collections::HashMap, fs, path::PathBuf, sync::LazyLock as Lazy};
+use std::{fs, path::PathBuf, sync::LazyLock as Lazy};
 
 use chrono::Utc;
 use config_file2::Storable;
 use log::info;
-use parking_lot::Mutex;
-use tauri::{AppHandle, Manager as _, async_runtime::JoinHandle};
+use tauri::{AppHandle, Manager as _};
 
 use crate::{
     archive::{ArchiveInfo, archive_impl, restore_impl},
     db::{CONFIG, CONFIG_DIR, Config, device::DEVICE_UID, settings::SortType},
-    error::Result,
-    exec::{game_loop, launch_game},
+    error::{Error, Result},
+    exec::{GAME_LOOP_HANDLES, launch_game_with_plugins},
     logging::LogLevel,
+    plugin::{dispatch_after_save_upload, dispatch_before_save_upload},
     sync::MyOperation,
     utils::list_dir_all,
 };
@@ -155,9 +155,15 @@ pub fn extract(app: AppHandle, game_id: u32, archive_filename: String) -> Result
 
 #[inline]
 fn build_operator_with_varmap(app: &AppHandle) -> Result<Box<dyn MyOperation + Send + Sync>> {
+    use std::time::Duration;
+
     let lock = CONFIG.lock();
     let varmap = lock.varmap();
-    lock.settings.storage.build_operator(app, varmap)
+    let io_timeout = Duration::from_secs(lock.settings.sync_io_timeout_secs.max(1) as u64);
+    let non_io_timeout = Duration::from_secs(lock.settings.sync_non_io_timeout_secs.max(1) as u64);
+    lock.settings
+        .storage
+        .build_operator_with_timeouts(app, varmap, io_timeout, non_io_timeout)
 }
 
 #[tauri::command(async)]
@@ -173,13 +179,22 @@ pub async fn upload_archive(app: AppHandle, game_id: u32, archive_filename: Stri
         "uploading archive: game_id={}, archive_filename={}",
         game_id, archive_filename
     );
+
+    // Dispatch before_save_upload hooks
+    dispatch_before_save_upload(&app, game_id, &archive_filename).await?;
+
     build_operator_with_varmap(&app)?
         .upload_archive(
             game_id,
             &archive_filename,
             &app.path().app_local_data_dir()?.join("backup"),
         )
-        .await
+        .await?;
+
+    // Dispatch after_save_upload hooks (non-fatal)
+    dispatch_after_save_upload(&app, game_id, &archive_filename).await;
+
+    Ok(())
 }
 
 #[tauri::command(async)]
@@ -257,23 +272,15 @@ pub async fn apply_remote_config(app: AppHandle, safe: bool) -> Result<(Option<C
 
 // region exec
 
-static GAME_HANDLES: Lazy<Mutex<HashMap<u32, JoinHandle<Result<()>>>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
-
 #[tauri::command(async)]
 pub async fn exec(app: AppHandle, game_id: u32) -> Result<()> {
-    let res = launch_game(app.clone(), game_id).await?;
-
-    let handle = tauri::async_runtime::spawn(async move { game_loop(res, game_id, app).await });
-    _ = GAME_HANDLES.lock().insert(game_id, handle);
-    Ok(())
+    launch_game_with_plugins(app, game_id).await
 }
 
 // currently not used
 #[tauri::command]
 pub fn is_game_running(game_id: u32) -> bool {
-    let handles = GAME_HANDLES.lock();
-    if let Some(handle) = handles.get(&game_id) {
+    if let Some(handle) = GAME_LOOP_HANDLES.get(&game_id) {
         !handle.inner().is_finished()
     } else {
         false
@@ -282,9 +289,25 @@ pub fn is_game_running(game_id: u32) -> bool {
 
 #[tauri::command]
 pub fn running_game_ids() -> Vec<u32> {
-    let handles = GAME_HANDLES.lock();
-    handles
+    GAME_LOOP_HANDLES
         .iter()
-        .filter_map(|(id, handle)| (!handle.inner().is_finished()).then_some(*id))
+        .filter_map(|r| (!r.inner().is_finished()).then_some(*r.key()))
         .collect()
+}
+
+/// Open the directory containing the game executable in the system file
+/// manager.
+#[tauri::command]
+pub fn open_game_dir(game_id: u32) -> Result<()> {
+    let lock = CONFIG.lock();
+    let game = lock.get_game_by_id(game_id)?;
+    let exe_path = game.excutable_path.as_deref().ok_or(Error::Launch)?;
+    let resolved = lock.resolve_var(exe_path)?;
+    drop(lock);
+
+    let dir = std::path::Path::new(&resolved)
+        .parent()
+        .ok_or_else(|| Error::InvalidCommand("no parent dir".into()))?;
+    opener::open(dir).map_err(Error::Open)?;
+    Ok(())
 }

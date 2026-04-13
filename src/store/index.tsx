@@ -3,7 +3,7 @@ import { type Config } from '@bindings/Config'
 import type { Device } from '@bindings/Device'
 import type { Game } from '@bindings/Game'
 import type { Settings } from '@bindings/Settings'
-import { myToast } from '@components/ui/myToast'
+import { myToast, type ToastVariant } from '@components/ui/myToast'
 import * as i18n from '@solid-primitives/i18n'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
@@ -13,6 +13,59 @@ import { onCleanup, onMount } from 'solid-js'
 import { createStore, produce, unwrap } from 'solid-js/store'
 import toast from 'solid-toast'
 import { currentDeviceId } from './Singleton'
+
+// ── Backend toast listener ──────────────────────────────────────────────────
+
+interface ToastEventPayload {
+  variant: string
+  message: string
+  /** Optional stable ID used to identify a loading toast for later dismissal. */
+  toast_id?: string
+}
+
+/**
+ * Resolve i18n keys in backend toast messages.
+ *
+ * Backend messages may contain `<i18n.key>` tokens which are replaced
+ * with the translated string.  Everything outside `<>` is kept as-is.
+ * Nested or unclosed tags are left untouched.
+ *
+ * Example: `"AutoUpload: <hint.syncFailed>game X"` → `"AutoUpload: 同步失败: game X"`
+ */
+function resolveBackendI18n(raw: string, t: i18n.Translator<Dictionary>): string {
+  return raw.replace(/<([a-zA-Z0-9._]+)>/g, (_match, key: string) => {
+    // t() returns the key itself when not found, which is fine
+    return t(key as keyof Dictionary) as string
+  })
+}
+
+/**
+ * Start listening for `toast://show` and `toast://dismiss` events emitted by
+ * the Rust backend.  Returns an unlisten function for each listener.
+ */
+const startToastListener = async (t: i18n.Translator<Dictionary>) => {
+  const validVariants = new Set(['success', 'error', 'warning', 'default', 'loading'])
+
+  const unlistenShow = await listen<ToastEventPayload>('toast://show', event => {
+    const { variant, message, toast_id } = event.payload
+    const v = (validVariants.has(variant) ? variant : 'default') as ToastVariant
+    const resolved = resolveBackendI18n(message, t)
+    const toastId = toast_id ?? undefined
+    myToast({ variant: v, message: resolved, toastId })
+  })
+
+  const unlistenDismiss = await listen<string>('toast://dismiss', event => {
+    toast.dismiss(event.payload)
+  })
+
+  // Return a single cleanup function that unregisters both listeners.
+  return () => {
+    unlistenShow()
+    unlistenDismiss()
+  }
+}
+
+// ── Config store ────────────────────────────────────────────────────────────
 
 // 初始空状态
 const DEFAULT_CONFIG: Config = {
@@ -52,18 +105,89 @@ const DEFAULT_CONFIG: Config = {
     launch: {
       precisionMode: true
     },
-    autoSyncInterval: 1200
+    autoSyncInterval: 1200,
+    syncIoTimeoutSecs: 60,
+    syncNonIoTimeoutSecs: 15
+  },
+  pluginMetadatas: {
+    execute: {
+      enabled: true,
+      autoAdd: false,
+      configDefaults: {
+        on: 'beforeGameStart',
+        cmd: '',
+        passExePath: false,
+        currentDir: '',
+        env: {},
+        exitSignal: 'none'
+      }
+    },
+    autoUpload: {
+      enabled: true,
+      autoAdd: false
+    },
+    gameWrapper: {
+      enabled: true,
+      autoAdd: false,
+      configDefaults: {
+        cmd: '',
+        currentDir: '',
+        env: {}
+      }
+    },
+    localeEmulator: {
+      enabled: true,
+      autoAdd: false,
+      configDefaults: {
+        cmd: 'your_path/LEProc.exe "{}"'
+      }
+    },
+    translator: {
+      enabled: true,
+      autoAdd: false,
+      configDefaults: {
+        cmd: '',
+        currentDir: ''
+      }
+    },
+    voiceSpeedup: {
+      enabled: true,
+      autoAdd: false,
+      configDefaults: {
+        speed: 1.5,
+        provider: 'mmdevapi',
+        arch: 'auto'
+      }
+    },
+    voiceZerointerrupt: {
+      enabled: true,
+      autoAdd: false,
+      configDefaults: {
+        arch: 'auto'
+      }
+    }
   }
 }
 
 const [config, setConfig] = createStore<Config>(DEFAULT_CONFIG)
 
-export const useConfigInit = () => {
+export const useConfigInit = (t?: i18n.Translator<Dictionary>) => {
   onMount(() => {
     let unlisten: (() => void) | undefined
+    let unlistenToast: (() => void) | undefined
     let mounted = true
 
     const init = async () => {
+      // 0. Listen for backend toast events (needs t for i18n resolution)
+      if (t) {
+        const toastFn = await startToastListener(t)
+        if (!mounted) {
+          toastFn()
+          return
+        }
+        unlistenToast = toastFn
+      }
+
       // 1. 监听 Rust 端的主动推送
       const fn = await listen<Config>('config://updated', event => {
         console.log('Config updated from Rust:', event.payload)
@@ -87,6 +211,7 @@ export const useConfigInit = () => {
     onCleanup(() => {
       mounted = false
       unlisten?.()
+      unlistenToast?.()
     })
   })
 }
@@ -147,7 +272,7 @@ export const checkAndPullRemote = async (
     }
   } catch (e) {
     // 只在自动拉取且配置了存储后端时提示，提升首次启动的体验
-    if (skipCheck || !(e as Error).message.includes('Storage provider not set')) {
+    if (skipCheck || !(e as Error).toString().includes('Storage provider not set')) {
       toast.error(t('hint.checkRemoteConfigFailed') + ': ' + e)
     }
   }

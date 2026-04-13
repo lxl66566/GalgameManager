@@ -12,7 +12,7 @@ import toast, { type Toast } from 'solid-toast'
 // Types
 // ----------------------------------------------------------------------
 
-export type ToastVariant = 'default' | 'success' | 'error' | 'warning'
+export type ToastVariant = 'default' | 'success' | 'error' | 'warning' | 'loading'
 
 export interface ToastAction {
   label: string
@@ -31,6 +31,8 @@ export interface CustomToastOptions {
   actions?: ToastAction[]
   variant?: ToastVariant
   closable?: boolean
+  /** Stable ID used to identify a toast for later dismissal. */
+  toastId?: string
   toastOptions?: Parameters<typeof toast>[1]
 }
 
@@ -42,14 +44,32 @@ const VARIANT_ICONS: Record<ToastVariant, () => JSX.Element> = {
   default: () => <FiInfo />,
   success: () => <FiCheckCircle />,
   error: () => <FiAlertCircle />,
-  warning: () => <FiAlertTriangle />
+  warning: () => <FiAlertTriangle />,
+  loading: () => (
+    <svg class="animate-spin h-[1em] w-[1em]" viewBox="0 0 24 24" fill="none">
+      <circle
+        class="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        stroke-width="4"
+      />
+      <path
+        class="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+      />
+    </svg>
+  )
 }
 
 const ICON_COLORS: Record<ToastVariant, string> = {
   default: 'text-blue-500',
   success: 'text-green-500',
   error: 'text-red-500',
-  warning: 'text-amber-500'
+  warning: 'text-amber-500',
+  loading: 'text-blue-500'
 }
 
 const ACTION_STYLES = {
@@ -71,8 +91,12 @@ export const myToast = (props: CustomToastOptions) => {
     actions = [],
     variant = 'default',
     closable = false,
+    toastId,
     toastOptions
   } = props
+
+  // Loading toasts should persist until explicitly dismissed.
+  const duration = variant === 'loading' ? Infinity : 8000
 
   toast.custom(
     t => (
@@ -131,8 +155,10 @@ export const myToast = (props: CustomToastOptions) => {
       </div>
     ),
     {
-      duration: 8000,
+      duration,
       position: 'bottom-left',
+      // Use the stable toast ID if provided so the backend can dismiss it later.
+      ...(toastId ? { id: toastId } : {}),
       ...toastOptions
     }
   )

@@ -1,6 +1,6 @@
 import type { Device } from '@bindings/Device'
+import { FormTableEditor } from '@components/ui/form'
 import { Input, SettingRow, SettingSection } from '@components/ui/settings'
-import { VariableEditor } from '@components/VariableEditor'
 import { log } from '@utils/log'
 import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'
@@ -32,7 +32,6 @@ export const DeviceTab: Component = () => {
     // 第三步：乐观更新 (Optimistic Update)
     // 将修改后的新对象塞回 Resource，触发 UI 更新
     mutate(next)
-
     await actions.updateCurrentDevice(next)
   }
 
@@ -40,40 +39,9 @@ export const DeviceTab: Component = () => {
     modifyDevice(d => (d.name = name))
   }
 
-  const handleAddVar = (key: string, value: string) => {
-    modifyDevice(d => {
-      // 确保 variables 对象存在
-      if (!d.variables) d.variables = {}
-      d.variables[key] = value
-    })
-    log.info('Added variable ', key, ' with value ', value)
-  }
-
-  const handleRemoveVar = (key: string) => {
-    modifyDevice(d => {
-      if (d.variables) delete d.variables[key]
-    })
-    log.info('Removed variable ', key)
-  }
-
-  const handleUpdateVarValue = (key: string, val: string) => {
-    modifyDevice(d => {
-      if (d.variables) d.variables[key] = val
-    })
-    log.info('Updated variable value ', key, ' to ', val)
-  }
-
-  const handleRenameVarKey = (oldKey: string, newKey: string) => {
-    modifyDevice(d => {
-      if (!d.variables) return
-      const val = d.variables[oldKey]
-      // 只有当旧值存在时才迁移
-      if (val !== undefined) {
-        delete d.variables[oldKey]
-        d.variables[newKey] = val
-      }
-    })
-    log.info('Renamed variable key ', oldKey, ' to ', newKey)
+  const handleVariablesChange = (newVars: Record<string, string>) => {
+    modifyDevice(d => (d.variables = newVars))
+    log.info('Variables updated')
   }
 
   return (
@@ -113,12 +81,13 @@ export const DeviceTab: Component = () => {
 
               <SettingSection title={t('settings.device.variables')}>
                 <div class="p-4">
-                  <VariableEditor
-                    variables={dev().variables || {}}
-                    onAdd={handleAddVar}
-                    onRemove={handleRemoveVar}
-                    onUpdateValue={handleUpdateVarValue}
-                    onRenameKey={handleRenameVarKey}
+                  <FormTableEditor
+                    values={dev().variables || {}}
+                    onChange={handleVariablesChange}
+                    label={t('settings.device.variables')}
+                    description={t('settings.device.variablesDesc')}
+                    addLabel={t('settings.device.addVariable')}
+                    emptyText={t('settings.device.noVariablesDefined')}
                   />
                 </div>
               </SettingSection>

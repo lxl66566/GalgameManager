@@ -9,7 +9,10 @@ use crate::{
     archive::ArchiveConfig,
     db::device::VarMap,
     error::{Error, Result},
-    sync::{BuildOperator, LocalOperator, MyOperation, S3Operator, WebdavOperator},
+    sync::{
+        BuildOperator, DEFAULT_IO_TIMEOUT, DEFAULT_NON_IO_TIMEOUT, LocalOperator, MyOperation,
+        S3Operator, WebdavOperator,
+    },
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, TS)]
@@ -23,6 +26,11 @@ pub struct Settings {
     pub launch: LaunchConfig,
     /// in secs
     pub auto_sync_interval: u32,
+    /// IO timeout for remote sync operations (upload/download), in seconds.
+    pub sync_io_timeout_secs: u32,
+    /// Non-IO timeout for remote sync operations (connection/listing), in
+    /// seconds.
+    pub sync_non_io_timeout_secs: u32,
 }
 
 impl Default for Settings {
@@ -33,6 +41,8 @@ impl Default for Settings {
             appearance: Default::default(),
             launch: Default::default(),
             auto_sync_interval: 1200,
+            sync_io_timeout_secs: DEFAULT_IO_TIMEOUT.as_secs() as u32,
+            sync_non_io_timeout_secs: DEFAULT_NON_IO_TIMEOUT.as_secs() as u32,
         }
     }
 }
@@ -72,10 +82,28 @@ impl StorageConfig {
         app: &AppHandle,
         varmap: &VarMap,
     ) -> Result<Box<dyn MyOperation + Send + Sync>> {
+        self.build_operator_with_timeouts(app, varmap, DEFAULT_IO_TIMEOUT, DEFAULT_NON_IO_TIMEOUT)
+    }
+
+    pub fn build_operator_with_timeouts(
+        &self,
+        app: &AppHandle,
+        varmap: &VarMap,
+        io_timeout: std::time::Duration,
+        non_io_timeout: std::time::Duration,
+    ) -> Result<Box<dyn MyOperation + Send + Sync>> {
         match self.provider {
-            StorageProvider::Local => self.local.get_operator_or_init(varmap),
-            StorageProvider::WebDav => self.webdav.get_operator_or_init(app),
-            StorageProvider::S3 => self.s3.get_operator_or_init(app),
+            StorageProvider::Local => {
+                self.local
+                    .get_operator_or_init(varmap, io_timeout, non_io_timeout)
+            }
+            StorageProvider::WebDav => {
+                self.webdav
+                    .get_operator_or_init(app, io_timeout, non_io_timeout)
+            }
+            StorageProvider::S3 => self
+                .s3
+                .get_operator_or_init(app, io_timeout, non_io_timeout),
             _ => Err(Error::ProviderNotSet),
         }
     }

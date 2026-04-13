@@ -38,6 +38,9 @@ pub enum Error {
     #[error("Launch error: executable not found")]
     Launch,
 
+    #[error("Open error: {0}")]
+    Open(#[from] opener::OpenError),
+
     #[cfg(target_os = "windows")]
     #[error("Windows API error: {0}")]
     WindowsApi(#[from] windows_result::Error),
@@ -53,6 +56,16 @@ pub enum Error {
 
     #[error("Game time check failed: {0}")]
     GameTimeCheckFailed(String),
+
+    #[error("Invalid launch command: {0}")]
+    InvalidCommand(String),
+
+    #[error("Internal error: Invalid channel: {0}")]
+    InvalidChannel(&'static str),
+
+    #[cfg(windows)]
+    #[error("PE parse error: {0}")]
+    PeParse(#[from] goblin::error::Error),
 }
 
 impl Clone for Error {

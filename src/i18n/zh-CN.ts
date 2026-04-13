@@ -29,7 +29,8 @@ export const dict: DeepPartial<RawDictionary> = {
     withdraw: '撤销',
     WIP: '开发中...',
     loading: '加载中...',
-    interface: '界面'
+    interface: '界面',
+    none: '无'
   },
   game: {
     sortType: {
@@ -39,7 +40,7 @@ export const dict: DeepPartial<RawDictionary> = {
       playTime: '时长'
     },
     edit: {
-      editTitle: '编辑游戏信息',
+      editTitle: '编辑游戏',
       addTitle: '添加新游戏',
       gameName: '游戏名称',
       exePath: '启动路径',
@@ -86,9 +87,90 @@ export const dict: DeepPartial<RawDictionary> = {
     openSyncModal: '打开同步面板',
     clickToAdd: '点击添加',
     self: '游戏列表',
-    orDrag: '或拖拽可执行文件至此'
+    orDrag: '或拖拽可执行文件至此',
+    context: {
+      openDir: '打开游戏目录'
+    }
   },
-  plugin: {},
+  plugin: {
+    title: '插件',
+    noPlugins: '暂无已注册的插件',
+    enabled: '已启用',
+    disabled: '已禁用',
+    metaConfig: '元配置',
+    defaultConfig: '默认配置',
+    defaultConfigDesc: '新游戏添加此插件时的默认配置值',
+    version: '版本',
+    author: '作者',
+    links: '链接',
+    expand: '展开',
+    autoAdd: '自动添加到新游戏',
+    collapse: '收起',
+    pluginSection: '插件',
+    addPlugin: '添加插件',
+    removePlugin: '移除',
+    moveUp: '上移',
+    moveDown: '下移',
+    noPluginsAdded: '未添加任何插件',
+    pluginConfig: '插件配置',
+    configEmpty: '无需配置',
+    arch: '架构',
+    archAuto: '自动检测',
+    currentDir: '工作目录',
+    currentDirPlaceholder: '留空则使用游戏所在目录',
+    needBraces: '命令必须包含 {} 占位符',
+    execute: {
+      name: '执行外部命令',
+      description: '执行外部命令行程序',
+      on: '执行时机',
+      cmd: '命令',
+      cmdPlaceholder: '例如 echo "Hello World"',
+      env: '环境变量',
+      addEnv: '添加环境变量',
+      beforeGameStart: '游戏启动前',
+      afterGameStart: '游戏启动后',
+      gameExit: '游戏退出时',
+      passExePath: '插入游戏路径',
+      passExePathDesc: '插入游戏路径到命令中的 {}',
+      exitSignal: '退出信号',
+      exitSignalDesc: '当游戏退出时，发送信号给该插件启动的进程',
+      exitSignalNone: '无'
+    },
+    autoUpload: {
+      name: '自动上传存档',
+      description: '游戏退出时自动归档并上传存档'
+    },
+    gameWrapper: {
+      name: '游戏启动包装',
+      description: '用自定义命令替换游戏的启动方式',
+      cmd: '命令',
+      cmdPlaceholder: '例如 wrapper.exe "{}"',
+      env: '环境变量',
+      addEnv: '添加环境变量'
+    },
+    localeEmulator: {
+      name: 'Locale Emulator',
+      description: '通过转区启动游戏',
+      cmd: '命令',
+      cmdPlaceholder: '例如 your_path/LEProc.exe "{}"'
+    },
+    translator: {
+      name: '翻译工具',
+      description: '在游戏运行时启动翻译工具',
+      cmd: '命令',
+      cmdPlaceholder: '例如 your_translator.exe'
+    },
+    voiceSpeedup: {
+      name: 'SPEED UP!',
+      description: '加速游戏音频播放',
+      speed: '加速倍率',
+      provider: '注入方式'
+    },
+    voiceZerointerrupt: {
+      name: 'ZeroInterrupt',
+      description: '阻止游戏打断语音（仅限 dsound 游戏）'
+    }
+  },
   settings: {
     self: '设置',
     tabs: {
@@ -98,7 +180,7 @@ export const dict: DeepPartial<RawDictionary> = {
       appearance: '外观'
     },
     storage: {
-      self: '云存储后端',
+      self: '云存储',
       none: '（未设置）',
       provider: '服务提供方',
       Endpoint: 'URL',
@@ -106,7 +188,11 @@ export const dict: DeepPartial<RawDictionary> = {
       Password: '密码',
       Root: '根目录',
       localPath: '本地文件夹路径',
-      localStorage: '本地备份'
+      localStorage: '本地备份',
+      ioTimeout: '传输超时',
+      ioTimeoutDesc: '数据传输操作（上传/下载）的超时时间，单位：秒',
+      nonIoTimeout: '操作超时',
+      nonIoTimeoutDesc: '远端操作（列表/删除）的超时时间，单位：秒'
     },
     compression: {
       self: '归档',
@@ -116,7 +202,7 @@ export const dict: DeepPartial<RawDictionary> = {
     config: {
       self: '配置',
       autoSyncInterval: '自动上传间隔',
-      autoSyncIntervalDesc: '仅上传配置，暂不支持自动存档同步',
+      autoSyncIntervalDesc: '仅上传配置，不上传存档',
       autoSyncIntervalPlaceholder: '单位：秒，设为 0 禁用自动上传',
       inSecs: '（秒）',
       manualSync: '管理配置',
@@ -149,6 +235,7 @@ export const dict: DeepPartial<RawDictionary> = {
   hint: {
     appliedNewConfig: '已应用远端最新配置',
     archiveExists: '存档已存在',
+    archiveFailed: '归档失败: ',
     archiving: '正在归档: ',
     checkRemoteConfigFailed: '检查远端配置失败',
     configAutoUploadFailed: '配置自动上传失败',
@@ -197,6 +284,7 @@ export const dict: DeepPartial<RawDictionary> = {
     uploading: '正在上传: ',
     uploadSuccess: '上传成功: ',
     duplicateGameId: '疑似配置损坏: 检测到重复的游戏 ID! 请手动修复配置。',
-    retryError: '发生错误，正在重试'
+    retryError: '发生错误，正在重试',
+    openDirFailed: '打开游戏目录失败'
   }
 }

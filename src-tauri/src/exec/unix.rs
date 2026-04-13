@@ -7,27 +7,38 @@ use tokio::{process::Command, time};
 use crate::{
     db::CONFIG,
     error::{Error, Result},
+    exec::StartCtx,
 };
 
 pub type GameLaunchRes = tokio::process::Child;
 
-pub async fn launch_game(app: AppHandle, game_id: u32) -> Result<GameLaunchRes> {
-    let exe_path: String = {
-        let lock = CONFIG.lock();
-        lock.resolve_var(
-            &lock
-                .get_game_by_id(game_id)?
-                .excutable_path
-                .clone()
-                .ok_or(Error::Launch)?,
-        )?
-    };
+pub async fn launch_game(
+    app: AppHandle,
+    game_id: u32,
+    _game_start_sender: tokio::sync::oneshot::Sender<()>,
+    launch_override: Option<StartCtx>,
+) -> Result<GameLaunchRes> {
+    let child = if let Some(ctx) = launch_override {
+        let mut cmd = ctx.build_async_command()?;
+        cmd.spawn()?
+    } else {
+        let exe_path: String = {
+            let lock = CONFIG.lock();
+            lock.resolve_var(
+                &lock
+                    .get_game_by_id(game_id)?
+                    .excutable_path
+                    .clone()
+                    .ok_or(Error::Launch)?,
+            )?
+        };
 
-    let mut cmd = Command::new(&exe_path);
-    if let Some(parent) = Path::new(&exe_path).parent() {
-        cmd.current_dir(parent);
-    }
-    let child = cmd.spawn()?;
+        let mut cmd = Command::new(&exe_path);
+        if let Some(parent) = Path::new(&exe_path).parent() {
+            cmd.current_dir(parent);
+        }
+        cmd.spawn()?
+    };
     app.emit(&format!("game://spawn/{}", game_id), ())?;
 
     Ok(child)

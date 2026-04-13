@@ -18,6 +18,10 @@ use ts_rs::TS;
 use crate::{
     db::{device::VarMap, migration::migrate},
     error::{Error, Result},
+    plugin::{
+        PluginInstance, PluginMetadatas, deserialize_metadatas_fallback,
+        deserialize_plugins_fallback,
+    },
 };
 
 pub static CONFIG_DIR: Lazy<PathBuf> = Lazy::new(|| {
@@ -60,6 +64,8 @@ pub struct Config {
     pub games: Vec<Game>,
     pub devices: Vec<Device>,
     pub settings: Settings,
+    #[serde(deserialize_with = "deserialize_metadatas_fallback")]
+    pub plugin_metadatas: PluginMetadatas,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
@@ -78,6 +84,12 @@ pub struct Game {
     pub use_time: Duration,
     pub last_played_time: Option<DateTime<Utc>>,
     pub last_upload_time: Option<DateTime<Utc>>,
+    #[serde(
+        skip_serializing_if = "Vec::is_empty",
+        default,
+        deserialize_with = "deserialize_plugins_fallback"
+    )]
+    pub plugins: Vec<PluginInstance>,
 }
 
 impl Config {

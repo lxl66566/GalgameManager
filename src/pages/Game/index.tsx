@@ -252,6 +252,19 @@ const GamePage = (): JSX.Element => {
     openGameAddModal(paths.at(0) ? fuckBackslash(paths[0]) : undefined)
   }
 
+  /** Handle context menu actions dispatched from GameItem. */
+  const handleContextMenuAction = async (gameId: number, action: string) => {
+    switch (action) {
+      case 'openDir':
+        try {
+          await invoke('open_game_dir', { gameId })
+        } catch (e) {
+          toast.error(t('hint.openDirFailed') + ': ' + e)
+        }
+        break
+    }
+  }
+
   // 并发备份处理
   const handleBackup = async (index: number) => {
     const game = config.games[index]
@@ -291,7 +304,7 @@ const GamePage = (): JSX.Element => {
         archiveFilename: archived_filename
       })
 
-      toast.success(t('hint.syncSuccess') + ': ' + game.name, {
+      toast.success(t('hint.syncSuccess') + game.name, {
         id: toastId,
         duration: 3000
       })
@@ -356,6 +369,7 @@ const GamePage = (): JSX.Element => {
                   onImageHashUpdate={newhash =>
                     handleImageHashUpdate(realIndex(), newhash)
                   }
+                  onContextMenuAction={action => handleContextMenuAction(game.id, action)}
                   isBackingUp={backingUpIds().includes(game.id)}
                   isPlaying={playingIds().includes(game.id)}
                 />

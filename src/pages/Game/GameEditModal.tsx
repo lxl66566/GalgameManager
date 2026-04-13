@@ -1,5 +1,6 @@
 import { type Game } from '@bindings/Game'
 import PathListEditor from '@components/PathListEditor'
+import PluginSection from '@components/PluginSection'
 import CachedImage from '@components/ui/CachedImage'
 import { myToast } from '@components/ui/myToast'
 import { open } from '@tauri-apps/plugin-dialog'
@@ -7,6 +8,9 @@ import { fuckBackslash, getParentPath } from '@utils/path'
 import { dateToInput, durationToForm, inputToDate } from '@utils/time'
 import { fetchVnCover } from '@utils/vndb'
 import { useI18n } from '~/i18n'
+import { PLUGIN_REGISTRY } from '~/pages/Plugin/plugins'
+import { buildNewInstance } from '~/pages/Plugin/plugins/types'
+import { useConfig } from '~/store'
 import { FiRefreshCw, FiSearch } from 'solid-icons/fi'
 import { createEffect, createSignal, onMount, Show, Suspense } from 'solid-js'
 import { createStore, unwrap } from 'solid-js/store'
@@ -29,17 +33,27 @@ const DEFAULT_GAME: Game = {
   addedTime: new Date().toISOString(),
   lastPlayedTime: null,
   useTime: [0, 0],
-  lastUploadTime: null
+  lastUploadTime: null,
+  plugins: []
 }
 
 export default function GameEditModal(props: GameEditModalProps) {
   const { t } = useI18n()
+  const { config } = useConfig()
 
   const isEditMode = () => props.editMode ?? !!props.gameInfo
 
-  const [localGame, setLocalGame] = createStore<Game>(
-    structuredClone(unwrap(props.gameInfo ?? DEFAULT_GAME))
-  )
+  // Auto-populate plugins for new games based on autoAdd meta config
+  const baseGame = structuredClone(unwrap(props.gameInfo ?? DEFAULT_GAME))
+  if (!isEditMode()) {
+    const autoPlugins = PLUGIN_REGISTRY.filter(def => {
+      const meta = config.pluginMetadatas[def.metaKey] as Record<string, unknown>
+      return meta?.['autoAdd'] === true
+    }).map(def => buildNewInstance(def, config.pluginMetadatas))
+    baseGame.plugins = autoPlugins.length > 0 ? autoPlugins : []
+  }
+
+  const [localGame, setLocalGame] = createStore<Game>(baseGame)
 
   // 临时存储输入框的内容，避免每次按键都触发图片加载
   const [tempImageUrl, setTempImageUrl] = createSignal(localGame.imageUrl || '')
@@ -194,8 +208,9 @@ export default function GameEditModal(props: GameEditModalProps) {
       <div class="flex flex-col w-full h-full max-h-[85vh]">
         {/* Header */}
         <div class="flex justify-between items-center mb-4 flex-shrink-0">
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-            {isEditMode() ? t('game.edit.editTitle') : t('game.edit.addTitle')}
+          <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+            {(isEditMode() ? t('game.edit.editTitle') : t('game.edit.addTitle')) +
+              ` (ID = ${localGame.id})`}
           </h1>
         </div>
 
@@ -395,6 +410,14 @@ export default function GameEditModal(props: GameEditModalProps) {
                 </div>
               </div>
             </div>
+
+            <hr class="border-gray-300 dark:border-gray-700 my-1" />
+
+            {/* Plugin Section */}
+            <PluginSection
+              plugins={localGame.plugins ?? []}
+              onChange={plugins => setLocalGame('plugins', plugins)}
+            />
           </div>
         </div>
 

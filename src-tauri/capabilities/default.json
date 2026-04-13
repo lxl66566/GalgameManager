@@ -22,6 +22,14 @@
     {
       "identifier": "fs:scope",
       "allow": ["**", "**/*", "/**/*"]
+    },
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://github.com/**"
+        }
+      ]
     }
   ]
 }

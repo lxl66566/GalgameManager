@@ -6,7 +6,7 @@ edition     = "2024"
 license     = "MIT"
 name        = "GalgameManager"
 repository  = "https://github.com/lxl66566/GalgameManager"
-version     = "0.1.5"
+version     = "1.0.0"
 
 [lib]
 # The `_lib` suffix may seem redundant but it is necessary
@@ -26,12 +26,13 @@ async-trait               = "0.1.89"
 backhand                  = "0.25.1"
 chrono                    = { version = "0.4", features = ["serde"] }
 config-file2              = "0.4.1"
+dashmap                   = "6.1.0"
 easy_strfmt               = { path = "./easy_strfmt", features = ["indexmap"] }
 flexi_logger              = { version = "0.31.7", features = ["compress"] }
 futures                   = "0.3.31"
 hex                       = "0.4.3"
 home                      = "0.5.12"
-indexmap                  = { version = "2.13.0", features = ["serde"] }
+indexmap                  = { version = "2.14.0", features = ["serde"] }
 log                       = "0.4.29"
 machine-uid               = "0.5.4"
 opendal                   = { version = "0.55.0", features = ["services-webdav", "services-s3", "services-fs"] }
@@ -40,26 +41,31 @@ parking_lot               = "0.12.5"
 pathdiff                  = "0.2.3"
 reqwest                   = { version = "0.13", features = ["json"] }
 serde                     = { version = "1.0", features = ["derive"] }
-serde_json                = "1.0"
-sha2                      = "0.10.9"
-similar                   = "2.7.0"
+sha2                      = "0.11"
+shlex                     = "1.3.0"
+similar                   = "3.1.0"
 sys-locale                = "0.3.2"
 tar                       = "0.4.44"
 tauri                     = { version = "2.0.6", features = ["tray-icon"] }
 tauri-plugin-dialog       = "2"
 tauri-plugin-fs           = "2.4.4"
 tauri-plugin-notification = "2.3.3"
+tauri-plugin-opener       = "2.5.3"
 thiserror                 = "2.0.18"
-tokio                     = { version = "1", features = ["fs", "macros", "process"] }
+tokio                     = { version = "1", features = ["fs", "macros", "process", "time"] }
 tokio-util                = { version = "0.7", features = ["compat"] }
-toml                      = "1.0.6"
+toml                      = "1.1.2"
 ts-rs                     = { version = "12.0", features = ["format", "chrono-impl", "indexmap-impl", "no-serde-warnings"] }
 walkdir                   = "2.5.0"
 # tauri-plugin-sql  = { version = "2.2.0", features = ["sqlite"] }
 
 [target.'cfg(windows)'.dependencies]
-windows        = { version = "0.62", features = ["Win32_System_JobObjects", "Win32_System_Threading", "Win32_Foundation", "Win32_Security", "Win32_UI_WindowsAndMessaging"] }
-windows-result = { version = "0.4" }
+goblin               = "0.10.4"
+include_assets       = { version = "1.0.0", default-features = false, features = ["zstd"] }
+windows              = { version = "0.62", features = ["Win32_System_JobObjects", "Win32_System_Threading", "Win32_Foundation", "Win32_Security", "Win32_UI_WindowsAndMessaging"] }
+windows-env          = "0.2.0"
+windows-result       = { version = "0.4" }
+windows_registry_obj = "0.1.0"
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-single-instance = "2.3.6"

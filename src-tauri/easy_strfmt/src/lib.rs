@@ -135,9 +135,10 @@ mod tests {
         vars.insert("name", "Rust");
         vars.insert("adj", "awesome");
         vars.insert("foo", "bar");
+        vars.insert("", "empty");
 
-        let result = strfmt("Hello {name}, you are {adj}! {foo}", &vars).unwrap();
-        assert_eq!(result, "Hello Rust, you are awesome! bar");
+        let result = strfmt("Hello {name}, you are {adj}! {foo} {}", &vars).unwrap();
+        assert_eq!(result, "Hello Rust, you are awesome! bar empty");
     }
 
     #[test]

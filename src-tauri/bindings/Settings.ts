@@ -13,4 +13,13 @@ export type Settings = {
    * in secs
    */
   autoSyncInterval: number;
+  /**
+   * IO timeout for remote sync operations (upload/download), in seconds.
+   */
+  syncIoTimeoutSecs: number;
+  /**
+   * Non-IO timeout for remote sync operations (connection/listing), in
+   * seconds.
+   */
+  syncNonIoTimeoutSecs: number;
 };

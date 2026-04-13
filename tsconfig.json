@@ -27,7 +27,9 @@
     "noImplicitOverride": true, // 禁止隐式覆盖（派生类覆盖基类成员必须使用 override 修饰符）
     "noImplicitReturns": true, // 禁止隐式返回（函数必须显式返回所有路径的值）
     "noImplicitThis": true, // 禁止隐式 any 类型的 this（必须显式声明 this 类型）
-    "noPropertyAccessFromIndexSignature": true, // 禁止通过点符号访问索引签名属性（强制使用 obj['key'] 语法）
+    "noPropertyAccessFromIndexSignature": false, // 禁止通过点符号访问索引签名属性（强制使用 obj['key'] 语法）
+    "skipDefaultLibCheck": true, // 确保不检查外部依赖包的类型
+    "skipLibCheck": true, // 跳过所有声明文件（.d.ts）的类型检查
     "strict": true, // 启用所有严格类型检查选项
     "strictBindCallApply": true, // 严格检查 bind/call/apply 方法的参数类型
     "strictFunctionTypes": true, // 严格检查函数类型（禁用函数参数的双变行为）

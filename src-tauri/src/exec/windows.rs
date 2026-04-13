@@ -3,7 +3,7 @@ use std::{path::Path, time::Duration};
 use chrono::TimeDelta;
 use log::{error, info, trace};
 use tauri::{AppHandle, Emitter as _};
-use tokio::{process::Command, time};
+use tokio::{process::Command, sync::oneshot, time};
 use windows::Win32::{
     Foundation::{CloseHandle, HANDLE},
     System::{
@@ -23,6 +23,7 @@ use windows_result::BOOL;
 use crate::{
     db::CONFIG,
     error::{Error, Result},
+    exec::StartCtx,
 };
 
 pub struct GameJob {
@@ -130,32 +131,37 @@ const SAVE_INTERVAL: TimeDelta = TimeDelta::seconds(60);
 
 pub type GameLaunchRes = GameJob;
 
-pub async fn launch_game(app: AppHandle, game_id: u32) -> Result<GameLaunchRes> {
-    let exe_path = {
-        let lock = CONFIG.lock();
-        let exe_path: String = lock.resolve_var(
-            &lock
-                .get_game_by_id(game_id)?
-                .excutable_path
-                .clone()
-                .ok_or(Error::Launch)?,
-        )?;
-        exe_path
+pub async fn launch_game(
+    game_id: u32,
+    app: AppHandle, // for time update
+    game_start_sender: oneshot::Sender<()>,
+    launch_override: Option<StartCtx>,
+) -> Result<GameLaunchRes> {
+    let child = if let Some(ctx) = launch_override {
+        let mut cmd = ctx.build_async_command()?;
+        cmd.spawn()?
+    } else {
+        let exe_path = {
+            let lock = CONFIG.lock();
+            let exe_path: String = lock.resolve_var(
+                &lock
+                    .get_game_by_id(game_id)?
+                    .excutable_path
+                    .clone()
+                    .ok_or(Error::Launch)?,
+            )?;
+            exe_path
+        };
+        let mut cmd = Command::new(&exe_path);
+        if let Some(parent) = Path::new(&exe_path).parent() {
+            cmd.current_dir(parent);
+        }
+        cmd.spawn()?
     };
 
-    // 1. 启动进程
-    let mut cmd = Command::new(&exe_path);
-    if let Some(parent) = Path::new(&exe_path).parent() {
-        cmd.current_dir(parent);
-    }
-    let child = cmd.spawn()?;
     let child_pid = child.id().ok_or(Error::Launch)?;
 
-    app.emit(&format!("game://spawn/{}", game_id), ())?;
-    info!("Game spawned: game_id={}", game_id);
-
     // 2. 创建 Job 并绑定
-
     let job = {
         let j = GameJob::new().map_err(|_| Error::Launch)?;
         // 关键点：将启动器加入 Job。
@@ -166,10 +172,22 @@ pub async fn launch_game(app: AppHandle, game_id: u32) -> Result<GameLaunchRes> 
         j
     };
 
+    // 3. 发出事件，告知前端已经启动了
+    info!("Game spawned: game_id={}", game_id);
+    app.emit(&format!("game://spawn/{}", game_id), ())?;
+    game_start_sender
+        .send(())
+        .map_err(|_| Error::InvalidChannel("game_start_sender"))?;
+
     Ok(job)
 }
 
-pub async fn game_loop(job: GameLaunchRes, game_id: u32, app: AppHandle) -> Result<()> {
+pub async fn game_loop(
+    job: GameLaunchRes,
+    game_id: u32,
+    app: AppHandle,
+    game_exit_sender: oneshot::Sender<()>,
+) -> Result<()> {
     let mut interval = time::interval(Duration::from_secs(1));
     let mut last_time_saved = chrono::Utc::now();
     let mut time_counter = TimeDelta::milliseconds(0);
@@ -182,6 +200,9 @@ pub async fn game_loop(job: GameLaunchRes, game_id: u32, app: AppHandle) -> Resu
             info!("Game exited: game_id={}", game_id);
             app.emit(&format!("game://exit/{}", game_id), true)?;
             super::update_game_time(&app, game_id, time_counter)?;
+            game_exit_sender
+                .send(())
+                .map_err(|_| Error::InvalidChannel("game_exit_sender"))?;
             break;
         }
 

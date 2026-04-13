@@ -5,6 +5,7 @@ pub mod error;
 pub mod exec;
 pub mod http;
 mod logging;
+pub mod plugin;
 pub mod sync;
 pub mod utils;
 
@@ -35,6 +36,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             get_config,
             save_config,
@@ -63,6 +65,7 @@ pub fn run() {
             exec,
             is_game_running,
             running_game_ids,
+            open_game_dir,
         ])
         .register_uri_scheme_protocol("galimg", |_, request| {
             crate::http::image_protocol_handler(request)

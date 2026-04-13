@@ -13,6 +13,7 @@ impl Default for Config {
             games: Default::default(),
             devices: Default::default(),
             settings: Default::default(),
+            plugin_metadatas: Default::default(),
         }
     }
 }

@@ -24,7 +24,7 @@ const MainLayout: Component = () => {
   const { colorMode } = useColorMode()
   const [isServiceReady, setServiceReady] = createSignal(false)
 
-  useConfigInit()
+  useConfigInit(t)
 
   checkAndPullRemote(t).finally(() => {
     setServiceReady(true)
@@ -73,7 +73,8 @@ const MainLayout: Component = () => {
         />
       </Sidebar>
 
-      <div class="flex-1 p-0 overflow-y-auto dark:bg-slate-800 dark:text-gray-400 min-h-screen transition-colors duration-200">
+      {/* 让页面内容自己处理 overflow 滚动 */}
+      <div class="flex-1 min-w-0 p-0 dark:bg-slate-800 dark:text-gray-400 h-full overflow-hidden relative transition-colors duration-200">
         <Router>
           <Route path={['/Game', '/', '']} component={Game} />
           <Route path="/Plugin" component={Plugin} />
@@ -88,7 +89,7 @@ const App: Component = () => {
   const storageManager = createLocalStorageManager('vite-ui-theme')
 
   return (
-    <div class="flex min-h-screen h-screen bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100">
+    <div class="flex h-screen w-screen overflow-hidden bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100">
       <ColorModeScript storageType={storageManager.type} />
       <ColorModeProvider storageManager={storageManager}>
         <I18nProvider>
@@ -115,6 +116,3 @@ const App: Component = () => {
 }
 
 export default App
-function parsePath(pathname: string): any {
-  throw new Error('Function not implemented.')
-}

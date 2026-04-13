@@ -25,7 +25,8 @@ export const dict = {
     withdraw: 'Withdraw',
     WIP: 'Wait in progress...',
     loading: 'Loading...',
-    interface: 'Interface'
+    interface: 'Interface',
+    none: 'None'
   },
   game: {
     sortType: {
@@ -82,9 +83,91 @@ export const dict = {
     openSyncModal: 'Open Sync Panel',
     clickToAdd: 'Click to add',
     self: 'Game',
-    orDrag: 'or drag executable file here'
+    orDrag: 'or drag executable file here',
+    context: {
+      openDir: 'Open Game Directory'
+    }
   },
-  plugin: {},
+  plugin: {
+    title: 'Plugins',
+    noPlugins: 'No plugins registered',
+    enabled: 'Enabled',
+    disabled: 'Disabled',
+    metaConfig: 'Meta Config',
+    defaultConfig: 'Default Config',
+    defaultConfigDesc: 'Default configuration values for new plugin instances on games',
+    version: 'Version',
+    author: 'Author',
+    links: 'Links',
+    expand: 'Expand',
+    collapse: 'Collapse',
+    autoAdd: 'Auto add to new games',
+    pluginSection: 'Plugins',
+    addPlugin: 'Add Plugin',
+    removePlugin: 'Remove',
+    moveUp: 'Move Up',
+    moveDown: 'Move Down',
+    noPluginsAdded: 'No plugins added to this game',
+    pluginConfig: 'Plugin Config',
+    configEmpty: 'No configuration needed',
+    arch: 'Architecture',
+    archAuto: 'Auto Detect',
+    currentDir: 'Working Directory',
+    currentDirPlaceholder: 'Defaults to game dir if empty',
+    needBraces: 'Command must contain {} placeholder',
+    execute: {
+      name: 'Execute Command',
+      description: 'Execute external CLI commands',
+      on: 'Execute On',
+      cmd: 'Command',
+      cmdPlaceholder: 'e.g. echo "Hello World"',
+      env: 'Environment Variables',
+      addEnv: 'Add Variable',
+      beforeGameStart: 'Before Game Start',
+      afterGameStart: 'After Game Start',
+      gameExit: 'On Game Exit',
+      passExePath: 'Insert Executable Path',
+      passExePathDesc: 'Insert game executable into {} in cmd',
+      exitSignal: 'Exit Signal',
+      exitSignalDesc:
+        'Sends a signal to the spawned process by the plugin when the game exits',
+      exitSignalNone: 'None'
+    },
+    autoUpload: {
+      name: 'Auto Upload Saves',
+      description: 'Automatically archive and upload game saves when the game exits'
+    },
+    gameWrapper: {
+      name: 'Game Wrapper',
+      description: 'Replace the game launch command with a custom one',
+      cmd: 'Command',
+      cmdPlaceholder: 'e.g. wrapper.exe "{}"',
+      env: 'Environment Variables',
+      addEnv: 'Add Variable'
+    },
+    localeEmulator: {
+      name: 'Locale Emulator',
+      description: 'Run the game through Locale Emulator',
+      cmd: 'Command',
+      cmdPlaceholder: 'e.g. your_path/LEProc.exe "{}"'
+    },
+    translator: {
+      name: 'Translator',
+      description: 'Run translation tool on game start',
+      cmd: 'Command',
+      cmdPlaceholder: 'e.g. your_translator.exe'
+    },
+    voiceSpeedup: {
+      name: 'SPEED UP!',
+      description: 'Accelerate game audio playback',
+      speed: 'Speed Multiplier',
+      provider: 'Provider'
+    },
+    voiceZerointerrupt: {
+      name: 'ZeroInterrupt',
+      description: 'Prevent voice interruption in games (dsound games only)'
+    }
+  },
   settings: {
     self: 'Settings',
     tabs: {
@@ -102,7 +185,12 @@ export const dict = {
       Password: 'Password',
       Root: 'Root',
       localPath: 'Local Dir Path',
-      localStorage: 'Local Storage'
+      localStorage: 'Local Storage',
+      ioTimeout: 'Transfer Timeout',
+      ioTimeoutDesc:
+        'Timeout for data transfer operations (upload / download), in seconds',
+      nonIoTimeout: 'Operation Timeout',
+      nonIoTimeoutDesc: 'Timeout for remote operations (list / delete), in seconds'
     },
     compression: {
       self: 'Archive',
@@ -112,7 +200,7 @@ export const dict = {
     config: {
       self: 'Config',
       autoSyncInterval: 'Config Auto Sync Interval',
-      autoSyncIntervalDesc: 'Config Only, not saves',
+      autoSyncIntervalDesc: 'Upload config only, not saves',
       autoSyncIntervalPlaceholder: 'seconds, 0 to disable',
       inSecs: 'In seconds',
       manualSync: 'Manual Syncing',
@@ -147,6 +235,7 @@ export const dict = {
   hint: {
     appliedNewConfig: 'Applied remote configuration',
     archiveExists: 'Archive already exists',
+    archiveFailed: 'Archive failed: ',
     archiving: 'Archiving: ',
     checkRemoteConfigFailed: 'Failed to check remote config',
     configAutoUploadFailed: 'Config auto upload failed',
@@ -195,7 +284,8 @@ export const dict = {
     uploading: 'Uploading: ',
     uploadSuccess: 'Upload Success: ',
     duplicateGameId: 'CRITICAL: Duplicate game id detected!',
-    retryError: 'An error occurred, retrying'
+    retryError: 'An error occurred, retrying',
+    openDirFailed: 'Failed to open game directory'
   }
 }
 

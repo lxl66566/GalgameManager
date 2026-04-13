@@ -302,6 +302,37 @@ export const StorageTab: Component = () => {
             <S3Form config={config.settings.storage.s3} onChange={updateS3} />
           </Match>
         </Switch>
+
+        <SettingRow
+          label={t('settings.storage.ioTimeout')}
+          description={t('settings.storage.ioTimeoutDesc')}
+        >
+          <Input
+            type="number"
+            value={config.settings.syncIoTimeoutSecs}
+            onChange={e =>
+              actions.updateSettings(
+                s => (s.syncIoTimeoutSecs = parseInt(e.currentTarget.value) || 60)
+              )
+            }
+            placeholder="60"
+          />
+        </SettingRow>
+        <SettingRow
+          label={t('settings.storage.nonIoTimeout')}
+          description={t('settings.storage.nonIoTimeoutDesc')}
+        >
+          <Input
+            type="number"
+            value={config.settings.syncNonIoTimeoutSecs}
+            onChange={e =>
+              actions.updateSettings(
+                s => (s.syncNonIoTimeoutSecs = parseInt(e.currentTarget.value) || 15)
+              )
+            }
+            placeholder="15"
+          />
+        </SettingRow>
       </SettingSection>
 
       <CompressionForm config={config.settings.archive} actions={actions} />

@@ -1,6 +1,6 @@
 {
   "name": "GalgameManager",
-  "version": "0.1.5",
+  "version": "1.0.0",
   "author": "lxl66566",
   "type": "module",
   "scripts": {
@@ -14,26 +14,26 @@
   "license": "MIT",
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "4.4.0",
-    "@solidjs/router": "^0.15.4",
     "@solid-primitives/i18n": "^2.2.1",
+    "@solidjs/router": "^0.16.1",
     "@types/node": "^25.3.5",
     "@unocss/preset-wind4": "^66.6.6",
     "lightningcss": "1.28.2",
     "prettier-plugin-tailwindcss": "0.7.2",
     "prettier": "^3.8.1",
     "solid-icons": "^1.2.0",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.2",
     "unocss": "^66.6.6",
     "vite-plugin-solid": "^2.11.10",
-    "vite-tsconfig-paths": "^6.1.1",
-    "vite": "^7.3.1"
+    "vite": "^8.0.8"
   },
   "dependencies": {
     "@kobalte/core": "^0.13.11",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/cli": "^2.10.1",
-    "@tauri-apps/plugin-dialog": "~2.6.0",
-    "@tauri-apps/plugin-fs": "^2.4.5",
+    "@tauri-apps/plugin-dialog": "^2.7.0",
+    "@tauri-apps/plugin-fs": "^2.5.0",
+    "@tauri-apps/plugin-opener": "^2.5.3",
     "@tauri-apps/plugin-window-state": "^2.4.1",
     "baseline-browser-mapping": "^2.10.0",
     "caniuse-lite": "^1.0.30001777",
@@ -42,7 +42,7 @@
     "clsx": "^2.1.1",
     "solid-js": "^1.9.11",
     "solid-toast": "^0.5.0",
-    "tailwind-merge": "^2.6.1",
+    "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
     "unocss-preset-scrollbar-hide": "^1.0.1"
   }

@@ -24,10 +24,15 @@ use crate::{
     utils,
 };
 
-const IO_TIMEOUT: Duration = Duration::from_secs(60);
-const NON_IO_TIMEOUT: Duration = Duration::from_secs(15);
 const MAX_RETRY_DELAY: Duration = Duration::from_secs(5);
 const RETRY_TIMES: usize = 3;
+
+/// Tauri event key emitted when a sync operation fails.
+const EVENT_SYNC_FAILED: &str = "sync://failed";
+
+/// Default timeouts used as fallback.
+pub const DEFAULT_IO_TIMEOUT: Duration = Duration::from_secs(60);
+pub const DEFAULT_NON_IO_TIMEOUT: Duration = Duration::from_secs(15);
 
 #[async_trait::async_trait]
 pub trait MyOperation {
@@ -216,14 +221,28 @@ pub trait MyOperation {
 pub trait BuildOperator {
     type CTX;
     fn get_operator(&self) -> Option<Box<dyn MyOperation + Send + Sync>>;
-    /// Must ensure that `get_operator` is `Some` if `build_operator` is called
-    fn build_operator(&self, ctx: &Self::CTX) -> Result<()>;
+    /// Must ensure that `get_operator` is `Some` if `build_operator` is called.
+    ///
+    /// `io_timeout` and `non_io_timeout` are the configured timeouts for remote
+    /// sync operations. Implementations that don't need timeouts (e.g. local
+    /// filesystem) may safely ignore them.
+    fn build_operator(
+        &self,
+        ctx: &Self::CTX,
+        io_timeout: Duration,
+        non_io_timeout: Duration,
+    ) -> Result<()>;
     fn remove_operator(&self);
-    fn get_operator_or_init(&self, ctx: &Self::CTX) -> Result<Box<dyn MyOperation + Send + Sync>> {
+    fn get_operator_or_init(
+        &self,
+        ctx: &Self::CTX,
+        io_timeout: Duration,
+        non_io_timeout: Duration,
+    ) -> Result<Box<dyn MyOperation + Send + Sync>> {
         if let Some(op) = self.get_operator() {
             Ok(op)
         } else {
-            self.build_operator(ctx)?;
+            self.build_operator(ctx, io_timeout, non_io_timeout)?;
             Ok(self.get_operator().unwrap())
         }
     }
@@ -237,7 +256,12 @@ impl BuildOperator for LocalConfig {
             .as_ref()
             .map(|o| Box::new(o.clone()) as Box<dyn MyOperation + Send + Sync>)
     }
-    fn build_operator(&self, ctx: &VarMap) -> Result<()> {
+    fn build_operator(
+        &self,
+        ctx: &VarMap,
+        _io_timeout: Duration,
+        _non_io_timeout: Duration,
+    ) -> Result<()> {
         let resolved = ctx.resolve_var(&self.path)?;
         let path = PathBuf::from(resolved);
         std::fs::create_dir_all(&path)?;
@@ -262,11 +286,16 @@ impl BuildOperator for WebDavConfig {
             .as_ref()
             .map(|o| Box::new(o.clone()) as Box<dyn MyOperation + Send + Sync>)
     }
-    fn build_operator(&self, ctx: &Self::CTX) -> Result<()> {
+    fn build_operator(
+        &self,
+        ctx: &Self::CTX,
+        io_timeout: Duration,
+        non_io_timeout: Duration,
+    ) -> Result<()> {
         let ctx = ctx.clone();
         let notify = move |err: &::opendal::Error, _dur: Duration| {
             log::warn!("webdav sync failed: {err}");
-            ctx.emit("sync://failed", err.to_string()).unwrap();
+            ctx.emit(EVENT_SYNC_FAILED, err.to_string()).unwrap();
         };
 
         let operator = Operator::new(
@@ -278,8 +307,8 @@ impl BuildOperator for WebDavConfig {
         )?
         .layer(
             TimeoutLayer::new()
-                .with_io_timeout(IO_TIMEOUT)
-                .with_timeout(NON_IO_TIMEOUT),
+                .with_io_timeout(io_timeout)
+                .with_timeout(non_io_timeout),
         )
         .layer(
             RetryLayer::new()
@@ -307,11 +336,16 @@ impl BuildOperator for S3Config {
             .as_ref()
             .map(|o| Box::new(o.clone()) as Box<dyn MyOperation + Send + Sync>)
     }
-    fn build_operator(&self, ctx: &Self::CTX) -> Result<()> {
+    fn build_operator(
+        &self,
+        ctx: &Self::CTX,
+        io_timeout: Duration,
+        non_io_timeout: Duration,
+    ) -> Result<()> {
         let ctx = ctx.clone();
         let notify = move |err: &::opendal::Error, _dur: Duration| {
             log::warn!("s3 sync failed: {err}");
-            ctx.emit("sync://failed", err.to_string()).unwrap();
+            ctx.emit(EVENT_SYNC_FAILED, err.to_string()).unwrap();
         };
 
         let operator = Operator::new(
@@ -322,8 +356,8 @@ impl BuildOperator for S3Config {
         )?
         .layer(
             TimeoutLayer::new()
-                .with_io_timeout(IO_TIMEOUT)
-                .with_timeout(NON_IO_TIMEOUT),
+                .with_io_timeout(io_timeout)
+                .with_timeout(non_io_timeout),
         )
         .layer(
             RetryLayer::new()
@@ -371,7 +405,11 @@ mod tests {
             path: remote_path.to_string_lossy().to_string(),
             ..Default::default()
         };
-        let op = local_conf.get_operator_or_init(&Default::default())?;
+        let op = local_conf.get_operator_or_init(
+            &Default::default(),
+            DEFAULT_IO_TIMEOUT,
+            DEFAULT_NON_IO_TIMEOUT,
+        )?;
 
         // initial state
         let ls = op.list_archive(game_id).await.unwrap();
@@ -438,7 +476,11 @@ mod tests {
         };
         test_big_file(
             &*local_config
-                .get_operator_or_init(&Default::default())
+                .get_operator_or_init(
+                    &Default::default(),
+                    DEFAULT_IO_TIMEOUT,
+                    DEFAULT_NON_IO_TIMEOUT,
+                )
                 .unwrap(),
         )
         .await
