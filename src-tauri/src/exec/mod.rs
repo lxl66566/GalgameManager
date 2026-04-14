@@ -1,7 +1,7 @@
 use std::{
     path::Path,
     process::{Child, Command},
-    sync::LazyLock as Lazy,
+    sync::{Arc, LazyLock as Lazy},
 };
 
 use dashmap::DashMap;
@@ -95,11 +95,19 @@ impl StartCtx {
 }
 
 pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()> {
-    let (plugins, metas) = {
+    // ── Phase 1: single CONFIG lock, extract everything needed ──
+    let (plugins, metas, exe_path) = {
         let lock = CONFIG.lock();
         let game = lock.get_game_by_id(game_id)?;
-        (game.plugins.clone(), lock.plugin_metadatas.clone())
+        let exe = match &game.excutable_path {
+            Some(p) => Some(lock.resolve_var(p)?),
+            None => None,
+        };
+        (game.plugins.clone(), lock.plugin_metadatas.clone(), exe)
     };
+
+    let plugins = Arc::new(plugins);
+    let metas = Arc::new(metas);
 
     // Run before_game_start hooks (only for enabled plugins)
     for instance in plugins.iter() {
@@ -128,8 +136,9 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
         }
     }
 
-    let plugins_after_start = plugins.clone();
-    let plugins_after_exit = plugins.clone();
+    // Share data via Arc to avoid cloning the entire plugin list & metas.
+    let plugins_start = plugins.clone();
+    let plugins_exit = plugins.clone();
     let metas_start = metas.clone();
     let metas_exit = metas.clone();
     let app_start = app.clone();
@@ -143,7 +152,7 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
             .await
             .map_err(|_| Error::InvalidChannel("game_start_rx"))?;
         // Run after_game_start hooks
-        for instance in plugins_after_start.iter() {
+        for instance in plugins_start.iter() {
             if !metas_start.is_enabled(instance) {
                 continue;
             }
@@ -161,7 +170,7 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
             .await
             .map_err(|_| Error::InvalidChannel("game_exit_rx"))?;
         // Run after_game_exit hooks
-        for instance in plugins_after_exit.iter() {
+        for instance in plugins_exit.iter() {
             if !metas_exit.is_enabled(instance) {
                 continue;
             }
@@ -174,7 +183,14 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
         Ok::<(), Error>(())
     });
 
-    let res = launch_game(game_id, app.clone(), game_start_tx, launch_override).await?;
+    let res = launch_game(
+        game_id,
+        app.clone(),
+        game_start_tx,
+        launch_override,
+        exe_path,
+    )
+    .await?;
     let handle =
         tauri::async_runtime::spawn(
             async move { game_loop(res, game_id, app, game_exit_tx).await },

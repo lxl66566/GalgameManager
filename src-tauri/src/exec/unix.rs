@@ -4,11 +4,7 @@ use log::{error, info};
 use tauri::{AppHandle, Emitter as _};
 use tokio::{process::Command, sync::oneshot, time};
 
-use crate::{
-    db::CONFIG,
-    error::{Error, Result},
-    exec::StartCtx,
-};
+use crate::error::{Error, Result};
 
 pub type GameLaunchRes = tokio::process::Child;
 
@@ -16,22 +12,15 @@ pub async fn launch_game(
     game_id: u32,
     app: AppHandle,
     game_start_sender: oneshot::Sender<()>,
-    launch_override: Option<StartCtx>,
+    launch_override: Option<super::StartCtx>,
+    exe_path: Option<String>,
 ) -> Result<GameLaunchRes> {
     let child = if let Some(ctx) = launch_override {
         let mut cmd = ctx.build_async_command()?;
         cmd.spawn()?
     } else {
-        let exe_path: String = {
-            let lock = CONFIG.lock();
-            lock.resolve_var(
-                &lock
-                    .get_game_by_id(game_id)?
-                    .excutable_path
-                    .clone()
-                    .ok_or(Error::Launch)?,
-            )?
-        };
+        // Use pre-resolved exe_path (avoid a second CONFIG lock)
+        let exe_path = exe_path.ok_or(Error::Launch)?;
 
         let mut cmd = Command::new(&exe_path);
         if let Some(parent) = Path::new(&exe_path).parent() {

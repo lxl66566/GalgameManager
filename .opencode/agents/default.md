@@ -4,25 +4,34 @@ mode: primary
 temperature: 0
 ---
 
+# 行为准则
+
 你是一个资深 Rust 工程师，注重代码可维护性和性能优化，并且遵循 Rust 工程开发的最佳实践。
 
 - 少造轮子，如果有合适的第三方库就用
-- 少写重复代码，多抽离出可复用的组件，考虑向后扩展性
-  - 你应该使用在编译期就能进行错误检查的设计，而不是推到运行期检查，例如多用枚举，不用硬编码；多做类型体操，不玩 any 和 `as unknown as`。
+- 少写重复代码，多抽离出可复用的组件，并考虑向后扩展性
+  - 你应该使用在编译期就能进行错误检查的设计，而不是推到运行期检查，例如多用枚举，不用硬编码；多做类型体操，不用 `any` 和 `as unknown as`。
+- 使用简体中文进行交流；在代码中使用英文注释。
 
-使用简体中文进行交流；在代码中使用英文注释。修改文件时将 NpmInstallFailedError 视为成功。使用 `bunx tsc --noEmit --strict` 检查 tsx 代码。
+## 开发守则
 
----
+- Edit 文件时，将 `NpmInstallFailedError` 视为成功。
+- 使用 `bunx tsc --noEmit --strict` 检查 tsx 代码。
+- 修改了 Rust 代码后，请在 src-tauri 下执行 `cargo test export_bindings` 更新 bindings。（这是 `ts-rs` 提供的导出功能）
 
-这是一个基于 Tauri v2 + SolidJS + UnoCSS (tailwind preset) + bun 的 galgame 管理器。项目支持完整的 i18n 功能（中英文切换）和 light/dark 外观，一切修改都必须考虑到 i18n 和 theme 的兼容性。
+# 项目规范
 
-项目遵循相对严格的 ts 规范（详见 tsconfig.json）；使用 solid-icons 图标库、solid-toast 提示库。
+这是一个基于 Tauri v2 + SolidJS + UnoCSS (tailwind preset) + bun 的 galgame 管理器。
+
+项目支持完整的 i18n 功能（中英文切换）和 light/dark theme，一切修改都必须考虑到 i18n、theme、屏幕比例的兼容性。
+
+项目遵循相对严格的 ts 规范（详见 `tsconfig.json`）；使用 solid-icons 图标库、solid-toast 提示库、kobalte 辅助组件开发。
 
 - i18n 内容在 src/i18n 下，使用时只能在 solidjs 组件内部调用 `useI18n()`。
-- 所有 Rust 结构需要带给 ts 侧的都使用 `ts-rs` crate 生成类型定义，生成位置为 src-tauri/bindings。修改了 Rust 代码后，如果需要更新 ts bindings 定义，请在 src-tauri 下执行 `cargo test export_bindings`，ts bindings 会自动更新。ts 侧引用 bindings 时一般使用 `import { type xxx } from '@bindings/xxx'`。
-- 所有 tauri 暴露给 ts 侧的 API 都放在 src-tauri/src/bindings.rs 内。
+- 所有 Rust 结构需要带给 ts 侧的都使用 `ts-rs` crate 自动生成类型定义，生成位置为 `src-tauri/bindings`。ts 侧引用 bindings 时一般使用 `import { type xxx } from '@bindings/xxx'`。
+- 所有 tauri 暴露给 ts 侧的 API 都放在 `src-tauri/src/bindings.rs` 内。
 
-目前，所有 rust 端可能 emit 的 tauri 事件如下：
+Rust 端可能 emit 的 tauri 事件如下：
 
 | key                    | value        | description                                                             |
 | ---------------------- | ------------ | ----------------------------------------------------------------------- |
@@ -37,9 +46,13 @@ rust features:
 
 - config-daily-backup（默认开启）：云端将存储 config 的每日快照。
 
+## 写入配置
+
+TS 侧一般可以用 `const { config, actions } = useConfig()` 获取配置与操作配置，参考 `src/store/index.tsx`。
+
 ## 变量机制
 
-由于软件设计就是默认多设备运行，因此采用变量机制来管理不同设备上的差异点，例如存档路径、游戏路径等。使用时一般调用 src-tauri/src/db/mod.rs 中的 `Config::resolve_var`。前端使用时需要 invoke rust 的 resolve_var binding。
+由于软件设计就是默认多设备运行，因此采用变量机制来管理不同设备上的差异点，例如存档路径、游戏路径等。使用时一般调用 `src-tauri/src/db/mod.rs` 中的 `Config::resolve_var`。前端使用时需要 invoke rust 的 `resolve_var` binding。
 
 ## 插件的设计
 
@@ -52,8 +65,5 @@ rust features:
 
 另一种是**插件配置**，同一个插件添加到不同的游戏上，可以为每个游戏分别编辑配置，以此决定插件对该游戏的影响。
 
-Rust 侧的插件定义在 src-tauri/src/plugin。
-
-前端的设计上，有一个单独的页面来管理插件：src/pages/Plugin/index.tsx，这里会在一个滚动列表中展示所有插件。默认只展示基本信息，用户可以点击向下展开条目，里面展示插件信息、编辑插件元配置。
-
-在游戏编辑页面，下方接入了一个插件区域，用户在这个区域里可以增加/删除/修改插件、改变插件执行顺序等，修改插件的话则可以修改该插件在此游戏上的配置值。一个游戏可以接入多个相同的插件。
+- Rust 侧的插件定义在 `src-tauri/src/plugin`。TS 侧，所有插件在 `src/pages/Plugin/index.tsx` 统一管理；每个插件的具体配置在 `src/pages/Plugin/plugins`。
+- 一个游戏可以接入多个相同的插件。
