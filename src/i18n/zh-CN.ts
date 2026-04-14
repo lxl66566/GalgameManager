@@ -117,6 +117,8 @@ export const dict: DeepPartial<RawDictionary> = {
     arch: '架构',
     archAuto: '自动检测',
     currentDir: '工作目录',
+    currentDirDesc:
+      '程序运行时的工作目录。命令中若以相对路径执行程序，则会从该目录开始查找程序',
     currentDirPlaceholder: '留空则使用游戏所在目录',
     needBraces: '命令必须包含 {} 占位符',
     execute: {
@@ -129,12 +131,14 @@ export const dict: DeepPartial<RawDictionary> = {
       addEnv: '添加环境变量',
       beforeGameStart: '游戏启动前',
       afterGameStart: '游戏启动后',
-      gameExit: '游戏退出时',
+      gameExit: '游戏退出后',
       passExePath: '插入游戏路径',
-      passExePathDesc: '插入游戏路径到命令中的 {}',
+      passExePathDesc: '将游戏路径作为参数，插入到命令中的 {} 占位符里',
       exitSignal: '退出信号',
-      exitSignalDesc: '当游戏退出时，发送信号给该插件启动的进程',
-      exitSignalNone: '无'
+      exitSignalDesc: '游戏退出后，发送信号给该插件启动的进程',
+      exitSignalDescWin: '游戏退出后是否终止该外部进程',
+      exitSignalNone: '无',
+      exitSignalTerminate: '终止进程'
     },
     autoUpload: {
       name: '自动上传存档',
@@ -158,7 +162,12 @@ export const dict: DeepPartial<RawDictionary> = {
       name: '翻译工具',
       description: '在游戏运行时启动翻译工具',
       cmd: '命令',
-      cmdPlaceholder: '例如 your_translator.exe'
+      cmdPlaceholder: '例如 your_translator.exe',
+      onGameExit: '游戏退出后',
+      onGameExitDesc: '游戏退出后是否关闭翻译工具？',
+      exitNone: '不关闭',
+      exitGraceful: '关闭',
+      exitForce: '强制关闭'
     },
     voiceSpeedup: {
       name: 'SPEED UP!',
@@ -285,6 +294,7 @@ export const dict: DeepPartial<RawDictionary> = {
     uploadSuccess: '上传成功: ',
     duplicateGameId: '疑似配置损坏: 检测到重复的游戏 ID! 请手动修复配置。',
     retryError: '发生错误，正在重试',
-    openDirFailed: '打开游戏目录失败'
+    openDirFailed: '打开游戏目录失败',
+    exePathNotAbsolute: '游戏启动路径解析后不是绝对路径，可能导致启动失败'
   }
 }

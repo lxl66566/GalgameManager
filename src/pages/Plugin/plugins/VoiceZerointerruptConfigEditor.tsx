@@ -17,7 +17,7 @@ function VoiceZerointerruptMetaEditor(
         <FormSwitch
           checked={props.config.autoAdd}
           onChange={(checked: boolean) =>
-            props.onChange({ ...props.config, autoAdd: checked })
+            props.onCommit({ ...props.config, autoAdd: checked })
           }
         />
       </FormField>
@@ -40,7 +40,7 @@ function VoiceZerointerruptGameConfigEditor(
           ]}
           value={props.config.arch}
           onChange={(e: Event) =>
-            props.onChange({
+            props.onCommit({
               ...props.config,
               arch: (e.target as HTMLSelectElement).value as 'auto' | 'x86' | 'x64'
             })

@@ -19,7 +19,7 @@ pub const PLUGIN_ID: &str = "translator";
 // ── Config types ─────────────────────────────────────────────────────────────
 
 /// Per-game config for the Translator plugin.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", default)]
 pub struct TranslatorGameConfig {
     /// The command to launch the translator tool.
@@ -27,6 +27,19 @@ pub struct TranslatorGameConfig {
     /// Working directory. If empty, defaults to the directory of the program
     /// (first argument of cmd).
     pub current_dir: String,
+    /// Signal to send to the translator process when the game exits.
+    /// Defaults to SIGTERM (graceful shutdown).
+    pub exit_signal: ExitSignal,
+}
+
+impl Default for TranslatorGameConfig {
+    fn default() -> Self {
+        Self {
+            cmd: String::new(),
+            current_dir: String::new(),
+            exit_signal: ExitSignal::Sigterm,
+        }
+    }
 }
 
 /// Global metadata for the Translator plugin (stored in `PluginMetadatas`).
@@ -53,15 +66,13 @@ impl Default for TranslatorPluginMeta {
 impl TranslatorGameConfig {
     /// Convert to an `ExecuteGameConfig` for delegation.
     fn to_execute_config(&self) -> ExecuteGameConfig {
-        // Pass current_dir through as-is; resolve_cmd_config will default to
-        // the game executable's parent directory when it is empty.
         ExecuteGameConfig {
             on: ExecutePhase::BeforeGameStart,
             cmd: self.cmd.clone(),
             pass_exe_path: false,
             current_dir: self.current_dir.clone(),
             env: std::collections::HashMap::new(),
-            exit_signal: ExitSignal::None,
+            exit_signal: self.exit_signal,
         }
     }
 }

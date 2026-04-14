@@ -137,7 +137,8 @@ export default function PluginPage() {
                               <Dynamic
                                 component={def.MetaEditor!}
                                 config={meta()}
-                                onChange={(m: Record<string, unknown>) => {
+                                onCommit={(m: Record<string, unknown>) => {
+                                  // Persists to disk: actions.mutate → save()
                                   actions.mutate(state => {
                                     state.pluginMetadatas = patchPluginMeta(
                                       def.metaKey as PluginId,
@@ -169,7 +170,8 @@ export default function PluginPage() {
                                     'configDefaults'
                                   ] as any
                                 }
-                                onChange={(newDefaults: Record<string, unknown>) => {
+                                onCommit={(newDefaults: Record<string, unknown>) => {
+                                  // Persists to disk: actions.mutate → save()
                                   actions.mutate(state => {
                                     state.pluginMetadatas = patchPluginMeta(
                                       def.metaKey as PluginId,

@@ -37,7 +37,16 @@ export interface PluginInfo {
 
 export interface ConfigEditorProps<T> {
   config: T
-  onChange: (config: T) => void
+  /**
+   * Commit callback — called when the user finishes editing a field.
+   *
+   * For text fields this fires on blur; for discrete controls (select, switch)
+   * it fires immediately on change.
+   *
+   * ⚠️ In the Plugin page context this writes to disk; in the Game edit modal
+   * it only updates a local in-memory store.
+   */
+  onCommit: (config: T) => void
 }
 
 // ── Type-level plugin mapping ────────────────────────────────────────────────

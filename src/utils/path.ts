@@ -57,3 +57,14 @@ export function getParentPath(pathStr: string): string | undefined {
 export function fuckBackslash(path: string): string {
   return path.replace(/\\/g, '/')
 }
+
+/// Check whether a filesystem path is absolute (Windows or Unix).
+export function isAbsolutePath(p: string): boolean {
+  // Unix: starts with /
+  if (p.startsWith('/')) return true
+  // Windows: drive letter (C:\, D:\, …)
+  if (/^[A-Za-z]:/.test(p)) return true
+  // UNC: \\server\share
+  if (p.startsWith('\\\\')) return true
+  return false
+}

@@ -18,7 +18,7 @@ function LocaleEmulatorMetaEditor(props: ConfigEditorProps<LocaleEmulatorPluginM
         <FormSwitch
           checked={props.config.autoAdd}
           onChange={(checked: boolean) =>
-            props.onChange({ ...props.config, autoAdd: checked })
+            props.onCommit({ ...props.config, autoAdd: checked })
           }
         />
       </FormField>
@@ -45,9 +45,12 @@ function LocaleEmulatorGameConfigEditor(
           type="text"
           value={props.config.cmd}
           placeholder={t('plugin.localeEmulator.cmdPlaceholder')}
-          onInput={(e: InputEvent) =>
-            props.onChange({ ...props.config, cmd: (e.target as HTMLInputElement).value })
-          }
+          onBlur={(e: FocusEvent) => {
+            const val = (e.target as HTMLInputElement).value
+            if (val !== props.config.cmd) {
+              props.onCommit({ ...props.config, cmd: val })
+            }
+          }}
         />
       </FormField>
     </div>
@@ -59,7 +62,7 @@ export const LOCALE_EMULATOR_PLUGIN: PluginDefinition<'localeEmulator'> = {
     id: 'localeEmulator',
     nameKey: 'plugin.localeEmulator.name',
     descriptionKey: 'plugin.localeEmulator.description',
-    version: '1.0.0',
+    version: '1.0.1',
     author: 'BUILTIN_WRAPPER',
     links: [
       {

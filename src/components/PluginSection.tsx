@@ -22,6 +22,12 @@ import { Dynamic, For, Show } from 'solid-js/web'
 interface PluginSectionProps {
   plugins: PluginInstance[]
   onChange: (plugins: PluginInstance[]) => void
+  /**
+   * Fine-grained store update that avoids replacing the array (keeps focus).
+   * Receives the fully-typed updated instance so the consumer can do a
+   * simple `setStore('plugins', index, updated)` without any casting.
+   */
+  onConfigChange?: (index: number, updated: PluginInstance) => void
 }
 
 /** Check whether a plugin type is enabled via its meta config. */
@@ -95,11 +101,29 @@ export default function PluginSection(props: PluginSectionProps) {
     else if (expandedIndex() === newIndex) setExpandedIndex(index)
   }
 
+  /**
+   * Reconstruct a PluginInstance with updated config.
+   *
+   * This is the only place that bridges the untyped `Record<string, unknown>`
+   * from Dynamic editors back to the typed PluginInstance union. The spread
+   * preserves the `pluginId` discriminant, so the assertion is safe.
+   */
+  const withUpdatedConfig = (
+    instance: PluginInstance,
+    newConfig: Record<string, unknown>
+  ): PluginInstance => ({ ...instance, config: newConfig }) as PluginInstance
+
   const handleUpdateConfig = (index: number, newConfig: Record<string, unknown>) => {
-    const newPlugins = [...props.plugins]
-    const existing = newPlugins[index]
-    newPlugins[index] = { ...existing, config: newConfig } as PluginInstance
-    props.onChange(newPlugins)
+    // Prefer fine-grained store update to avoid replacing the entire array,
+    // which would cause <For> to re-create DOM elements and lose input focus.
+    const updated = withUpdatedConfig(props.plugins[index], newConfig)
+    if (props.onConfigChange) {
+      props.onConfigChange(index, updated)
+    } else {
+      const newPlugins = [...props.plugins]
+      newPlugins[index] = updated
+      props.onChange(newPlugins)
+    }
   }
 
   const getPluginName = (instance: PluginInstance): string => {
@@ -239,7 +263,7 @@ export default function PluginSection(props: PluginSectionProps) {
                                 }
                               ).config as any
                             }
-                            onChange={(values: Record<string, unknown>) =>
+                            onCommit={(values: Record<string, unknown>) =>
                               handleUpdateConfig(index(), values)
                             }
                           />

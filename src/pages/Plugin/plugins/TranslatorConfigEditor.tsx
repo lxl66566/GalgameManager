@@ -2,11 +2,17 @@
  * Translator plugin — self-contained definition file.
  *
  * A simplified wrapper around the Execute plugin for running translation
- * tools alongside the game. Only exposes cmd and currentDir fields.
+ * tools alongside the game. Only exposes cmd, currentDir, and exitSignal fields.
  */
 import type { TranslatorGameConfig } from '@bindings/TranslatorGameConfig'
 import type { TranslatorPluginMeta } from '@bindings/TranslatorPluginMeta'
-import { FormField, FormInput, FormPathInput, FormSwitch } from '@components/ui/form'
+import {
+  FormField,
+  FormInput,
+  FormPathInput,
+  FormSelect,
+  FormSwitch
+} from '@components/ui/form'
 import { useI18n } from '~/i18n'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 
@@ -18,7 +24,7 @@ function TranslatorMetaEditor(props: ConfigEditorProps<TranslatorPluginMeta>) {
         <FormSwitch
           checked={props.config.autoAdd}
           onChange={(checked: boolean) =>
-            props.onChange({ ...props.config, autoAdd: checked })
+            props.onCommit({ ...props.config, autoAdd: checked })
           }
         />
       </FormField>
@@ -37,9 +43,12 @@ function TranslatorGameConfigEditor(props: ConfigEditorProps<TranslatorGameConfi
           type="text"
           value={props.config.cmd}
           placeholder={t('plugin.translator.cmdPlaceholder')}
-          onInput={(e: InputEvent) =>
-            props.onChange({ ...props.config, cmd: (e.target as HTMLInputElement).value })
-          }
+          onBlur={(e: FocusEvent) => {
+            const val = (e.target as HTMLInputElement).value
+            if (val !== props.config.cmd) {
+              props.onCommit({ ...props.config, cmd: val })
+            }
+          }}
         />
       </FormField>
 
@@ -47,9 +56,30 @@ function TranslatorGameConfigEditor(props: ConfigEditorProps<TranslatorGameConfi
         <FormPathInput
           class="w-full"
           value={props.config.currentDir}
-          onChange={v => props.onChange({ ...props.config, currentDir: v })}
+          onCommit={v => props.onCommit({ ...props.config, currentDir: v })}
           placeholder={t('plugin.currentDirPlaceholder')}
           isDir
+        />
+      </FormField>
+
+      <FormField
+        label={t('plugin.translator.onGameExit')}
+        class="w-40"
+        description={t('plugin.translator.onGameExitDesc')}
+      >
+        <FormSelect
+          class="w-full"
+          options={[
+            { label: t('plugin.translator.exitNone'), value: 'none' },
+            { label: t('plugin.translator.exitGraceful'), value: 'sigterm' }
+          ]}
+          value={props.config.exitSignal}
+          onChange={(e: Event) =>
+            props.onCommit({
+              ...props.config,
+              exitSignal: (e.target as HTMLSelectElement).value as 'none' | 'sigterm'
+            })
+          }
         />
       </FormField>
     </div>
@@ -61,7 +91,7 @@ export const TRANSLATOR_PLUGIN: PluginDefinition<'translator'> = {
     id: 'translator',
     nameKey: 'plugin.translator.name',
     descriptionKey: 'plugin.translator.description',
-    version: '1.0.0',
+    version: '1.0.1',
     author: 'BUILTIN_WRAPPER',
     links: [
       {
@@ -73,7 +103,8 @@ export const TRANSLATOR_PLUGIN: PluginDefinition<'translator'> = {
   metaKey: 'translator',
   configDefaults: {
     cmd: '',
-    currentDir: ''
+    currentDir: '',
+    exitSignal: 'sigterm'
   },
   MetaEditor: TranslatorMetaEditor,
   GameEditor: TranslatorGameConfigEditor

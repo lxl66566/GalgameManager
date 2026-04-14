@@ -10,7 +10,7 @@ temperature: 0
 
 - 少造轮子，如果有合适的第三方库就用
 - 少写重复代码，多抽离出可复用的组件，并考虑向后扩展性
-  - 你应该使用在编译期就能进行错误检查的设计，而不是推到运行期检查，例如多用枚举，不用硬编码；多做类型体操，不用 `any` 和 `as unknown as`。
+  - 你应该使用在编译期就能进行错误检查的设计，而不是推到运行期检查，例如多用枚举，不用硬编码；多做类型体操，不用 `any` 和 `as unknown`。
 - 使用简体中文进行交流；在代码中使用英文注释。
 
 ## 开发守则
@@ -30,6 +30,7 @@ temperature: 0
 - i18n 内容在 src/i18n 下，使用时只能在 solidjs 组件内部调用 `useI18n()`。
 - 所有 Rust 结构需要带给 ts 侧的都使用 `ts-rs` crate 自动生成类型定义，生成位置为 `src-tauri/bindings`。ts 侧引用 bindings 时一般使用 `import { type xxx } from '@bindings/xxx'`。
 - 所有 tauri 暴露给 ts 侧的 API 都放在 `src-tauri/src/bindings.rs` 内。
+- TS 侧需要注意，对于配置写入磁盘的操作，不允许在频繁的回调函数里使用，例如输入框的 onChange。
 
 Rust 端可能 emit 的 tauri 事件如下：
 

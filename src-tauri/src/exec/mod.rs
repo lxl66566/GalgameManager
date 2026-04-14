@@ -1,10 +1,11 @@
 use std::{
-    path::Path,
+    path::{Path, PathBuf},
     process::{Child, Command},
     sync::{Arc, LazyLock as Lazy},
 };
 
 use dashmap::DashMap;
+use log::{debug, warn};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, async_runtime::JoinHandle};
 use tokio::sync::oneshot;
@@ -40,24 +41,64 @@ impl StartCtx {
         let mut parts = shlex::split(&self.cmd)
             .ok_or_else(|| Error::InvalidCommand(self.cmd.clone()))?
             .into_iter();
-        let mut cmd = Command::new(
-            parts
-                .next()
-                .ok_or_else(|| Error::InvalidCommand(self.cmd.clone()))?,
-        );
-        for part in parts {
-            cmd.arg(part);
+
+        let program = parts
+            .next()
+            .ok_or_else(|| Error::InvalidCommand(self.cmd.clone()))?;
+
+        let program_path = PathBuf::from(&program);
+
+        let (resolved_program, resolved_current_dir) = if program_path.is_relative() {
+            match &self.current_dir {
+                Some(cd) => {
+                    // 相对路径 + 有 current_dir：拼接出系统能找到的绝对路径
+                    let joined = Path::new(cd).join(&program_path);
+                    debug!(
+                        "Relative program '{}' specified with current_dir '{}', joined to '{}'",
+                        program,
+                        cd,
+                        joined.display()
+                    );
+                    (joined, Some(cd.clone()))
+                }
+                None => {
+                    warn!(
+                        "Relative program '{}' specified without a working \
+                         directory; the OS will search in PATH and the \
+                         process CWD",
+                        program
+                    );
+                    (program_path, None)
+                }
+            }
+        } else {
+            // 绝对路径：如果没有 current_dir，则从它的父目录推断
+            let cd = self.current_dir.clone().or_else(|| {
+                program_path
+                    .parent()
+                    .filter(|p| !p.as_os_str().is_empty())
+                    .map(|p| p.to_string_lossy().to_string())
+            });
+            (program_path, cd)
+        };
+
+        // 2. 组装并配置标准库的 Command
+        let mut cmd = Command::new(resolved_program);
+
+        for arg in parts {
+            cmd.arg(arg);
         }
-        if let Some(current_dir) = &self.current_dir {
-            cmd.current_dir(current_dir);
-        } else if let Some(parent_dir) = Path::new(&self.cmd).parent() {
-            cmd.current_dir(parent_dir);
+
+        if let Some(cd) = resolved_current_dir {
+            cmd.current_dir(cd);
         }
+
         if let Some(env) = &self.env {
             for (k, v) in env {
                 cmd.env(k, v);
             }
         }
+
         Ok(cmd)
     }
 
@@ -67,30 +108,9 @@ impl StartCtx {
     }
 
     /// Build a [`tokio::process::Command`] from this context.
-    ///
-    /// Used by the launch override path to spawn the game process
-    /// asynchronously.
     pub fn build_async_command(&self) -> Result<tokio::process::Command> {
-        let mut parts = shlex::split(&self.cmd)
-            .ok_or_else(|| Error::InvalidCommand(self.cmd.clone()))?
-            .into_iter();
-        let mut cmd = tokio::process::Command::new(
-            parts
-                .next()
-                .ok_or_else(|| Error::InvalidCommand(self.cmd.clone()))?,
-        );
-        for part in parts {
-            cmd.arg(part);
-        }
-        if let Some(current_dir) = &self.current_dir {
-            cmd.current_dir(current_dir);
-        }
-        if let Some(env) = &self.env {
-            for (k, v) in env {
-                cmd.env(k, v);
-            }
-        }
-        Ok(cmd)
+        let std_cmd = self.build_command()?;
+        Ok(tokio::process::Command::from(std_cmd))
     }
 }
 
@@ -121,7 +141,6 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
         }
     }
 
-    // Check for launch overrides (e.g. game_wrapper, locale_emulator)
     let mut launch_override = None;
     for instance in plugins.iter() {
         if !metas.is_enabled(instance) {
@@ -135,6 +154,31 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
             break; // only one override is allowed
         }
     }
+    // Resolve the final StartCtx: plugin override takes priority,
+    // otherwise fall back to the default exe-based context.
+    let start_ctx = if let Some(ctx) = launch_override {
+        ctx
+    } else {
+        // Build a default StartCtx from the game's exe_path.
+        let exe_path = exe_path.ok_or(Error::Launch)?;
+        let exe = Path::new(&exe_path);
+        let current_dir = exe
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .map(|p| p.to_string_lossy().to_string());
+        if exe.is_relative() && current_dir.is_none() {
+            warn!(
+                "Game executable '{}' is relative without a resolvable \
+                     parent directory; the OS will search in PATH and CWD",
+                exe_path
+            );
+        }
+        StartCtx {
+            cmd: exe_path,
+            current_dir,
+            env: None,
+        }
+    };
 
     // Share data via Arc to avoid cloning the entire plugin list & metas.
     let plugins_start = plugins.clone();
@@ -183,14 +227,8 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
         Ok::<(), Error>(())
     });
 
-    let res = launch_game(
-        game_id,
-        app.clone(),
-        game_start_tx,
-        launch_override,
-        exe_path,
-    )
-    .await?;
+    debug!("launch_game with ctx: {:?}", start_ctx);
+    let res = launch_game(game_id, app.clone(), game_start_tx, start_ctx).await?;
     let handle =
         tauri::async_runtime::spawn(
             async move { game_loop(res, game_id, app, game_exit_tx).await },

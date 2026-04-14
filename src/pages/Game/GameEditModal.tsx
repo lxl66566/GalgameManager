@@ -416,7 +416,9 @@ export default function GameEditModal(props: GameEditModalProps) {
             {/* Plugin Section */}
             <PluginSection
               plugins={localGame.plugins ?? []}
+              // Memory-only: write to local store, persisted only on confirm
               onChange={plugins => setLocalGame('plugins', plugins)}
+              onConfigChange={(index, updated) => setLocalGame('plugins', index, updated)}
             />
           </div>
         </div>

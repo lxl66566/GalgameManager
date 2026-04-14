@@ -15,7 +15,7 @@ function VoiceSpeedupMetaEditor(props: ConfigEditorProps<VoiceSpeedupPluginMeta>
         <FormSwitch
           checked={props.config.autoAdd}
           onChange={(checked: boolean) =>
-            props.onChange({ ...props.config, autoAdd: checked })
+            props.onCommit({ ...props.config, autoAdd: checked })
           }
         />
       </FormField>
@@ -42,21 +42,13 @@ function VoiceSpeedupGameConfigEditor(props: ConfigEditorProps<VoiceSpeedupGameC
           type="text"
           inputmode="decimal"
           value={String(props.config.speed)}
-          onInput={(e: InputEvent) => {
-            const raw = (e.target as HTMLInputElement).value
-            // Allow free typing; only commit valid values
-            const parsed = parseSpeed(raw)
-            if (parsed !== null) {
-              props.onChange({ ...props.config, speed: parsed })
-            }
-          }}
           onBlur={(e: FocusEvent) => {
             // Normalize on blur: reformat to clean decimal
             const el = e.target as HTMLInputElement
             const parsed = parseSpeed(el.value)
             if (parsed !== null) {
               el.value = String(parsed)
-              props.onChange({ ...props.config, speed: parsed })
+              props.onCommit({ ...props.config, speed: parsed })
             } else {
               // Reset to current config value if invalid
               el.value = String(props.config.speed)
@@ -73,7 +65,7 @@ function VoiceSpeedupGameConfigEditor(props: ConfigEditorProps<VoiceSpeedupGameC
           ]}
           value={props.config.provider}
           onChange={(e: Event) =>
-            props.onChange({
+            props.onCommit({
               ...props.config,
               provider: (e.target as HTMLSelectElement).value as 'mmdevapi' | 'dsound'
             })
@@ -90,7 +82,7 @@ function VoiceSpeedupGameConfigEditor(props: ConfigEditorProps<VoiceSpeedupGameC
           ]}
           value={props.config.arch}
           onChange={(e: Event) =>
-            props.onChange({
+            props.onCommit({
               ...props.config,
               arch: (e.target as HTMLSelectElement).value as 'auto' | 'x86' | 'x64'
             })

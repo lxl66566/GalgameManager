@@ -116,7 +116,8 @@ export const FormField: Component<FormFieldProps> = props => (
 
 export interface FormPathInputProps {
   value: string
-  onChange: (value: string) => void
+  /** Commit callback — fires on blur (text) or after file dialog selection. */
+  onCommit: (value: string) => void
   isDir?: boolean
   placeholder?: string
   class?: string
@@ -125,15 +126,18 @@ export interface FormPathInputProps {
 /** Text input + file/folder browse button. */
 export const FormPathInput: Component<FormPathInputProps> = props => {
   const { t } = useI18n()
-  // Omit `value` when empty so the browser can display the placeholder.
   const inputStyle = () => clsx('flex gap-1.5', props.class)
-  const inputValue = () => props.value || undefined
   return (
     <div class={inputStyle()}>
       <FormInput
         type="text"
-        value={inputValue()}
-        onInput={(e: InputEvent) => props.onChange((e.target as HTMLInputElement).value)}
+        value={props.value}
+        onBlur={(e: FocusEvent) => {
+          const newVal = (e.target as HTMLInputElement).value
+          if (newVal !== props.value) {
+            props.onCommit(newVal)
+          }
+        }}
         placeholder={props.placeholder}
         class="flex-1 min-w-0"
       />
@@ -145,7 +149,7 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
               multiple: false
             })
             if (selected && typeof selected === 'string') {
-              props.onChange(fuckBackslash(selected))
+              props.onCommit(fuckBackslash(selected))
             }
           } catch (e) {
             console.error(e)
@@ -163,8 +167,8 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
 export interface FormTableEditorProps {
   /** Current key-value pairs */
   values: Record<string, string>
-  /** Called with the updated map */
-  onChange: (values: Record<string, string>) => void
+  /** Commit callback — fires when a value editing is committed (blur, delete, add). */
+  onCommit: (values: Record<string, string>) => void
   /** When provided, renders a header with label + description + add button */
   label?: string
   /** Secondary text below the label */
@@ -207,7 +211,7 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
       setError('Key already exists')
       return
     }
-    props.onChange({ ...props.values, [key]: val })
+    props.onCommit({ ...props.values, [key]: val })
     setNewKey('')
     setNewValue('')
     setError(null)
@@ -233,7 +237,7 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
     for (const [k, v] of entries) {
       updated[k === oldKey ? trimmedNewKey : k] = v
     }
-    props.onChange(updated)
+    props.onCommit(updated)
   }
 
   // Whether to show the full header (label + description + add button)
@@ -369,19 +373,22 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
                 <input
                   type="text"
                   value={props.values[key] ?? ''}
-                  onInput={e =>
-                    props.onChange({
-                      ...props.values,
-                      [key]: e.currentTarget.value
-                    })
-                  }
+                  onBlur={e => {
+                    const newVal = e.currentTarget.value
+                    if (newVal !== (props.values[key] ?? '')) {
+                      props.onCommit({
+                        ...props.values,
+                        [key]: newVal
+                      })
+                    }
+                  }}
                   class="flex-1 bg-transparent text-gray-800 dark:text-gray-200 text-[11px] px-0.5 py-0 rounded border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:bg-gray-100 dark:focus:bg-gray-900 focus:border-blue-500 outline-none transition-all min-w-0"
                 />
                 <button
                   onClick={() => {
                     const updated = { ...props.values }
                     delete updated[key]
-                    props.onChange(updated)
+                    props.onCommit(updated)
                   }}
                   class="text-gray-400 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity px-0 text-[11px]"
                   tabIndex={-1}

@@ -147,7 +147,8 @@ const DEFAULT_CONFIG: Config = {
       autoAdd: false,
       configDefaults: {
         cmd: '',
-        currentDir: ''
+        currentDir: '',
+        exitSignal: 'sigterm'
       }
     },
     voiceSpeedup: {

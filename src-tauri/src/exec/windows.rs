@@ -1,9 +1,9 @@
-use std::{path::Path, time::Duration};
+use std::time::Duration;
 
 use chrono::TimeDelta;
 use log::{error, info, trace};
 use tauri::{AppHandle, Emitter as _};
-use tokio::{process::Command, sync::oneshot, time};
+use tokio::{sync::oneshot, time};
 use windows::Win32::{
     Foundation::{CloseHandle, HANDLE},
     System::{
@@ -132,24 +132,11 @@ pub type GameLaunchRes = GameJob;
 
 pub async fn launch_game(
     game_id: u32,
-    app: AppHandle, // for time update
+    app: AppHandle,
     game_start_sender: oneshot::Sender<()>,
-    launch_override: Option<super::StartCtx>,
-    exe_path: Option<String>,
+    start_ctx: super::StartCtx,
 ) -> Result<GameLaunchRes> {
-    let child = if let Some(ctx) = launch_override {
-        let mut cmd = ctx.build_async_command()?;
-        cmd.spawn()?
-    } else {
-        // Use pre-resolved exe_path (avoid a second CONFIG lock)
-        let exe_path = exe_path.ok_or(Error::Launch)?;
-        let mut cmd = Command::new(&exe_path);
-        if let Some(parent) = Path::new(&exe_path).parent() {
-            cmd.current_dir(parent);
-        }
-        cmd.spawn()?
-    };
-
+    let child = start_ctx.build_async_command()?.spawn()?;
     let child_pid = child.id().ok_or(Error::Launch)?;
 
     // 2. 创建 Job 并绑定

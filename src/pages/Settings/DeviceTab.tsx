@@ -35,11 +35,13 @@ export const DeviceTab: Component = () => {
     await actions.updateCurrentDevice(next)
   }
 
+  // Persists to disk: modifyDevice → actions.updateCurrentDevice → save()
   const handleNameChange = (name: string) => {
     modifyDevice(d => (d.name = name))
   }
 
-  const handleVariablesChange = (newVars: Record<string, string>) => {
+  // Persists to disk: modifyDevice → actions.updateCurrentDevice → save()
+  const handleVariablesCommit = (newVars: Record<string, string>) => {
     modifyDevice(d => (d.variables = newVars))
     log.info('Variables updated')
   }
@@ -83,7 +85,7 @@ export const DeviceTab: Component = () => {
                 <div class="p-4">
                   <FormTableEditor
                     values={dev().variables || {}}
-                    onChange={handleVariablesChange}
+                    onCommit={handleVariablesCommit}
                     label={t('settings.device.variables')}
                     description={t('settings.device.variablesDesc')}
                     addLabel={t('settings.device.addVariable')}

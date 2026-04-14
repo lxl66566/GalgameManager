@@ -63,6 +63,13 @@ pub enum Error {
     #[error("Internal error: Invalid channel: {0}")]
     InvalidChannel(&'static str),
 
+    #[error("Plugin '{plugin}' command failed: {source}")]
+    PluginCommand {
+        plugin: &'static str,
+        #[source]
+        source: Box<Self>,
+    },
+
     #[cfg(windows)]
     #[error("PE parse error: {0}")]
     PeParse(#[from] goblin::error::Error),
@@ -72,6 +79,10 @@ impl Clone for Error {
     fn clone(&self) -> Self {
         match self {
             Error::Device(e) => Error::Device(e.clone()),
+            Error::PluginCommand { plugin, .. } => Error::PluginCommand {
+                plugin,
+                source: Box::new(Self::Clone),
+            },
             _ => Self::Clone,
         }
     }

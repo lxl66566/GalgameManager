@@ -12,6 +12,8 @@ import {
   FormTableEditor
 } from '@components/ui/form'
 import { useI18n } from '~/i18n'
+import { isWindows } from '~/utils/platform'
+import { createMemo } from 'solid-js'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 
 function ExecuteMetaEditor(props: ConfigEditorProps<ExecutePluginMeta>) {
@@ -22,7 +24,7 @@ function ExecuteMetaEditor(props: ConfigEditorProps<ExecutePluginMeta>) {
         <FormSwitch
           checked={props.config.autoAdd}
           onChange={(checked: boolean) =>
-            props.onChange({ ...props.config, autoAdd: checked })
+            props.onCommit({ ...props.config, autoAdd: checked })
           }
         />
       </FormField>
@@ -37,6 +39,28 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
   const needsPlaceholder = () =>
     props.config.passExePath && !props.config.cmd.includes('{}')
 
+  /** Build platform-appropriate exit-signal options. */
+  const exitSignalOptions = createMemo((): Array<{ label: string; value: string }> => {
+    if (isWindows) {
+      return [
+        { label: t('plugin.execute.exitSignalNone'), value: 'none' },
+        { label: t('plugin.execute.exitSignalTerminate'), value: 'sigterm' }
+      ]
+    }
+    return [
+      { label: t('plugin.execute.exitSignalNone'), value: 'none' },
+      { label: 'SIGTERM', value: 'sigterm' },
+      { label: 'SIGKILL', value: 'sigkill' }
+    ]
+  })
+
+  /** Resolve the effective value for the dropdown — on Windows, map sigkill → sigterm. */
+  const effectiveExitSignal = createMemo(() =>
+    isWindows && props.config.exitSignal === 'sigkill'
+      ? ('sigterm' as const)
+      : props.config.exitSignal
+  )
+
   return (
     <div class="flex flex-wrap gap-4 items-start items-stretch">
       <FormField label={t('plugin.execute.on')} class="w-40">
@@ -49,7 +73,7 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
           ]}
           value={props.config.on}
           onChange={(e: Event) =>
-            props.onChange({
+            props.onCommit({
               ...props.config,
               on: (e.target as HTMLSelectElement).value as
                 | 'beforeGameStart'
@@ -60,11 +84,15 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
         />
       </FormField>
 
-      <FormField label={t('plugin.currentDir')} class="flex-1 min-w-48">
+      <FormField
+        label={t('plugin.currentDir')}
+        description={t('plugin.currentDirDesc')}
+        class="flex-1 min-w-48"
+      >
         <FormPathInput
           class="w-full"
           value={props.config.currentDir}
-          onChange={v => props.onChange({ ...props.config, currentDir: v })}
+          onCommit={v => props.onCommit({ ...props.config, currentDir: v })}
           placeholder={t('plugin.currentDirPlaceholder')}
           isDir
         />
@@ -80,9 +108,12 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
           type="text"
           value={props.config.cmd}
           placeholder={t('plugin.execute.cmdPlaceholder')}
-          onInput={(e: InputEvent) =>
-            props.onChange({ ...props.config, cmd: (e.target as HTMLInputElement).value })
-          }
+          onBlur={(e: FocusEvent) => {
+            const val = (e.target as HTMLInputElement).value
+            if (val !== props.config.cmd) {
+              props.onCommit({ ...props.config, cmd: val })
+            }
+          }}
         />
       </FormField>
 
@@ -94,7 +125,7 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
         <FormSwitch
           checked={props.config.passExePath}
           onChange={(checked: boolean) =>
-            props.onChange({ ...props.config, passExePath: checked })
+            props.onCommit({ ...props.config, passExePath: checked })
           }
         />
       </FormField>
@@ -102,18 +133,18 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
       <FormField
         label={t('plugin.execute.exitSignal')}
         class="w-40"
-        description={t('plugin.execute.exitSignalDesc')}
+        description={
+          isWindows
+            ? t('plugin.execute.exitSignalDescWin')
+            : t('plugin.execute.exitSignalDesc')
+        }
       >
         <FormSelect
           class="w-full"
-          options={[
-            { label: t('plugin.execute.exitSignalNone'), value: 'none' },
-            { label: 'SIGTERM', value: 'sigterm' },
-            { label: 'SIGKILL', value: 'sigkill' }
-          ]}
-          value={props.config.exitSignal}
+          options={exitSignalOptions()}
+          value={effectiveExitSignal()}
           onChange={(e: Event) =>
-            props.onChange({
+            props.onCommit({
               ...props.config,
               exitSignal: (e.target as HTMLSelectElement).value as
                 | 'none'
@@ -127,7 +158,7 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
       <FormField label={t('plugin.execute.env')} class="w-full">
         <FormTableEditor
           values={props.config.env}
-          onChange={v => props.onChange({ ...props.config, env: v })}
+          onCommit={v => props.onCommit({ ...props.config, env: v })}
           addLabel={t('plugin.execute.addEnv')}
         />
       </FormField>
@@ -140,7 +171,7 @@ export const EXECUTE_PLUGIN: PluginDefinition<'execute'> = {
     id: 'execute',
     nameKey: 'plugin.execute.name',
     descriptionKey: 'plugin.execute.description',
-    version: '1.0.0',
+    version: '1.0.1',
     author: 'BUILTIN',
     links: []
   },

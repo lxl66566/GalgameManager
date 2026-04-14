@@ -158,15 +158,31 @@ impl ExecutePlugin {
             &config.current_dir,
             &config.env,
             config.pass_exe_path,
-        )?;
+        )
+        .map_err(|e| crate::error::Error::PluginCommand {
+            plugin: PLUGIN_ID,
+            source: Box::new(e),
+        })?;
 
         log::info!(
-            "ExecutePlugin: running command '{}' on phase '{:?}'",
+            "ExecutePlugin: phase={phase:?}, game_id={game_id}, \
+             cmd='{}', current_dir={:?}, env={:?}",
             start_ctx.cmd,
-            phase,
+            start_ctx.current_dir,
+            start_ctx.env,
         );
 
-        let child = start_ctx.spawn()?;
+        let child = start_ctx.spawn().map_err(|e| {
+            log::error!(
+                "ExecutePlugin: failed to spawn command '{}' in dir {:?}: {e}",
+                start_ctx.cmd,
+                start_ctx.current_dir,
+            );
+            crate::error::Error::PluginCommand {
+                plugin: PLUGIN_ID,
+                source: Box::new(e),
+            }
+        })?;
 
         // Track the spawned process for exit signal delivery (only for
         // pre-exit phases, and only when a signal is configured).

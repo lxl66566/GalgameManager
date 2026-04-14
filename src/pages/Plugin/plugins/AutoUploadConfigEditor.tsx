@@ -14,7 +14,7 @@ function AutoUploadMetaEditor(props: ConfigEditorProps<AutoUploadPluginMeta>) {
         <FormSwitch
           checked={props.config.autoAdd}
           onChange={(checked: boolean) =>
-            props.onChange({ ...props.config, autoAdd: checked })
+            props.onCommit({ ...props.config, autoAdd: checked })
           }
         />
       </FormField>
@@ -27,7 +27,7 @@ export const AUTO_UPLOAD_PLUGIN: PluginDefinition<'autoUpload'> = {
     id: 'autoUpload',
     nameKey: 'plugin.autoUpload.name',
     descriptionKey: 'plugin.autoUpload.description',
-    version: '1.0.0',
+    version: '1.0.1',
     author: 'BUILTIN',
     links: []
   },

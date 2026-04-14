@@ -113,6 +113,8 @@ export const dict = {
     arch: 'Architecture',
     archAuto: 'Auto Detect',
     currentDir: 'Working Directory',
+    currentDirDesc:
+      'Working directory for the program. If the command contains a relative path, it will be resolved from this directory',
     currentDirPlaceholder: 'Defaults to game dir if empty',
     needBraces: 'Command must contain {} placeholder',
     execute: {
@@ -131,7 +133,9 @@ export const dict = {
       exitSignal: 'Exit Signal',
       exitSignalDesc:
         'Sends a signal to the spawned process by the plugin when the game exits',
-      exitSignalNone: 'None'
+      exitSignalDescWin: 'Whether to terminate the spawned process when the game exits',
+      exitSignalNone: 'None',
+      exitSignalTerminate: 'TerminateProcess'
     },
     autoUpload: {
       name: 'Auto Upload Saves',
@@ -155,7 +159,12 @@ export const dict = {
       name: 'Translator',
       description: 'Run translation tool on game start',
       cmd: 'Command',
-      cmdPlaceholder: 'e.g. your_translator.exe'
+      cmdPlaceholder: 'e.g. your_translator.exe',
+      onGameExit: 'On Game Exit',
+      onGameExitDesc: 'Whether to close the translator when the game exits',
+      exitNone: "Don't close",
+      exitGraceful: 'Close',
+      exitForce: 'Force Close'
     },
     voiceSpeedup: {
       name: 'SPEED UP!',
@@ -285,7 +294,9 @@ export const dict = {
     uploadSuccess: 'Upload Success: ',
     duplicateGameId: 'CRITICAL: Duplicate game id detected!',
     retryError: 'An error occurred, retrying',
-    openDirFailed: 'Failed to open game directory'
+    openDirFailed: 'Failed to open game directory',
+    exePathNotAbsolute:
+      'Resolved executable path is not absolute, which may cause launch failure'
   }
 }
 

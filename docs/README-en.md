@@ -34,6 +34,15 @@ It can:
 
 ## Changelog
 
+### v1.0.1
+
+- Fix: Image cannot be displayed when image cache misses
+- Fix: Executing relative path command did not start searching from the working directory
+- Fix: Plugin input text loses focus
+- Fix: Frequent writing to disk when input
+- Distinguish between plugin startup failure and game startup failure
+- Performance optimization
+
 ### v1.0.0
 
 - (Major update) **Plugin system support**: Plugins are a set of predefined features by developers; users can apply plugins to games and modify parameters to customize additional functionalities. Initial plugins:

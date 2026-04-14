@@ -6,7 +6,7 @@ import { myToast } from '@components/ui/myToast'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, once, type UnlistenFn } from '@tauri-apps/api/event'
 import { log } from '@utils/log'
-import { fuckBackslash, getParentPath } from '@utils/path'
+import { fuckBackslash, getParentPath, isAbsolutePath } from '@utils/path'
 import { durationToSecs } from '@utils/time'
 import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'
@@ -184,8 +184,15 @@ const GamePage = (): JSX.Element => {
       // 2. 调用后端启动命令
       await invoke('exec', { gameId: game.id })
     } catch (error) {
-      log.error(`Failed to start game ${game.name}: ${error}`)
-      toast.error(game.name + t('hint.failToStart') + error)
+      // Distinguish plugin command failures from game launch failures
+      const isPluginError = typeof error === 'string' && error.includes('Plugin ')
+      if (isPluginError) {
+        log.error(`Plugin error for game ${game.name}: ${error}`)
+        toast.error(error)
+      } else {
+        log.error(`Failed to start game ${game.name}: ${error}`)
+        toast.error(game.name + t('hint.failToStart') + error)
+      }
 
       // 3. 如果启动指令本身失败，手动清理刚才注册的监听器
       unlistenSpawn()
@@ -201,6 +208,23 @@ const GamePage = (): JSX.Element => {
       actions.replaceGame(index, game)
     }
     closeEditModal()
+
+    // Validate that the resolved executable path is absolute
+    if (game.excutablePath) {
+      invoke<string>('resolve_var', { s: game.excutablePath })
+        .then(resolved => {
+          if (resolved && !isAbsolutePath(resolved)) {
+            myToast({
+              variant: 'error',
+              title: t('game.edit.exePath'),
+              message: t('hint.exePathNotAbsolute')
+            })
+          }
+        })
+        .catch(() => {
+          // resolve_var failed (e.g. unresolved variable), silently ignore
+        })
+    }
   }
 
   const handleDelete = async () => {

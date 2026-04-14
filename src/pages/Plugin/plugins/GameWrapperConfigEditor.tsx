@@ -24,7 +24,7 @@ function GameWrapperMetaEditor(props: ConfigEditorProps<GameWrapperPluginMeta>) 
         <FormSwitch
           checked={props.config.autoAdd}
           onChange={(checked: boolean) =>
-            props.onChange({ ...props.config, autoAdd: checked })
+            props.onCommit({ ...props.config, autoAdd: checked })
           }
         />
       </FormField>
@@ -49,17 +49,24 @@ function GameWrapperGameConfigEditor(props: ConfigEditorProps<GameWrapperGameCon
           type="text"
           value={props.config.cmd}
           placeholder={t('plugin.gameWrapper.cmdPlaceholder')}
-          onInput={(e: InputEvent) =>
-            props.onChange({ ...props.config, cmd: (e.target as HTMLInputElement).value })
-          }
+          onBlur={(e: FocusEvent) => {
+            const val = (e.target as HTMLInputElement).value
+            if (val !== props.config.cmd) {
+              props.onCommit({ ...props.config, cmd: val })
+            }
+          }}
         />
       </FormField>
 
-      <FormField label={t('plugin.currentDir')} class="flex-1 min-w-48">
+      <FormField
+        label={t('plugin.currentDir')}
+        description={t('plugin.currentDirDesc')}
+        class="flex-1 min-w-48"
+      >
         <FormPathInput
           class="w-full"
           value={props.config.currentDir}
-          onChange={v => props.onChange({ ...props.config, currentDir: v })}
+          onCommit={v => props.onCommit({ ...props.config, currentDir: v })}
           placeholder={t('plugin.currentDirPlaceholder')}
           isDir
         />
@@ -68,7 +75,7 @@ function GameWrapperGameConfigEditor(props: ConfigEditorProps<GameWrapperGameCon
       <FormField label={t('plugin.gameWrapper.env')} class="w-full">
         <FormTableEditor
           values={props.config.env}
-          onChange={v => props.onChange({ ...props.config, env: v })}
+          onCommit={v => props.onCommit({ ...props.config, env: v })}
           addLabel={t('plugin.gameWrapper.addEnv')}
         />
       </FormField>
@@ -81,7 +88,7 @@ export const GAME_WRAPPER_PLUGIN: PluginDefinition<'gameWrapper'> = {
     id: 'gameWrapper',
     nameKey: 'plugin.gameWrapper.name',
     descriptionKey: 'plugin.gameWrapper.description',
-    version: '1.0.0',
+    version: '1.0.1',
     author: 'BUILTIN',
     links: []
   },
