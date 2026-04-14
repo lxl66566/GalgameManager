@@ -19,10 +19,10 @@ interface ImageProps {
 /**
  * Image component backed by the `galimg` custom protocol.
  *
- * - If a `hash` is already known, the image is served directly via the custom
- *   protocol with **zero IPC** — the browser handles HTTP-level caching.
- * - If no hash exists, `prepare_image` is called once to download/cache the
- *   image on disk; subsequent renders use the cached hash.
+ * - Always calls `prepare_image` via IPC to ensure the image cache exists on
+ *   this device. Rust handles the fast-path (cache hit) efficiently.
+ * - This guarantees images display correctly even when a hash was synced from
+ *   another device but the local cache is missing.
  * - No in-memory cache is kept; images are always served from the filesystem
  *   through the custom protocol, keeping JS heap usage minimal.
  */
@@ -30,20 +30,19 @@ const CachedImage: Component<ImageProps> = props => {
   const [imageHash] = createResource(
     () => [props.url, props.hash] as const,
     async ([rawUrl, currentHash]) => {
-      // Fast path: hash already known — serve directly via custom protocol.
-      // No IPC call needed; the browser will request the image from Rust.
-      if (currentHash) return currentHash
-
       if (!rawUrl) return null
 
       try {
         const resolvedUrl = await invoke<string>('resolve_var', { s: rawUrl })
+        // Always call prepare_image to ensure cache exists on this device.
+        // Rust handles fast-path (cache hit) efficiently — just a file exists check.
         const hash = await invoke<string>('prepare_image', {
           url: resolvedUrl,
           hash: currentHash
         })
 
-        // 只有当 hash 存在，且与当前的 hash 不一致时，才触发更新事件
+        // Notify parent of the resolved hash (may differ from currentHash
+        // if cache was missing and had to be re-computed)
         if (hash !== currentHash) {
           props.onHashUpdate?.(hash)
         }
