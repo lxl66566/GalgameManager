@@ -3,14 +3,12 @@ import type { ArchiveConfig } from '@bindings/ArchiveConfig'
 import type { S3Config } from '@bindings/S3Config'
 import type { StorageProvider } from '@bindings/StorageProvider'
 import type { WebDavConfig } from '@bindings/WebDavConfig'
-import {
-  Button,
-  Input,
-  Select,
-  SettingRow,
-  SettingSection,
-  SettingSubGroup
-} from '@components/ui/settings'
+import { Button } from '@components/ui/Button'
+import { Input } from '@components/ui/Input'
+import { Select } from '@components/ui/Select'
+import { SettingRow } from '@components/ui/SettingRow'
+import { SettingSection } from '@components/ui/SettingSection'
+import { SettingSubGroup } from '@components/ui/SettingSubGroup'
 import { invoke } from '@tauri-apps/api/core'
 import { useI18n } from '~/i18n'
 import { checkAndPullRemote, performManualUpload, useConfig } from '~/store'

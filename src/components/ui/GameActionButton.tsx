@@ -1,3 +1,4 @@
+import { cn } from '~/lib/utils'
 import { Show, type JSX } from 'solid-js'
 
 interface GameActionButtonProps {
@@ -20,15 +21,13 @@ export const GameActionButton = (props: GameActionButtonProps) => {
           props.onClick()
         }
       }}
-      class={`
-        p-2 rounded-full transition-all duration-200 
-        flex items-center justify-center
-        ${
-          props.loading || props.disabled
-            ? 'opacity-50 cursor-not-allowed bg-gray-200 dark:bg-gray-700'
-            : `${props.colorClass} hover:scale-110 active:scale-95 hover:bg-opacity-10 dark:hover:bg-opacity-20 hover:bg-gray-500 cursor-pointer`
-        }
-      `}
+      class={cn(
+        'p-2 rounded-full transition-all duration-200',
+        'flex items-center justify-center',
+        props.loading || props.disabled
+          ? 'opacity-50 cursor-not-allowed bg-gray-200 dark:bg-gray-700'
+          : cn(props.colorClass, 'hover:scale-110 active:scale-95 hover:bg-opacity-10 dark:hover:bg-opacity-20 hover:bg-gray-500 cursor-pointer')
+      )}
     >
       <Show when={props.loading} fallback={props.icon}>
         {/* 加载动画 Spinner */}

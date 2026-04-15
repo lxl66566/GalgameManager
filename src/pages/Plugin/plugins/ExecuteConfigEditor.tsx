@@ -3,14 +3,12 @@
  */
 import type { ExecuteGameConfig } from '@bindings/ExecuteGameConfig'
 import type { ExecutePluginMeta } from '@bindings/ExecutePluginMeta'
-import {
-  FormField,
-  FormInput,
-  FormPathInput,
-  FormSelect,
-  FormSwitch,
-  FormTableEditor
-} from '@components/ui/form'
+import { FormField } from '@components/ui/FormField'
+import { FormInput } from '@components/ui/FormInput'
+import { FormPathInput } from '@components/ui/FormPathInput'
+import { FormSelect } from '@components/ui/FormSelect'
+import { FormSwitch } from '@components/ui/FormSwitch'
+import { FormTableEditor } from '@components/ui/FormTableEditor'
 import { useI18n } from '~/i18n'
 import { isWindows } from '~/utils/platform'
 import { createMemo } from 'solid-js'

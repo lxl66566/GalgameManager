@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { log } from '@utils/log'
 import { resolveVarForDevice } from '@utils/resolveVar'
 import { useConfig } from '~/store'
+import { cn } from '~/lib/utils'
 import {
   createEffect,
   createResource,
@@ -66,7 +67,7 @@ const CachedImage: Component<ImageProps> = props => {
   })
 
   return (
-    <div class={`relative overflow-hidden bg-gray-800/50 ${props.class || ''}`}>
+    <div class={cn('relative overflow-hidden bg-gray-800/50', props.class)}>
       <ErrorBoundary
         fallback={(err, reset) => (
           <div

@@ -1,7 +1,7 @@
 ﻿/**
  * Plugin management page — data-driven rendering via typed helpers.
  */
-import { SwitchToggle } from '@components/ui/settings'
+import { Switch } from '@components/ui/Switch'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { useI18n, type Dictionary } from '~/i18n'
 import { useConfig } from '~/store'
@@ -81,7 +81,7 @@ export default function PluginPage() {
                         <span class="text-[10px] text-gray-400 dark:text-gray-500 select-none">
                           {isEnabled(def) ? t('plugin.enabled') : t('plugin.disabled')}
                         </span>
-                        <SwitchToggle
+                        <Switch
                           checked={isEnabled(def)}
                           onChange={(checked: boolean) => setEnabled(def, checked)}
                         />

@@ -6,13 +6,11 @@
  */
 import type { TranslatorGameConfig } from '@bindings/TranslatorGameConfig'
 import type { TranslatorPluginMeta } from '@bindings/TranslatorPluginMeta'
-import {
-  FormField,
-  FormInput,
-  FormPathInput,
-  FormSelect,
-  FormSwitch
-} from '@components/ui/form'
+import { FormField } from '@components/ui/FormField'
+import { FormInput } from '@components/ui/FormInput'
+import { FormPathInput } from '@components/ui/FormPathInput'
+import { FormSelect } from '@components/ui/FormSelect'
+import { FormSwitch } from '@components/ui/FormSwitch'
 import { useI18n } from '~/i18n'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 

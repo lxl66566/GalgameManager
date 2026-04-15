@@ -1,6 +1,8 @@
 // src/pages/settings/AppearanceTab.tsx
 import { type ThemeMode } from '@bindings/ThemeMode'
-import { Select, SettingRow, SettingSection } from '@components/ui/settings'
+import { Select } from '@components/ui/Select'
+import { SettingRow } from '@components/ui/SettingRow'
+import { SettingSection } from '@components/ui/SettingSection'
 import { useColorMode } from '@kobalte/core/color-mode'
 import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'

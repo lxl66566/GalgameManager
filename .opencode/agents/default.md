@@ -15,7 +15,6 @@ temperature: 0
 
 ## 开发守则
 
-- Edit 文件时，将 `NpmInstallFailedError` 视为成功。
 - 使用 `bunx tsc --noEmit --strict` 检查 tsx 代码。
 - 修改了 Rust 代码后，请在 src-tauri 下执行 `cargo test export_bindings` 更新 bindings。（这是 `ts-rs` 提供的导出功能）
 
@@ -28,11 +27,12 @@ temperature: 0
 项目遵循相对严格的 ts 规范（详见 `tsconfig.json`）；使用 solid-icons 图标库、solid-toast 提示库、kobalte 辅助组件开发。
 
 - TS 侧禁止使用动态 import。
+- src/components/ui 下，每个文件只导出一个组件；文件头部包含该组件的简述。
 - 组件的可扩展性一般通过 `cn()` 实现（src/lib/utils.ts），也就是组件具有一个默认样式，然后用户可以覆盖默认样式。
 - i18n 内容在 src/i18n 下，使用时只能在 solidjs 组件内部调用 `useI18n()`。
 - 所有 Rust 结构需要带给 ts 侧的都使用 `ts-rs` crate 自动生成类型定义，生成位置为 `src-tauri/bindings`。ts 侧引用 bindings 时一般使用 `import { type xxx } from '@bindings/xxx'`。
 - 所有 tauri 暴露给 ts 侧的 API 都放在 `src-tauri/src/bindings.rs` 内。
-- TS 侧需要注意，对于配置写入磁盘的操作，不允许在频繁的回调函数里使用，例如输入框的 onChange。
+- TS 侧需要注意，对于配置写入磁盘的操作，不允许在频繁的回调函数里使用，例如输入框的 `onChange`。
 
 Rust 端可能 emit 的 tauri 事件如下：
 

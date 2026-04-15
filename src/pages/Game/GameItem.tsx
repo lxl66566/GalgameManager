@@ -8,7 +8,8 @@ import { useI18n } from '~/i18n'
 import { AiOutlineCloudUpload, AiOutlineEdit, AiOutlineSync } from 'solid-icons/ai'
 import { FaRegularCirclePlay, FaSolidGamepad } from 'solid-icons/fa'
 import { FiFolder } from 'solid-icons/fi'
-import { Show, type JSX } from 'solid-js'
+import { Show } from 'solid-js'
+import { GameItemWrapper } from './GameItemWrapper'
 
 // --- 组件：游戏卡片 ---
 interface GameItemProps {
@@ -153,21 +154,5 @@ export const GameItem = (props: GameItemProps) => {
         </div>
       </div>
     </GameItemWrapper>
-  )
-}
-
-export const GameItemWrapper = ({
-  children,
-  extra_class
-}: {
-  children: JSX.Element
-  extra_class?: string
-}) => {
-  return (
-    <div
-      class={`relative rounded-xl overflow-hidden bg-white dark:bg-slate-700 shadow-lg hover:shadow-xl transition-shadow duration-300 w-44 h-72 flex flex-col ${extra_class}`}
-    >
-      {children}
-    </div>
   )
 }

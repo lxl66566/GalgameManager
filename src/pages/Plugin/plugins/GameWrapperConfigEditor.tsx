@@ -5,13 +5,11 @@
  */
 import type { GameWrapperGameConfig } from '@bindings/GameWrapperGameConfig'
 import type { GameWrapperPluginMeta } from '@bindings/GameWrapperPluginMeta'
-import {
-  FormField,
-  FormInput,
-  FormPathInput,
-  FormSwitch,
-  FormTableEditor
-} from '@components/ui/form'
+import { FormField } from '@components/ui/FormField'
+import { FormInput } from '@components/ui/FormInput'
+import { FormPathInput } from '@components/ui/FormPathInput'
+import { FormSwitch } from '@components/ui/FormSwitch'
+import { FormTableEditor } from '@components/ui/FormTableEditor'
 import { useI18n } from '~/i18n'
 import { Show } from 'solid-js'
 import type { ConfigEditorProps, PluginDefinition } from './types'

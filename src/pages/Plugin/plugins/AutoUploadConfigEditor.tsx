@@ -2,7 +2,8 @@
  * AutoUpload plugin — self-contained definition file.
  */
 import type { AutoUploadPluginMeta } from '@bindings/AutoUploadPluginMeta'
-import { FormField, FormSwitch } from '@components/ui/form'
+import { FormField } from '@components/ui/FormField'
+import { FormSwitch } from '@components/ui/FormSwitch'
 import { useI18n } from '~/i18n'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 

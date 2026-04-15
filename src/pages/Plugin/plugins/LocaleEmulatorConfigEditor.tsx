@@ -6,7 +6,9 @@
  */
 import type { LocaleEmulatorGameConfig } from '@bindings/LocaleEmulatorGameConfig'
 import type { LocaleEmulatorPluginMeta } from '@bindings/LocaleEmulatorPluginMeta'
-import { FormField, FormInput, FormSwitch } from '@components/ui/form'
+import { FormField } from '@components/ui/FormField'
+import { FormInput } from '@components/ui/FormInput'
+import { FormSwitch } from '@components/ui/FormSwitch'
 import { useI18n } from '~/i18n'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 

@@ -3,7 +3,9 @@
  */
 import type { VoiceZerointerruptGameConfig } from '@bindings/VoiceZerointerruptGameConfig'
 import type { VoiceZerointerruptPluginMeta } from '@bindings/VoiceZerointerruptPluginMeta'
-import { FormField, FormSelect, FormSwitch } from '@components/ui/form'
+import { FormField } from '@components/ui/FormField'
+import { FormSelect } from '@components/ui/FormSelect'
+import { FormSwitch } from '@components/ui/FormSwitch'
 import { useI18n } from '~/i18n'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 

@@ -3,7 +3,10 @@
  */
 import type { VoiceSpeedupGameConfig } from '@bindings/VoiceSpeedupGameConfig'
 import type { VoiceSpeedupPluginMeta } from '@bindings/VoiceSpeedupPluginMeta'
-import { FormField, FormInput, FormSelect, FormSwitch } from '@components/ui/form'
+import { FormField } from '@components/ui/FormField'
+import { FormInput } from '@components/ui/FormInput'
+import { FormSelect } from '@components/ui/FormSelect'
+import { FormSwitch } from '@components/ui/FormSwitch'
 import { useI18n } from '~/i18n'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 

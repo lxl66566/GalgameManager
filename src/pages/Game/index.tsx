@@ -35,7 +35,8 @@ import {
 import { unwrap } from 'solid-js/store'
 import toast from 'solid-toast'
 import GameEditModal from './GameEditModal'
-import { GameItem, GameItemWrapper } from './GameItem'
+import { GameItem } from './GameItem'
+import { GameItemWrapper } from './GameItemWrapper'
 import { ArchiveSyncModal } from './SyncModal'
 
 const GamePage = (): JSX.Element => {
