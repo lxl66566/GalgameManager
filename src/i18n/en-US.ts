@@ -297,7 +297,7 @@ export const dict = {
     openDirFailed: 'Failed to open game directory',
     exePathNotAbsolute:
       'Resolved executable path is not absolute, which may cause launch failure',
-    pathNotExist: 'Resolved path does not exist on this device'
+    pathNotExist: 'Path does not exist on this device'
   }
 }
 

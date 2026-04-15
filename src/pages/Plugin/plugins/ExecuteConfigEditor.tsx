@@ -8,9 +8,9 @@ import {
   FormInput,
   FormPathInput,
   FormSelect,
-  FormSwitch,
-  FormTableEditor
+  FormSwitch
 } from '@components/ui/form'
+import { FormTableEditor } from '@components/ui/FormTableEditor'
 import { useI18n } from '~/i18n'
 import { isWindows } from '~/utils/platform'
 import { createMemo } from 'solid-js'
@@ -155,13 +155,13 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
         />
       </FormField>
 
-      <FormField label={t('plugin.execute.env')} class="w-full">
-        <FormTableEditor
-          values={props.config.env}
-          onCommit={v => props.onCommit({ ...props.config, env: v })}
-          addLabel={t('plugin.execute.addEnv')}
-        />
-      </FormField>
+      <FormTableEditor
+        label={t('plugin.execute.env')}
+        labelClass="text-xs"
+        values={props.config.env}
+        onCommit={v => props.onCommit({ ...props.config, env: v })}
+        addLabel={t('plugin.execute.addEnv')}
+      />
     </div>
   )
 }

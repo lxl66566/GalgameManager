@@ -2,6 +2,7 @@ import { type Game } from '@bindings/Game'
 import PathListEditor from '@components/PathListEditor'
 import PluginSection from '@components/PluginSection'
 import CachedImage from '@components/ui/CachedImage'
+import { FieldHint } from '@components/ui/FieldHint'
 import { FormPathInput } from '@components/ui/form'
 import { myToast } from '@components/ui/myToast'
 import { invoke } from '@tauri-apps/api/core'
@@ -14,7 +15,7 @@ import { useI18n } from '~/i18n'
 import { PLUGIN_REGISTRY } from '~/pages/Plugin/plugins'
 import { buildNewInstance } from '~/pages/Plugin/plugins/types'
 import { useConfig } from '~/store'
-import { FiAlertTriangle, FiRefreshCw, FiSearch } from 'solid-icons/fi'
+import { FiRefreshCw, FiSearch } from 'solid-icons/fi'
 import {
   createEffect,
   createResource,
@@ -30,10 +31,10 @@ import { createStore, unwrap } from 'solid-js/store'
 const MODAL_INPUT_BASE =
   'bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors'
 
-const MODAL_PATH_INPUT = `flex-1 min-w-0 ${MODAL_INPUT_BASE} truncate`
+const MODAL_PATH_INPUT = `flex-1 min-w-0 h-auto ${MODAL_INPUT_BASE} truncate`
 
 const MODAL_BROWSE_BTN =
-  'bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-800 dark:text-white px-3 py-1.5 rounded text-sm whitespace-nowrap transition-colors'
+  'bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-800 dark:text-white px-2 py-1.5 h-auto rounded text-sm whitespace-nowrap transition-colors'
 
 const MODAL_LABEL = 'text-sm font-bold text-gray-700 dark:text-gray-300'
 
@@ -368,14 +369,9 @@ export default function GameEditModal(props: GameEditModalProps) {
                 buttonClass={MODAL_BROWSE_BTN}
               />
               <Show when={exePathWarning()}>
-                <p class="flex items-center gap-1 text-[10px] leading-tight text-amber-600 dark:text-amber-400 select-none">
-                  <FiAlertTriangle class="w-3 h-3 shrink-0" />
-                  {exePathWarning()}
-                </p>
+                <FieldHint variant="warning" text={exePathWarning()} />
               </Show>
             </div>
-
-            <hr class="border-gray-300 dark:border-gray-700 my-1" />
 
             <PathListEditor
               label={t('game.edit.savePath')}
@@ -384,10 +380,7 @@ export default function GameEditModal(props: GameEditModalProps) {
               onBulkInput={bulkPathTransform}
             />
             <Show when={savePathWarningText()}>
-              <p class="flex items-center gap-1 text-[10px] leading-tight text-amber-600 dark:text-amber-400 select-none -mt-2">
-                <FiAlertTriangle class="w-3 h-3 shrink-0" />
-                {savePathWarningText()}
-              </p>
+              <FieldHint variant="warning" class="-mt-2" text={savePathWarningText()} />
             </Show>
 
             <hr class="border-gray-300 dark:border-gray-700 my-1" />
@@ -427,7 +420,7 @@ export default function GameEditModal(props: GameEditModalProps) {
                 <label class="text-xs font-bold text-gray-500 dark:text-gray-400">
                   {t('game.edit.useTime')}
                 </label>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-4">
                   <div class="relative flex-1">
                     <input
                       type="number"

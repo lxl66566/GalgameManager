@@ -5,15 +5,9 @@
  */
 import type { GameWrapperGameConfig } from '@bindings/GameWrapperGameConfig'
 import type { GameWrapperPluginMeta } from '@bindings/GameWrapperPluginMeta'
-import {
-  FormField,
-  FormInput,
-  FormPathInput,
-  FormSwitch,
-  FormTableEditor
-} from '@components/ui/form'
+import { FormField, FormInput, FormPathInput, FormSwitch } from '@components/ui/form'
+import { FormTableEditor } from '@components/ui/FormTableEditor'
 import { useI18n } from '~/i18n'
-import { Show } from 'solid-js'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 
 function GameWrapperMetaEditor(props: ConfigEditorProps<GameWrapperPluginMeta>) {

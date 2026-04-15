@@ -1,5 +1,5 @@
 import type { Device } from '@bindings/Device'
-import { FormTableEditor } from '@components/ui/form'
+import { FormTableEditor } from '@components/ui/FormTableEditor'
 import { Input, SettingRow, SettingSection } from '@components/ui/settings'
 import { log } from '@utils/log'
 import { useI18n } from '~/i18n'
