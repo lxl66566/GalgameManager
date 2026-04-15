@@ -11,10 +11,11 @@ import {
   SettingSection,
   SettingSubGroup
 } from '@components/ui/settings'
+import { Spinner } from '@components/ui/Spinner'
 import { invoke } from '@tauri-apps/api/core'
 import { useI18n } from '~/i18n'
 import { checkAndPullRemote, performManualUpload, useConfig } from '~/store'
-import { FiDownload, FiLoader, FiUpload } from 'solid-icons/fi'
+import { FiDownload, FiUpload } from 'solid-icons/fi'
 import { createMemo, createSignal, Match, Show, Switch, type Component } from 'solid-js'
 
 const COMPRESSION_RULES: Record<string, { min: number; max: number; disabled: boolean }> =
@@ -178,38 +179,34 @@ const CompressionForm: Component<{
 
   return (
     <SettingSection title={t('settings.compression.self')}>
-      <SettingSubGroup>
-        <SettingRow label={t('settings.compression.algorithm')} indent>
-          <Select
-            value={props.config.algorithm}
-            onChange={e =>
-              props.actions.updateSettings(
-                s => (s.archive.algorithm = e.currentTarget.value as ArchiveAlgo)
-              )
-            }
-            options={[
-              { label: 'Squashfs + Zstd', value: 'squashfsZstd' },
-              { label: 'tar', value: 'tar' }
-            ]}
-          />
-        </SettingRow>
+      <SettingRow label={t('settings.compression.algorithm')}>
+        <Select
+          value={props.config.algorithm}
+          onChange={e =>
+            props.actions.updateSettings(
+              s => (s.archive.algorithm = e.currentTarget.value as ArchiveAlgo)
+            )
+          }
+          options={[
+            { label: 'Squashfs + Zstd', value: 'squashfsZstd' },
+            { label: 'tar', value: 'tar' }
+          ]}
+        />
+      </SettingRow>
 
-        <SettingRow label={t('settings.compression.level')} indent>
-          <Input
-            type="number" // 建议加上 type="number"
-            value={currentRule().disabled ? '' : props.config.level}
-            // 传入事件对象 e，而不是 e.currentTarget.value
-            onChange={e => handleLevelChange(e)}
-            disabled={currentRule().disabled}
-            placeholder={
-              currentRule().disabled ? 'N/A' : `${currentRule().min}-${currentRule().max}`
-            }
-            // 增加 min/max 属性辅助浏览器原生校验 UI
-            min={currentRule().min}
-            max={currentRule().max}
-          />
-        </SettingRow>
-      </SettingSubGroup>
+      <SettingRow label={t('settings.compression.level')}>
+        <Input
+          type="number"
+          value={currentRule().disabled ? '' : props.config.level}
+          onChange={e => handleLevelChange(e)}
+          disabled={currentRule().disabled}
+          placeholder={
+            currentRule().disabled ? 'N/A' : `${currentRule().min}-${currentRule().max}`
+          }
+          min={currentRule().min}
+          max={currentRule().max}
+        />
+      </SettingRow>
     </SettingSection>
   )
 }
@@ -361,10 +358,7 @@ export const StorageTab: Component = () => {
             disabled={uploading()}
             class="min-w-[100px] mx-1" // 保证加载时宽度不跳动
           >
-            <Show
-              when={!uploading()}
-              fallback={<FiLoader class="animate-spin h-3.5 w-3.5 mr-1.5" />}
-            >
+            <Show when={!uploading()} fallback={<Spinner size="xs" class="mr-1.5" />}>
               <FiUpload class="h-3.5 w-3.5 mr-1.5 text-gray-500 dark:text-gray-400" />
             </Show>
             {uploading() ? 'Syncing...' : t('ui.push')}
@@ -375,10 +369,7 @@ export const StorageTab: Component = () => {
             disabled={downloading()}
             class="min-w-[100px] mx-1"
           >
-            <Show
-              when={!downloading()}
-              fallback={<FiLoader class="animate-spin h-3.5 w-3.5 mr-1.5" />}
-            >
+            <Show when={!downloading()} fallback={<Spinner size="xs" class="mr-1.5" />}>
               <FiDownload class="h-3.5 w-3.5 mr-1.5 text-gray-500 dark:text-gray-400" />
             </Show>
             {downloading() ? 'Syncing...' : t('ui.pull')}

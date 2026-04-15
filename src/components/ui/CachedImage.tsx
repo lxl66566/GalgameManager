@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { log } from '@utils/log'
 import { resolveVarForDevice } from '@utils/resolveVar'
+import { cn } from '~/lib/utils'
 import { useConfig } from '~/store'
 import {
   createEffect,
@@ -9,6 +10,7 @@ import {
   Suspense,
   type Component
 } from 'solid-js'
+import { Spinner } from './Spinner'
 
 interface ImageProps {
   url?: string | null | undefined
@@ -66,7 +68,7 @@ const CachedImage: Component<ImageProps> = props => {
   })
 
   return (
-    <div class={`relative overflow-hidden bg-gray-800/50 ${props.class || ''}`}>
+    <div class={cn('relative overflow-hidden bg-gray-800/50', props.class || '')}>
       <ErrorBoundary
         fallback={(err, reset) => (
           <div
@@ -82,7 +84,7 @@ const CachedImage: Component<ImageProps> = props => {
         <Suspense
           fallback={
             <div class="absolute inset-0 flex items-center justify-center bg-gray-100/10 backdrop-blur-sm z-10">
-              <div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <Spinner size="sm" class="text-white/60" />
             </div>
           }
         >

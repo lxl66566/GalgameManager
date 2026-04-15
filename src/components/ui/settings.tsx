@@ -1,18 +1,36 @@
 /**
  * settings.tsx — Layout composites for the Settings page.
  *
- * Re-exports primitive controls from controls.tsx under their original names
- * (default `size='md'`). Provides settings-specific layout components:
- * SettingSection, SettingRow, SettingSubGroup.
+ * Re-exports primitive controls wrapped with settings-specific width constraints.
+ * Provides layout components: SettingSection, SettingRow, SettingSubGroup.
  */
-import { clsx } from 'clsx'
-import { Show, type Component, type JSX } from 'solid-js'
-import { Button, Input, LinkButton, Select, Switch, Textarea } from './controls'
+import { cn } from '~/lib/utils'
+import { mergeProps, Show, splitProps, type Component, type JSX } from 'solid-js'
+import { Button, type ButtonProps } from './Button'
+import { Input, type InputProps } from './Input'
+import { LinkButton, type LinkButtonProps } from './LinkButton'
+import { Select, type SelectProps } from './Select'
+import { Switch } from './Switch'
+import { Textarea, type TextareaProps } from './Textarea'
 
-// ─── Re-exports (standard density) ──────────────────────────────────────────
+// ─── Settings-width wrappers ────────────────────────────────────────────────
 
-export { Input, Select, Button, Textarea, LinkButton }
-export { Switch as SwitchToggle } from './controls'
+/** Settings Input — constrains to `sm:w-64` for consistent column alignment. */
+const SettingsInput: Component<InputProps> = props => {
+  const [local, rest] = splitProps(props, ['class'])
+  return <Input {...rest} class={cn('sm:w-64 flex-none', local.class)} />
+}
+
+/** Settings Select — constrains to `sm:w-64` for consistent column alignment. */
+const SettingsSelect: Component<SelectProps> = props => {
+  const [local, rest] = splitProps(props, ['class'])
+  return <Select {...rest} class={cn('sm:w-64 flex-none', local.class)} />
+}
+
+// ─── Re-exports ──────────────────────────────────────────────────────────────
+
+export { SettingsInput as Input, SettingsSelect as Select, Button, Textarea, LinkButton }
+export { Switch as SwitchToggle } from './Switch'
 
 // ─── SettingSection ─────────────────────────────────────────────────────────
 
@@ -21,7 +39,7 @@ export const SettingSection: Component<{
   children: JSX.Element
   class?: string
 }> = props => (
-  <div class={clsx('mb-6', props.class)}>
+  <div class={cn('mb-6', props.class)}>
     <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 px-1 uppercase tracking-wider">
       {props.title}
     </h3>
@@ -51,7 +69,7 @@ interface SettingRowProps {
 
 export const SettingRow: Component<SettingRowProps> = props => (
   <div
-    class={clsx(
+    class={cn(
       'flex items-center justify-between gap-4 px-3 py-2.5 border-b border-gray-100 dark:border-gray-700/50 last:border-0 transition-colors hover:bg-gray-50/50 dark:hover:bg-gray-700/10',
       props.indent && 'pl-6',
       props.class

@@ -1,6 +1,9 @@
+import { Button } from '@components/ui/Button'
+import { Input } from '@components/ui/Input'
 import { open } from '@tauri-apps/plugin-dialog'
 import { fuckBackslash } from '@utils/path'
 import { useI18n } from '~/i18n'
+import { cn } from '~/lib/utils'
 import { createSignal, For, Show } from 'solid-js'
 
 interface PathListEditorProps {
@@ -9,8 +12,6 @@ interface PathListEditorProps {
   /**
    * Transform function applied when a path comes from a "bulk" source
    * (file-dialog selection or clipboard paste).
-   * Receives the normalised value (backslashes already replaced) and
-   * must return the transformed string.
    */
   onBulkInput?: (value: string) => string
   label?: string
@@ -18,7 +19,6 @@ interface PathListEditorProps {
 
 export default function PathListEditor(props: PathListEditorProps) {
   const { t } = useI18n()
-  // 记录当前正在编辑的索引，null 表示没有在编辑
   const [editingIndex, setEditingIndex] = createSignal<number | null>(null)
 
   const handleAddPath = async (directory: boolean) => {
@@ -31,7 +31,6 @@ export default function PathListEditor(props: PathListEditorProps) {
 
       if (selected) {
         const newPaths = Array.isArray(selected) ? selected : [selected]
-        // 转换反斜杠，应用 onBulkInput，并过滤重复路径
         const transformed = newPaths.map(p => {
           let val = fuckBackslash(p)
           if (props.onBulkInput) {
@@ -53,7 +52,6 @@ export default function PathListEditor(props: PathListEditorProps) {
     const newPaths = [...props.paths]
     newPaths.splice(index, 1)
     props.onChange(newPaths)
-    // 如果删除的是当前正在编辑的项，重置编辑状态
     if (editingIndex() === index) {
       setEditingIndex(null)
     }
@@ -79,20 +77,12 @@ export default function PathListEditor(props: PathListEditorProps) {
           {props.label || 'Save Path'}
         </span>
         <div class="flex gap-2">
-          <button
-            onClick={() => handleAddPath(false)}
-            class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded transition-colors cursor-pointer"
-            type="button"
-          >
+          <Button variant="primary" size="xs" onClick={() => handleAddPath(false)}>
             + {t('ui.addFile')}
-          </button>
-          <button
-            onClick={() => handleAddPath(true)}
-            class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded transition-colors cursor-pointer"
-            type="button"
-          >
+          </Button>
+          <Button variant="primary" size="xs" onClick={() => handleAddPath(true)}>
             + {t('ui.addFolder')}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -113,7 +103,6 @@ export default function PathListEditor(props: PathListEditorProps) {
                   <Show
                     when={editingIndex() === i()}
                     fallback={
-                      // 显示模式
                       <span
                         class="truncate text-gray-600 dark:text-gray-300 mr-2 flex-1 cursor-text select-text hover:text-gray-900 dark:hover:text-white transition-colors"
                         title={t('hint.doubleClickToEdit')}
@@ -123,14 +112,16 @@ export default function PathListEditor(props: PathListEditorProps) {
                       </span>
                     }
                   >
-                    {/* 编辑模式 */}
                     <input
                       type="text"
                       value={path}
-                      class="flex-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-1 rounded border border-blue-500 outline-none mr-2 min-w-0"
+                      class={cn(
+                        'flex-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white',
+                        'rounded border border-blue-500 outline-none mr-2 min-w-0',
+                        'px-1'
+                      )}
                       ref={el => setTimeout(() => el.focus(), 0)}
                       onInput={e => {
-                        // Detect paste in edit mode — normalise backslashes + onBulkInput
                         if (e.inputType === 'insertFromPaste') {
                           const input = e.currentTarget
                           let val = fuckBackslash(input.value)
@@ -142,11 +133,9 @@ export default function PathListEditor(props: PathListEditorProps) {
                       }}
                       onBlur={e => handleUpdatePath(i(), e.currentTarget.value)}
                       onKeyDown={e => {
-                        if (e.key === 'Enter') {
+                        if (e.key === 'Enter')
                           handleUpdatePath(i(), e.currentTarget.value)
-                        } else if (e.key === 'Escape') {
-                          setEditingIndex(null)
-                        }
+                        else if (e.key === 'Escape') setEditingIndex(null)
                       }}
                     />
                   </Show>
@@ -166,7 +155,7 @@ export default function PathListEditor(props: PathListEditorProps) {
         </Show>
       </div>
 
-      {/* 底部提示 */}
+      {/* Bottom hint */}
       <Show when={props.paths.length > 0}>
         <div class="text-[10px] text-gray-400 dark:text-gray-500 text-right px-1">
           {t('hint.doubleClickToEdit')}

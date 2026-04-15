@@ -4,6 +4,7 @@
  */
 import type { PluginInstance } from '@bindings/PluginInstance'
 import type { PluginMetadatas } from '@bindings/PluginMetadatas'
+import { Button } from '@components/ui/Button'
 import { useI18n, type Dictionary } from '~/i18n'
 import { PLUGIN_REGISTRY, type AnyPluginDef } from '~/pages/Plugin/plugins'
 import { buildNewInstance } from '~/pages/Plugin/plugins/types'
@@ -24,8 +25,6 @@ interface PluginSectionProps {
   onChange: (plugins: PluginInstance[]) => void
   /**
    * Fine-grained store update that avoids replacing the array (keeps focus).
-   * Receives the fully-typed updated instance so the consumer can do a
-   * simple `setStore('plugins', index, updated)` without any casting.
    */
   onConfigChange?: (index: number, updated: PluginInstance) => void
 }
@@ -49,13 +48,12 @@ const findScrollParent = (el: HTMLElement): HTMLElement | null => {
   return null
 }
 
-/** Scroll the nearest scrollable ancestor so that `el` (plus extra for the dropdown) is visible. */
+/** Scroll the nearest scrollable ancestor so that `el` is visible. */
 const scrollIntoViewLocal = (el: HTMLElement) => {
   const scrollParent = findScrollParent(el)
   if (!scrollParent) return
   const parentRect = scrollParent.getBoundingClientRect()
   const elRect = el.getBoundingClientRect()
-  // Reserve ~300px below the section for the dropdown menu
   const neededBottom = elRect.top + 300
   if (neededBottom > parentRect.bottom) {
     scrollParent.scrollTop += neededBottom - parentRect.bottom + 8
@@ -101,21 +99,12 @@ export default function PluginSection(props: PluginSectionProps) {
     else if (expandedIndex() === newIndex) setExpandedIndex(index)
   }
 
-  /**
-   * Reconstruct a PluginInstance with updated config.
-   *
-   * This is the only place that bridges the untyped `Record<string, unknown>`
-   * from Dynamic editors back to the typed PluginInstance union. The spread
-   * preserves the `pluginId` discriminant, so the assertion is safe.
-   */
   const withUpdatedConfig = (
     instance: PluginInstance,
     newConfig: Record<string, unknown>
   ): PluginInstance => ({ ...instance, config: newConfig }) as PluginInstance
 
   const handleUpdateConfig = (index: number, newConfig: Record<string, unknown>) => {
-    // Prefer fine-grained store update to avoid replacing the entire array,
-    // which would cause <For> to re-create DOM elements and lose input focus.
     const updated = withUpdatedConfig(props.plugins[index], newConfig)
     if (props.onConfigChange) {
       props.onConfigChange(index, updated)
@@ -138,18 +127,18 @@ export default function PluginSection(props: PluginSectionProps) {
           {t('plugin.pluginSection')}
         </span>
         <div class="relative">
-          <button
+          <Button
+            variant="primary"
+            size="xs"
             onClick={() => {
               const opening = !showAddMenu()
               setShowAddMenu(opening)
               if (opening && sectionRef) scrollIntoViewLocal(sectionRef)
             }}
-            class="flex items-center gap-1 text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded transition-colors cursor-pointer"
-            type="button"
           >
             <FiPlus class="w-3 h-3" />
             {t('plugin.addPlugin')}
-          </button>
+          </Button>
           <Show when={showAddMenu()}>
             <div class="absolute right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-lg z-10 min-w-[160px] overflow-hidden">
               <For
@@ -192,25 +181,27 @@ export default function PluginSection(props: PluginSectionProps) {
 
               return (
                 <div class="bg-white dark:bg-gray-700/50 border border-gray-200 dark:border-transparent rounded overflow-hidden transition-colors">
-                  <div class="flex items-center gap-2 px-2 py-1.5">
-                    <button
-                      class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  <div class="flex items-center gap-1 px-1.5 py-1">
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      class="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30"
                       onClick={() => handleMovePlugin(index(), -1)}
                       disabled={isFirst()}
                       title={t('plugin.moveUp')}
-                      type="button"
                     >
                       <FiArrowUp class="w-3 h-3" />
-                    </button>
-                    <button
-                      class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      class="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30"
                       onClick={() => handleMovePlugin(index(), 1)}
                       disabled={isLast()}
                       title={t('plugin.moveDown')}
-                      type="button"
                     >
                       <FiArrowDown class="w-3 h-3" />
-                    </button>
+                    </Button>
 
                     <span
                       class={`flex-1 text-xs font-medium cursor-pointer select-none truncate ${
@@ -224,10 +215,11 @@ export default function PluginSection(props: PluginSectionProps) {
                       {getPluginName(instance)}
                     </span>
 
-                    <button
-                      class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      class="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                       onClick={() => setExpandedIndex(isExpanded() ? null : index())}
-                      type="button"
                     >
                       <Show
                         when={isExpanded()}
@@ -235,16 +227,17 @@ export default function PluginSection(props: PluginSectionProps) {
                       >
                         <FiChevronUp class="w-3 h-3" />
                       </Show>
-                    </button>
+                    </Button>
 
-                    <button
-                      class="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      class="p-0.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400"
                       onClick={() => handleRemovePlugin(index())}
                       title={t('plugin.removePlugin')}
-                      type="button"
                     >
                       <FiTrash2 class="w-3 h-3" />
-                    </button>
+                    </Button>
                   </div>
 
                   <Show when={isExpanded() && def()?.GameEditor && 'config' in instance}>
