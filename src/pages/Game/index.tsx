@@ -7,6 +7,11 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen, once, type UnlistenFn } from '@tauri-apps/api/event'
 import { log } from '@utils/log'
 import { fuckBackslash, getParentPath, isAbsolutePath } from '@utils/path'
+import {
+  getDeviceVarMap,
+  replaceWithVarNames,
+  resolveVarForDevice
+} from '@utils/resolveVar'
 import { durationToSecs } from '@utils/time'
 import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'
@@ -112,11 +117,17 @@ const GamePage = (): JSX.Element => {
     return nextId + 1
   }
 
-  const openGameAddModal = (path?: string) => {
+  const openGameAddModal = async (path?: string) => {
+    // Apply reverse variable replacement so the path uses {varName} templates
+    let resolvedPath = path
+    if (path) {
+      const vars = await getDeviceVarMap(config.devices)
+      resolvedPath = replaceWithVarNames(path, vars)
+    }
     const newGame: Game = {
       id: findNextGameId(),
-      name: path ? (getParentPath(path) ?? '') : '',
-      excutablePath: path ?? null,
+      name: resolvedPath ? (getParentPath(resolvedPath) ?? '') : '',
+      excutablePath: resolvedPath ?? null,
       savePaths: [],
       imageUrl: null,
       imageSha256: null,
@@ -211,7 +222,7 @@ const GamePage = (): JSX.Element => {
 
     // Validate that the resolved executable path is absolute
     if (game.excutablePath) {
-      invoke<string>('resolve_var', { s: game.excutablePath })
+      resolveVarForDevice(game.excutablePath, config.devices)
         .then(resolved => {
           if (resolved && !isAbsolutePath(resolved)) {
             myToast({

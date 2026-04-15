@@ -9,7 +9,7 @@ import { Tooltip } from '@kobalte/core/tooltip'
 import { open } from '@tauri-apps/plugin-dialog'
 import { fuckBackslash } from '@utils/path'
 import { useI18n } from '~/i18n'
-import { clsx } from 'clsx'
+import { cn } from '~/lib/utils'
 import { FiAlertCircle, FiAlertTriangle, FiInfo } from 'solid-icons/fi'
 import {
   createSignal,
@@ -36,9 +36,35 @@ import {
 
 // ─── Re-exports with compact defaults ───────────────────────────────────────
 
-export const FormInput: Component<InputProps> = props => {
-  const mergedProps = mergeProps({ size: 'sm' as const }, props)
-  return <Input {...mergedProps} />
+export interface FormInputProps extends InputProps {
+  /**
+   * Transform function applied when the value is pasted into the input.
+   * Receives the raw pasted text and must return the transformed string.
+   */
+  onBulkInput?: (value: string) => string
+}
+
+export const FormInput: Component<FormInputProps> = props => {
+  const [local, rest] = splitProps(props, ['class', 'size', 'onBulkInput', 'onInput'])
+  return (
+    <Input
+      size={local.size ?? 'sm'}
+      class={local.class}
+      {...rest}
+      onInput={e => {
+        if (e.inputType === 'insertFromPaste' && local.onBulkInput) {
+          const input = e.currentTarget
+          const transformed = local.onBulkInput(input.value)
+          if (transformed !== input.value) {
+            input.value = transformed
+          }
+        }
+        if (typeof local.onInput === 'function') {
+          local.onInput(e)
+        }
+      }}
+    />
+  )
 }
 
 export const FormSelect: Component<SelectProps> = props => {
@@ -65,20 +91,29 @@ export const FormTextarea: Component<TextareaProps> = props => {
 
 export interface FormFieldProps {
   label?: string
+  /** Override the label element class. */
+  labelClass?: string
   description?: string
   /** Warning hint rendered below the children area (amber, icon + text). */
   warning?: string
   /** Error hint rendered below the children area (red, icon + text). */
   error?: string
+  /** Override the children wrapper div class (default: `flex items-center min-h-7`). */
+  childrenClass?: string
   class?: string
   children: JSX.Element
 }
 
 /** Vertical field wrapper: label (with optional hint tooltip) → children → warning/error. */
 export const FormField: Component<FormFieldProps> = props => (
-  <div class={clsx('flex flex-col gap-1', props.class)}>
+  <div class={cn('flex flex-col gap-1', props.class)}>
     <Show when={props.label}>
-      <label class="flex items-center gap-1 text-xs font-medium text-gray-700 dark:text-gray-300 select-none">
+      <label
+        class={cn(
+          'flex items-center gap-1 text-xs font-medium text-gray-700 dark:text-gray-300 select-none',
+          props.labelClass
+        )}
+      >
         <span class="truncate min-w-0">{props.label}</span>
         <Show when={props.description}>
           <Tooltip openDelay={0} closeDelay={0}>
@@ -95,8 +130,7 @@ export const FormField: Component<FormFieldProps> = props => (
         </Show>
       </label>
     </Show>
-    {/* Ensure children area matches the height of other controls (h-7 for sm) */}
-    <div class="flex items-center min-h-7">{props.children}</div>
+    <div class={props.childrenClass ?? 'flex items-center min-h-7'}>{props.children}</div>
     <Show when={props.warning}>
       <p class="flex items-center gap-1 text-[10px] leading-tight text-amber-600 dark:text-amber-400 select-none">
         <FiAlertTriangle class="w-3 h-3 shrink-0" />
@@ -114,24 +148,98 @@ export const FormField: Component<FormFieldProps> = props => (
 
 // ─── FormPathInput ──────────────────────────────────────────────────────────
 
+const DEFAULT_PATH_INPUT =
+  'flex-1 min-w-0 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-xs text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-gray-400 dark:placeholder-gray-500 transition-all outline-none h-7 px-2'
+
+const DEFAULT_PATH_BTN =
+  'inline-flex items-center justify-center rounded border shadow-sm transition-all h-7 px-2.5 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed'
+
 export interface FormPathInputProps {
   value: string
   /** Commit callback — fires on blur (text) or after file dialog selection. */
   onCommit: (value: string) => void
+  /**
+   * Transform function applied when the value comes from a "bulk" source
+   * (file-dialog selection or clipboard paste).
+   *
+   * The function receives the normalised value (backslashes already replaced)
+   * and must return the transformed string.
+   */
+  onBulkInput?: (value: string) => string
+  /**
+   * Callback fired when a file/folder is selected via the browse dialog.
+   * Receives the normalised path *before* `onBulkInput` is applied.
+   * Useful for side-effects like auto-filling related fields.
+   */
+  onBrowse?: (selectedPath: string) => void
   isDir?: boolean
   placeholder?: string
   class?: string
+  /** File dialog filters passed directly to `@tauri-apps/plugin-dialog`. */
+  filters?: { name: string; extensions: string[] }[]
+  /**
+   * Extra class for the `<input>` element — merged via `cn()`
+   */
+  inputClass?: string
+  /**
+   * Extra class for the browse `<button>` — merged via `cn()`
+   */
+  buttonClass?: string
 }
 
-/** Text input + file/folder browse button. */
+/** Text input + file/folder browse button with paste-aware bulk-input support. */
 export const FormPathInput: Component<FormPathInputProps> = props => {
   const { t } = useI18n()
-  const inputStyle = () => clsx('flex gap-1.5', props.class)
+  const wrapperClass = () => cn('flex gap-2', props.class)
+  const inputClass = () => cn(DEFAULT_PATH_INPUT, props.inputClass)
+  const buttonClass = () => cn(DEFAULT_PATH_BTN, props.buttonClass)
+
+  // Shared paste handling logic for both input modes
+  const handlePasteDetect = (e: InputEvent) => {
+    if (e.inputType === 'insertFromPaste') {
+      const input = e.currentTarget as HTMLInputElement
+      let val = fuckBackslash(input.value)
+      if (props.onBulkInput) {
+        val = props.onBulkInput(val)
+      }
+      input.value = val
+      // Auto-commit on paste
+      if (val !== props.value) {
+        props.onCommit(val)
+      }
+    }
+  }
+
+  // Shared browse logic
+  const handleBrowse = async () => {
+    try {
+      const selected = await open({
+        directory: props.isDir ?? false,
+        multiple: false,
+        filters: props.filters
+      })
+      if (selected && typeof selected === 'string') {
+        const normalized = fuckBackslash(selected)
+        // Notify side-effects before transformation
+        props.onBrowse?.(normalized)
+        let val = normalized
+        if (props.onBulkInput) {
+          val = props.onBulkInput(val)
+        }
+        props.onCommit(val)
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   return (
-    <div class={inputStyle()}>
-      <FormInput
+    <div class={wrapperClass()}>
+      <input
         type="text"
         value={props.value}
+        class={inputClass()}
+        onInput={handlePasteDetect}
         onBlur={(e: FocusEvent) => {
           const newVal = (e.target as HTMLInputElement).value
           if (newVal !== props.value) {
@@ -139,25 +247,10 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
           }
         }}
         placeholder={props.placeholder}
-        class="flex-1 min-w-0"
       />
-      <FormButton
-        onClick={async () => {
-          try {
-            const selected = await open({
-              directory: props.isDir ?? false,
-              multiple: false
-            })
-            if (selected && typeof selected === 'string') {
-              props.onCommit(fuckBackslash(selected))
-            }
-          } catch (e) {
-            console.error(e)
-          }
-        }}
-      >
+      <button type="button" class={buttonClass()} onClick={handleBrowse}>
         {t('ui.browse')}
-      </FormButton>
+      </button>
     </div>
   )
 }
@@ -244,7 +337,7 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
   const hasHeader = () => !!(props.label || props.addLabel)
 
   return (
-    <div class={clsx('flex flex-col gap-2 w-full', props.class)}>
+    <div class={cn('flex flex-col gap-2 w-full', props.class)}>
       {/* Full header — shown when label or addLabel is provided */}
       <Show when={hasHeader()}>
         {/* 修改：去掉了 justify-between，保留 flex 和 items-center */}
@@ -292,7 +385,7 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
 
       {/* Editor area */}
       <div
-        class={clsx(
+        class={cn(
           'rounded border border-gray-200 dark:border-gray-600 p-1.5 min-h-[50px] overflow-y-auto flex flex-col gap-1 transition-colors',
           hasHeader()
             ? 'bg-gray-50 dark:bg-gray-800 max-h-[300px]'

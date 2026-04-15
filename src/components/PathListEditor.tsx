@@ -1,5 +1,4 @@
 import { open } from '@tauri-apps/plugin-dialog'
-import { log } from '@utils/log'
 import { fuckBackslash } from '@utils/path'
 import { useI18n } from '~/i18n'
 import { createSignal, For, Show } from 'solid-js'
@@ -7,6 +6,13 @@ import { createSignal, For, Show } from 'solid-js'
 interface PathListEditorProps {
   paths: string[]
   onChange: (newPaths: string[]) => void
+  /**
+   * Transform function applied when a path comes from a "bulk" source
+   * (file-dialog selection or clipboard paste).
+   * Receives the normalised value (backslashes already replaced) and
+   * must return the transformed string.
+   */
+  onBulkInput?: (value: string) => string
   label?: string
 }
 
@@ -25,16 +31,21 @@ export default function PathListEditor(props: PathListEditorProps) {
 
       if (selected) {
         const newPaths = Array.isArray(selected) ? selected : [selected]
-        // 转换反斜杠，并过滤重复路径
-        const uniquePaths = newPaths
-          .map(p => fuckBackslash(p))
-          .filter(p => !props.paths.includes(p))
+        // 转换反斜杠，应用 onBulkInput，并过滤重复路径
+        const transformed = newPaths.map(p => {
+          let val = fuckBackslash(p)
+          if (props.onBulkInput) {
+            val = props.onBulkInput(val)
+          }
+          return val
+        })
+        const uniquePaths = transformed.filter(p => !props.paths.includes(p))
         if (uniquePaths.length > 0) {
           props.onChange([...props.paths, ...uniquePaths])
         }
       }
     } catch (err) {
-      log.error(`Failed to open dialog: ${err}`)
+      console.error(`Failed to open dialog: ${err}`)
     }
   }
 
@@ -118,6 +129,17 @@ export default function PathListEditor(props: PathListEditorProps) {
                       value={path}
                       class="flex-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-1 rounded border border-blue-500 outline-none mr-2 min-w-0"
                       ref={el => setTimeout(() => el.focus(), 0)}
+                      onInput={e => {
+                        // Detect paste in edit mode — normalise backslashes + onBulkInput
+                        if (e.inputType === 'insertFromPaste') {
+                          const input = e.currentTarget
+                          let val = fuckBackslash(input.value)
+                          if (props.onBulkInput) {
+                            val = props.onBulkInput(val)
+                          }
+                          input.value = val
+                        }
+                      }}
                       onBlur={e => handleUpdatePath(i(), e.currentTarget.value)}
                       onKeyDown={e => {
                         if (e.key === 'Enter') {

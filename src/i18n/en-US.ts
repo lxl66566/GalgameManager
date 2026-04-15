@@ -296,7 +296,8 @@ export const dict = {
     retryError: 'An error occurred, retrying',
     openDirFailed: 'Failed to open game directory',
     exePathNotAbsolute:
-      'Resolved executable path is not absolute, which may cause launch failure'
+      'Resolved executable path is not absolute, which may cause launch failure',
+    pathNotExist: 'Resolved path does not exist on this device'
   }
 }
 

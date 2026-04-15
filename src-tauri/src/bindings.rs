@@ -295,6 +295,24 @@ pub fn running_game_ids() -> Vec<u32> {
         .collect()
 }
 
+/// Check whether each path in `paths` exists on the local filesystem.
+///
+/// Resolves variables first, then checks existence. Returns a `Vec<bool>`
+/// with the same length and order as the input.
+#[tauri::command]
+pub fn paths_exist(paths: Vec<String>) -> Result<Vec<bool>> {
+    let lock = CONFIG.lock();
+    let results = paths
+        .iter()
+        .map(|p| {
+            lock.resolve_var(p)
+                .map(|resolved| std::path::Path::new(&resolved).exists())
+                .unwrap_or(false)
+        })
+        .collect();
+    Ok(results)
+}
+
 /// Open the directory containing the game executable in the system file
 /// manager.
 #[tauri::command]

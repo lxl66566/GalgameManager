@@ -2,18 +2,42 @@ import { type Game } from '@bindings/Game'
 import PathListEditor from '@components/PathListEditor'
 import PluginSection from '@components/PluginSection'
 import CachedImage from '@components/ui/CachedImage'
+import { FormPathInput } from '@components/ui/form'
 import { myToast } from '@components/ui/myToast'
+import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { fuckBackslash, getParentPath } from '@utils/path'
+import { getDeviceVarMap, replaceWithVarNames, resolveVar } from '@utils/resolveVar'
 import { dateToInput, durationToForm, inputToDate } from '@utils/time'
 import { fetchVnCover } from '@utils/vndb'
 import { useI18n } from '~/i18n'
 import { PLUGIN_REGISTRY } from '~/pages/Plugin/plugins'
 import { buildNewInstance } from '~/pages/Plugin/plugins/types'
 import { useConfig } from '~/store'
-import { FiRefreshCw, FiSearch } from 'solid-icons/fi'
-import { createEffect, createSignal, onMount, Show, Suspense } from 'solid-js'
+import { FiAlertTriangle, FiRefreshCw, FiSearch } from 'solid-icons/fi'
+import {
+  createEffect,
+  createResource,
+  createSignal,
+  onMount,
+  Show,
+  Suspense
+} from 'solid-js'
 import { createStore, unwrap } from 'solid-js/store'
+
+// ─── Shared style constants for the modal's form fields ───────────────────────
+
+const MODAL_INPUT_BASE =
+  'bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors'
+
+const MODAL_PATH_INPUT = `flex-1 min-w-0 ${MODAL_INPUT_BASE} truncate`
+
+const MODAL_BROWSE_BTN =
+  'bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-800 dark:text-white px-3 py-1.5 rounded text-sm whitespace-nowrap transition-colors'
+
+const MODAL_LABEL = 'text-sm font-bold text-gray-700 dark:text-gray-300'
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 interface GameEditModalProps {
   gameInfo?: Game | null
@@ -43,6 +67,16 @@ export default function GameEditModal(props: GameEditModalProps) {
 
   const isEditMode = () => props.editMode ?? !!props.gameInfo
 
+  // Resolve the current device variable map (cached after first fetch)
+  const [currentVars] = createResource(() => config.devices, getDeviceVarMap)
+
+  // onBulkInput for path fields: replace variable values with {varName}
+  // (backslashes are already normalised by FormPathInput before this runs)
+  const bulkPathTransform = (v: string): string => {
+    const vars = currentVars()
+    return vars ? replaceWithVarNames(v, vars) : v
+  }
+
   // Auto-populate plugins for new games based on autoAdd meta config
   const baseGame = structuredClone(unwrap(props.gameInfo ?? DEFAULT_GAME))
   if (!isEditMode()) {
@@ -71,7 +105,7 @@ export default function GameEditModal(props: GameEditModalProps) {
     }
   })
 
-  // 当 store 中的 imageUrl 发生变化（例如通过浏览按钮或清除按钮）时，同步到输入框
+  // 当 store 中的 imageUrl 发生变化时，同步到输入框
   createEffect(() => {
     setTempImageUrl(localGame.imageUrl || '')
   })
@@ -87,10 +121,9 @@ export default function GameEditModal(props: GameEditModalProps) {
   // 提交图片更改的逻辑
   const commitImageChange = () => {
     const currentInput = tempImageUrl().trim()
-    // 只有当内容真正改变时才更新 store
     if (currentInput !== (localGame.imageUrl || '')) {
       setLocalGame('imageUrl', currentInput || null)
-      setLocalGame('imageSha256', null) // 重置 Hash 以触发重新计算/加载
+      setLocalGame('imageSha256', null)
     }
   }
 
@@ -107,7 +140,6 @@ export default function GameEditModal(props: GameEditModalProps) {
         ]
       })
       if (selected && typeof selected === 'string') {
-        // 浏览选择直接更新 Store，createEffect 会自动同步 tempImageUrl
         setLocalGame('imageUrl', fuckBackslash(selected))
         setLocalGame('imageSha256', null)
       }
@@ -138,32 +170,12 @@ export default function GameEditModal(props: GameEditModalProps) {
     })
   }
 
-  const handleSelectExecutable = async () => {
-    try {
-      const selected = await open({
-        multiple: false,
-        directory: false,
-        filters: [{ name: 'Executables', extensions: ['exe', 'lnk', 'bat', 'cmd'] }]
-      })
-      if (selected && typeof selected === 'string') {
-        setLocalGame('excutablePath', fuckBackslash(selected))
-        if (!localGame.name) {
-          const parentDir = getParentPath(selected)
-          setLocalGame('name', parentDir || '')
-        }
-      }
-    } catch (e) {
-      console.error(e)
-    }
-  }
-
   const handleSearchVnCover = async () => {
     if (!localGame.name) return
 
     if (isSearching()) {
-      // 再次点击取消搜索
       setIsSearching(false)
-      setSearchId(id => id + 1) // 自增使接下来的返回结果失效
+      setSearchId(id => id + 1)
       return
     }
 
@@ -173,12 +185,11 @@ export default function GameEditModal(props: GameEditModalProps) {
 
     try {
       const url = await fetchVnCover(localGame.name)
-      // 如果本次搜索没有被手动取消
       if (isSearching() && searchId() === currentSearchId) {
         if (url) {
           setTempImageUrl(url)
           setLocalGame('imageUrl', url)
-          setLocalGame('imageSha256', null) // 重置 Hash
+          setLocalGame('imageSha256', null)
         } else {
           myToast({
             variant: 'warning',
@@ -196,12 +207,50 @@ export default function GameEditModal(props: GameEditModalProps) {
         })
       }
     } finally {
-      // 只有当前搜索仍在进行时才置空状态，防止干扰可能发起的新搜索
       if (searchId() === currentSearchId) {
         setIsSearching(false)
       }
     }
   }
+
+  // ─── FS existence checks ──────────────────────────────────────────────────
+
+  const [exePathWarning] = createResource(
+    () => ({ path: localGame.excutablePath, vars: currentVars() }),
+    async ({ path, vars }) => {
+      if (!path || !vars) return undefined
+      try {
+        const resolved = resolveVar(path, vars)
+        const results = await invoke<boolean[]>('paths_exist', { paths: [resolved] })
+        return results[0] ? undefined : t('hint.pathNotExist')
+      } catch {
+        return undefined
+      }
+    }
+  )
+
+  const [savePathWarnings] = createResource(
+    () => ({ paths: [...localGame.savePaths], vars: currentVars() }),
+    async ({ paths, vars }) => {
+      if (paths.length === 0 || !vars) return []
+      try {
+        const resolved = paths.map(p => resolveVar(p, vars))
+        const results = await invoke<boolean[]>('paths_exist', { paths: resolved })
+        return results.map((exists, i) => (exists ? undefined : paths[i]))
+      } catch {
+        return []
+      }
+    }
+  )
+
+  const savePathWarningText = () => {
+    const warnings = savePathWarnings()
+    if (!warnings || warnings.length === 0) return undefined
+    const missing = warnings.filter(Boolean)
+    return missing.length > 0 ? t('hint.pathNotExist') : undefined
+  }
+
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div class="dark:bg-zinc-800 bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col p-6 overflow-hidden border border-gray-200 dark:border-gray-700">
@@ -233,7 +282,6 @@ export default function GameEditModal(props: GameEditModalProps) {
                   }}
                 />
               </Suspense>
-              {/* 只有当没有图片时显示提示，有图片时依靠右侧输入框修改，保持界面整洁 */}
               <Show when={!localGame.imageUrl}>
                 <div
                   class="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
@@ -251,12 +299,10 @@ export default function GameEditModal(props: GameEditModalProps) {
           <div class="flex-1 flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar">
             {/* Name */}
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-bold text-gray-700 dark:text-gray-300">
-                {t('game.edit.gameName')}
-              </label>
+              <label class={MODAL_LABEL}>{t('game.edit.gameName')}</label>
               <input
                 type="text"
-                class="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
+                class={`w-full ${MODAL_INPUT_BASE}`}
                 value={localGame.name}
                 onInput={e => setLocalGame('name', e.currentTarget.value)}
               />
@@ -264,26 +310,18 @@ export default function GameEditModal(props: GameEditModalProps) {
 
             {/* Image Source Input */}
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-bold text-gray-700 dark:text-gray-300">
-                {t('game.edit.imageUrl')}
-              </label>
+              <label class={MODAL_LABEL}>{t('game.edit.imageUrl')}</label>
               <div class="flex gap-2">
                 <input
                   type="text"
-                  class="flex-1 min-w-0 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  // 绑定到 tempImageUrl
+                  class={`flex-1 min-w-0 ${MODAL_INPUT_BASE} disabled:opacity-50 disabled:cursor-not-allowed`}
                   value={tempImageUrl()}
-                  // 输入时只更新临时变量
                   onInput={e => setTempImageUrl(e.currentTarget.value)}
-                  // 失去焦点时提交
                   onBlur={commitImageChange}
-                  // 按下回车时提交
                   onKeyDown={e => e.key === 'Enter' && commitImageChange()}
                   placeholder={t('game.edit.imageUrlPlaceholder')}
                   disabled={isSearching()}
                 />
-
-                {/* VNDB 搜索 / 取消按钮 - 高对比度带图标 */}
                 <button
                   onClick={handleSearchVnCover}
                   disabled={!localGame.name && !isSearching()}
@@ -312,24 +350,29 @@ export default function GameEditModal(props: GameEditModalProps) {
 
             {/* Executable Path */}
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-bold text-gray-700 dark:text-gray-300">
-                {t('game.edit.exePath')}
-              </label>
-              <div class="flex gap-2">
-                <input
-                  type="text"
-                  class="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 truncate transition-colors"
-                  value={localGame.excutablePath || ''}
-                  onInput={e => setLocalGame('excutablePath', e.currentTarget.value)}
-                  placeholder={t('game.edit.exePathPlaceholder')}
-                />
-                <button
-                  onClick={handleSelectExecutable}
-                  class="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-800 dark:text-white px-3 py-1.5 rounded text-sm whitespace-nowrap transition-colors"
-                >
-                  {t('ui.browse')}
-                </button>
-              </div>
+              <label class={MODAL_LABEL}>{t('game.edit.exePath')}</label>
+              <FormPathInput
+                value={localGame.excutablePath || ''}
+                onCommit={v => setLocalGame('excutablePath', v || null)}
+                onBulkInput={bulkPathTransform}
+                onBrowse={normalizedPath => {
+                  if (!localGame.name) {
+                    setLocalGame('name', getParentPath(normalizedPath) || '')
+                  }
+                }}
+                filters={[
+                  { name: 'Executables', extensions: ['exe', 'lnk', 'bat', 'cmd'] }
+                ]}
+                placeholder={t('game.edit.exePathPlaceholder')}
+                inputClass={MODAL_PATH_INPUT}
+                buttonClass={MODAL_BROWSE_BTN}
+              />
+              <Show when={exePathWarning()}>
+                <p class="flex items-center gap-1 text-[10px] leading-tight text-amber-600 dark:text-amber-400 select-none">
+                  <FiAlertTriangle class="w-3 h-3 shrink-0" />
+                  {exePathWarning()}
+                </p>
+              </Show>
             </div>
 
             <hr class="border-gray-300 dark:border-gray-700 my-1" />
@@ -338,7 +381,14 @@ export default function GameEditModal(props: GameEditModalProps) {
               label={t('game.edit.savePath')}
               paths={localGame.savePaths}
               onChange={newPaths => setLocalGame('savePaths', newPaths)}
+              onBulkInput={bulkPathTransform}
             />
+            <Show when={savePathWarningText()}>
+              <p class="flex items-center gap-1 text-[10px] leading-tight text-amber-600 dark:text-amber-400 select-none -mt-2">
+                <FiAlertTriangle class="w-3 h-3 shrink-0" />
+                {savePathWarningText()}
+              </p>
+            </Show>
 
             <hr class="border-gray-300 dark:border-gray-700 my-1" />
 
@@ -416,7 +466,6 @@ export default function GameEditModal(props: GameEditModalProps) {
             {/* Plugin Section */}
             <PluginSection
               plugins={localGame.plugins ?? []}
-              // Memory-only: write to local store, persisted only on confirm
               onChange={plugins => setLocalGame('plugins', plugins)}
               onConfigChange={(index, updated) => setLocalGame('plugins', index, updated)}
             />
