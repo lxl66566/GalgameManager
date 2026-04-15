@@ -14,7 +14,7 @@
  * ```
  */
 import { ContextMenu as KobalteContextMenu } from '@kobalte/core/context-menu'
-import clsx from 'clsx'
+import { cn } from '~/lib/utils'
 import { For, Show, type JSX } from 'solid-js'
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ export function ContextMenu(props: ContextMenuProps) {
                 when={isSeparator(item)}
                 fallback={
                   <KobalteContextMenu.Item
-                    class={clsx(
+                    class={cn(
                       'flex items-center gap-2 rounded-sm px-2 py-1.5 text-xs outline-none transition-colors cursor-pointer',
                       (item as ContextMenuItem).danger
                         ? 'text-red-600 dark:text-red-400 data-[highlighted]:bg-red-50 dark:data-[highlighted]:bg-red-900/30'

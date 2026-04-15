@@ -9,7 +9,7 @@
  * (form.tsx, settings.tsx) re-export or compose on top.
  */
 import * as KobalteSwitch from '@kobalte/core/switch'
-import { clsx } from 'clsx'
+import { cn } from '~/lib/utils'
 import { splitProps, type Component, type JSX } from 'solid-js'
 
 // ─── Size type ────
@@ -73,7 +73,7 @@ export const Input: Component<InputProps> = props => {
   const [local, others] = splitProps(props, ['class', 'size'])
   return (
     <input
-      class={clsx(
+      class={cn(
         'rounded border border-gray-300 dark:border-gray-600',
         'bg-white dark:bg-gray-900 text-xs text-gray-900 dark:text-gray-100',
         'shadow-sm',
@@ -101,9 +101,9 @@ export const Select: Component<SelectProps> = props => {
   const [local, others] = splitProps(props, ['class', 'options', 'value', 'size'])
   const s = () => local.size ?? 'md'
   return (
-    <div class={clsx(SELECT_WRAPPER_SIZES[s()], local.class)}>
+    <div class={cn(SELECT_WRAPPER_SIZES[s()], local.class)}>
       <select
-        class={clsx(
+        class={cn(
           'block w-full rounded border border-gray-300 dark:border-gray-600',
           'bg-white dark:bg-gray-900 text-xs text-gray-900 dark:text-gray-100',
           'shadow-sm',
@@ -123,7 +123,7 @@ export const Select: Component<SelectProps> = props => {
       {/* Chevron icon */}
       <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center text-gray-400 px-1.5">
         <svg
-          class={clsx(s() === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5')}
+          class={cn(s() === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5')}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -152,14 +152,14 @@ export const Switch: Component<SwitchProps> = props => {
   const s = () => local.size ?? 'md'
   return (
     <KobalteSwitch.Root
-      class={clsx('group inline-flex items-center', local.class)}
+      class={cn('group inline-flex items-center', local.class)}
       onChange={local.onChange}
       checked={local.checked}
       {...others}
     >
       <KobalteSwitch.Input />
       <KobalteSwitch.Control
-        class={clsx(
+        class={cn(
           'relative rounded-full transition-colors duration-200 cursor-pointer',
           SWITCH_TRACK[s()],
           'bg-gray-300/50 dark:bg-gray-600/50',
@@ -169,7 +169,7 @@ export const Switch: Component<SwitchProps> = props => {
         )}
       >
         <KobalteSwitch.Thumb
-          class={clsx(
+          class={cn(
             'block rounded-full bg-white shadow-md ring-0 transition-transform duration-200',
             'absolute top-1/2 left-0 -translate-y-1/2',
             SWITCH_THUMB[s()],
@@ -193,7 +193,7 @@ export const Button: Component<ButtonProps> = props => {
   return (
     <button
       type={local.type ?? 'button'}
-      class={clsx(
+      class={cn(
         'inline-flex items-center justify-center rounded border shadow-sm transition-all',
         BUTTON_SIZES[local.size ?? 'md'],
         'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900',
@@ -220,7 +220,7 @@ export const Textarea: Component<TextareaProps> = props => {
   const [local, others] = splitProps(props, ['class', 'size'])
   return (
     <textarea
-      class={clsx(
+      class={cn(
         'w-full flex-none rounded border border-gray-300 dark:border-gray-600',
         'bg-white dark:bg-gray-900 text-xs text-gray-900 dark:text-gray-100',
         'shadow-sm',
@@ -245,7 +245,7 @@ export const LinkButton: Component<LinkButtonProps> = props => {
   return (
     <button
       type="button"
-      class={clsx(
+      class={cn(
         'inline-flex items-center justify-center transition-colors',
         LINK_BTN_SIZES[local.size ?? 'md'],
         'text-xs font-medium text-blue-600 dark:text-blue-400',

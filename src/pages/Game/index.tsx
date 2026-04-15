@@ -14,8 +14,8 @@ import {
 } from '@utils/resolveVar'
 import { durationToSecs } from '@utils/time'
 import { useI18n } from '~/i18n'
+import { cn } from '~/lib/utils'
 import { useConfig } from '~/store'
-import clsx from 'clsx'
 import { AiTwotonePlusCircle } from 'solid-icons/ai'
 import {
   TbOutlineClockPlay,
@@ -490,7 +490,7 @@ const SortOptions = (props: {
     ])
 
   return (
-    <div class={clsx('flex bg-gray-200 dark:bg-gray-900 rounded-md', props.class)}>
+    <div class={cn('flex bg-gray-200 dark:bg-gray-900 rounded-md', props.class)}>
       <For each={sortOptions()}>
         {option => (
           <button
