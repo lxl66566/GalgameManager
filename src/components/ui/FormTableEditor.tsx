@@ -1,5 +1,6 @@
 import { useI18n } from '~/i18n'
 import { cn } from '~/lib/utils'
+import { FiPlusCircle } from 'solid-icons/fi'
 import { createSignal, For, Show, type Component } from 'solid-js'
 import toast from 'solid-toast'
 
@@ -98,10 +99,12 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
               setError(null)
             }}
             disabled={isAdding()}
-            class="ml-auto text-xs bg-blue-600 hover:bg-blue-500 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-2 py-1 rounded transition-colors cursor-pointer"
+            class="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:text-gray-300 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center gap-1"
+            title={props.addLabel ?? ''}
             type="button"
           >
-            + {props.addLabel ?? ''}
+            <FiPlusCircle class="w-4 h-4" />
+            <span class="text-xs">{props.addLabel ?? ''}</span>
           </button>
         </div>
       </Show>
@@ -114,10 +117,12 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
               setError(null)
             }}
             disabled={isAdding()}
-            class="text-[10px] bg-blue-600 hover:bg-blue-500 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-1.5 py-0.5 rounded transition-colors cursor-pointer"
+            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:text-gray-300 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center gap-1"
+            title={props.addLabel ?? ''}
             type="button"
           >
-            +
+            <FiPlusCircle class="w-4 h-4" />
+            <span class="text-xs">{props.addLabel ?? ''}</span>
           </button>
         </div>
       </Show>

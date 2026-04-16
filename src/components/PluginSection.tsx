@@ -1,4 +1,4 @@
-﻿/**
+/**
  * PluginSection — Plugin management for a single game (in game edit modal).
  * Fully data-driven via typed helpers.
  */
@@ -144,11 +144,13 @@ export default function PluginSection(props: PluginSectionProps) {
               setShowAddMenu(opening)
               if (opening && sectionRef) scrollIntoViewLocal(sectionRef)
             }}
-            class="flex items-center gap-1 text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded transition-colors cursor-pointer"
+            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors cursor-pointer 
+         flex items-center gap-1"
+            title={t('plugin.addPlugin')}
             type="button"
           >
-            <FiPlus class="w-3 h-3" />
-            {t('plugin.addPlugin')}
+            <FiPlus class="w-4 h-4" />
+            <span class="text-xs leading-none">{t('plugin.addPlugin')}</span>
           </button>
           <Show when={showAddMenu()}>
             <div class="absolute right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-lg z-10 min-w-[160px] overflow-hidden">

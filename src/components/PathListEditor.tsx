@@ -2,7 +2,8 @@ import { GameEditLabel } from '@components/ui/GameEditLabel'
 import { open } from '@tauri-apps/plugin-dialog'
 import { fuckBackslash } from '@utils/path'
 import { useI18n } from '~/i18n'
-import { createSignal, For, Show } from 'solid-js'
+import { FiFilePlus, FiFolderPlus } from 'solid-icons/fi'
+import { createSignal, For, Show, type Component } from 'solid-js'
 
 interface PathListEditorProps {
   paths: string[]
@@ -18,10 +19,46 @@ interface PathListEditorProps {
   labelClass?: string
 }
 
+interface ActionButtonProps {
+  icon: Component<any>
+  label: string
+  onClick: () => void
+}
+
+// 抽离的带展开动画的按钮组件
+function ActionButton(props: ActionButtonProps) {
+  const Icon = props.icon
+  return (
+    <button
+      onClick={props.onClick}
+      class="group flex items-center rounded p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-all cursor-pointer"
+      title={props.label}
+      type="button"
+    >
+      <Icon class="w-4 h-4 shrink-0" />
+      {/* 利用 grid-template-columns 实现平滑的宽度展开动画 */}
+      <div class="grid grid-cols-[0fr] group-hover:grid-cols-[1fr] transition-[grid-template-columns] duration-300 ease-in-out">
+        <span class="overflow-hidden whitespace-nowrap text-xs font-medium pl-0 group-hover:pl-1.5 transition-all duration-300">
+          {props.label}
+        </span>
+      </div>
+    </button>
+  )
+}
+
 export default function PathListEditor(props: PathListEditorProps) {
   const { t } = useI18n()
   // 记录当前正在编辑的索引，null 表示没有在编辑
   const [editingIndex, setEditingIndex] = createSignal<number | null>(null)
+
+  // 路径标准化逻辑
+  const normalizePath = (p: string) => {
+    let val = fuckBackslash(p)
+    if (props.onBulkInput) {
+      val = props.onBulkInput(val)
+    }
+    return val
+  }
 
   const handleAddPath = async (directory: boolean) => {
     try {
@@ -33,15 +70,10 @@ export default function PathListEditor(props: PathListEditorProps) {
 
       if (selected) {
         const newPaths = Array.isArray(selected) ? selected : [selected]
-        // 转换反斜杠，应用 onBulkInput，并过滤重复路径
-        const transformed = newPaths.map(p => {
-          let val = fuckBackslash(p)
-          if (props.onBulkInput) {
-            val = props.onBulkInput(val)
-          }
-          return val
-        })
-        const uniquePaths = transformed.filter(p => !props.paths.includes(p))
+        const uniquePaths = newPaths
+          .map(normalizePath)
+          .filter(p => !props.paths.includes(p))
+
         if (uniquePaths.length > 0) {
           props.onChange([...props.paths, ...uniquePaths])
         }
@@ -52,9 +84,7 @@ export default function PathListEditor(props: PathListEditorProps) {
   }
 
   const handleRemovePath = (index: number) => {
-    const newPaths = [...props.paths]
-    newPaths.splice(index, 1)
-    props.onChange(newPaths)
+    props.onChange(props.paths.filter((_, i) => i !== index))
     // 如果删除的是当前正在编辑的项，重置编辑状态
     if (editingIndex() === index) {
       setEditingIndex(null)
@@ -62,13 +92,15 @@ export default function PathListEditor(props: PathListEditorProps) {
   }
 
   const handleUpdatePath = (index: number, newValue: string) => {
-    if (!newValue.trim()) {
+    const trimmed = newValue.trim()
+    // 如果为空或值未改变，则不触发 onChange
+    if (!trimmed || props.paths[index] === trimmed) {
       setEditingIndex(null)
       return
     }
 
     const newPaths = [...props.paths]
-    newPaths[index] = newValue
+    newPaths[index] = trimmed
     props.onChange(newPaths)
     setEditingIndex(null)
   }
@@ -78,21 +110,17 @@ export default function PathListEditor(props: PathListEditorProps) {
       {/* Header */}
       <div class="flex justify-between items-center">
         <GameEditLabel class={props.labelClass} children={props.label} />
-        <div class="flex gap-2">
-          <button
+        <div class="flex gap-1">
+          <ActionButton
+            icon={FiFilePlus}
+            label={t('ui.addFile')}
             onClick={() => handleAddPath(false)}
-            class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded transition-colors cursor-pointer"
-            type="button"
-          >
-            + {t('ui.addFile')}
-          </button>
-          <button
+          />
+          <ActionButton
+            icon={FiFolderPlus}
+            label={t('ui.addFolder')}
             onClick={() => handleAddPath(true)}
-            class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded transition-colors cursor-pointer"
-            type="button"
-          >
-            + {t('ui.addFolder')}
-          </button>
+          />
         </div>
       </div>
 
@@ -132,12 +160,7 @@ export default function PathListEditor(props: PathListEditorProps) {
                       onInput={e => {
                         // Detect paste in edit mode — normalise backslashes + onBulkInput
                         if (e.inputType === 'insertFromPaste') {
-                          const input = e.currentTarget
-                          let val = fuckBackslash(input.value)
-                          if (props.onBulkInput) {
-                            val = props.onBulkInput(val)
-                          }
-                          input.value = val
+                          e.currentTarget.value = normalizePath(e.currentTarget.value)
                         }
                       }}
                       onBlur={e => handleUpdatePath(i(), e.currentTarget.value)}
@@ -153,9 +176,10 @@ export default function PathListEditor(props: PathListEditorProps) {
 
                   <button
                     onClick={() => handleRemovePath(i())}
-                    class="text-gray-400 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity px-1"
+                    class="text-gray-400 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity px-1 cursor-pointer"
                     title={t('ui.delete')}
                     tabIndex={-1}
+                    type="button"
                   >
                     ✕
                   </button>
