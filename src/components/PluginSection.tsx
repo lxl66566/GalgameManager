@@ -1,23 +1,25 @@
 /**
  * PluginSection — Plugin management for a single game (in game edit modal).
- * Fully data-driven via typed helpers.
+ * Fully data-driven via typed helpers, with drag-to-reorder support.
  */
 import type { PluginInstance } from '@bindings/PluginInstance'
 import type { PluginMetadatas } from '@bindings/PluginMetadatas'
+import {
+  closestCenter,
+  createSortable,
+  DragDropProvider,
+  DragDropSensors,
+  SortableProvider,
+  type DragEvent as DndDragEvent
+} from '@thisbeyond/solid-dnd'
 import { useI18n, type Dictionary } from '~/i18n'
 import { PLUGIN_REGISTRY, type AnyPluginDef } from '~/pages/Plugin/plugins'
 import { buildNewInstance } from '~/pages/Plugin/plugins/types'
 import { useConfig } from '~/store'
-import {
-  FiArrowDown,
-  FiArrowUp,
-  FiChevronDown,
-  FiChevronUp,
-  FiPlus,
-  FiTrash2
-} from 'solid-icons/fi'
-import { createSignal } from 'solid-js'
-import { Dynamic, For, Show } from 'solid-js/web'
+import { CgLayoutGridSmall, CgMenuGridO } from 'solid-icons/cg'
+import { FiChevronDown, FiChevronUp, FiPlus, FiTrash2 } from 'solid-icons/fi'
+import { createSignal, Index, Show } from 'solid-js'
+import { Dynamic, For } from 'solid-js/web'
 
 interface PluginSectionProps {
   plugins: PluginInstance[]
@@ -89,18 +91,6 @@ export default function PluginSection(props: PluginSectionProps) {
     }
   }
 
-  const handleMovePlugin = (index: number, direction: -1 | 1) => {
-    const newIndex = index + direction
-    if (newIndex < 0 || newIndex >= props.plugins.length) return
-    const newPlugins = [...props.plugins]
-    const temp = newPlugins[index]
-    newPlugins[index] = newPlugins[newIndex]
-    newPlugins[newIndex] = temp
-    props.onChange(newPlugins)
-    if (expandedIndex() === index) setExpandedIndex(newIndex)
-    else if (expandedIndex() === newIndex) setExpandedIndex(index)
-  }
-
   /**
    * Reconstruct a PluginInstance with updated config.
    *
@@ -115,7 +105,7 @@ export default function PluginSection(props: PluginSectionProps) {
 
   const handleUpdateConfig = (index: number, newConfig: Record<string, unknown>) => {
     // Prefer fine-grained store update to avoid replacing the entire array,
-    // which would cause <For> to re-create DOM elements and lose input focus.
+    // which would cause <Index> to re-create DOM elements and lose input focus.
     const updated = withUpdatedConfig(props.plugins[index], newConfig)
     if (props.onConfigChange) {
       props.onConfigChange(index, updated)
@@ -131,6 +121,21 @@ export default function PluginSection(props: PluginSectionProps) {
     return def ? String(t(def.info.nameKey as keyof Dictionary)) : instance.pluginId
   }
 
+  // --- Drag-and-drop reorder ---
+  const sortableIds = () => props.plugins.map((_, i) => `${i}`)
+
+  const handleDragEnd = ({ draggable, droppable }: DndDragEvent) => {
+    if (!draggable || !droppable) return
+    const fromIndex = parseInt(String(draggable.id))
+    const toIndex = parseInt(String(droppable.id))
+    if (fromIndex === toIndex) return
+
+    const newPlugins = [...props.plugins]
+    const [moved] = newPlugins.splice(fromIndex, 1)
+    newPlugins.splice(toIndex, 0, moved)
+    props.onChange(newPlugins)
+  }
+
   return (
     <div ref={sectionRef} class="flex flex-col gap-2 w-full">
       <div class="flex justify-between items-center">
@@ -144,8 +149,7 @@ export default function PluginSection(props: PluginSectionProps) {
               setShowAddMenu(opening)
               if (opening && sectionRef) scrollIntoViewLocal(sectionRef)
             }}
-            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors cursor-pointer 
-         flex items-center gap-1"
+            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors cursor-pointer flex items-center gap-1"
             title={t('plugin.addPlugin')}
             type="button"
           >
@@ -183,100 +187,106 @@ export default function PluginSection(props: PluginSectionProps) {
             </div>
           }
         >
-          <For each={props.plugins}>
-            {(instance, index) => {
-              const isExpanded = () => expandedIndex() === index()
-              const isFirst = () => index() === 0
-              const isLast = () => index() === props.plugins.length - 1
-              const def = () => getDef(instance.pluginId)
-              const enabled = () =>
-                isPluginEnabled(config.pluginMetadatas, instance.pluginId)
+          <DragDropProvider
+            onDragEnd={handleDragEnd}
+            collisionDetector={closestCenter}
+          >
+            <DragDropSensors />
+            <SortableProvider ids={sortableIds()}>
+              <Index each={props.plugins}>
+                {(item, index) => {
+                  const sortable = createSortable(index.toString())
+                  const isExpanded = () => expandedIndex() === index
+                  const def = () => getDef(item().pluginId)
+                  const enabled = () =>
+                    isPluginEnabled(config.pluginMetadatas, item().pluginId)
 
-              return (
-                <div class="bg-white dark:bg-gray-700/50 border border-gray-200 dark:border-transparent rounded overflow-hidden transition-colors">
-                  <div class="flex items-center gap-2 px-2 py-1.5">
-                    <button
-                      class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                      onClick={() => handleMovePlugin(index(), -1)}
-                      disabled={isFirst()}
-                      title={t('plugin.moveUp')}
-                      type="button"
-                    >
-                      <FiArrowUp class="w-3 h-3" />
-                    </button>
-                    <button
-                      class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                      onClick={() => handleMovePlugin(index(), 1)}
-                      disabled={isLast()}
-                      title={t('plugin.moveDown')}
-                      type="button"
-                    >
-                      <FiArrowDown class="w-3 h-3" />
-                    </button>
-
-                    <span
-                      class={`flex-1 text-xs font-medium cursor-pointer select-none truncate ${
-                        enabled()
-                          ? 'text-gray-700 dark:text-gray-200'
-                          : 'text-gray-400 dark:text-gray-500 line-through'
+                  return (
+                    <div
+                      ref={sortable}
+                      class={`bg-white dark:bg-gray-700/50 border border-gray-200 dark:border-transparent rounded overflow-hidden transition-colors ${
+                        sortable.isActiveDraggable
+                          ? 'opacity-50 shadow-lg z-10 relative'
+                          : ''
                       }`}
-                      onClick={() => setExpandedIndex(isExpanded() ? null : index())}
-                      title={enabled() ? undefined : t('plugin.disabled')}
                     >
-                      {getPluginName(instance)}
-                    </span>
+                      <div class="flex items-center gap-2 px-2 py-1.5">
+                        {/* Drag handle */}
+                        <button
+                          class="text-gray-300 dark:text-gray-500 hover:text-gray-400 dark:hover:text-gray-400 cursor-grab active:cursor-grabbing transition-colors"
+                          {...sortable.dragActivators}
+                          type="button"
+                        >
+                          <CgMenuGridO />
+                        </button>
 
-                    <button
-                      class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                      onClick={() => setExpandedIndex(isExpanded() ? null : index())}
-                      type="button"
-                    >
+                        <span
+                          class={`flex-1 text-xs font-medium cursor-pointer select-none truncate ${
+                            enabled()
+                              ? 'text-gray-700 dark:text-gray-200'
+                              : 'text-gray-400 dark:text-gray-500 line-through'
+                          }`}
+                          onClick={() => setExpandedIndex(isExpanded() ? null : index)}
+                          title={enabled() ? undefined : t('plugin.disabled')}
+                        >
+                          {getPluginName(item())}
+                        </span>
+
+                        <button
+                          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                          onClick={() => setExpandedIndex(isExpanded() ? null : index)}
+                          type="button"
+                        >
+                          <Show
+                            when={isExpanded()}
+                            fallback={<FiChevronDown class="w-3 h-3" />}
+                          >
+                            <FiChevronUp class="w-3 h-3" />
+                          </Show>
+                        </button>
+
+                        <button
+                          class="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                          onClick={() => handleRemovePlugin(index)}
+                          title={t('plugin.removePlugin')}
+                          type="button"
+                        >
+                          <FiTrash2 class="w-3 h-3" />
+                        </button>
+                      </div>
+
                       <Show
-                        when={isExpanded()}
-                        fallback={<FiChevronDown class="w-3 h-3" />}
+                        when={isExpanded() && def()?.GameEditor && 'config' in item()}
                       >
-                        <FiChevronUp class="w-3 h-3" />
-                      </Show>
-                    </button>
-
-                    <button
-                      class="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                      onClick={() => handleRemovePlugin(index())}
-                      title={t('plugin.removePlugin')}
-                      type="button"
-                    >
-                      <FiTrash2 class="w-3 h-3" />
-                    </button>
-                  </div>
-
-                  <Show when={isExpanded() && def()?.GameEditor && 'config' in instance}>
-                    {(() => {
-                      const d = def()
-                      if (!d?.GameEditor) return null
-                      return (
-                        <div class="border-t border-gray-200 dark:border-gray-600/50 px-3 py-2 bg-gray-50/50 dark:bg-gray-900/20">
-                          <Dynamic
-                            component={d.GameEditor}
-                            config={
-                              (
-                                instance as {
-                                  pluginId: string
-                                  config: Record<string, unknown>
+                        {(() => {
+                          const d = def()
+                          if (!d?.GameEditor) return null
+                          return (
+                            <div class="border-t border-gray-200 dark:border-gray-600/50 px-3 py-2 bg-gray-50/50 dark:bg-gray-900/20">
+                              <Dynamic
+                                component={d.GameEditor}
+                                config={
+                                  (
+                                    item() as {
+                                      pluginId: string
+                                      config: Record<string, unknown>
+                                    }
+                                  ).config as any
                                 }
-                              ).config as any
-                            }
-                            onCommit={(values: Record<string, unknown>) =>
-                              handleUpdateConfig(index(), values)
-                            }
-                          />
-                        </div>
-                      )
-                    })()}
-                  </Show>
-                </div>
-              )
-            }}
-          </For>
+                                onCommit={(values: Record<string, unknown>) =>
+                                  handleUpdateConfig(index, values)
+                                }
+                              />
+                            </div>
+                          )
+                        })()}
+                      </Show>
+                    </div>
+                  )
+                }}
+              </Index>
+            </SortableProvider>
+          </DragDropProvider>
         </Show>
       </div>
     </div>
