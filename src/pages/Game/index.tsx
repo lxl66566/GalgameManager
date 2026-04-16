@@ -12,6 +12,7 @@ import {
   replaceWithVarNames,
   resolveVarForDevice
 } from '@utils/resolveVar'
+import { getSortType, setSortType as setSortTypeCached } from '@utils/sortTypeCache'
 import { durationToSecs } from '@utils/time'
 import { useI18n } from '~/i18n'
 import { cn } from '~/lib/utils'
@@ -68,11 +69,7 @@ const GamePage = (): JSX.Element => {
         })
       }
     })
-    try {
-      invoke<SortType>('get_sort_type').then(type => {
-        setSortType(type)
-      })
-    } catch {}
+    getSortType().then(setSortType)
   })
 
   const sortedGames = createMemo(() => {
@@ -381,9 +378,7 @@ const GamePage = (): JSX.Element => {
             sortType={sortType}
             onChange={s => {
               setSortType(s)
-              try {
-                invoke('set_sort_type', { sortType: s })
-              } catch {}
+              setSortTypeCached(s)
             }}
           />
         </div>

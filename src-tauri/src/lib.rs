@@ -42,8 +42,6 @@ pub fn run() {
             save_config,
             device_id,
             resolve_var,
-            set_sort_type,
-            get_sort_type,
             log,
             list_local_archive,
             delete_local_archive,
