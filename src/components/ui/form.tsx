@@ -10,7 +10,7 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { fuckBackslash } from '@utils/path'
 import { useI18n } from '~/i18n'
 import { cn } from '~/lib/utils'
-import { FiInfo } from 'solid-icons/fi'
+import { FiFolder, FiInfo } from 'solid-icons/fi'
 import {
   createSignal,
   For,
@@ -185,11 +185,24 @@ export interface FormPathInputProps {
 /** Text input + file/folder browse button with paste-aware bulk-input support. */
 export const FormPathInput: Component<FormPathInputProps> = props => {
   const { t } = useI18n()
-  const wrapperClass = () => cn('flex gap-2', props.class)
-  const inputClass = () => cn(DEFAULT_PATH_INPUT, props.inputClass)
-  const buttonClass = () => cn(DEFAULT_PATH_BTN, props.buttonClass)
 
-  // Shared paste handling logic for both input modes
+  // 外层使用 grid 布局，这是实现 input 宽度随内容自适应的核心
+  // min-w-[12rem] 保证没内容时也有一个基础宽度，max-w-full 防止撑爆屏幕
+  const wrapperClass = () => cn('relative flex items-center w-full', props.class)
+  const inputClass = () =>
+    cn(DEFAULT_PATH_INPUT, 'col-start-1 row-start-1 w-full pr-8', props.inputClass)
+
+  // 图标按钮：小巧的正方形，悬浮时显示半透明背景
+  const buttonClass = () =>
+    cn(
+      'absolute right-1.5 top-1/2 -translate-y-1/2',
+      'w-6 h-6 flex items-center justify-center rounded-md',
+      'text-neutral-500 dark:text-neutral-400',
+      'hover:bg-black/10 dark:hover:bg-white/10 hover:text-neutral-700 dark:hover:text-neutral-200',
+      'transition-colors cursor-pointer',
+      props.buttonClass
+    )
+
   const handlePasteDetect = (e: InputEvent) => {
     if (e.inputType === 'insertFromPaste') {
       const input = e.currentTarget as HTMLInputElement
@@ -198,14 +211,12 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
         val = props.onBulkInput(val)
       }
       input.value = val
-      // Auto-commit on paste
       if (val !== props.value) {
         props.onCommit(val)
       }
     }
   }
 
-  // Shared browse logic
   const handleBrowse = async () => {
     try {
       const selected = await open({
@@ -215,7 +226,6 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
       })
       if (selected && typeof selected === 'string') {
         const normalized = fuckBackslash(selected)
-        // Notify side-effects before transformation
         props.onBrowse?.(normalized)
         let val = normalized
         if (props.onBulkInput) {
@@ -243,8 +253,14 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
         }}
         placeholder={props.placeholder}
       />
-      <button type="button" class={buttonClass()} onClick={handleBrowse}>
-        {t('ui.browse')}
+
+      <button
+        type="button"
+        class={buttonClass()}
+        onClick={handleBrowse}
+        title={t('ui.browse')}
+      >
+        <FiFolder class="w-4 h-4" />
       </button>
     </div>
   )

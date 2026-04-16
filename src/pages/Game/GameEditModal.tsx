@@ -37,9 +37,6 @@ const MODAL_INPUT_BASE =
 
 const MODAL_PATH_INPUT = `flex-1 min-w-0 h-auto ${MODAL_INPUT_BASE} truncate`
 
-const MODAL_BROWSE_BTN =
-  'bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-800 dark:text-white px-2 py-1.5 h-auto rounded text-sm whitespace-nowrap transition-colors'
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface GameEditModalProps {
@@ -358,7 +355,6 @@ export default function GameEditModal(props: GameEditModalProps) {
                 ]}
                 placeholder={t('game.edit.exePathPlaceholder')}
                 inputClass={MODAL_PATH_INPUT} // 如果 FormPathInput 内部也重构了，这里可以直接传 class
-                buttonClass={MODAL_BROWSE_BTN}
               />
               <Show when={exePathWarning()}>
                 <FieldHint variant="warning" text={exePathWarning()} class="pt-1" />

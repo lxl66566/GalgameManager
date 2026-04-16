@@ -178,38 +178,36 @@ const CompressionForm: Component<{
 
   return (
     <SettingSection title={t('settings.compression.self')}>
-      <SettingSubGroup>
-        <SettingRow label={t('settings.compression.algorithm')} indent>
-          <Select
-            value={props.config.algorithm}
-            onChange={e =>
-              props.actions.updateSettings(
-                s => (s.archive.algorithm = e.currentTarget.value as ArchiveAlgo)
-              )
-            }
-            options={[
-              { label: 'Squashfs + Zstd', value: 'squashfsZstd' },
-              { label: 'tar', value: 'tar' }
-            ]}
-          />
-        </SettingRow>
+      <SettingRow label={t('settings.compression.algorithm')} indent>
+        <Select
+          value={props.config.algorithm}
+          onChange={e =>
+            props.actions.updateSettings(
+              s => (s.archive.algorithm = e.currentTarget.value as ArchiveAlgo)
+            )
+          }
+          options={[
+            { label: 'Squashfs + Zstd', value: 'squashfsZstd' },
+            { label: 'tar', value: 'tar' }
+          ]}
+        />
+      </SettingRow>
 
-        <SettingRow label={t('settings.compression.level')} indent>
-          <Input
-            type="number" // 建议加上 type="number"
-            value={currentRule().disabled ? '' : props.config.level}
-            // 传入事件对象 e，而不是 e.currentTarget.value
-            onChange={e => handleLevelChange(e)}
-            disabled={currentRule().disabled}
-            placeholder={
-              currentRule().disabled ? 'N/A' : `${currentRule().min}-${currentRule().max}`
-            }
-            // 增加 min/max 属性辅助浏览器原生校验 UI
-            min={currentRule().min}
-            max={currentRule().max}
-          />
-        </SettingRow>
-      </SettingSubGroup>
+      <SettingRow label={t('settings.compression.level')} indent>
+        <Input
+          type="number" // 建议加上 type="number"
+          value={currentRule().disabled ? '' : props.config.level}
+          // 传入事件对象 e，而不是 e.currentTarget.value
+          onChange={e => handleLevelChange(e)}
+          disabled={currentRule().disabled}
+          placeholder={
+            currentRule().disabled ? 'N/A' : `${currentRule().min}-${currentRule().max}`
+          }
+          // 增加 min/max 属性辅助浏览器原生校验 UI
+          min={currentRule().min}
+          max={currentRule().max}
+        />
+      </SettingRow>
     </SettingSection>
   )
 }
