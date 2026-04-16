@@ -1,3 +1,4 @@
+import { GameEditLabel } from '@components/ui/GameEditLabel'
 import { open } from '@tauri-apps/plugin-dialog'
 import { fuckBackslash } from '@utils/path'
 import { useI18n } from '~/i18n'
@@ -14,6 +15,7 @@ interface PathListEditorProps {
    */
   onBulkInput?: (value: string) => string
   label?: string
+  labelClass?: string
 }
 
 export default function PathListEditor(props: PathListEditorProps) {
@@ -75,9 +77,7 @@ export default function PathListEditor(props: PathListEditorProps) {
     <div class="flex flex-col gap-2 w-full">
       {/* Header */}
       <div class="flex justify-between items-center">
-        <span class="text-sm font-bold text-gray-700 dark:text-gray-300">
-          {props.label || 'Save Path'}
-        </span>
+        <GameEditLabel class={props.labelClass} children={props.label} />
         <div class="flex gap-2">
           <button
             onClick={() => handleAddPath(false)}

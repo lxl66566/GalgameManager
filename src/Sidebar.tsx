@@ -1,5 +1,5 @@
+import { cn } from '~/lib/utils'
 import { splitProps, type JSX } from 'solid-js'
-import { cn } from './lib/utils'
 
 interface SidebarItemProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElement> {
   label: string
