@@ -64,14 +64,30 @@ impl System {
 
 // ── Asset extraction helpers ───────────────────────────────────────────────
 
-/// Extract a single file from a `NamedArchive`, returning the destination
-/// path **only** if the file was newly created (did not exist before).
+const BACKUP_SUFFIX: &str = ".backup";
+
+/// Tracks a single extracted file and its optional backup for restoration.
+#[derive(Debug)]
+pub struct ExtractedFile {
+    /// Path of the extracted file in the game directory.
+    pub path: PathBuf,
+    /// If a pre-existing file was backed up before extraction, this is the
+    /// backup path (original renamed to `<name>.backup`).
+    pub backup: Option<PathBuf>,
+}
+
+/// Extract a single file from a `NamedArchive`.
+///
+/// If the destination file already exists, it is renamed to `<name>.backup`
+/// before extraction so it can be restored during cleanup. The returned
+/// `ExtractedFile` always tracks the destination regardless of whether it
+/// was newly created or overwritten.
 fn extract_single(
     archive: &NamedArchive,
     src_name: &str,
     dest_dir: &Path,
     dest_name: &str,
-) -> Result<Vec<PathBuf>> {
+) -> Result<ExtractedFile> {
     let bytes = archive.get(src_name).ok_or_else(|| {
         std::io::Error::new(
             std::io::ErrorKind::NotFound,
@@ -79,17 +95,20 @@ fn extract_single(
         )
     })?;
     let dest = dest_dir.join(dest_name);
-    let created = if !dest.exists() {
-        vec![dest.clone()]
+    let backup = if dest.exists() {
+        let bak = dest_dir.join(format!("{dest_name}{BACKUP_SUFFIX}"));
+        fs::rename(&dest, &bak)?;
+        info!("Backed up {} -> {}", dest.display(), bak.display());
+        Some(bak)
     } else {
-        vec![]
+        None
     };
     fs::write(&dest, bytes)?;
     info!("Extracted {dest_name}");
-    Ok(created)
+    Ok(ExtractedFile { path: dest, backup })
 }
 
-pub fn extract_soundtouch(system: System, dest: &Path) -> Result<Vec<PathBuf>> {
+pub fn extract_soundtouch(system: System, dest: &Path) -> Result<ExtractedFile> {
     #[cfg(not(debug_assertions))]
     let archive = NamedArchive::load(include_dir!(
         "assets/SoundTouch",
@@ -107,7 +126,7 @@ pub fn extract_soundtouch(system: System, dest: &Path) -> Result<Vec<PathBuf>> {
     )
 }
 
-pub fn extract_dsound_speedup(system: System, dest: &Path) -> Result<Vec<PathBuf>> {
+pub fn extract_dsound_speedup(system: System, dest: &Path) -> Result<ExtractedFile> {
     #[cfg(not(debug_assertions))]
     let archive = NamedArchive::load(include_dir!(
         "assets/dsound",
@@ -125,7 +144,7 @@ pub fn extract_dsound_speedup(system: System, dest: &Path) -> Result<Vec<PathBuf
     )
 }
 
-pub fn extract_dsound_zerointerrupt(system: System, dest: &Path) -> Result<Vec<PathBuf>> {
+pub fn extract_dsound_zerointerrupt(system: System, dest: &Path) -> Result<ExtractedFile> {
     #[cfg(not(debug_assertions))]
     let archive = NamedArchive::load(include_dir!(
         "assets/dsound",
@@ -143,7 +162,7 @@ pub fn extract_dsound_zerointerrupt(system: System, dest: &Path) -> Result<Vec<P
     )
 }
 
-pub fn extract_mmdevapi(system: System, dest: &Path) -> Result<Vec<PathBuf>> {
+pub fn extract_mmdevapi(system: System, dest: &Path) -> Result<ExtractedFile> {
     #[cfg(not(debug_assertions))]
     let archive = NamedArchive::load(include_dir!(
         "assets/MMDevAPI",
@@ -161,7 +180,7 @@ pub fn extract_mmdevapi(system: System, dest: &Path) -> Result<Vec<PathBuf>> {
     )
 }
 
-pub fn extract_onnxruntime(system: System, dest: &Path) -> Result<Vec<PathBuf>> {
+pub fn extract_onnxruntime(system: System, dest: &Path) -> Result<ExtractedFile> {
     #[cfg(not(debug_assertions))]
     let archive = NamedArchive::load(include_dir!(
         "assets/onnxruntime",
@@ -179,7 +198,7 @@ pub fn extract_onnxruntime(system: System, dest: &Path) -> Result<Vec<PathBuf>> 
     )
 }
 
-pub fn extract_model(dest: &Path) -> Result<Vec<PathBuf>> {
+pub fn extract_model(dest: &Path) -> Result<ExtractedFile> {
     #[cfg(not(debug_assertions))]
     let archive = NamedArchive::load(include_dir!(
         "assets/models",
@@ -197,40 +216,73 @@ pub fn extract_speedup_assets(
     system: System,
     dest: &Path,
     provider: SpeedupProvider,
-) -> Result<Vec<PathBuf>> {
+) -> Result<Vec<ExtractedFile>> {
     let mut files = Vec::new();
-    match provider {
-        SpeedupProvider::DSound => {
-            files.extend(extract_soundtouch(system, dest)?);
-            files.extend(extract_dsound_speedup(system, dest)?);
+
+    let result: Result<()> = (|| {
+        match provider {
+            SpeedupProvider::DSound => {
+                files.push(extract_soundtouch(system, dest)?);
+                files.push(extract_dsound_speedup(system, dest)?);
+            }
+            SpeedupProvider::MMDevAPI => {
+                files.push(extract_soundtouch(system, dest)?);
+                files.push(extract_mmdevapi(system, dest)?);
+            }
         }
-        SpeedupProvider::MMDevAPI => {
-            files.extend(extract_soundtouch(system, dest)?);
-            files.extend(extract_mmdevapi(system, dest)?);
-        }
+        Ok(())
+    })();
+
+    // 如果中途解压失败，清理掉已经解压出来的部分文件
+    if let Err(e) = result {
+        cleanup_files(&files);
+        return Err(e);
     }
     Ok(files)
 }
 
 /// Extract all DLLs needed for VoiceZerointerrupt.
-pub fn extract_zerointerrupt_assets(system: System, dest: &Path) -> Result<Vec<PathBuf>> {
+pub fn extract_zerointerrupt_assets(system: System, dest: &Path) -> Result<Vec<ExtractedFile>> {
     let mut files = Vec::new();
-    files.extend(extract_dsound_zerointerrupt(system, dest)?);
-    files.extend(extract_model(dest)?);
-    files.extend(extract_onnxruntime(system, dest)?);
+
+    let result: Result<()> = (|| {
+        files.push(extract_dsound_zerointerrupt(system, dest)?);
+        files.push(extract_model(dest)?);
+        files.push(extract_onnxruntime(system, dest)?);
+        Ok(())
+    })();
+
+    if let Err(e) = result {
+        cleanup_files(&files);
+        return Err(e);
+    }
     Ok(files)
 }
 
-/// Remove extracted files (only those that were newly created).
-pub fn cleanup_files(files: &[PathBuf]) {
-    for path in files {
-        match fs::remove_file(path) {
-            Ok(()) => info!("Cleaned up: {}", path.display()),
+/// Remove extracted files and restore any backups.
+pub fn cleanup_files(files: &[ExtractedFile]) {
+    for file in files {
+        // 1. Remove the extracted file
+        match fs::remove_file(&file.path) {
+            Ok(()) => info!("Cleaned up: {}", file.path.display()),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                warn!("File not found during cleanup: {}", path.display());
+                warn!("File not found during cleanup: {}", file.path.display());
             }
             Err(e) => {
-                log::error!("Failed to remove {}: {e}", path.display());
+                log::error!("Failed to remove {}: {e}", file.path.display());
+            }
+        }
+        // 2. Restore backup if one exists
+        if let Some(backup) = &file.backup {
+            match fs::rename(backup, &file.path) {
+                Ok(()) => info!(
+                    "Restored backup: {} -> {}",
+                    backup.display(),
+                    file.path.display()
+                ),
+                Err(e) => {
+                    log::error!("Failed to restore backup {}: {e}", backup.display());
+                }
             }
         }
     }

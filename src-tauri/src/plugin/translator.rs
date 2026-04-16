@@ -11,7 +11,7 @@ use super::{
     PLUGIN_REGISTRY, PluginConfig, PluginContext,
     config::{ExecuteGameConfig, ExecutePhase, ExitSignal},
 };
-use crate::error::Result;
+use crate::{error::Result, plugin::Transaction};
 
 /// Plugin identifier used in the registry and config.
 pub const PLUGIN_ID: &str = "translator";
@@ -99,6 +99,7 @@ impl super::PluginHandler for TranslatorPlugin {
             app: ctx.app,
             game_id: ctx.game_id,
             config: PluginConfig::Execute(inner_config),
+            transaction: Transaction::new(),
         };
 
         if let Some(handler) = PLUGIN_REGISTRY.get(super::execute::PLUGIN_ID) {
@@ -117,6 +118,7 @@ impl super::PluginHandler for TranslatorPlugin {
             app: ctx.app,
             game_id: ctx.game_id,
             config: PluginConfig::Execute(inner_config),
+            transaction: Transaction::new(),
         };
 
         if let Some(handler) = PLUGIN_REGISTRY.get(super::execute::PLUGIN_ID) {
@@ -135,6 +137,7 @@ impl super::PluginHandler for TranslatorPlugin {
             app: ctx.app,
             game_id: ctx.game_id,
             config: PluginConfig::Execute(inner_config),
+            transaction: Transaction::new(),
         };
 
         if let Some(handler) = PLUGIN_REGISTRY.get(super::execute::PLUGIN_ID) {

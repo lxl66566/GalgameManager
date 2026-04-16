@@ -11,7 +11,7 @@ use crate::{
     error::{Error, Result},
     exec::{GAME_LOOP_HANDLES, launch_game_with_plugins},
     logging::LogLevel,
-    plugin::{dispatch_after_save_upload, dispatch_before_save_upload},
+    plugin::{Transaction, dispatch_after_save_upload, dispatch_before_save_upload},
     sync::MyOperation,
     utils::list_dir_all,
 };
@@ -180,19 +180,29 @@ pub async fn upload_archive(app: AppHandle, game_id: u32, archive_filename: Stri
         game_id, archive_filename
     );
 
-    // Dispatch before_save_upload hooks
-    dispatch_before_save_upload(&app, game_id, &archive_filename).await?;
+    let tx = Transaction::new();
 
-    build_operator_with_varmap(&app)?
+    // Dispatch before_save_upload hooks
+    if let Err(e) = dispatch_before_save_upload(&app, game_id, &archive_filename, tx.clone()).await
+    {
+        tx.rollback();
+        return Err(e);
+    }
+
+    if let Err(e) = build_operator_with_varmap(&app)?
         .upload_archive(
             game_id,
             &archive_filename,
             &app.path().app_local_data_dir()?.join("backup"),
         )
-        .await?;
+        .await
+    {
+        tx.rollback();
+        return Err(e);
+    }
 
     // Dispatch after_save_upload hooks (non-fatal)
-    dispatch_after_save_upload(&app, game_id, &archive_filename).await;
+    dispatch_after_save_upload(&app, game_id, &archive_filename, tx.clone()).await;
 
     Ok(())
 }

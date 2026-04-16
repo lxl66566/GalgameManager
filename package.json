@@ -9,7 +9,8 @@
     "tauri": "tauri",
     "preview": "vite preview",
     "prettier": "prettier src -c",
-    "prettier:fix": "prettier src -w"
+    "prettier:fix": "prettier src -w",
+    "check": "tsc --noEmit --strict --skipLibCheck"
   },
   "license": "MIT",
   "devDependencies": {

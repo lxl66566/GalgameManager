@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use super::{PLUGIN_REGISTRY, PluginConfig, PluginContext, config::GameWrapperGameConfig};
-use crate::{error::Result, exec::StartCtx};
+use crate::{error::Result, exec::StartCtx, plugin::Transaction};
 
 /// Plugin identifier used in the registry and config.
 pub const PLUGIN_ID: &str = "localeEmulator";
@@ -92,6 +92,7 @@ impl super::PluginHandler for LocaleEmulatorPlugin {
             app: ctx.app.clone(),
             game_id: ctx.game_id,
             config: PluginConfig::GameWrapper(inner_config),
+            transaction: Transaction::new(),
         };
 
         if let Some(handler) = PLUGIN_REGISTRY.get(super::game_wrapper::PLUGIN_ID) {
