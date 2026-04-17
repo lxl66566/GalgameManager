@@ -35,10 +35,7 @@ function LocaleEmulatorGameConfigEditor(
 
   return (
     <div class="flex flex-wrap gap-4 items-start items-stretch">
-      <FormField
-        label={t('plugin.localeEmulator.cmd')}
-        class="flex-1 min-w-48"
-      >
+      <FormField label={t('plugin.localeEmulator.cmd')} class="flex-1 min-w-48">
         <FormInput
           class="w-full"
           type="text"

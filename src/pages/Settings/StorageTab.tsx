@@ -3,6 +3,7 @@ import type { ArchiveConfig } from '@bindings/ArchiveConfig'
 import type { S3Config } from '@bindings/S3Config'
 import type { StorageProvider } from '@bindings/StorageProvider'
 import type { WebDavConfig } from '@bindings/WebDavConfig'
+import { FieldHint } from '@components/ui/FieldHint'
 import {
   Button,
   Input,
@@ -11,7 +12,6 @@ import {
   SettingSection,
   SettingSubGroup
 } from '@components/ui/settings'
-import { FieldHint } from '@components/ui/FieldHint'
 import { invoke } from '@tauri-apps/api/core'
 import { extractUnknownVars } from '@utils/resolveVar'
 import { useVarMap } from '@utils/useVarMap'
