@@ -60,7 +60,7 @@ export const LOCALE_EMULATOR_PLUGIN: PluginDefinition<'localeEmulator'> = {
     id: 'localeEmulator',
     nameKey: 'plugin.localeEmulator.name',
     descriptionKey: 'plugin.localeEmulator.description',
-    version: '1.0.1',
+    version: '1.1.0',
     author: 'BUILTIN_WRAPPER',
     links: [
       {

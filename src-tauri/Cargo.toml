@@ -6,7 +6,7 @@ edition     = "2024"
 license     = "MIT"
 name        = "GalgameManager"
 repository  = "https://github.com/lxl66566/GalgameManager"
-version     = "1.0.1"
+version     = "1.1.0"
 
 [lib]
 # The `_lib` suffix may seem redundant but it is necessary

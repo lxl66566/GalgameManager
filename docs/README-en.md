@@ -4,15 +4,13 @@
 
 A game launcher based on Tauri + SolidJS, primarily designed for managing and playing Galgame.
 
-It can:
-
 - Synchronize configurations and saves across devices
   - Currently supports local paths, WebDAV, and S3 as storage backends (if you need other backends, feel free to open an issue)
   - Efficient compression algorithm (squashfs + zstd, adjustable compression level)
   - Support for different paths on different devices via custom variables
   - Flexible save management and restoration
 - A powerful plugin system to customize behavior and additional features for different games
-- Precise playtime tracking (optional: track only window focus time or total running time)
+- Precise playtime tracking (track only window focus time)
 - Logging system (with diff support), daily snapshots to ensure user data safety
 - Multi-language / light & dark theme support
 
@@ -23,16 +21,16 @@ It can:
 ![Save Management](../assets/sync.png)
 ![Plugin Management](../assets/plugin.png)
 
-## TODO
-
-- [x] Save backup and synchronization
-- [x] Playtime tracking
-- [x] i18n
-- [x] Plugin system and launch chain
-- [ ] Support for more storage backends
-- [ ] Unix exec optimization
-
 ## Changelog
+
+### v1.1.0
+
+- Transaction rollback mechanism: If the game or a subsequent plugin fails to start, the effects caused by previous plugins (DLLs, registry entries) will be rolled back
+- When adding or pasting a path, automatically resolve it into variables
+- Input box checks whether a path or variable actually exists, and displays a warning if it does not
+- DLL backup to prevent overwriting existing files during extraction
+- UI fixes: inconsistent input box sizes, inconsistent gaps, flickering when switching tabs on the first screen, missing speed multiplier value display
+- UI improvements: button appearance optimization, automatic line wrapping for overly long variable edits
 
 ### v1.0.1
 
