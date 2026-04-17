@@ -6,24 +6,23 @@
  * composites: FormField, FormPathInput, FormTableEditor.
  */
 import { Tooltip } from '@kobalte/core/tooltip'
+import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { fuckBackslash } from '@utils/path'
-import { extractUnknownVars } from '@utils/resolveVar'
+import { extractUnknownVars, resolveVar } from '@utils/resolveVar'
 import { useVarMap } from '@utils/useVarMap'
 import { useI18n } from '~/i18n'
 import { cn } from '~/lib/utils'
 import { FiFolder, FiInfo } from 'solid-icons/fi'
 import {
   createMemo,
-  createSignal,
-  For,
+  createResource,
   mergeProps,
   Show,
   splitProps,
   type Component,
   type JSX
 } from 'solid-js'
-import toast from 'solid-toast'
 import {
   Button,
   Input,
@@ -64,7 +63,6 @@ export const FormInput: Component<FormInputProps> = props => {
   const { t } = useI18n()
   const varMap = useVarMap()
   const [local, rest] = splitProps(props, [
-    'class',
     'size',
     'onBulkInput',
     'onInput',
@@ -83,10 +81,10 @@ export const FormInput: Component<FormInputProps> = props => {
   })
 
   return (
-    <div class="flex flex-col">
+    <div class="flex flex-col w-full">
       <Input
         size={local.size ?? 'sm'}
-        class={local.class}
+        value={local.value}
         {...rest}
         onInput={e => {
           if (e.inputType === 'insertFromPaste' && local.onBulkInput) {
@@ -101,12 +99,14 @@ export const FormInput: Component<FormInputProps> = props => {
           }
         }}
       />
-      <Show when={varWarning()}>
-        <FieldHint variant="warning" text={varWarning()} />
-      </Show>
-      <Show when={local.warning}>
-        <FieldHint variant="warning" text={local.warning} />
-      </Show>
+      <div class="flex flex-col gap-1 mt-1">
+        <Show when={varWarning()}>
+          <FieldHint variant="warning" text={varWarning()} />
+        </Show>
+        <Show when={local.warning}>
+          <FieldHint variant="warning" text={local.warning} />
+        </Show>
+      </div>
     </div>
   )
 }
@@ -232,6 +232,15 @@ export interface FormPathInputProps {
    */
   checkVars?: boolean
   /**
+   * Enable asynchronous path-existence validation. When enabled, the
+   * resolved path (after variable substitution) is checked against the
+   * local filesystem via `paths_exist`. A warning is shown if the path
+   * does not exist.
+   *
+   * @default false
+   */
+  checkPathExist?: boolean
+  /**
    * External warning text rendered below the input (amber, icon + text),
    * e.g., a path-existence check result.
    */
@@ -251,6 +260,25 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
     const unknown = extractUnknownVars(props.value, vm)
     return unknown.length > 0 ? t('hint.unknownVar') + unknown.join(', ') : undefined
   })
+
+  // Path existence validation — async check via `paths_exist`
+  const [pathExistWarning] = createResource(
+    () => ({
+      path: props.value,
+      vars: varMap(),
+      enabled: props.checkPathExist === true
+    }),
+    async ({ path, vars, enabled }) => {
+      if (!enabled || !path || !vars) return undefined
+      try {
+        const resolved = resolveVar(path, vars)
+        const results = await invoke<boolean[]>('paths_exist', { paths: [resolved] })
+        return results[0] ? undefined : t('hint.pathNotExist')
+      } catch {
+        return undefined
+      }
+    }
+  )
 
   const wrapperClass = () => cn('flex flex-col', props.class)
   const inputClass = () =>
@@ -331,12 +359,17 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
       </div>
 
       {/* Warning hints — stacked below the input */}
-      <Show when={varWarning()}>
-        <FieldHint class="mt-1" variant="warning" text={varWarning()} />
-      </Show>
-      <Show when={props.warning}>
-        <FieldHint class="mt-1" variant="warning" text={props.warning} />
-      </Show>
+      <div class="flex flex-col gap-2 mt-2">
+        <Show when={varWarning()}>
+          <FieldHint variant="warning" text={varWarning()} />
+        </Show>
+        <Show when={pathExistWarning()}>
+          <FieldHint variant="warning" text={pathExistWarning()} />
+        </Show>
+        <Show when={props.warning}>
+          <FieldHint variant="warning" text={props.warning} />
+        </Show>
+      </div>
     </div>
   )
 }

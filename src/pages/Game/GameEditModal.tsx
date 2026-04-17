@@ -2,14 +2,12 @@ import { type Game } from '@bindings/Game'
 import PathListEditor from '@components/PathListEditor'
 import PluginSection from '@components/PluginSection'
 import CachedImage from '@components/ui/CachedImage'
-import { FieldHint } from '@components/ui/FieldHint'
 import { FormField, FormPathInput } from '@components/ui/form'
 import { MODAL_LABEL } from '@components/ui/GameEditLabel'
 import { myToast } from '@components/ui/myToast'
-import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { fuckBackslash, getParentPath } from '@utils/path'
-import { getDeviceVarMap, replaceWithVarNames, resolveVar, extractUnknownVars } from '@utils/resolveVar'
+import { getDeviceVarMap, replaceWithVarNames } from '@utils/resolveVar'
 import { dateToInput, durationToForm, inputToDate } from '@utils/time'
 import { fetchVnCover } from '@utils/vndb'
 import { Button } from '~/components/ui/Button'
@@ -213,58 +211,6 @@ export default function GameEditModal(props: GameEditModalProps) {
     }
   }
 
-  // ─── FS existence checks ──────────────────────────────────────────────────
-
-  const [exePathWarning] = createResource(
-    () => ({ path: localGame.excutablePath, vars: currentVars() }),
-    async ({ path, vars }) => {
-      if (!path || !vars) return undefined
-      try {
-        const resolved = resolveVar(path, vars)
-        const results = await invoke<boolean[]>('paths_exist', { paths: [resolved] })
-        return results[0] ? undefined : t('hint.pathNotExist')
-      } catch {
-        return undefined
-      }
-    }
-  )
-
-  const [savePathWarnings] = createResource(
-    () => ({ paths: [...localGame.savePaths], vars: currentVars() }),
-    async ({ paths, vars }) => {
-      if (paths.length === 0 || !vars) return []
-      try {
-        const resolved = paths.map(p => resolveVar(p, vars))
-        const results = await invoke<boolean[]>('paths_exist', { paths: resolved })
-        return results.map((exists, i) => (exists ? undefined : paths[i]))
-      } catch {
-        return []
-      }
-    }
-  )
-
-  const savePathWarningText = () => {
-    const warnings = savePathWarnings()
-    if (!warnings || warnings.length === 0) return undefined
-    const missing = warnings.filter(Boolean)
-    return missing.length > 0 ? t('hint.partialPathNotExist') : undefined
-  }
-
-  // ─── Var validation ─────────────────────────────────────────────────────
-
-  /** Check if any save path contains unknown variable references. */
-  const savePathsVarWarning = () => {
-    const vars = currentVars()
-    if (!vars) return undefined
-    const allUnknown = new Set<string>()
-    for (const p of localGame.savePaths) {
-      for (const u of extractUnknownVars(p, vars)) {
-        allUnknown.add(u)
-      }
-    }
-    return allUnknown.size > 0 ? t('hint.unknownVar') + [...allUnknown].join(', ') : undefined
-  }
-
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -370,7 +316,7 @@ export default function GameEditModal(props: GameEditModalProps) {
                 ]}
                 placeholder={t('game.edit.exePathPlaceholder')}
                 inputClass={MODAL_PATH_INPUT}
-                warning={exePathWarning()}
+                checkPathExist
               />
             </FormField>
 
@@ -379,25 +325,9 @@ export default function GameEditModal(props: GameEditModalProps) {
               paths={localGame.savePaths}
               onChange={newPaths => setLocalGame('savePaths', newPaths)}
               onBulkInput={bulkPathTransform}
+              checkVars
+              checkPathExist
             />
-            <Show when={savePathsVarWarning()}>
-              <div class="relative h-0 w-full z-10">
-                <FieldHint
-                  variant="warning"
-                  class="absolute top-0 left-0 w-full -my-7"
-                  text={savePathsVarWarning()}
-                />
-              </div>
-            </Show>
-            <Show when={savePathWarningText()}>
-              <div class="relative h-0 w-full z-10">
-                <FieldHint
-                  variant="warning"
-                  class="absolute top-0 left-0 w-full -my-7"
-                  text={savePathWarningText()}
-                />
-              </div>
-            </Show>
 
             <hr class="border-gray-300 dark:border-gray-700 my-1" />
 

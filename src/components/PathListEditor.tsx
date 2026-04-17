@@ -1,9 +1,20 @@
+import { FieldHint } from '@components/ui/FieldHint'
 import { GameEditLabel } from '@components/ui/GameEditLabel'
+import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { fuckBackslash } from '@utils/path'
+import { extractUnknownVars, resolveVar } from '@utils/resolveVar'
+import { useVarMap } from '@utils/useVarMap'
 import { useI18n } from '~/i18n'
 import { FiFilePlus, FiFolderPlus } from 'solid-icons/fi'
-import { createSignal, For, Show, type Component } from 'solid-js'
+import {
+  createMemo,
+  createResource,
+  createSignal,
+  For,
+  Show,
+  type Component
+} from 'solid-js'
 
 interface PathListEditorProps {
   paths: string[]
@@ -17,6 +28,23 @@ interface PathListEditorProps {
   onBulkInput?: (value: string) => string
   label?: string
   labelClass?: string
+  /**
+   * Enable validation of `{var}` placeholders against the current device's
+   * variable map. When enabled, unknown variable names in any path trigger
+   * a consolidated warning hint below the list.
+   *
+   * @default false
+   */
+  checkVars?: boolean
+  /**
+   * Enable asynchronous path-existence validation. When enabled, each
+   * resolved path (after variable substitution) is checked against the
+   * local filesystem via `paths_exist`. A warning is shown if any paths
+   * do not exist.
+   *
+   * @default false
+   */
+  checkPathExist?: boolean
 }
 
 interface ActionButtonProps {
@@ -48,8 +76,49 @@ function ActionButton(props: ActionButtonProps) {
 
 export default function PathListEditor(props: PathListEditorProps) {
   const { t } = useI18n()
+  const varMap = useVarMap()
   // 记录当前正在编辑的索引，null 表示没有在编辑
   const [editingIndex, setEditingIndex] = createSignal<number | null>(null)
+
+  // ─── Validations ──────────────────────────────────────────────────────────
+
+  /** Check if any save path contains unknown variable references. */
+  const varWarning = createMemo(() => {
+    if (!props.checkVars) return undefined
+    const vm = varMap()
+    if (!vm) return undefined
+    const allUnknown = new Set<string>()
+    for (const p of props.paths) {
+      for (const u of extractUnknownVars(p, vm)) {
+        allUnknown.add(u)
+      }
+    }
+    return allUnknown.size > 0
+      ? t('hint.unknownVar') + [...allUnknown].join(', ')
+      : undefined
+  })
+
+  /** Check if any resolved path does not exist on disk. */
+  const [pathExistWarning] = createResource(
+    () => ({
+      paths: [...props.paths],
+      vars: varMap(),
+      enabled: props.checkPathExist === true
+    }),
+    async ({ paths, vars, enabled }) => {
+      if (!enabled || paths.length === 0 || !vars) return undefined
+      try {
+        const resolved = paths.map(p => resolveVar(p, vars))
+        const results = await invoke<boolean[]>('paths_exist', { paths: resolved })
+        const missing = paths.filter((_, i) => !results[i])
+        return missing.length > 0 ? t('hint.partialPathNotExist') : undefined
+      } catch {
+        return undefined
+      }
+    }
+  )
+
+  // ─── Path helpers ─────────────────────────────────────────────────────────
 
   // 路径标准化逻辑
   const normalizePath = (p: string) => {
@@ -190,9 +259,21 @@ export default function PathListEditor(props: PathListEditorProps) {
         </Show>
       </div>
 
-      {/* 底部提示 */}
+      {/* 构建一个高度为 0 的锚点，让 warning 相对于这里进行绝对定位 */}
+      <div class="relative w-full h-0">
+        <div class="absolute top-0 left-0 flex flex-col gap-2 w-full z-10">
+          <Show when={varWarning()}>
+            <FieldHint variant="warning" text={varWarning()} />
+          </Show>
+          <Show when={pathExistWarning()}>
+            <FieldHint variant="warning" text={pathExistWarning()} />
+          </Show>
+        </div>
+      </div>
+
+      {/* 正常文档流中的提示，永远紧贴主体 */}
       <Show when={props.paths.length > 0}>
-        <div class="text-[10px] text-gray-400 dark:text-gray-500 text-right px-1">
+        <div class="text-[10px] text-gray-400 dark:text-gray-500 text-right pr-1 top-0">
           {t('hint.doubleClickToEdit')}
         </div>
       </Show>

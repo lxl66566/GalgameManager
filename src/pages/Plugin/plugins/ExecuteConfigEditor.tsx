@@ -98,10 +98,7 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
         />
       </FormField>
 
-      <FormField
-        label={t('plugin.execute.cmd')}
-        class="flex-1 min-w-48"
-      >
+      <FormField label={t('plugin.execute.cmd')} class="flex-1 min-w-48">
         <FormInput
           class="w-full"
           type="text"
