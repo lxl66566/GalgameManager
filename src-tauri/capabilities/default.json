@@ -22,7 +22,7 @@
     "window-state:default",
     {
       "identifier": "fs:scope",
-      "allow": ["**", "**/*", "/**/*"]
+      "allow": ["$HOME/.config/GalgameManager/**"]
     },
     {
       "identifier": "opener:allow-open-url",

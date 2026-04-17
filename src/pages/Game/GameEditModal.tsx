@@ -9,7 +9,7 @@ import { myToast } from '@components/ui/myToast'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { fuckBackslash, getParentPath } from '@utils/path'
-import { getDeviceVarMap, replaceWithVarNames, resolveVar } from '@utils/resolveVar'
+import { getDeviceVarMap, replaceWithVarNames, resolveVar, extractUnknownVars } from '@utils/resolveVar'
 import { dateToInput, durationToForm, inputToDate } from '@utils/time'
 import { fetchVnCover } from '@utils/vndb'
 import { Button } from '~/components/ui/Button'
@@ -250,6 +250,21 @@ export default function GameEditModal(props: GameEditModalProps) {
     return missing.length > 0 ? t('hint.partialPathNotExist') : undefined
   }
 
+  // ─── Var validation ─────────────────────────────────────────────────────
+
+  /** Check if any save path contains unknown variable references. */
+  const savePathsVarWarning = () => {
+    const vars = currentVars()
+    if (!vars) return undefined
+    const allUnknown = new Set<string>()
+    for (const p of localGame.savePaths) {
+      for (const u of extractUnknownVars(p, vars)) {
+        allUnknown.add(u)
+      }
+    }
+    return allUnknown.size > 0 ? t('hint.unknownVar') + [...allUnknown].join(', ') : undefined
+  }
+
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -354,11 +369,9 @@ export default function GameEditModal(props: GameEditModalProps) {
                   { name: 'Executables', extensions: ['exe', 'lnk', 'bat', 'cmd'] }
                 ]}
                 placeholder={t('game.edit.exePathPlaceholder')}
-                inputClass={MODAL_PATH_INPUT} // 如果 FormPathInput 内部也重构了，这里可以直接传 class
+                inputClass={MODAL_PATH_INPUT}
+                warning={exePathWarning()}
               />
-              <Show when={exePathWarning()}>
-                <FieldHint variant="warning" text={exePathWarning()} class="pt-1" />
-              </Show>
             </FormField>
 
             <PathListEditor
@@ -367,6 +380,15 @@ export default function GameEditModal(props: GameEditModalProps) {
               onChange={newPaths => setLocalGame('savePaths', newPaths)}
               onBulkInput={bulkPathTransform}
             />
+            <Show when={savePathsVarWarning()}>
+              <div class="relative h-0 w-full z-10">
+                <FieldHint
+                  variant="warning"
+                  class="absolute top-0 left-0 w-full -my-7"
+                  text={savePathsVarWarning()}
+                />
+              </div>
+            </Show>
             <Show when={savePathWarningText()}>
               <div class="relative h-0 w-full z-10">
                 <FieldHint

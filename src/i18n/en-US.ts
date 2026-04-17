@@ -298,7 +298,8 @@ export const dict = {
     exePathNotAbsolute:
       'Resolved executable path is not absolute, which may cause launch failure',
     pathNotExist: 'Path does not exist on this device',
-    partialPathNotExist: 'Partial path does not exist on this device'
+    partialPathNotExist: 'Partial path does not exist on this device',
+    unknownVar: 'Unknown variable(s): '
   }
 }
 

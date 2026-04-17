@@ -101,13 +101,14 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
       <FormField
         label={t('plugin.execute.cmd')}
         class="flex-1 min-w-48"
-        warning={needsPlaceholder() ? t('plugin.needBraces') : undefined}
       >
         <FormInput
           class="w-full"
           type="text"
           value={props.config.cmd}
           placeholder={t('plugin.execute.cmdPlaceholder')}
+          checkVars
+          warning={needsPlaceholder() ? t('plugin.needBraces') : undefined}
           onBlur={(e: FocusEvent) => {
             const val = (e.target as HTMLInputElement).value
             if (val !== props.config.cmd) {

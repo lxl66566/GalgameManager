@@ -8,10 +8,13 @@
 import { Tooltip } from '@kobalte/core/tooltip'
 import { open } from '@tauri-apps/plugin-dialog'
 import { fuckBackslash } from '@utils/path'
+import { extractUnknownVars } from '@utils/resolveVar'
+import { useVarMap } from '@utils/useVarMap'
 import { useI18n } from '~/i18n'
 import { cn } from '~/lib/utils'
 import { FiFolder, FiInfo } from 'solid-icons/fi'
 import {
+  createMemo,
   createSignal,
   For,
   mergeProps,
@@ -43,28 +46,68 @@ export interface FormInputProps extends InputProps {
    * Receives the raw pasted text and must return the transformed string.
    */
   onBulkInput?: (value: string) => string
+  /**
+   * Enable validation of `{var}` placeholders against the current device's
+   * variable map. When enabled, unknown variable names trigger a warning
+   * hint below the input.
+   *
+   * @default false
+   */
+  checkVars?: boolean
+  /**
+   * External warning text rendered below the input (amber, icon + text).
+   */
+  warning?: string
 }
 
 export const FormInput: Component<FormInputProps> = props => {
-  const [local, rest] = splitProps(props, ['class', 'size', 'onBulkInput', 'onInput'])
+  const { t } = useI18n()
+  const varMap = useVarMap()
+  const [local, rest] = splitProps(props, [
+    'class',
+    'size',
+    'onBulkInput',
+    'onInput',
+    'checkVars',
+    'warning',
+    'value'
+  ])
+
+  const varWarning = createMemo(() => {
+    if (!local.checkVars) return undefined
+    const vm = varMap()
+    if (!vm) return undefined
+    const val = typeof local.value === 'string' ? local.value : ''
+    const unknown = extractUnknownVars(val, vm)
+    return unknown.length > 0 ? t('hint.unknownVar') + unknown.join(', ') : undefined
+  })
+
   return (
-    <Input
-      size={local.size ?? 'sm'}
-      class={local.class}
-      {...rest}
-      onInput={e => {
-        if (e.inputType === 'insertFromPaste' && local.onBulkInput) {
-          const input = e.currentTarget
-          const transformed = local.onBulkInput(input.value)
-          if (transformed !== input.value) {
-            input.value = transformed
+    <div class="flex flex-col">
+      <Input
+        size={local.size ?? 'sm'}
+        class={local.class}
+        {...rest}
+        onInput={e => {
+          if (e.inputType === 'insertFromPaste' && local.onBulkInput) {
+            const input = e.currentTarget
+            const transformed = local.onBulkInput(input.value)
+            if (transformed !== input.value) {
+              input.value = transformed
+            }
           }
-        }
-        if (typeof local.onInput === 'function') {
-          local.onInput(e)
-        }
-      }}
-    />
+          if (typeof local.onInput === 'function') {
+            local.onInput(e)
+          }
+        }}
+      />
+      <Show when={varWarning()}>
+        <FieldHint variant="warning" text={varWarning()} />
+      </Show>
+      <Show when={local.warning}>
+        <FieldHint variant="warning" text={local.warning} />
+      </Show>
+    </div>
   )
 }
 
@@ -180,15 +223,36 @@ export interface FormPathInputProps {
    * Extra class for the browse `<button>` — merged via `cn()`
    */
   buttonClass?: string
+  /**
+   * Enable validation of `{var}` placeholders against the current device's
+   * variable map. When enabled, unknown variable names trigger a warning
+   * hint below the input.
+   *
+   * @default true
+   */
+  checkVars?: boolean
+  /**
+   * External warning text rendered below the input (amber, icon + text),
+   * e.g., a path-existence check result.
+   */
+  warning?: string
 }
 
-/** Text input + file/folder browse button with paste-aware bulk-input support. */
+/** Text input + file/folder browse button with var validation and warning hints. */
 export const FormPathInput: Component<FormPathInputProps> = props => {
   const { t } = useI18n()
+  const varMap = useVarMap()
 
-  // 外层使用 grid 布局，这是实现 input 宽度随内容自适应的核心
-  // min-w-[12rem] 保证没内容时也有一个基础宽度，max-w-full 防止撑爆屏幕
-  const wrapperClass = () => cn('relative flex items-center w-full', props.class)
+  // Var validation — checks for unknown {key} references
+  const varWarning = createMemo(() => {
+    if (props.checkVars === false) return undefined
+    const vm = varMap()
+    if (!vm) return undefined
+    const unknown = extractUnknownVars(props.value, vm)
+    return unknown.length > 0 ? t('hint.unknownVar') + unknown.join(', ') : undefined
+  })
+
+  const wrapperClass = () => cn('flex flex-col', props.class)
   const inputClass = () =>
     cn(DEFAULT_PATH_INPUT, 'col-start-1 row-start-1 w-full pr-8', props.inputClass)
 
@@ -240,28 +304,39 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
 
   return (
     <div class={wrapperClass()}>
-      <input
-        type="text"
-        value={props.value}
-        class={inputClass()}
-        onInput={handlePasteDetect}
-        onBlur={(e: FocusEvent) => {
-          const newVal = (e.target as HTMLInputElement).value
-          if (newVal !== props.value) {
-            props.onCommit(newVal)
-          }
-        }}
-        placeholder={props.placeholder}
-      />
+      {/* Input row: text input + browse button */}
+      <div class="relative flex items-center w-full">
+        <input
+          type="text"
+          value={props.value}
+          class={inputClass()}
+          onInput={handlePasteDetect}
+          onBlur={(e: FocusEvent) => {
+            const newVal = (e.target as HTMLInputElement).value
+            if (newVal !== props.value) {
+              props.onCommit(newVal)
+            }
+          }}
+          placeholder={props.placeholder}
+        />
 
-      <button
-        type="button"
-        class={buttonClass()}
-        onClick={handleBrowse}
-        title={t('ui.browse')}
-      >
-        <FiFolder class="w-4 h-4" />
-      </button>
+        <button
+          type="button"
+          class={buttonClass()}
+          onClick={handleBrowse}
+          title={t('ui.browse')}
+        >
+          <FiFolder class="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Warning hints — stacked below the input */}
+      <Show when={varWarning()}>
+        <FieldHint class="mt-1" variant="warning" text={varWarning()} />
+      </Show>
+      <Show when={props.warning}>
+        <FieldHint class="mt-1" variant="warning" text={props.warning} />
+      </Show>
     </div>
   )
 }

@@ -11,7 +11,10 @@ import {
   SettingSection,
   SettingSubGroup
 } from '@components/ui/settings'
+import { FieldHint } from '@components/ui/FieldHint'
 import { invoke } from '@tauri-apps/api/core'
+import { extractUnknownVars } from '@utils/resolveVar'
+import { useVarMap } from '@utils/useVarMap'
 import { useI18n } from '~/i18n'
 import { checkAndPullRemote, performManualUpload, useConfig } from '~/store'
 import { FiDownload, FiLoader, FiUpload } from 'solid-icons/fi'
@@ -114,6 +117,15 @@ const LocalForm: Component<{
   onChange: (value: string) => void
 }> = props => {
   const { t } = useI18n()
+  const varMap = useVarMap()
+
+  const varWarning = createMemo(() => {
+    const vm = varMap()
+    if (!vm) return undefined
+    const unknown = extractUnknownVars(props.path, vm)
+    return unknown.length > 0 ? t('hint.unknownVar') + unknown.join(', ') : undefined
+  })
+
   return (
     <SettingSubGroup>
       <SettingRow label={t('settings.storage.localPath')} indent>
@@ -123,6 +135,11 @@ const LocalForm: Component<{
           placeholder={t('hint.supportVar')}
         />
       </SettingRow>
+      <Show when={varWarning()}>
+        <div class="px-3 pb-2">
+          <FieldHint variant="warning" text={varWarning()} />
+        </div>
+      </Show>
     </SettingSubGroup>
   )
 }

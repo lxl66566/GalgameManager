@@ -130,3 +130,47 @@ export async function getDeviceVarMap(
   const uid = await currentDeviceId()
   return devices.find(d => d.uid === uid)?.variables ?? {}
 }
+
+// ─── Var validation ──────────────────────────────────────────────────────────
+
+/**
+ * Extract `{key}` placeholders from a template string and return the keys
+ * that are NOT present in the provided varMap.
+ *
+ * - Escaped braces (`{{` / `}}`) are skipped.
+ * - Empty braces `{}` are skipped (commonly used as positional args in
+ *   plugin commands like `LEProc.exe "{}"`).
+ * - Returns a deduplicated list of unknown variable names.
+ */
+export function extractUnknownVars(
+  template: string,
+  varMap: Record<string, string>
+): string[] {
+  if (!template.includes('{')) return []
+
+  const unknown = new Set<string>()
+  let i = 0
+
+  while (i < template.length) {
+    const openIdx = template.indexOf('{', i)
+    if (openIdx === -1) break
+
+    // Skip escaped {{
+    if (template[openIdx + 1] === '{') {
+      i = openIdx + 2
+      continue
+    }
+
+    const closeIdx = template.indexOf('}', openIdx + 1)
+    if (closeIdx === -1) break
+
+    const key = template.slice(openIdx + 1, closeIdx)
+    // Skip empty braces {} (positional args in commands)
+    if (key.length > 0 && !Object.prototype.hasOwnProperty.call(varMap, key)) {
+      unknown.add(key)
+    }
+    i = closeIdx + 1
+  }
+
+  return [...unknown]
+}

@@ -38,13 +38,14 @@ function LocaleEmulatorGameConfigEditor(
       <FormField
         label={t('plugin.localeEmulator.cmd')}
         class="flex-1 min-w-48"
-        warning={needsPlaceholder() ? t('plugin.needBraces') : undefined}
       >
         <FormInput
           class="w-full"
           type="text"
           value={props.config.cmd}
           placeholder={t('plugin.localeEmulator.cmdPlaceholder')}
+          checkVars
+          warning={needsPlaceholder() ? t('plugin.needBraces') : undefined}
           onBlur={(e: FocusEvent) => {
             const val = (e.target as HTMLInputElement).value
             if (val !== props.config.cmd) {
