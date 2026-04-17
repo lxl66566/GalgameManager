@@ -295,6 +295,9 @@ export const dict: DeepPartial<RawDictionary> = {
     duplicateGameId: '疑似配置损坏: 检测到重复的游戏 ID! 请手动修复配置。',
     retryError: '发生错误，正在重试',
     openDirFailed: '打开游戏目录失败',
-    exePathNotAbsolute: '游戏启动路径解析后不是绝对路径，可能导致启动失败'
+    exePathNotAbsolute: '游戏启动路径解析后不是绝对路径，可能导致启动失败',
+    pathNotExist: '路径在当前设备上不存在',
+    partialPathNotExist: '部分路径在当前设备上不存在',
+    unknownVar: '未知变量: '
   }
 }

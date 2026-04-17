@@ -5,7 +5,7 @@
  * (default `size='md'`). Provides settings-specific layout components:
  * SettingSection, SettingRow, SettingSubGroup.
  */
-import { clsx } from 'clsx'
+import { cn } from '~/lib/utils'
 import { Show, type Component, type JSX } from 'solid-js'
 import { Button, Input, LinkButton, Select, Switch, Textarea } from './controls'
 
@@ -21,7 +21,7 @@ export const SettingSection: Component<{
   children: JSX.Element
   class?: string
 }> = props => (
-  <div class={clsx('mb-6', props.class)}>
+  <div class={cn('mb-6', props.class)}>
     <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 px-1 uppercase tracking-wider">
       {props.title}
     </h3>
@@ -39,7 +39,7 @@ export const SettingSubGroup: Component<{ children: JSX.Element }> = props => (
   </div>
 )
 
-// ─── SettingRow ─────────────────────────────────────────────────────────────
+// ─── SettingRow ──
 
 interface SettingRowProps {
   label: string | JSX.Element
@@ -51,7 +51,7 @@ interface SettingRowProps {
 
 export const SettingRow: Component<SettingRowProps> = props => (
   <div
-    class={clsx(
+    class={cn(
       'flex items-center justify-between gap-4 px-3 py-2.5 border-b border-gray-100 dark:border-gray-700/50 last:border-0 transition-colors hover:bg-gray-50/50 dark:hover:bg-gray-700/10',
       props.indent && 'pl-6',
       props.class

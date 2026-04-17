@@ -42,8 +42,6 @@ pub fn run() {
             save_config,
             device_id,
             resolve_var,
-            set_sort_type,
-            get_sort_type,
             log,
             list_local_archive,
             delete_local_archive,
@@ -66,6 +64,7 @@ pub fn run() {
             is_game_running,
             running_game_ids,
             open_game_dir,
+            paths_exist,
         ])
         .register_uri_scheme_protocol("galimg", |_, request| {
             crate::http::image_protocol_handler(request)

@@ -1,5 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { log } from '@utils/log'
+import { resolveVarForDevice } from '@utils/resolveVar'
+import { useConfig } from '~/store'
 import {
   createEffect,
   createResource,
@@ -27,13 +29,15 @@ interface ImageProps {
  *   through the custom protocol, keeping JS heap usage minimal.
  */
 const CachedImage: Component<ImageProps> = props => {
+  const { config } = useConfig()
+
   const [imageHash] = createResource(
     () => [props.url, props.hash] as const,
     async ([rawUrl, currentHash]) => {
       if (!rawUrl) return null
 
       try {
-        const resolvedUrl = await invoke<string>('resolve_var', { s: rawUrl })
+        const resolvedUrl = await resolveVarForDevice(rawUrl, config.devices)
         // Always call prepare_image to ensure cache exists on this device.
         // Rust handles fast-path (cache hit) efficiently — just a file exists check.
         const hash = await invoke<string>('prepare_image', {

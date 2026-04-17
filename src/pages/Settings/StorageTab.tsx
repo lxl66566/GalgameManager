@@ -3,6 +3,7 @@ import type { ArchiveConfig } from '@bindings/ArchiveConfig'
 import type { S3Config } from '@bindings/S3Config'
 import type { StorageProvider } from '@bindings/StorageProvider'
 import type { WebDavConfig } from '@bindings/WebDavConfig'
+import { FieldHint } from '@components/ui/FieldHint'
 import {
   Button,
   Input,
@@ -12,6 +13,8 @@ import {
   SettingSubGroup
 } from '@components/ui/settings'
 import { invoke } from '@tauri-apps/api/core'
+import { extractUnknownVars } from '@utils/resolveVar'
+import { useVarMap } from '@utils/useVarMap'
 import { useI18n } from '~/i18n'
 import { checkAndPullRemote, performManualUpload, useConfig } from '~/store'
 import { FiDownload, FiLoader, FiUpload } from 'solid-icons/fi'
@@ -114,6 +117,15 @@ const LocalForm: Component<{
   onChange: (value: string) => void
 }> = props => {
   const { t } = useI18n()
+  const varMap = useVarMap()
+
+  const varWarning = createMemo(() => {
+    const vm = varMap()
+    if (!vm) return undefined
+    const unknown = extractUnknownVars(props.path, vm)
+    return unknown.length > 0 ? t('hint.unknownVar') + unknown.join(', ') : undefined
+  })
+
   return (
     <SettingSubGroup>
       <SettingRow label={t('settings.storage.localPath')} indent>
@@ -123,6 +135,11 @@ const LocalForm: Component<{
           placeholder={t('hint.supportVar')}
         />
       </SettingRow>
+      <Show when={varWarning()}>
+        <div class="px-3 pb-2">
+          <FieldHint variant="warning" text={varWarning()} />
+        </div>
+      </Show>
     </SettingSubGroup>
   )
 }
@@ -178,38 +195,36 @@ const CompressionForm: Component<{
 
   return (
     <SettingSection title={t('settings.compression.self')}>
-      <SettingSubGroup>
-        <SettingRow label={t('settings.compression.algorithm')} indent>
-          <Select
-            value={props.config.algorithm}
-            onChange={e =>
-              props.actions.updateSettings(
-                s => (s.archive.algorithm = e.currentTarget.value as ArchiveAlgo)
-              )
-            }
-            options={[
-              { label: 'Squashfs + Zstd', value: 'squashfsZstd' },
-              { label: 'tar', value: 'tar' }
-            ]}
-          />
-        </SettingRow>
+      <SettingRow label={t('settings.compression.algorithm')} indent>
+        <Select
+          value={props.config.algorithm}
+          onChange={e =>
+            props.actions.updateSettings(
+              s => (s.archive.algorithm = e.currentTarget.value as ArchiveAlgo)
+            )
+          }
+          options={[
+            { label: 'Squashfs + Zstd', value: 'squashfsZstd' },
+            { label: 'tar', value: 'tar' }
+          ]}
+        />
+      </SettingRow>
 
-        <SettingRow label={t('settings.compression.level')} indent>
-          <Input
-            type="number" // 建议加上 type="number"
-            value={currentRule().disabled ? '' : props.config.level}
-            // 传入事件对象 e，而不是 e.currentTarget.value
-            onChange={e => handleLevelChange(e)}
-            disabled={currentRule().disabled}
-            placeholder={
-              currentRule().disabled ? 'N/A' : `${currentRule().min}-${currentRule().max}`
-            }
-            // 增加 min/max 属性辅助浏览器原生校验 UI
-            min={currentRule().min}
-            max={currentRule().max}
-          />
-        </SettingRow>
-      </SettingSubGroup>
+      <SettingRow label={t('settings.compression.level')} indent>
+        <Input
+          type="number" // 建议加上 type="number"
+          value={currentRule().disabled ? '' : props.config.level}
+          // 传入事件对象 e，而不是 e.currentTarget.value
+          onChange={e => handleLevelChange(e)}
+          disabled={currentRule().disabled}
+          placeholder={
+            currentRule().disabled ? 'N/A' : `${currentRule().min}-${currentRule().max}`
+          }
+          // 增加 min/max 属性辅助浏览器原生校验 UI
+          min={currentRule().min}
+          max={currentRule().max}
+        />
+      </SettingRow>
     </SettingSection>
   )
 }

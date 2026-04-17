@@ -43,6 +43,7 @@ function TranslatorGameConfigEditor(props: ConfigEditorProps<TranslatorGameConfi
           type="text"
           value={props.config.cmd}
           placeholder={t('plugin.translator.cmdPlaceholder')}
+          checkVars
           onBlur={(e: FocusEvent) => {
             const val = (e.target as HTMLInputElement).value
             if (val !== props.config.cmd) {
@@ -91,7 +92,7 @@ export const TRANSLATOR_PLUGIN: PluginDefinition<'translator'> = {
     id: 'translator',
     nameKey: 'plugin.translator.name',
     descriptionKey: 'plugin.translator.description',
-    version: '1.0.1',
+    version: '1.1.0',
     author: 'BUILTIN_WRAPPER',
     links: [
       {

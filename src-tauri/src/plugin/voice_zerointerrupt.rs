@@ -47,20 +47,17 @@ impl Default for VoiceZerointerruptPluginMeta {
 
 #[cfg(windows)]
 mod win_impl {
-    use std::{path::Path, sync::LazyLock as Lazy};
+    use std::path::Path;
 
-    use dashmap::DashMap;
     use log::info;
 
     use super::ArchPreference;
     use crate::{
         db::CONFIG,
         error::{Error, Result},
-        plugin::{PluginConfig, PluginContext, PluginHandler},
+        plugin::{CleanupPhase, PluginConfig, PluginContext, PluginHandler},
         utils::audio_speed_hack,
     };
-
-    static CLEANUP_STATES: Lazy<DashMap<u32, Vec<std::path::PathBuf>>> = Lazy::new(DashMap::new);
 
     pub struct VoiceZerointerruptPlugin;
 
@@ -98,10 +95,12 @@ mod win_impl {
                 ArchPreference::X64 => audio_speed_hack::System::X64,
             };
 
-            // Extract DLLs for ZeroInterrupt
+            // Extract DLLs for ZeroInterrupt and register cleanup
             let files = audio_speed_hack::extract_zerointerrupt_assets(system, game_dir)?;
-
-            CLEANUP_STATES.insert(ctx.game_id, files);
+            ctx.transaction
+                .add_cleanup(CleanupPhase::AfterGameExit, move || {
+                    audio_speed_hack::cleanup_files(&files);
+                });
 
             info!(
                 "VoiceZerointerrupt: prepared for game {} (arch={system})",
@@ -110,16 +109,8 @@ mod win_impl {
             Ok(())
         }
 
-        async fn after_game_exit(&self, ctx: PluginContext) -> Result<()> {
-            let PluginConfig::VoiceZerointerrupt(_) = ctx.config else {
-                return Ok(());
-            };
-
-            if let Some((_, files)) = CLEANUP_STATES.remove(&ctx.game_id) {
-                info!("VoiceZerointerrupt: cleaning up after game exit");
-                audio_speed_hack::cleanup_files(&files);
-            }
-
+        async fn after_game_exit(&self, _ctx: PluginContext) -> Result<()> {
+            // All cleanup is handled by the Transaction automatically.
             Ok(())
         }
     }

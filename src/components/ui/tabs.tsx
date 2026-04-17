@@ -1,5 +1,5 @@
 // src/components/Tabs.tsx
-import { clsx } from 'clsx'
+import { cn } from '~/lib/utils'
 import { For, type JSX } from 'solid-js'
 
 export interface TabItem<T extends string> {
@@ -17,10 +17,7 @@ interface TabsProps<T extends string> {
 export function Tabs<T extends string>(props: TabsProps<T>): JSX.Element {
   return (
     <div
-      class={clsx(
-        'w-full border-b border-gray-200 dark:border-gray-800 mt-0',
-        props.class
-      )}
+      class={cn('w-full border-b border-gray-200 dark:border-gray-800 mt-0', props.class)}
     >
       {/* 
         justify-center: 居中所有 tab
@@ -36,7 +33,7 @@ export function Tabs<T extends string>(props: TabsProps<T>): JSX.Element {
             return (
               <button
                 onClick={() => props.onChange(item.key)}
-                class={clsx(
+                class={cn(
                   'whitespace-nowrap border-b-2 pb-2 pt-3 px-1 text-sm font-medium transition-colors duration-200 ease-in-out outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 rounded-t-sm cursor-pointer',
                   isActive()
                     ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400'

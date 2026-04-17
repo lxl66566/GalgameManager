@@ -5,15 +5,9 @@
  */
 import type { GameWrapperGameConfig } from '@bindings/GameWrapperGameConfig'
 import type { GameWrapperPluginMeta } from '@bindings/GameWrapperPluginMeta'
-import {
-  FormField,
-  FormInput,
-  FormPathInput,
-  FormSwitch,
-  FormTableEditor
-} from '@components/ui/form'
+import { FormField, FormInput, FormPathInput, FormSwitch } from '@components/ui/form'
+import { FormTableEditor } from '@components/ui/FormTableEditor'
 import { useI18n } from '~/i18n'
-import { Show } from 'solid-js'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 
 function GameWrapperMetaEditor(props: ConfigEditorProps<GameWrapperPluginMeta>) {
@@ -39,16 +33,14 @@ function GameWrapperGameConfigEditor(props: ConfigEditorProps<GameWrapperGameCon
 
   return (
     <div class="flex flex-wrap gap-4 items-start items-stretch">
-      <FormField
-        label={t('plugin.gameWrapper.cmd')}
-        class="flex-1 min-w-48"
-        warning={needsPlaceholder() ? t('plugin.needBraces') : undefined}
-      >
+      <FormField label={t('plugin.gameWrapper.cmd')} class="flex-1 min-w-48">
         <FormInput
           class="w-full"
           type="text"
           value={props.config.cmd}
           placeholder={t('plugin.gameWrapper.cmdPlaceholder')}
+          checkVars
+          warning={needsPlaceholder() ? t('plugin.needBraces') : undefined}
           onBlur={(e: FocusEvent) => {
             const val = (e.target as HTMLInputElement).value
             if (val !== props.config.cmd) {
@@ -88,7 +80,7 @@ export const GAME_WRAPPER_PLUGIN: PluginDefinition<'gameWrapper'> = {
     id: 'gameWrapper',
     nameKey: 'plugin.gameWrapper.name',
     descriptionKey: 'plugin.gameWrapper.description',
-    version: '1.0.1',
+    version: '1.1.0',
     author: 'BUILTIN',
     links: []
   },

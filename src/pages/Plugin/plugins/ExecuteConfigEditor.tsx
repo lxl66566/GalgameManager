@@ -8,9 +8,9 @@ import {
   FormInput,
   FormPathInput,
   FormSelect,
-  FormSwitch,
-  FormTableEditor
+  FormSwitch
 } from '@components/ui/form'
+import { FormTableEditor } from '@components/ui/FormTableEditor'
 import { useI18n } from '~/i18n'
 import { isWindows } from '~/utils/platform'
 import { createMemo } from 'solid-js'
@@ -98,16 +98,14 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
         />
       </FormField>
 
-      <FormField
-        label={t('plugin.execute.cmd')}
-        class="flex-1 min-w-48"
-        warning={needsPlaceholder() ? t('plugin.needBraces') : undefined}
-      >
+      <FormField label={t('plugin.execute.cmd')} class="flex-1 min-w-48">
         <FormInput
           class="w-full"
           type="text"
           value={props.config.cmd}
           placeholder={t('plugin.execute.cmdPlaceholder')}
+          checkVars
+          warning={needsPlaceholder() ? t('plugin.needBraces') : undefined}
           onBlur={(e: FocusEvent) => {
             const val = (e.target as HTMLInputElement).value
             if (val !== props.config.cmd) {
@@ -155,13 +153,13 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
         />
       </FormField>
 
-      <FormField label={t('plugin.execute.env')} class="w-full">
-        <FormTableEditor
-          values={props.config.env}
-          onCommit={v => props.onCommit({ ...props.config, env: v })}
-          addLabel={t('plugin.execute.addEnv')}
-        />
-      </FormField>
+      <FormTableEditor
+        label={t('plugin.execute.env')}
+        labelClass="text-xs"
+        values={props.config.env}
+        onCommit={v => props.onCommit({ ...props.config, env: v })}
+        addLabel={t('plugin.execute.addEnv')}
+      />
     </div>
   )
 }
@@ -171,7 +169,7 @@ export const EXECUTE_PLUGIN: PluginDefinition<'execute'> = {
     id: 'execute',
     nameKey: 'plugin.execute.name',
     descriptionKey: 'plugin.execute.description',
-    version: '1.0.1',
+    version: '1.1.0',
     author: 'BUILTIN',
     links: []
   },

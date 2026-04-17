@@ -16,7 +16,7 @@ use crate::error::Result;
 /// Plugin identifier used in the registry and config.
 pub const PLUGIN_ID: &str = "execute";
 
-// ── Config types ─────────────────────────────────────────────────────────────
+// ── Config types ──
 
 /// When the execute command should fire.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -128,7 +128,7 @@ fn send_signal(pid: u32, signal: ExitSignal) -> Result<()> {
     }
 }
 
-// ── Handler ──────────────────────────────────────────────────────────────────
+// ── Handler ───────
 
 pub struct ExecutePlugin;
 

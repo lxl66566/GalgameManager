@@ -15,7 +15,7 @@ use crate::{error::Result, exec::StartCtx};
 /// Plugin identifier used in the registry and config.
 pub const PLUGIN_ID: &str = "gameWrapper";
 
-// ── Config types ─────────────────────────────────────────────────────────────
+// ── Config types ──
 
 /// Per-game config for the GameWrapper plugin.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
@@ -47,7 +47,7 @@ impl Default for GameWrapperPluginMeta {
     }
 }
 
-// ── Handler ──────────────────────────────────────────────────────────────────
+// ── Handler ───────
 
 pub struct GameWrapperPlugin;
 

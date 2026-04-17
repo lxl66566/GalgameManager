@@ -1,4 +1,4 @@
-import { clsx } from 'clsx'
+import { cn } from '~/lib/utils'
 import { splitProps, type JSX } from 'solid-js'
 
 interface SidebarItemProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElement> {
@@ -14,7 +14,7 @@ const SidebarItem = (props: SidebarItemProps) => {
 
   return (
     <a
-      class={clsx(
+      class={cn(
         // 基础布局与过渡
         'group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ease-in-out outline-none',
         // 字体设置
@@ -31,7 +31,7 @@ const SidebarItem = (props: SidebarItemProps) => {
     >
       {/* 图标容器：固定宽度防止文字显隐时抖动，并处理图标颜色 */}
       <span
-        class={clsx(
+        class={cn(
           'flex items-center justify-center text-lg transition-colors',
           local.active
             ? 'text-primary-600 dark:text-primary-400'
@@ -52,7 +52,7 @@ const SidebarItem = (props: SidebarItemProps) => {
 const Sidebar = (props: { children: JSX.Element; class?: string }) => {
   return (
     <aside
-      class={clsx(
+      class={cn(
         // 容器布局
         'flex flex-col h-full py-4 px-3 space-y-2 overflow-y-auto',
         // 滚动条隐藏

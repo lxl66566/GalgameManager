@@ -2,18 +2,40 @@ import { type Game } from '@bindings/Game'
 import PathListEditor from '@components/PathListEditor'
 import PluginSection from '@components/PluginSection'
 import CachedImage from '@components/ui/CachedImage'
+import { FormField, FormPathInput } from '@components/ui/form'
+import { MODAL_LABEL } from '@components/ui/GameEditLabel'
 import { myToast } from '@components/ui/myToast'
 import { open } from '@tauri-apps/plugin-dialog'
 import { fuckBackslash, getParentPath } from '@utils/path'
+import { getDeviceVarMap, replaceWithVarNames } from '@utils/resolveVar'
 import { dateToInput, durationToForm, inputToDate } from '@utils/time'
 import { fetchVnCover } from '@utils/vndb'
+import { Button } from '~/components/ui/Button'
+import { Input } from '~/components/ui/Input'
+import { InputWithSuffix } from '~/components/ui/InputWithSuffix'
 import { useI18n } from '~/i18n'
 import { PLUGIN_REGISTRY } from '~/pages/Plugin/plugins'
 import { buildNewInstance } from '~/pages/Plugin/plugins/types'
 import { useConfig } from '~/store'
 import { FiRefreshCw, FiSearch } from 'solid-icons/fi'
-import { createEffect, createSignal, onMount, Show, Suspense } from 'solid-js'
+import {
+  createEffect,
+  createResource,
+  createSignal,
+  onMount,
+  Show,
+  Suspense
+} from 'solid-js'
 import { createStore, unwrap } from 'solid-js/store'
+
+// ─── Shared style constants for the modal's form fields ───────────────────────
+
+const MODAL_INPUT_BASE =
+  'bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors'
+
+const MODAL_PATH_INPUT = `flex-1 min-w-0 h-auto ${MODAL_INPUT_BASE} truncate`
+
+// ─── Component ─────
 
 interface GameEditModalProps {
   gameInfo?: Game | null
@@ -43,6 +65,16 @@ export default function GameEditModal(props: GameEditModalProps) {
 
   const isEditMode = () => props.editMode ?? !!props.gameInfo
 
+  // Resolve the current device variable map (cached after first fetch)
+  const [currentVars] = createResource(() => config.devices, getDeviceVarMap)
+
+  // onBulkInput for path fields: replace variable values with {varName}
+  // (backslashes are already normalised by FormPathInput before this runs)
+  const bulkPathTransform = (v: string): string => {
+    const vars = currentVars()
+    return vars ? replaceWithVarNames(v, vars) : v
+  }
+
   // Auto-populate plugins for new games based on autoAdd meta config
   const baseGame = structuredClone(unwrap(props.gameInfo ?? DEFAULT_GAME))
   if (!isEditMode()) {
@@ -71,7 +103,7 @@ export default function GameEditModal(props: GameEditModalProps) {
     }
   })
 
-  // 当 store 中的 imageUrl 发生变化（例如通过浏览按钮或清除按钮）时，同步到输入框
+  // 当 store 中的 imageUrl 发生变化时，同步到输入框
   createEffect(() => {
     setTempImageUrl(localGame.imageUrl || '')
   })
@@ -87,10 +119,9 @@ export default function GameEditModal(props: GameEditModalProps) {
   // 提交图片更改的逻辑
   const commitImageChange = () => {
     const currentInput = tempImageUrl().trim()
-    // 只有当内容真正改变时才更新 store
     if (currentInput !== (localGame.imageUrl || '')) {
       setLocalGame('imageUrl', currentInput || null)
-      setLocalGame('imageSha256', null) // 重置 Hash 以触发重新计算/加载
+      setLocalGame('imageSha256', null)
     }
   }
 
@@ -107,7 +138,6 @@ export default function GameEditModal(props: GameEditModalProps) {
         ]
       })
       if (selected && typeof selected === 'string') {
-        // 浏览选择直接更新 Store，createEffect 会自动同步 tempImageUrl
         setLocalGame('imageUrl', fuckBackslash(selected))
         setLocalGame('imageSha256', null)
       }
@@ -138,32 +168,12 @@ export default function GameEditModal(props: GameEditModalProps) {
     })
   }
 
-  const handleSelectExecutable = async () => {
-    try {
-      const selected = await open({
-        multiple: false,
-        directory: false,
-        filters: [{ name: 'Executables', extensions: ['exe', 'lnk', 'bat', 'cmd'] }]
-      })
-      if (selected && typeof selected === 'string') {
-        setLocalGame('excutablePath', fuckBackslash(selected))
-        if (!localGame.name) {
-          const parentDir = getParentPath(selected)
-          setLocalGame('name', parentDir || '')
-        }
-      }
-    } catch (e) {
-      console.error(e)
-    }
-  }
-
   const handleSearchVnCover = async () => {
     if (!localGame.name) return
 
     if (isSearching()) {
-      // 再次点击取消搜索
       setIsSearching(false)
-      setSearchId(id => id + 1) // 自增使接下来的返回结果失效
+      setSearchId(id => id + 1)
       return
     }
 
@@ -173,12 +183,11 @@ export default function GameEditModal(props: GameEditModalProps) {
 
     try {
       const url = await fetchVnCover(localGame.name)
-      // 如果本次搜索没有被手动取消
       if (isSearching() && searchId() === currentSearchId) {
         if (url) {
           setTempImageUrl(url)
           setLocalGame('imageUrl', url)
-          setLocalGame('imageSha256', null) // 重置 Hash
+          setLocalGame('imageSha256', null)
         } else {
           myToast({
             variant: 'warning',
@@ -196,12 +205,13 @@ export default function GameEditModal(props: GameEditModalProps) {
         })
       }
     } finally {
-      // 只有当前搜索仍在进行时才置空状态，防止干扰可能发起的新搜索
       if (searchId() === currentSearchId) {
         setIsSearching(false)
       }
     }
   }
+
+  // ─── Render ─────
 
   return (
     <div class="dark:bg-zinc-800 bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col p-6 overflow-hidden border border-gray-200 dark:border-gray-700">
@@ -233,7 +243,6 @@ export default function GameEditModal(props: GameEditModalProps) {
                   }}
                 />
               </Suspense>
-              {/* 只有当没有图片时显示提示，有图片时依靠右侧输入框修改，保持界面整洁 */}
               <Show when={!localGame.imageUrl}>
                 <div
                   class="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
@@ -250,50 +259,30 @@ export default function GameEditModal(props: GameEditModalProps) {
           {/* Right Column: Form */}
           <div class="flex-1 flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar">
             {/* Name */}
-            <div class="flex flex-col gap-1">
-              <label class="text-sm font-bold text-gray-700 dark:text-gray-300">
-                {t('game.edit.gameName')}
-              </label>
-              <input
-                type="text"
-                class="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
+            <FormField label={t('game.edit.gameName')} labelClass={MODAL_LABEL}>
+              <Input
                 value={localGame.name}
                 onInput={e => setLocalGame('name', e.currentTarget.value)}
               />
-            </div>
+            </FormField>
 
             {/* Image Source Input */}
-            <div class="flex flex-col gap-1">
-              <label class="text-sm font-bold text-gray-700 dark:text-gray-300">
-                {t('game.edit.imageUrl')}
-              </label>
-              <div class="flex gap-2">
-                <input
-                  type="text"
-                  class="flex-1 min-w-0 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  // 绑定到 tempImageUrl
+            <FormField label={t('game.edit.imageUrl')} labelClass={MODAL_LABEL}>
+              <div class="flex gap-2 w-full">
+                <Input
+                  class="min-w-0"
                   value={tempImageUrl()}
-                  // 输入时只更新临时变量
                   onInput={e => setTempImageUrl(e.currentTarget.value)}
-                  // 失去焦点时提交
                   onBlur={commitImageChange}
-                  // 按下回车时提交
                   onKeyDown={e => e.key === 'Enter' && commitImageChange()}
                   placeholder={t('game.edit.imageUrlPlaceholder')}
                   disabled={isSearching()}
                 />
-
-                {/* VNDB 搜索 / 取消按钮 - 高对比度带图标 */}
-                <button
+                <Button
+                  variant={isSearching() ? 'danger' : 'primary'}
+                  size="sm"
                   onClick={handleSearchVnCover}
                   disabled={!localGame.name && !isSearching()}
-                  class="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium whitespace-nowrap transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  classList={{
-                    'bg-red-500 hover:bg-red-600 text-white dark:bg-red-600 dark:hover:bg-red-700':
-                      isSearching(),
-                    'bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-500':
-                      !isSearching()
-                  }}
                 >
                   {isSearching() ? (
                     <>
@@ -306,51 +295,47 @@ export default function GameEditModal(props: GameEditModalProps) {
                       VNDB
                     </>
                   )}
-                </button>
+                </Button>
               </div>
-            </div>
+            </FormField>
 
             {/* Executable Path */}
-            <div class="flex flex-col gap-1">
-              <label class="text-sm font-bold text-gray-700 dark:text-gray-300">
-                {t('game.edit.exePath')}
-              </label>
-              <div class="flex gap-2">
-                <input
-                  type="text"
-                  class="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 truncate transition-colors"
-                  value={localGame.excutablePath || ''}
-                  onInput={e => setLocalGame('excutablePath', e.currentTarget.value)}
-                  placeholder={t('game.edit.exePathPlaceholder')}
-                />
-                <button
-                  onClick={handleSelectExecutable}
-                  class="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-800 dark:text-white px-3 py-1.5 rounded text-sm whitespace-nowrap transition-colors"
-                >
-                  {t('ui.browse')}
-                </button>
-              </div>
-            </div>
-
-            <hr class="border-gray-300 dark:border-gray-700 my-1" />
+            <FormField label={t('game.edit.exePath')} labelClass={MODAL_LABEL}>
+              <FormPathInput
+                class="w-full"
+                value={localGame.excutablePath || ''}
+                onCommit={v => setLocalGame('excutablePath', v || null)}
+                onBulkInput={bulkPathTransform}
+                onBrowse={normalizedPath => {
+                  if (!localGame.name) {
+                    setLocalGame('name', getParentPath(normalizedPath) || '')
+                  }
+                }}
+                filters={[
+                  { name: 'Executables', extensions: ['exe', 'lnk', 'bat', 'cmd'] }
+                ]}
+                placeholder={t('game.edit.exePathPlaceholder')}
+                inputClass={MODAL_PATH_INPUT}
+                checkPathExist
+              />
+            </FormField>
 
             <PathListEditor
               label={t('game.edit.savePath')}
               paths={localGame.savePaths}
               onChange={newPaths => setLocalGame('savePaths', newPaths)}
+              onBulkInput={bulkPathTransform}
+              checkVars
+              checkPathExist
             />
 
             <hr class="border-gray-300 dark:border-gray-700 my-1" />
 
             {/* Time Settings */}
             <div class="grid grid-cols-2 gap-4">
-              <div class="flex flex-col gap-1">
-                <label class="text-xs font-bold text-gray-500 dark:text-gray-400">
-                  {t('game.edit.addedTime')}
-                </label>
-                <input
+              <FormField label={t('game.edit.addedTime')} labelClass={MODAL_LABEL}>
+                <Input
                   type="datetime-local"
-                  class="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
                   value={dateToInput(localGame.addedTime)}
                   onInput={e =>
                     setLocalGame(
@@ -359,56 +344,45 @@ export default function GameEditModal(props: GameEditModalProps) {
                     )
                   }
                 />
-              </div>
-              <div class="flex flex-col gap-1">
-                <label class="text-xs font-bold text-gray-500 dark:text-gray-400">
-                  {t('game.edit.lastPlayedTime')}
-                </label>
-                <input
+              </FormField>
+
+              <FormField label={t('game.edit.lastPlayedTime')} labelClass={MODAL_LABEL}>
+                <Input
                   type="datetime-local"
-                  class="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
                   value={dateToInput(localGame.lastPlayedTime)}
                   onInput={e =>
                     setLocalGame('lastPlayedTime', inputToDate(e.currentTarget.value))
                   }
                 />
-              </div>
-              <div class="col-span-2 flex flex-col gap-1">
-                <label class="text-xs font-bold text-gray-500 dark:text-gray-400">
-                  {t('game.edit.useTime')}
-                </label>
-                <div class="flex items-center gap-2">
-                  <div class="relative flex-1">
-                    <input
-                      type="number"
-                      min="0"
-                      class="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 pr-9"
-                      value={playTime().h}
-                      onInput={e =>
-                        updateDuration(parseInt(e.currentTarget.value) || 0, playTime().m)
-                      }
-                    />
-                    <span class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400 pointer-events-none">
-                      {t('unit.hour')}
-                    </span>
-                  </div>
-                  <div class="relative flex-1">
-                    <input
-                      type="number"
-                      min="0"
-                      max="59"
-                      class="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 pr-9"
-                      value={playTime().m}
-                      onInput={e =>
-                        updateDuration(playTime().h, parseInt(e.currentTarget.value) || 0)
-                      }
-                    />
-                    <span class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400 pointer-events-none">
-                      {t('unit.minute')}
-                    </span>
-                  </div>
+              </FormField>
+
+              <FormField
+                label={t('game.edit.useTime')}
+                labelClass={MODAL_LABEL}
+                class="col-span-2"
+              >
+                <div class="flex items-center gap-4 w-full">
+                  <InputWithSuffix
+                    type="number"
+                    min="0"
+                    value={playTime().h}
+                    suffix={t('unit.hour')}
+                    onInput={e =>
+                      updateDuration(parseInt(e.currentTarget.value) || 0, playTime().m)
+                    }
+                  />
+                  <InputWithSuffix
+                    type="number"
+                    min="0"
+                    max="59"
+                    value={playTime().m}
+                    suffix={t('unit.minute')}
+                    onInput={e =>
+                      updateDuration(playTime().h, parseInt(e.currentTarget.value) || 0)
+                    }
+                  />
                 </div>
-              </div>
+              </FormField>
             </div>
 
             <hr class="border-gray-300 dark:border-gray-700 my-1" />
@@ -416,7 +390,6 @@ export default function GameEditModal(props: GameEditModalProps) {
             {/* Plugin Section */}
             <PluginSection
               plugins={localGame.plugins ?? []}
-              // Memory-only: write to local store, persisted only on confirm
               onChange={plugins => setLocalGame('plugins', plugins)}
               onConfigChange={(index, updated) => setLocalGame('plugins', index, updated)}
             />
@@ -427,32 +400,19 @@ export default function GameEditModal(props: GameEditModalProps) {
         <div class="flex flex-row items-center justify-between w-full mt-2 py-2 border-t border-gray-300 dark:border-gray-700 flex-shrink-0">
           <div>
             <Show when={isEditMode()}>
-              <button
-                type="button"
-                onClick={handleDelete}
-                class="px-4 py-2 rounded text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
-              >
+              <Button variant="ghost-danger" onClick={handleDelete}>
                 {t('game.edit.deleteGame')}
-              </button>
+              </Button>
             </Show>
           </div>
 
           <div class="flex gap-3">
-            <button
-              type="button"
-              onClick={props.cancel}
-              class="px-4 py-2 rounded text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors"
-            >
+            <Button variant="secondary" onClick={props.cancel}>
               {t('game.edit.cancel')}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => props.confirm(localGame)}
-              class="px-4 py-2 rounded text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 shadow-sm transition-colors"
-            >
+            </Button>
+            <Button variant="primary" onClick={() => props.confirm(localGame)}>
               {t('game.edit.confirmSave')}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

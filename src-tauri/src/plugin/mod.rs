@@ -3,6 +3,7 @@ pub mod config;
 mod execute;
 mod game_wrapper;
 mod locale_emulator;
+mod transaction;
 mod translator;
 mod voice_speedup;
 mod voice_zerointerrupt;
@@ -19,6 +20,7 @@ pub use config::{
 };
 use serde::Deserialize;
 use tauri::AppHandle;
+pub use transaction::{CleanupPhase, Transaction};
 
 use crate::{
     db::device::ResolveVar,
@@ -34,6 +36,7 @@ pub struct PluginContext {
     pub game_id: u32,
     /// Per-game config for this plugin instance
     pub config: PluginConfig,
+    pub transaction: Transaction,
 }
 
 /// Trait for plugin lifecycle handlers.
@@ -220,6 +223,7 @@ pub(crate) fn make_plugin_context(
     instance: &PluginInstance,
     app: AppHandle,
     game_id: u32,
+    transaction: Transaction,
 ) -> Option<PluginContext> {
     _ = PLUGIN_REGISTRY.get(instance.handler_key())?; // check if plugin is registered
     Some(match instance {
@@ -227,36 +231,43 @@ pub(crate) fn make_plugin_context(
             app,
             game_id,
             config: PluginConfig::Execute(config.clone()),
+            transaction,
         },
         PluginInstance::AutoUpload => PluginContext {
             app,
             game_id,
             config: PluginConfig::AutoUpload,
+            transaction,
         },
         PluginInstance::VoiceSpeedup { config } => PluginContext {
             app,
             game_id,
             config: PluginConfig::VoiceSpeedup(config.clone()),
+            transaction,
         },
         PluginInstance::VoiceZerointerrupt { config } => PluginContext {
             app,
             game_id,
             config: PluginConfig::VoiceZerointerrupt(config.clone()),
+            transaction,
         },
         PluginInstance::GameWrapper { config } => PluginContext {
             app,
             game_id,
             config: PluginConfig::GameWrapper(config.clone()),
+            transaction,
         },
         PluginInstance::LocaleEmulator { config } => PluginContext {
             app,
             game_id,
             config: PluginConfig::LocaleEmulator(config.clone()),
+            transaction,
         },
         PluginInstance::Translator { config } => PluginContext {
             app,
             game_id,
             config: PluginConfig::Translator(config.clone()),
+            transaction,
         },
     })
 }
@@ -266,6 +277,7 @@ pub async fn dispatch_before_save_upload(
     app: &AppHandle,
     game_id: u32,
     archive_filename: &str,
+    transaction: Transaction,
 ) -> Result<()> {
     let (plugins, metas) = {
         let lock = crate::db::CONFIG.lock();
@@ -278,7 +290,8 @@ pub async fn dispatch_before_save_upload(
             continue;
         }
         if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key())
-            && let Some(ctx) = make_plugin_context(instance, app.clone(), game_id)
+            && let Some(ctx) =
+                make_plugin_context(instance, app.clone(), game_id, transaction.clone())
         {
             handler.before_save_upload(ctx, archive_filename).await?;
         }
@@ -289,7 +302,12 @@ pub async fn dispatch_before_save_upload(
 /// Dispatch `after_save_upload` hooks for all enabled plugins of a game.
 ///
 /// Errors from individual hooks are logged but do not abort iteration.
-pub async fn dispatch_after_save_upload(app: &AppHandle, game_id: u32, archive_filename: &str) {
+pub async fn dispatch_after_save_upload(
+    app: &AppHandle,
+    game_id: u32,
+    archive_filename: &str,
+    transaction: Transaction,
+) {
     let (plugins, metas) = {
         let lock = crate::db::CONFIG.lock();
         let game = match lock.get_game_by_id(game_id) {
@@ -307,7 +325,8 @@ pub async fn dispatch_after_save_upload(app: &AppHandle, game_id: u32, archive_f
             continue;
         }
         if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key())
-            && let Some(ctx) = make_plugin_context(instance, app.clone(), game_id)
+            && let Some(ctx) =
+                make_plugin_context(instance, app.clone(), game_id, transaction.clone())
             && let Err(e) = handler.after_save_upload(ctx, archive_filename).await
         {
             log::error!(

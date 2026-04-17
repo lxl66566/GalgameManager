@@ -84,7 +84,7 @@ export interface PluginDefinition<K extends PluginId> {
 
 export type AnyPluginDef = { [K in PluginId]: PluginDefinition<K> }[PluginId]
 
-// ── Typed helpers ────────────────────────────────────────────────────────────
+// ── Typed helpers ─
 
 export function getPluginMeta<K extends PluginId>(
   key: K,

@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager as _;
 use ts_rs::TS;
 
-use super::{PluginContext, dispatch_after_save_upload, dispatch_before_save_upload};
+use super::{PluginContext, Transaction, dispatch_after_save_upload, dispatch_before_save_upload};
 use crate::{
     error::Result,
     utils::toast::{ToastVariant, dismiss_toast, emit_loading_toast, emit_toast},
@@ -23,7 +23,7 @@ const HINT_UPLOAD_FAILED: &str = "<hint.uploadFailed>";
 const HINT_UPLOAD_SUCCESS: &str = "<hint.uploadSuccess>";
 const HINT_UPLOADING: &str = "<hint.uploading>";
 
-// ── Config types ─────────────────────────────────────────────────────────────
+// ── Config types ──
 
 /// Global metadata for the AutoUpload plugin (stored in `PluginMetadatas`).
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -42,7 +42,7 @@ impl Default for AutoUploadPluginMeta {
     }
 }
 
-// ── Handler ──────────────────────────────────────────────────────────────────
+// ── Handler ───────
 
 pub struct AutoUploadPlugin;
 
@@ -136,8 +136,11 @@ impl super::PluginHandler for AutoUploadPlugin {
         };
 
         // Dispatch before_save_upload hooks
-        if let Err(e) = dispatch_before_save_upload(&ctx.app, ctx.game_id, &archive_filename).await
+        let tx = Transaction::new();
+        if let Err(e) =
+            dispatch_before_save_upload(&ctx.app, ctx.game_id, &archive_filename, tx.clone()).await
         {
+            tx.rollback();
             dismiss_toast(&ctx.app, &loading_toast_id);
             let msg = format!("{HINT_UPLOAD_FAILED}{game_name}: {e}");
             log::error!("AutoUpload: {msg}");
@@ -149,6 +152,7 @@ impl super::PluginHandler for AutoUploadPlugin {
             .upload_archive(ctx.game_id, &archive_filename, &data_dir.join("backup"))
             .await
         {
+            tx.rollback();
             dismiss_toast(&ctx.app, &loading_toast_id);
             let msg = format!("{HINT_UPLOAD_FAILED}{game_name}: {e}");
             log::error!("AutoUpload: {msg}");
@@ -157,7 +161,8 @@ impl super::PluginHandler for AutoUploadPlugin {
         }
 
         // Dispatch after_save_upload hooks (non-fatal)
-        dispatch_after_save_upload(&ctx.app, ctx.game_id, &archive_filename).await;
+        dispatch_after_save_upload(&ctx.app, ctx.game_id, &archive_filename, tx.clone()).await;
+        tx.execute_after_exit();
 
         dismiss_toast(&ctx.app, &loading_toast_id);
         let msg = format!("{HINT_UPLOAD_SUCCESS}{game_name}");

@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf, sync::LazyLock as Lazy};
+use std::fs;
 
 use chrono::Utc;
 use config_file2::Storable;
@@ -7,11 +7,11 @@ use tauri::{AppHandle, Manager as _};
 
 use crate::{
     archive::{ArchiveInfo, archive_impl, restore_impl},
-    db::{CONFIG, CONFIG_DIR, Config, device::DEVICE_UID, settings::SortType},
+    db::{CONFIG, Config, device::DEVICE_UID},
     error::{Error, Result},
     exec::{GAME_LOOP_HANDLES, launch_game_with_plugins},
     logging::LogLevel,
-    plugin::{dispatch_after_save_upload, dispatch_before_save_upload},
+    plugin::{Transaction, dispatch_after_save_upload, dispatch_before_save_upload},
     sync::MyOperation,
     utils::list_dir_all,
 };
@@ -40,20 +40,6 @@ pub fn device_id() -> &'static str {
 #[tauri::command]
 pub fn resolve_var(s: &str) -> Result<String> {
     CONFIG.lock().resolve_var(s)
-}
-
-static SORT_TYPE_PATH: Lazy<PathBuf> = Lazy::new(|| CONFIG_DIR.join("sort_type"));
-
-#[tauri::command]
-pub fn set_sort_type(sort_type: SortType) -> Result<()> {
-    fs::write(SORT_TYPE_PATH.as_path(), sort_type.as_str())?;
-    Ok(())
-}
-
-#[tauri::command]
-pub fn get_sort_type() -> Result<SortType> {
-    let sort_type = SortType::from_str(&fs::read_to_string(SORT_TYPE_PATH.as_path())?);
-    Ok(sort_type.unwrap_or_default())
 }
 
 #[tauri::command]
@@ -180,19 +166,29 @@ pub async fn upload_archive(app: AppHandle, game_id: u32, archive_filename: Stri
         game_id, archive_filename
     );
 
-    // Dispatch before_save_upload hooks
-    dispatch_before_save_upload(&app, game_id, &archive_filename).await?;
+    let tx = Transaction::new();
 
-    build_operator_with_varmap(&app)?
+    // Dispatch before_save_upload hooks
+    if let Err(e) = dispatch_before_save_upload(&app, game_id, &archive_filename, tx.clone()).await
+    {
+        tx.rollback();
+        return Err(e);
+    }
+
+    if let Err(e) = build_operator_with_varmap(&app)?
         .upload_archive(
             game_id,
             &archive_filename,
             &app.path().app_local_data_dir()?.join("backup"),
         )
-        .await?;
+        .await
+    {
+        tx.rollback();
+        return Err(e);
+    }
 
     // Dispatch after_save_upload hooks (non-fatal)
-    dispatch_after_save_upload(&app, game_id, &archive_filename).await;
+    dispatch_after_save_upload(&app, game_id, &archive_filename, tx.clone()).await;
 
     Ok(())
 }
@@ -293,6 +289,24 @@ pub fn running_game_ids() -> Vec<u32> {
         .iter()
         .filter_map(|r| (!r.inner().is_finished()).then_some(*r.key()))
         .collect()
+}
+
+/// Check whether each path in `paths` exists on the local filesystem.
+///
+/// Resolves variables first, then checks existence. Returns a `Vec<bool>`
+/// with the same length and order as the input.
+#[tauri::command]
+pub fn paths_exist(paths: Vec<String>) -> Result<Vec<bool>> {
+    let lock = CONFIG.lock();
+    let results = paths
+        .iter()
+        .map(|p| {
+            lock.resolve_var(p)
+                .map(|resolved| std::path::Path::new(&resolved).exists())
+                .unwrap_or(false)
+        })
+        .collect();
+    Ok(results)
 }
 
 /// Open the directory containing the game executable in the system file

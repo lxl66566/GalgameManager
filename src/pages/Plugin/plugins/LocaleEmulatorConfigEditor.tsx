@@ -35,16 +35,14 @@ function LocaleEmulatorGameConfigEditor(
 
   return (
     <div class="flex flex-wrap gap-4 items-start items-stretch">
-      <FormField
-        label={t('plugin.localeEmulator.cmd')}
-        class="flex-1 min-w-48"
-        warning={needsPlaceholder() ? t('plugin.needBraces') : undefined}
-      >
+      <FormField label={t('plugin.localeEmulator.cmd')} class="flex-1 min-w-48">
         <FormInput
           class="w-full"
           type="text"
           value={props.config.cmd}
           placeholder={t('plugin.localeEmulator.cmdPlaceholder')}
+          checkVars
+          warning={needsPlaceholder() ? t('plugin.needBraces') : undefined}
           onBlur={(e: FocusEvent) => {
             const val = (e.target as HTMLInputElement).value
             if (val !== props.config.cmd) {
@@ -62,7 +60,7 @@ export const LOCALE_EMULATOR_PLUGIN: PluginDefinition<'localeEmulator'> = {
     id: 'localeEmulator',
     nameKey: 'plugin.localeEmulator.name',
     descriptionKey: 'plugin.localeEmulator.description',
-    version: '1.0.1',
+    version: '1.1.0',
     author: 'BUILTIN_WRAPPER',
     links: [
       {

@@ -65,7 +65,7 @@ const startToastListener = async (t: i18n.Translator<Dictionary>) => {
   }
 }
 
-// ── Config store ────────────────────────────────────────────────────────────
+// ── Config store ─
 
 // 初始空状态
 const DEFAULT_CONFIG: Config = {

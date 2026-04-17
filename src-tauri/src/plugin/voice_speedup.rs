@@ -67,25 +67,17 @@ impl Default for VoiceSpeedupPluginMeta {
 
 #[cfg(windows)]
 mod win_impl {
-    use std::{path::Path, sync::LazyLock as Lazy, time::Duration};
+    use std::{path::Path, time::Duration};
 
-    use dashmap::DashMap;
     use log::info;
 
     use super::{ArchPreference, SpeedupProvider};
     use crate::{
         db::CONFIG,
         error::{Error, Result},
-        plugin::{PluginConfig, PluginContext, PluginHandler},
+        plugin::{CleanupPhase, PluginConfig, PluginContext, PluginHandler}, // 引入 CleanupPhase
         utils::audio_speed_hack,
     };
-
-    struct CleanupState {
-        extracted_dlls: Vec<std::path::PathBuf>,
-        used_mmdevapi: bool,
-    }
-
-    static CLEANUP_STATES: Lazy<DashMap<u32, CleanupState>> = Lazy::new(DashMap::new);
 
     pub struct VoiceSpeedupPlugin;
 
@@ -102,7 +94,6 @@ mod win_impl {
                 return Ok(());
             };
 
-            // Resolve the game's executable path
             let exe_path = {
                 let lock = CONFIG.lock();
                 let raw = lock
@@ -115,7 +106,6 @@ mod win_impl {
 
             let game_dir = Path::new(&exe_path).parent().ok_or(Error::InvalidPath)?;
 
-            // Determine architecture based on user preference
             let system = match config.arch {
                 ArchPreference::Auto => audio_speed_hack::System::detect(&exe_path)
                     .unwrap_or(audio_speed_hack::System::X64),
@@ -123,62 +113,54 @@ mod win_impl {
                 ArchPreference::X64 => audio_speed_hack::System::X64,
             };
 
-            // Extract DLLs
+            // 1. 解压 DLL 并注册退出时清理
             let files =
                 audio_speed_hack::extract_speedup_assets(system, game_dir, config.provider)?;
+            ctx.transaction
+                .add_cleanup(CleanupPhase::AfterGameExit, move || {
+                    audio_speed_hack::cleanup_files(&files);
+                });
 
-            // Set SPEEDUP environment variable
+            // 2. 设置环境变量并注册退出时清理
             audio_speed_hack::set_speedup_env(config.speed)?;
+            ctx.transaction
+                .add_cleanup(CleanupPhase::AfterGameExit, || {
+                    audio_speed_hack::remove_speedup_env();
+                });
 
-            // Set registry for MMDevAPI provider
+            // 3. 设置注册表并注册启动后清理
             let used_mmdevapi = config.provider == SpeedupProvider::MMDevAPI;
             if used_mmdevapi {
                 audio_speed_hack::set_mmdevapi_registry()?;
+                ctx.transaction
+                    .add_cleanup(CleanupPhase::AfterGameStart, || {
+                        audio_speed_hack::clean_mmdevapi_registry();
+                    });
             }
-
-            CLEANUP_STATES.insert(
-                ctx.game_id,
-                CleanupState {
-                    extracted_dlls: files,
-                    used_mmdevapi,
-                },
-            );
 
             info!(
                 "VoiceSpeedup: prepared for game {} (speed={:.1}, provider={:?}, arch={system})",
-                ctx.game_id, config.speed, config.provider,
+                ctx.game_id, config.speed, config.provider
             );
             Ok(())
         }
 
         async fn after_game_start(&self, ctx: PluginContext) -> Result<()> {
-            let PluginConfig::VoiceSpeedup(_) = ctx.config else {
+            let PluginConfig::VoiceSpeedup(ref config) = ctx.config else {
                 return Ok(());
             };
 
-            tokio::time::sleep(Duration::from_secs(5)).await;
-            if let Some(state) = CLEANUP_STATES.get(&ctx.game_id)
-                && state.used_mmdevapi
-            {
-                // Immediately undo registry modifications after game starts
-                info!("VoiceSpeedup: cleaning registry after game start");
-                audio_speed_hack::clean_mmdevapi_registry();
+            // 阻塞 5 秒。这会使得启动器中的 tx_start.execute_after_start() 延迟 5
+            // 秒执行，符合等待游戏加载完 DLL 后再清理注册表的需求。
+            if config.provider == SpeedupProvider::MMDevAPI {
+                tokio::time::sleep(Duration::from_secs(5)).await;
             }
 
             Ok(())
         }
 
-        async fn after_game_exit(&self, ctx: PluginContext) -> Result<()> {
-            let PluginConfig::VoiceSpeedup(_) = ctx.config else {
-                return Ok(());
-            };
-
-            if let Some((_, state)) = CLEANUP_STATES.remove(&ctx.game_id) {
-                info!("VoiceSpeedup: cleaning up after game exit");
-                audio_speed_hack::cleanup_files(&state.extracted_dlls);
-                audio_speed_hack::remove_speedup_env();
-            }
-
+        async fn after_game_exit(&self, _ctx: PluginContext) -> Result<()> {
+            // 所有的清理工作已经交由 Transaction 自动处理，这里无需任何代码
             Ok(())
         }
     }

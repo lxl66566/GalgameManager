@@ -7,10 +7,16 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen, once, type UnlistenFn } from '@tauri-apps/api/event'
 import { log } from '@utils/log'
 import { fuckBackslash, getParentPath, isAbsolutePath } from '@utils/path'
+import {
+  getDeviceVarMap,
+  replaceWithVarNames,
+  resolveVarForDevice
+} from '@utils/resolveVar'
+import { getSortType, setSortType as setSortTypeCached } from '@utils/sortTypeCache'
 import { durationToSecs } from '@utils/time'
 import { useI18n } from '~/i18n'
+import { cn } from '~/lib/utils'
 import { useConfig } from '~/store'
-import clsx from 'clsx'
 import { AiTwotonePlusCircle } from 'solid-icons/ai'
 import {
   TbOutlineClockPlay,
@@ -63,11 +69,7 @@ const GamePage = (): JSX.Element => {
         })
       }
     })
-    try {
-      invoke<SortType>('get_sort_type').then(type => {
-        setSortType(type)
-      })
-    } catch {}
+    getSortType().then(setSortType)
   })
 
   const sortedGames = createMemo(() => {
@@ -112,11 +114,17 @@ const GamePage = (): JSX.Element => {
     return nextId + 1
   }
 
-  const openGameAddModal = (path?: string) => {
+  const openGameAddModal = async (path?: string) => {
+    // Apply reverse variable replacement so the path uses {varName} templates
+    let resolvedPath = path
+    if (path) {
+      const vars = await getDeviceVarMap(config.devices)
+      resolvedPath = replaceWithVarNames(path, vars)
+    }
     const newGame: Game = {
       id: findNextGameId(),
-      name: path ? (getParentPath(path) ?? '') : '',
-      excutablePath: path ?? null,
+      name: resolvedPath ? (getParentPath(resolvedPath) ?? '') : '',
+      excutablePath: resolvedPath ?? null,
       savePaths: [],
       imageUrl: null,
       imageSha256: null,
@@ -211,7 +219,7 @@ const GamePage = (): JSX.Element => {
 
     // Validate that the resolved executable path is absolute
     if (game.excutablePath) {
-      invoke<string>('resolve_var', { s: game.excutablePath })
+      resolveVarForDevice(game.excutablePath, config.devices)
         .then(resolved => {
           if (resolved && !isAbsolutePath(resolved)) {
             myToast({
@@ -370,9 +378,7 @@ const GamePage = (): JSX.Element => {
             sortType={sortType}
             onChange={s => {
               setSortType(s)
-              try {
-                invoke('set_sort_type', { sortType: s })
-              } catch {}
+              setSortTypeCached(s)
             }}
           />
         </div>
@@ -479,7 +485,7 @@ const SortOptions = (props: {
     ])
 
   return (
-    <div class={clsx('flex bg-gray-200 dark:bg-gray-900 rounded-md', props.class)}>
+    <div class={cn('flex bg-gray-200 dark:bg-gray-900 rounded-md', props.class)}>
       <For each={sortOptions()}>
         {option => (
           <button

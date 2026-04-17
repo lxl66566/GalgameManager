@@ -18,7 +18,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-// ── Shared enums ─────────────────────────────────────────────────────────────
+// ── Shared enums ──
 
 /// Architecture preference for DLL injection.
 ///
