@@ -93,6 +93,7 @@ impl super::PluginHandler for LocaleEmulatorPlugin {
             game_id: ctx.game_id,
             config: PluginConfig::GameWrapper(inner_config),
             transaction: Transaction::new(),
+            exe_dir: ctx.exe_dir.clone(),
         };
 
         if let Some(handler) = PLUGIN_REGISTRY.get(super::game_wrapper::PLUGIN_ID) {

@@ -100,6 +100,7 @@ impl super::PluginHandler for TranslatorPlugin {
             game_id: ctx.game_id,
             config: PluginConfig::Execute(inner_config),
             transaction: Transaction::new(),
+            exe_dir: ctx.exe_dir.clone(),
         };
 
         if let Some(handler) = PLUGIN_REGISTRY.get(super::execute::PLUGIN_ID) {
@@ -119,6 +120,7 @@ impl super::PluginHandler for TranslatorPlugin {
             game_id: ctx.game_id,
             config: PluginConfig::Execute(inner_config),
             transaction: Transaction::new(),
+            exe_dir: ctx.exe_dir.clone(),
         };
 
         if let Some(handler) = PLUGIN_REGISTRY.get(super::execute::PLUGIN_ID) {
@@ -138,6 +140,7 @@ impl super::PluginHandler for TranslatorPlugin {
             game_id: ctx.game_id,
             config: PluginConfig::Execute(inner_config),
             transaction: Transaction::new(),
+            exe_dir: ctx.exe_dir,
         };
 
         if let Some(handler) = PLUGIN_REGISTRY.get(super::execute::PLUGIN_ID) {

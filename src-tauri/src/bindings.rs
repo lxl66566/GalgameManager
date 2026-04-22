@@ -12,7 +12,7 @@ use crate::{
     exec::{GAME_LOOP_HANDLES, launch_game_with_plugins},
     logging::LogLevel,
     plugin::{Transaction, dispatch_after_save_upload, dispatch_before_save_upload},
-    sync::MyOperation,
+    sync::{MyOperation, UploadConfigStatus},
     utils::list_dir_all,
 };
 
@@ -238,13 +238,15 @@ pub fn clean_current_operator() {
 }
 
 #[tauri::command(async)]
-pub async fn upload_config(app: AppHandle, safe: bool) -> Result<bool> {
+pub async fn upload_config(app: AppHandle, safe: bool) -> Result<UploadConfigStatus> {
     info!("upload_config triggered, safe: {}", safe);
     let op = build_operator_with_varmap(&app)?;
     let res = op.upload_config(&app, safe).await?;
     #[cfg(feature = "config-daily-backup")]
-    if res && let Err(e) = op.replicate_config().await {
-        log::error!("Failed to replicate config: {e}");
+    if matches!(res, UploadConfigStatus::Uploaded) {
+        if let Err(e) = op.replicate_config().await {
+            log::error!("Failed to replicate config: {e}");
+        }
     }
     Ok(res)
 }

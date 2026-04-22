@@ -104,7 +104,7 @@ mod win_impl {
                 lock.resolve_var(raw)?
             };
 
-            let game_dir = Path::new(&exe_path).parent().ok_or(Error::InvalidPath)?;
+            let game_dir = Path::new(&ctx.exe_dir);
 
             let system = match config.arch {
                 ArchPreference::Auto => audio_speed_hack::System::detect(&exe_path)

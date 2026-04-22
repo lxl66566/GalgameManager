@@ -74,7 +74,6 @@ mod win_impl {
                 return Ok(());
             };
 
-            // Resolve the game's executable path
             let exe_path = {
                 let lock = CONFIG.lock();
                 let raw = lock
@@ -85,7 +84,7 @@ mod win_impl {
                 lock.resolve_var(raw)?
             };
 
-            let game_dir = Path::new(&exe_path).parent().ok_or(Error::InvalidPath)?;
+            let game_dir = Path::new(&ctx.exe_dir);
 
             // Determine architecture based on user preference
             let system = match config.arch {

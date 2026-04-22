@@ -11,6 +11,7 @@ pub mod utils;
 
 use bindings::*;
 use log::{error, info, warn};
+use sync::UploadConfigStatus;
 use tauri::{
     Manager, generate_context,
     menu::{Menu, MenuItem},
@@ -179,12 +180,32 @@ pub fn run() {
                 let app = app.clone();
                 tauri::async_runtime::spawn(async move {
                     info!("[minimize] uploading config...");
+                    let app_clone = app.clone();
+                    let notify = move |title: &str, body: &str| {
+                        _ = app_clone
+                            .notification()
+                            .builder()
+                            .title(title)
+                            .body(body)
+                            .show();
+                    };
                     match bindings::upload_config(app, true).await {
-                        Ok(true) => info!("[minimize] upload config success"),
-                        Ok(false) => {
-                            warn!("[minimize] not upload")
+                        Ok(UploadConfigStatus::Uploaded) => {
+                            info!("[minimize] upload config success");
+                            notify("\u{2705} Synced", "Configuration uploaded successfully");
                         }
-                        Err(e) => error!("[minimize] failed to upload config: {e}"),
+                        Ok(UploadConfigStatus::LocalClean) => {
+                            warn!("[minimize] local clean, skip upload");
+                            notify("\u{23ed} Sync Skipped", "Local configuration is up to date");
+                        }
+                        Ok(UploadConfigStatus::Conflict) => {
+                            warn!("[minimize] conflict detected");
+                            notify("\u{26a0}\u{fe0f} Sync Conflict", "Remote configuration is newer \u{2014} please pull first");
+                        }
+                        Err(e) => {
+                            error!("[minimize] failed to upload config: {e}");
+                            notify("\u{274c} Sync Failed", &format!("Failed to upload configuration: {e}"));
+                        }
                     }
                 });
             }
@@ -197,26 +218,44 @@ pub fn run() {
                     let res = tauri::async_runtime::block_on(async move {
                         bindings::upload_config(app.clone(), true).await
                     });
+                    let notify = |title: &str, body: &str| {
+                        _ = app
+                            .notification()
+                            .builder()
+                            .title(title)
+                            .body(body)
+                            .show();
+                    };
                     match res {
-                        Ok(true) => info!("[exit] upload config success"),
-                        Ok(false) => {
-                            warn!("[exit] not upload")
+                        Ok(UploadConfigStatus::Uploaded) => {
+                            info!("[exit] upload config success");
+                            notify("\u{2705} Synced", "Configuration uploaded successfully");
+                            before_exit();
+                            std::thread::sleep(std::time::Duration::from_secs(1));
+                            std::process::exit(0);
+                        }
+                        Ok(UploadConfigStatus::LocalClean) => {
+                            warn!("[exit] local clean, skip upload");
+                            notify("\u{23ed} Sync Skipped", "Local configuration is up to date");
+                            before_exit();
+                            std::thread::sleep(std::time::Duration::from_secs(1));
+                            std::process::exit(0);
+                        }
+                        Ok(UploadConfigStatus::Conflict) => {
+                            warn!("[exit] conflict detected");
+                            notify("\u{26a0}\u{fe0f} Sync Conflict", "Remote configuration is newer \u{2014} please pull first");
+                            before_exit();
+                            std::thread::sleep(std::time::Duration::from_secs(1));
+                            std::process::exit(0);
                         }
                         Err(e) => {
                             error!("[exit] failed to upload config: {e}");
-                            _ = app
-                                .notification()
-                                .builder()
-                                .title(env!("CARGO_PKG_NAME"))
-                                .body(format!("Failed to upload config on exit: {e}"))
-                                .show();
-                            std::thread::sleep(std::time::Duration::from_secs(1)); // needed for notification to show
+                            notify("\u{274c} Sync Failed", &format!("Failed to upload configuration: {e}"));
                             before_exit();
+                            std::thread::sleep(std::time::Duration::from_secs(1));
                             std::process::exit(1);
                         }
                     }
-                    before_exit();
-                    std::process::exit(0);
                 } else {
                     info!("exit code: {:?}", code);
                 }

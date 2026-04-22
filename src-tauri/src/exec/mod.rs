@@ -5,7 +5,7 @@ use std::{
 };
 
 use dashmap::DashMap;
-use log::{debug, warn};
+use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, async_runtime::JoinHandle};
 use tokio::sync::oneshot;
@@ -114,18 +114,24 @@ impl StartCtx {
     }
 }
 pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()> {
-    let (plugins, metas, exe_path) = {
+    let (plugins, metas, exe_path, exe_dir) = {
         let lock = CONFIG.lock();
         let game = lock.get_game_by_id(game_id)?;
         let exe = match &game.excutable_path {
             Some(p) => Some(lock.resolve_var(p)?),
             None => None,
         };
-        (game.plugins.clone(), lock.plugin_metadatas.clone(), exe)
+        let exe_dir = exe
+            .as_ref()
+            .and_then(|p| Path::new(p).parent())
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_default();
+        (game.plugins.clone(), lock.plugin_metadatas.clone(), exe, exe_dir)
     };
 
     let plugins = Arc::new(plugins);
     let metas = Arc::new(metas);
+    let exe_dir = Arc::new(exe_dir);
 
     // 1. 创建本次启动的事务上下文
     let transaction = crate::plugin::Transaction::new();
@@ -137,7 +143,7 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
         }
         if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key())
             && let Some(ctx) =
-                make_plugin_context(instance, app.clone(), game_id, transaction.clone())
+                make_plugin_context(instance, app.clone(), game_id, transaction.clone(), (*exe_dir).clone())
             && let Err(e) = handler.before_game_start(ctx).await
         {
             // 任何插件启动失败，立即回滚已注册的清理任务
@@ -153,7 +159,7 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
         }
         if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key())
             && let Some(ctx) =
-                make_plugin_context(instance, app.clone(), game_id, transaction.clone())
+                make_plugin_context(instance, app.clone(), game_id, transaction.clone(), (*exe_dir).clone())
             && let Some(override_ctx) = handler.get_launch_override(&ctx)?
         {
             launch_override = Some(override_ctx);
@@ -165,11 +171,11 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
         ctx
     } else {
         let exe_path = exe_path.ok_or(Error::Launch)?;
-        let exe = Path::new(&exe_path);
-        let current_dir = exe
-            .parent()
-            .filter(|p| !p.as_os_str().is_empty())
-            .map(|p| p.to_string_lossy().to_string());
+        let current_dir = if exe_dir.is_empty() {
+            None
+        } else {
+            Some(exe_dir.to_string())
+        };        let exe = Path::new(&exe_path);
         if exe.is_relative() && current_dir.is_none() {
             warn!(
                 "Game executable '{}' is relative without a resolvable parent directory...",
@@ -187,6 +193,8 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
     let plugins_exit = plugins.clone();
     let metas_start = metas.clone();
     let metas_exit = metas.clone();
+    let exe_dir_start = exe_dir.clone();
+    let exe_dir_exit = exe_dir.clone();
     let app_start = app.clone();
     let app_exit = app.clone();
 
@@ -204,7 +212,7 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
                 }
                 if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key())
                     && let Some(ctx) =
-                        make_plugin_context(instance, app_start.clone(), game_id, tx_start.clone())
+                        make_plugin_context(instance, app_start.clone(), game_id, tx_start.clone(), (*exe_dir_start).clone())
                     && let Err(e) = handler.after_game_start(ctx).await
                 {
                     log::error!("Plugin after_game_start failed: {}", e);
@@ -227,7 +235,7 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
                 }
                 if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key())
                     && let Some(ctx) =
-                        make_plugin_context(instance, app_exit.clone(), game_id, tx_exit.clone())
+                        make_plugin_context(instance, app_exit.clone(), game_id, tx_exit.clone(), (*exe_dir_exit).clone())
                     && let Err(e) = handler.after_game_exit(ctx).await
                 {
                     log::error!("Plugin after_game_exit failed: {}", e);
@@ -238,7 +246,10 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
         rx_res.map_err(|_| Error::InvalidChannel("game_exit_rx"))
     });
 
-    debug!("launch_game with ctx: {:?}", start_ctx);
+    info!(
+        "launch_game with StartCtx: cmd='{}', current_dir={:?}, env={:?}",
+        start_ctx.cmd, start_ctx.current_dir, start_ctx.env
+    );
     let res = launch_game(game_id, app.clone(), game_start_tx, start_ctx).await;
 
     // 4. 如果游戏进程本身启动失败，立即回滚

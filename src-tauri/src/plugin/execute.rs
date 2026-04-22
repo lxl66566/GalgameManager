@@ -141,6 +141,7 @@ impl ExecutePlugin {
     fn try_execute(
         &self,
         game_id: u32,
+        exe_dir: &str,
         config: &ExecuteGameConfig,
         phase: ExecutePhase,
     ) -> Result<()> {
@@ -154,6 +155,7 @@ impl ExecutePlugin {
 
         let start_ctx = super::resolve_cmd_config(
             game_id,
+            exe_dir,
             &config.cmd,
             &config.current_dir,
             &config.env,
@@ -204,14 +206,14 @@ impl super::PluginHandler for ExecutePlugin {
         let PluginConfig::Execute(ref config) = ctx.config else {
             return Ok(());
         };
-        self.try_execute(ctx.game_id, config, ExecutePhase::BeforeGameStart)
+        self.try_execute(ctx.game_id, &ctx.exe_dir, config, ExecutePhase::BeforeGameStart)
     }
 
     async fn after_game_start(&self, ctx: super::PluginContext) -> Result<()> {
         let PluginConfig::Execute(ref config) = ctx.config else {
             return Ok(());
         };
-        self.try_execute(ctx.game_id, config, ExecutePhase::AfterGameStart)
+        self.try_execute(ctx.game_id, &ctx.exe_dir, config, ExecutePhase::AfterGameStart)
     }
 
     async fn after_game_exit(&self, ctx: super::PluginContext) -> Result<()> {
@@ -229,6 +231,6 @@ impl super::PluginHandler for ExecutePlugin {
             }
         }
 
-        self.try_execute(ctx.game_id, config, ExecutePhase::GameExit)
+        self.try_execute(ctx.game_id, &ctx.exe_dir, config, ExecutePhase::GameExit)
     }
 }

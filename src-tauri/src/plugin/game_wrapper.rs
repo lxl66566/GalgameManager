@@ -72,6 +72,7 @@ impl super::PluginHandler for GameWrapperPlugin {
         // `{}` is always required for game_wrapper
         let start_ctx = resolve_cmd_config(
             ctx.game_id,
+            &ctx.exe_dir,
             &config.cmd,
             &config.current_dir,
             &config.env,
@@ -79,8 +80,10 @@ impl super::PluginHandler for GameWrapperPlugin {
         )?;
 
         log::info!(
-            "GameWrapperPlugin: overriding launch with '{}'",
+            "GameWrapperPlugin: overriding launch with cmd='{}', current_dir={:?}, env={:?}",
             start_ctx.cmd,
+            start_ctx.current_dir,
+            start_ctx.env,
         );
         Ok(Some(start_ctx))
     }

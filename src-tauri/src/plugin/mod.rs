@@ -37,6 +37,9 @@ pub struct PluginContext {
     /// Per-game config for this plugin instance
     pub config: PluginConfig,
     pub transaction: Transaction,
+    /// The directory containing the game executable.
+    /// Computed once at launch time and immutable.
+    pub exe_dir: String,
 }
 
 /// Trait for plugin lifecycle handlers.
@@ -93,21 +96,21 @@ pub trait PluginHandler: Send + Sync + 'static {
 /// plugins (and their wrappers) to build a resolved `StartCtx`.
 pub(crate) fn resolve_cmd_config(
     game_id: u32,
+    exe_dir: &str,
     cmd: &str,
     current_dir: &str,
     env: &HashMap<String, String>,
     require_placeholder: bool,
 ) -> Result<StartCtx> {
-    let (mut varmap, exe) = {
+    let mut varmap = {
         let lock = crate::db::CONFIG.lock();
-        let varmap = lock.varmap().clone();
-        let exe = lock.get_game_by_id(game_id)?.excutable_path.clone();
-        (varmap, exe)
+        lock.varmap().clone()
     };
-    let resolved_exe = varmap.resolve_var(&exe.ok_or(Error::Launch)?)?;
-    let game_dir = Path::new(&resolved_exe)
-        .parent()
-        .map(|p| p.to_string_lossy().to_string());
+    let resolved_exe = {
+        let lock = crate::db::CONFIG.lock();
+        let raw = lock.get_game_by_id(game_id)?.excutable_path.clone();
+        varmap.resolve_var(&raw.ok_or(Error::Launch)?)?
+    };
     varmap.insert("".to_string(), resolved_exe);
 
     if require_placeholder && !cmd.contains("{}") {
@@ -119,8 +122,11 @@ pub(crate) fn resolve_cmd_config(
     let resolved_cmd = varmap.resolve_var(cmd)?;
 
     let resolved_current_dir = if current_dir.is_empty() {
-        // Default to the directory containing the game executable
-        game_dir
+        if exe_dir.is_empty() {
+            None
+        } else {
+            Some(exe_dir.to_string())
+        }
     } else {
         Some(varmap.resolve_var(current_dir)?)
     };
@@ -224,6 +230,7 @@ pub(crate) fn make_plugin_context(
     app: AppHandle,
     game_id: u32,
     transaction: Transaction,
+    exe_dir: String,
 ) -> Option<PluginContext> {
     _ = PLUGIN_REGISTRY.get(instance.handler_key())?; // check if plugin is registered
     Some(match instance {
@@ -232,42 +239,49 @@ pub(crate) fn make_plugin_context(
             game_id,
             config: PluginConfig::Execute(config.clone()),
             transaction,
+            exe_dir,
         },
         PluginInstance::AutoUpload => PluginContext {
             app,
             game_id,
             config: PluginConfig::AutoUpload,
             transaction,
+            exe_dir,
         },
         PluginInstance::VoiceSpeedup { config } => PluginContext {
             app,
             game_id,
             config: PluginConfig::VoiceSpeedup(config.clone()),
             transaction,
+            exe_dir,
         },
         PluginInstance::VoiceZerointerrupt { config } => PluginContext {
             app,
             game_id,
             config: PluginConfig::VoiceZerointerrupt(config.clone()),
             transaction,
+            exe_dir,
         },
         PluginInstance::GameWrapper { config } => PluginContext {
             app,
             game_id,
             config: PluginConfig::GameWrapper(config.clone()),
             transaction,
+            exe_dir,
         },
         PluginInstance::LocaleEmulator { config } => PluginContext {
             app,
             game_id,
             config: PluginConfig::LocaleEmulator(config.clone()),
             transaction,
+            exe_dir,
         },
         PluginInstance::Translator { config } => PluginContext {
             app,
             game_id,
             config: PluginConfig::Translator(config.clone()),
             transaction,
+            exe_dir,
         },
     })
 }
@@ -279,10 +293,20 @@ pub async fn dispatch_before_save_upload(
     archive_filename: &str,
     transaction: Transaction,
 ) -> Result<()> {
-    let (plugins, metas) = {
+    let (plugins, metas, exe_dir) = {
         let lock = crate::db::CONFIG.lock();
         let game = lock.get_game_by_id(game_id)?;
-        (game.plugins.clone(), lock.plugin_metadatas.clone())
+        let exe_dir = match game.excutable_path.as_ref() {
+            Some(p) => match lock.resolve_var(p) {
+                Ok(resolved) => Path::new(&resolved)
+                    .parent()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_default(),
+                Err(_) => String::new(),
+            },
+            None => String::new(),
+        };
+        (game.plugins.clone(), lock.plugin_metadatas.clone(), exe_dir)
     };
 
     for instance in &plugins {
@@ -291,7 +315,7 @@ pub async fn dispatch_before_save_upload(
         }
         if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key())
             && let Some(ctx) =
-                make_plugin_context(instance, app.clone(), game_id, transaction.clone())
+                make_plugin_context(instance, app.clone(), game_id, transaction.clone(), exe_dir.clone())
         {
             handler.before_save_upload(ctx, archive_filename).await?;
         }
@@ -308,7 +332,7 @@ pub async fn dispatch_after_save_upload(
     archive_filename: &str,
     transaction: Transaction,
 ) {
-    let (plugins, metas) = {
+    let (plugins, metas, exe_dir) = {
         let lock = crate::db::CONFIG.lock();
         let game = match lock.get_game_by_id(game_id) {
             Ok(g) => g,
@@ -317,7 +341,17 @@ pub async fn dispatch_after_save_upload(
                 return;
             }
         };
-        (game.plugins.clone(), lock.plugin_metadatas.clone())
+        let exe_dir = match game.excutable_path.as_ref() {
+            Some(p) => match lock.resolve_var(p) {
+                Ok(resolved) => Path::new(&resolved)
+                    .parent()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_default(),
+                Err(_) => String::new(),
+            },
+            None => String::new(),
+        };
+        (game.plugins.clone(), lock.plugin_metadatas.clone(), exe_dir)
     };
 
     for instance in &plugins {
@@ -326,7 +360,7 @@ pub async fn dispatch_after_save_upload(
         }
         if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key())
             && let Some(ctx) =
-                make_plugin_context(instance, app.clone(), game_id, transaction.clone())
+                make_plugin_context(instance, app.clone(), game_id, transaction.clone(), exe_dir.clone())
             && let Err(e) = handler.after_save_upload(ctx, archive_filename).await
         {
             log::error!(
