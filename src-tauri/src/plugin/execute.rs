@@ -10,7 +10,6 @@ use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use super::PluginConfig;
 use crate::error::Result;
 
 /// Plugin identifier used in the registry and config.
@@ -137,25 +136,18 @@ impl ExecutePlugin {
         Self
     }
 
-    /// Execute the command if the config phase matches the given phase.
-    fn try_execute(
-        &self,
-        game_id: u32,
-        exe_dir: &str,
-        config: &ExecuteGameConfig,
-        phase: ExecutePhase,
-    ) -> Result<()> {
-        if config.on != phase {
+    fn try_execute(&self, ctx: &super::PluginContext, phase: ExecutePhase) -> Result<()> {
+        let super::PluginConfig::Execute(ref config) = ctx.config else {
             return Ok(());
-        }
+        };
 
-        if config.cmd.is_empty() {
+        if config.on != phase || config.cmd.is_empty() {
             return Ok(());
         }
 
         let start_ctx = super::resolve_cmd_config(
-            game_id,
-            exe_dir,
+            &ctx.launch.exe_path,
+            &ctx.launch.current_dir,
             &config.cmd,
             &config.current_dir,
             &config.env,
@@ -167,31 +159,22 @@ impl ExecutePlugin {
         })?;
 
         log::info!(
-            "ExecutePlugin: phase={phase:?}, game_id={game_id}, \
-             cmd='{}', current_dir={:?}, env={:?}",
-            start_ctx.cmd,
-            start_ctx.current_dir,
-            start_ctx.env,
+            "ExecutePlugin: phase={phase:?}, game_id={}, {start_ctx}",
+            ctx.launch.game_id,
         );
 
         let child = start_ctx.spawn().map_err(|e| {
-            log::error!(
-                "ExecutePlugin: failed to spawn command '{}' in dir {:?}: {e}",
-                start_ctx.cmd,
-                start_ctx.current_dir,
-            );
+            log::error!("ExecutePlugin: failed to spawn {start_ctx}: {e}");
             crate::error::Error::PluginCommand {
                 plugin: PLUGIN_ID,
                 source: Box::new(e),
             }
         })?;
 
-        // Track the spawned process for exit signal delivery (only for
-        // pre-exit phases, and only when a signal is configured).
         if phase != ExecutePhase::GameExit && config.exit_signal != ExitSignal::None {
             let pid = child.id();
             TRACKED_PROCESSES
-                .entry(game_id)
+                .entry(ctx.launch.game_id)
                 .or_default()
                 .push((pid, config.exit_signal));
         }
@@ -203,27 +186,15 @@ impl ExecutePlugin {
 #[async_trait::async_trait]
 impl super::PluginHandler for ExecutePlugin {
     async fn before_game_start(&self, ctx: super::PluginContext) -> Result<()> {
-        let PluginConfig::Execute(ref config) = ctx.config else {
-            return Ok(());
-        };
-        self.try_execute(ctx.game_id, &ctx.exe_dir, config, ExecutePhase::BeforeGameStart)
+        self.try_execute(&ctx, ExecutePhase::BeforeGameStart)
     }
 
     async fn after_game_start(&self, ctx: super::PluginContext) -> Result<()> {
-        let PluginConfig::Execute(ref config) = ctx.config else {
-            return Ok(());
-        };
-        self.try_execute(ctx.game_id, &ctx.exe_dir, config, ExecutePhase::AfterGameStart)
+        self.try_execute(&ctx, ExecutePhase::AfterGameStart)
     }
 
     async fn after_game_exit(&self, ctx: super::PluginContext) -> Result<()> {
-        let PluginConfig::Execute(ref config) = ctx.config else {
-            return Ok(());
-        };
-
-        // Send exit signals to all tracked processes (atomic remove — only
-        // the first call gets the data).
-        if let Some((_, processes)) = TRACKED_PROCESSES.remove(&ctx.game_id) {
+        if let Some((_, processes)) = TRACKED_PROCESSES.remove(&ctx.launch.game_id) {
             for (pid, signal) in processes {
                 if let Err(e) = send_signal(pid, signal) {
                     log::warn!("Failed to send {signal:?} to process {pid}: {e}");
@@ -231,6 +202,6 @@ impl super::PluginHandler for ExecutePlugin {
             }
         }
 
-        self.try_execute(ctx.game_id, &ctx.exe_dir, config, ExecutePhase::GameExit)
+        self.try_execute(&ctx, ExecutePhase::GameExit)
     }
 }

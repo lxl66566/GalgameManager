@@ -17,6 +17,7 @@ temperature: 0
 
 - 使用 `bun run check` 检查 tsx 代码。
 - 修改了 Rust 代码后，请在 src-tauri 下执行 `cargo test export_bindings` 更新 bindings。（这是 `ts-rs` 提供的导出功能）
+- 不要删除运行逻辑相关的关键日志
 
 # 项目规范
 

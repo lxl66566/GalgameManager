@@ -69,22 +69,16 @@ impl super::PluginHandler for GameWrapperPlugin {
             return Ok(None);
         }
 
-        // `{}` is always required for game_wrapper
         let start_ctx = resolve_cmd_config(
-            ctx.game_id,
-            &ctx.exe_dir,
+            &ctx.launch.exe_path,
+            &ctx.launch.current_dir,
             &config.cmd,
             &config.current_dir,
             &config.env,
-            true, // require `{}` placeholder
+            true,
         )?;
 
-        log::info!(
-            "GameWrapperPlugin: overriding launch with cmd='{}', current_dir={:?}, env={:?}",
-            start_ctx.cmd,
-            start_ctx.current_dir,
-            start_ctx.env,
-        );
+        log::info!("GameWrapperPlugin: overriding launch with {start_ctx}");
         Ok(Some(start_ctx))
     }
 }

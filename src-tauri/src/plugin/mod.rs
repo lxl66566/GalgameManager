@@ -8,7 +8,7 @@ mod translator;
 mod voice_speedup;
 mod voice_zerointerrupt;
 
-use std::{collections::HashMap, path::Path, sync::LazyLock as Lazy};
+use std::{collections::HashMap, path::Path, sync::Arc, sync::LazyLock as Lazy};
 
 // Re-export all public config types for downstream convenience.
 pub use config::{
@@ -30,16 +30,26 @@ use crate::{
 
 // region: Plugin handler trait and context
 
+/// Shared context for the entire game launch lifecycle.
+///
+/// Created once before any plugin hooks run and wrapped in [`Arc`].
+/// After the launch-override phase the contents are effectively frozen
+/// (no further mutations).
+pub struct LaunchCtx {
+    pub app: AppHandle,
+    pub game_id: u32,
+    /// Resolved game executable path.
+    pub exe_path: String,
+    /// Parent directory of the game executable (may be empty).
+    pub current_dir: String,
+    pub transaction: Transaction,
+}
+
 /// Context passed to plugin lifecycle hooks.
 pub struct PluginContext {
-    pub app: tauri::AppHandle,
-    pub game_id: u32,
-    /// Per-game config for this plugin instance
+    pub launch: Arc<LaunchCtx>,
+    /// Per-game config for this plugin instance.
     pub config: PluginConfig,
-    pub transaction: Transaction,
-    /// The directory containing the game executable.
-    /// Computed once at launch time and immutable.
-    pub exe_dir: String,
 }
 
 /// Trait for plugin lifecycle handlers.
@@ -95,7 +105,7 @@ pub trait PluginHandler: Send + Sync + 'static {
 /// This is the shared logic used by both the `execute` and `game_wrapper`
 /// plugins (and their wrappers) to build a resolved `StartCtx`.
 pub(crate) fn resolve_cmd_config(
-    game_id: u32,
+    exe_path: &str,
     exe_dir: &str,
     cmd: &str,
     current_dir: &str,
@@ -106,12 +116,7 @@ pub(crate) fn resolve_cmd_config(
         let lock = crate::db::CONFIG.lock();
         lock.varmap().clone()
     };
-    let resolved_exe = {
-        let lock = crate::db::CONFIG.lock();
-        let raw = lock.get_game_by_id(game_id)?.excutable_path.clone();
-        varmap.resolve_var(&raw.ok_or(Error::Launch)?)?
-    };
-    varmap.insert("".to_string(), resolved_exe);
+    varmap.insert("".to_string(), exe_path.to_string());
 
     if require_placeholder && !cmd.contains("{}") {
         return Err(Error::InvalidCommand(
@@ -222,68 +227,23 @@ pub static PLUGIN_REGISTRY: Lazy<PluginRegistry> = Lazy::new(PluginRegistry::new
 
 // region: Hook dispatch helpers
 
-/// Build a `PluginContext` for a specific plugin instance.
+/// Extract the typed [`PluginConfig`] from a [`PluginInstance`].
 ///
 /// When adding a new plugin, add one match arm here.
-pub(crate) fn make_plugin_context(
-    instance: &PluginInstance,
-    app: AppHandle,
-    game_id: u32,
-    transaction: Transaction,
-    exe_dir: String,
-) -> Option<PluginContext> {
-    _ = PLUGIN_REGISTRY.get(instance.handler_key())?; // check if plugin is registered
-    Some(match instance {
-        PluginInstance::Execute { config } => PluginContext {
-            app,
-            game_id,
-            config: PluginConfig::Execute(config.clone()),
-            transaction,
-            exe_dir,
-        },
-        PluginInstance::AutoUpload => PluginContext {
-            app,
-            game_id,
-            config: PluginConfig::AutoUpload,
-            transaction,
-            exe_dir,
-        },
-        PluginInstance::VoiceSpeedup { config } => PluginContext {
-            app,
-            game_id,
-            config: PluginConfig::VoiceSpeedup(config.clone()),
-            transaction,
-            exe_dir,
-        },
-        PluginInstance::VoiceZerointerrupt { config } => PluginContext {
-            app,
-            game_id,
-            config: PluginConfig::VoiceZerointerrupt(config.clone()),
-            transaction,
-            exe_dir,
-        },
-        PluginInstance::GameWrapper { config } => PluginContext {
-            app,
-            game_id,
-            config: PluginConfig::GameWrapper(config.clone()),
-            transaction,
-            exe_dir,
-        },
-        PluginInstance::LocaleEmulator { config } => PluginContext {
-            app,
-            game_id,
-            config: PluginConfig::LocaleEmulator(config.clone()),
-            transaction,
-            exe_dir,
-        },
-        PluginInstance::Translator { config } => PluginContext {
-            app,
-            game_id,
-            config: PluginConfig::Translator(config.clone()),
-            transaction,
-            exe_dir,
-        },
-    })
+pub(crate) fn instance_config(instance: &PluginInstance) -> PluginConfig {
+    match instance {
+        PluginInstance::Execute { config } => PluginConfig::Execute(config.clone()),
+        PluginInstance::AutoUpload => PluginConfig::AutoUpload,
+        PluginInstance::VoiceSpeedup { config } => PluginConfig::VoiceSpeedup(config.clone()),
+        PluginInstance::VoiceZerointerrupt { config } => {
+            PluginConfig::VoiceZerointerrupt(config.clone())
+        }
+        PluginInstance::GameWrapper { config } => PluginConfig::GameWrapper(config.clone()),
+        PluginInstance::LocaleEmulator { config } => {
+            PluginConfig::LocaleEmulator(config.clone())
+        }
+        PluginInstance::Translator { config } => PluginConfig::Translator(config.clone()),
+    }
 }
 
 /// Dispatch `before_save_upload` hooks for all enabled plugins of a game.
@@ -293,30 +253,40 @@ pub async fn dispatch_before_save_upload(
     archive_filename: &str,
     transaction: Transaction,
 ) -> Result<()> {
-    let (plugins, metas, exe_dir) = {
+    let (plugins, metas, exe_path, current_dir) = {
         let lock = crate::db::CONFIG.lock();
         let game = lock.get_game_by_id(game_id)?;
-        let exe_dir = match game.excutable_path.as_ref() {
-            Some(p) => match lock.resolve_var(p) {
-                Ok(resolved) => Path::new(&resolved)
+        let (exe_path, current_dir) = match game.excutable_path.as_ref() {
+            Some(p) => {
+                let resolved = lock.resolve_var(p)?;
+                let dir = Path::new(&resolved)
                     .parent()
                     .map(|p| p.to_string_lossy().to_string())
-                    .unwrap_or_default(),
-                Err(_) => String::new(),
-            },
-            None => String::new(),
+                    .unwrap_or_default();
+                (resolved, dir)
+            }
+            None => (String::new(), String::new()),
         };
-        (game.plugins.clone(), lock.plugin_metadatas.clone(), exe_dir)
+        (game.plugins.clone(), lock.plugin_metadatas.clone(), exe_path, current_dir)
     };
+
+    let launch = Arc::new(LaunchCtx {
+        app: app.clone(),
+        game_id,
+        exe_path,
+        current_dir,
+        transaction,
+    });
 
     for instance in &plugins {
         if !metas.is_enabled(instance) {
             continue;
         }
-        if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key())
-            && let Some(ctx) =
-                make_plugin_context(instance, app.clone(), game_id, transaction.clone(), exe_dir.clone())
-        {
+        if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key()) {
+            let ctx = PluginContext {
+                launch: launch.clone(),
+                config: instance_config(instance),
+            };
             handler.before_save_upload(ctx, archive_filename).await?;
         }
     }
@@ -332,7 +302,7 @@ pub async fn dispatch_after_save_upload(
     archive_filename: &str,
     transaction: Transaction,
 ) {
-    let (plugins, metas, exe_dir) = {
+    let (plugins, metas, exe_path, current_dir) = {
         let lock = crate::db::CONFIG.lock();
         let game = match lock.get_game_by_id(game_id) {
             Ok(g) => g,
@@ -341,32 +311,45 @@ pub async fn dispatch_after_save_upload(
                 return;
             }
         };
-        let exe_dir = match game.excutable_path.as_ref() {
+        let (exe_path, current_dir) = match game.excutable_path.as_ref() {
             Some(p) => match lock.resolve_var(p) {
-                Ok(resolved) => Path::new(&resolved)
-                    .parent()
-                    .map(|p| p.to_string_lossy().to_string())
-                    .unwrap_or_default(),
-                Err(_) => String::new(),
+                Ok(resolved) => {
+                    let dir = Path::new(&resolved)
+                        .parent()
+                        .map(|p| p.to_string_lossy().to_string())
+                        .unwrap_or_default();
+                    (resolved, dir)
+                }
+                Err(_) => (String::new(), String::new()),
             },
-            None => String::new(),
+            None => (String::new(), String::new()),
         };
-        (game.plugins.clone(), lock.plugin_metadatas.clone(), exe_dir)
+        (game.plugins.clone(), lock.plugin_metadatas.clone(), exe_path, current_dir)
     };
+
+    let launch = Arc::new(LaunchCtx {
+        app: app.clone(),
+        game_id,
+        exe_path,
+        current_dir,
+        transaction,
+    });
 
     for instance in &plugins {
         if !metas.is_enabled(instance) {
             continue;
         }
-        if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key())
-            && let Some(ctx) =
-                make_plugin_context(instance, app.clone(), game_id, transaction.clone(), exe_dir.clone())
-            && let Err(e) = handler.after_save_upload(ctx, archive_filename).await
-        {
-            log::error!(
-                "after_save_upload hook failed for plugin '{}': {e}",
-                instance.handler_key()
-            );
+        if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key()) {
+            let ctx = PluginContext {
+                launch: launch.clone(),
+                config: instance_config(instance),
+            };
+            if let Err(e) = handler.after_save_upload(ctx, archive_filename).await {
+                log::error!(
+                    "after_save_upload hook failed for plugin '{}': {e}",
+                    instance.handler_key()
+                );
+            }
         }
     }
 }
