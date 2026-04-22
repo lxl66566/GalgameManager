@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager as _;
 use ts_rs::TS;
 
-use super::{PluginContext, Transaction, dispatch_after_save_upload, dispatch_before_save_upload};
+use super::{PluginContext, SaveUploadDispatcher, Transaction};
 use crate::{
     error::Result,
     utils::toast::{ToastVariant, dismiss_toast, emit_loading_toast, emit_toast},
@@ -88,7 +88,10 @@ impl super::PluginHandler for AutoUploadPlugin {
             )
         };
 
-        log::info!("AutoUploadPlugin: archiving saves for game {}", ctx.launch.game_id);
+        log::info!(
+            "AutoUploadPlugin: archiving saves for game {}",
+            ctx.launch.game_id
+        );
         let archive_filename = match crate::archive::archive_impl(
             &device_name,
             &archive_conf,
@@ -133,9 +136,10 @@ impl super::PluginHandler for AutoUploadPlugin {
         };
 
         let tx = Transaction::new();
-        if let Err(e) =
-            dispatch_before_save_upload(&ctx.launch.app, ctx.launch.game_id, &archive_filename, tx.clone()).await
-        {
+        let save_dispatcher =
+            SaveUploadDispatcher::new(&ctx.launch.app, ctx.launch.game_id, tx.clone())?;
+
+        if let Err(e) = save_dispatcher.dispatch_before(&archive_filename).await {
             tx.rollback();
             dismiss_toast(&ctx.launch.app, &loading_toast_id);
             let msg = format!("{HINT_UPLOAD_FAILED}{game_name}: {e}");
@@ -145,7 +149,11 @@ impl super::PluginHandler for AutoUploadPlugin {
         }
 
         if let Err(e) = op
-            .upload_archive(ctx.launch.game_id, &archive_filename, &data_dir.join("backup"))
+            .upload_archive(
+                ctx.launch.game_id,
+                &archive_filename,
+                &data_dir.join("backup"),
+            )
             .await
         {
             tx.rollback();
@@ -156,7 +164,7 @@ impl super::PluginHandler for AutoUploadPlugin {
             return Err(e);
         }
 
-        dispatch_after_save_upload(&ctx.launch.app, ctx.launch.game_id, &archive_filename, tx.clone()).await;
+        save_dispatcher.dispatch_after(&archive_filename).await;
         tx.execute_after_exit();
 
         dismiss_toast(&ctx.launch.app, &loading_toast_id);

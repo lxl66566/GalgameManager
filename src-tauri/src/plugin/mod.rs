@@ -8,7 +8,11 @@ mod translator;
 mod voice_speedup;
 mod voice_zerointerrupt;
 
-use std::{collections::HashMap, path::Path, sync::Arc, sync::LazyLock as Lazy};
+use std::{
+    collections::HashMap,
+    path::Path,
+    sync::{Arc, LazyLock as Lazy},
+};
 
 // Re-export all public config types for downstream convenience.
 pub use config::{
@@ -48,8 +52,9 @@ pub struct LaunchCtx {
 /// Context passed to plugin lifecycle hooks.
 pub struct PluginContext {
     pub launch: Arc<LaunchCtx>,
-    /// Per-game config for this plugin instance.
-    pub config: PluginConfig,
+    /// Per-game config for this plugin instance (shared via Arc to avoid
+    /// clone).
+    pub config: Arc<PluginConfig>,
 }
 
 /// Trait for plugin lifecycle handlers.
@@ -227,9 +232,8 @@ pub static PLUGIN_REGISTRY: Lazy<PluginRegistry> = Lazy::new(PluginRegistry::new
 
 // region: Hook dispatch helpers
 
-/// Extract the typed [`PluginConfig`] from a [`PluginInstance`].
-///
-/// When adding a new plugin, add one match arm here.
+/// Extract the typed [`PluginConfig`] from a [`PluginInstance`]. Note that this
+/// will clone the config, so it's not so cheap.
 pub(crate) fn instance_config(instance: &PluginInstance) -> PluginConfig {
     match instance {
         PluginInstance::Execute { config } => PluginConfig::Execute(config.clone()),
@@ -239,116 +243,107 @@ pub(crate) fn instance_config(instance: &PluginInstance) -> PluginConfig {
             PluginConfig::VoiceZerointerrupt(config.clone())
         }
         PluginInstance::GameWrapper { config } => PluginConfig::GameWrapper(config.clone()),
-        PluginInstance::LocaleEmulator { config } => {
-            PluginConfig::LocaleEmulator(config.clone())
-        }
+        PluginInstance::LocaleEmulator { config } => PluginConfig::LocaleEmulator(config.clone()),
         PluginInstance::Translator { config } => PluginConfig::Translator(config.clone()),
     }
 }
 
-/// Dispatch `before_save_upload` hooks for all enabled plugins of a game.
-pub async fn dispatch_before_save_upload(
-    app: &AppHandle,
-    game_id: u32,
-    archive_filename: &str,
-    transaction: Transaction,
-) -> Result<()> {
-    let (plugins, metas, exe_path, current_dir) = {
-        let lock = crate::db::CONFIG.lock();
-        let game = lock.get_game_by_id(game_id)?;
-        let (exe_path, current_dir) = match game.excutable_path.as_ref() {
-            Some(p) => {
-                let resolved = lock.resolve_var(p)?;
-                let dir = Path::new(&resolved)
-                    .parent()
-                    .map(|p| p.to_string_lossy().to_string())
-                    .unwrap_or_default();
-                (resolved, dir)
-            }
-            None => (String::new(), String::new()),
-        };
-        (game.plugins.clone(), lock.plugin_metadatas.clone(), exe_path, current_dir)
-    };
-
-    let launch = Arc::new(LaunchCtx {
-        app: app.clone(),
-        game_id,
-        exe_path,
-        current_dir,
-        transaction,
-    });
-
-    for instance in &plugins {
-        if !metas.is_enabled(instance) {
-            continue;
-        }
-        if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key()) {
-            let ctx = PluginContext {
-                launch: launch.clone(),
-                config: instance_config(instance),
-            };
-            handler.before_save_upload(ctx, archive_filename).await?;
-        }
-    }
-    Ok(())
+/// Pre-computed context for dispatching save-upload plugin hooks.
+///
+/// A single upload operation needs to call `before_save_upload` and
+/// `after_save_upload` around the actual upload. This struct performs the
+/// common setup (CONFIG lock, LaunchCtx, plugin configs) once so that both
+/// phases share the same pre-computed data.
+pub struct SaveUploadDispatcher {
+    launch: Arc<LaunchCtx>,
+    plugins: Vec<PluginInstance>,
+    metas: PluginMetadatas,
+    configs: Vec<Arc<PluginConfig>>,
 }
 
-/// Dispatch `after_save_upload` hooks for all enabled plugins of a game.
-///
-/// Errors from individual hooks are logged but do not abort iteration.
-pub async fn dispatch_after_save_upload(
-    app: &AppHandle,
-    game_id: u32,
-    archive_filename: &str,
-    transaction: Transaction,
-) {
-    let (plugins, metas, exe_path, current_dir) = {
-        let lock = crate::db::CONFIG.lock();
-        let game = match lock.get_game_by_id(game_id) {
-            Ok(g) => g,
-            Err(e) => {
-                log::error!("dispatch_after_save_upload: {e}");
-                return;
-            }
-        };
-        let (exe_path, current_dir) = match game.excutable_path.as_ref() {
-            Some(p) => match lock.resolve_var(p) {
-                Ok(resolved) => {
+impl SaveUploadDispatcher {
+    pub fn new(app: &AppHandle, game_id: u32, transaction: Transaction) -> Result<Self> {
+        let (plugins, metas, exe_path, current_dir) = {
+            let lock = crate::db::CONFIG.lock();
+            let game = lock.get_game_by_id(game_id)?;
+            let (exe_path, current_dir) = match game.excutable_path.as_ref() {
+                Some(p) => {
+                    let resolved = lock.resolve_var(p)?;
                     let dir = Path::new(&resolved)
                         .parent()
                         .map(|p| p.to_string_lossy().to_string())
                         .unwrap_or_default();
                     (resolved, dir)
                 }
-                Err(_) => (String::new(), String::new()),
-            },
-            None => (String::new(), String::new()),
-        };
-        (game.plugins.clone(), lock.plugin_metadatas.clone(), exe_path, current_dir)
-    };
-
-    let launch = Arc::new(LaunchCtx {
-        app: app.clone(),
-        game_id,
-        exe_path,
-        current_dir,
-        transaction,
-    });
-
-    for instance in &plugins {
-        if !metas.is_enabled(instance) {
-            continue;
-        }
-        if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key()) {
-            let ctx = PluginContext {
-                launch: launch.clone(),
-                config: instance_config(instance),
+                None => (String::new(), String::new()),
             };
-            if let Err(e) = handler.after_save_upload(ctx, archive_filename).await {
-                log::error!(
-                    "after_save_upload hook failed for plugin '{}': {e}",
-                    instance.handler_key()
-                );
+            (
+                game.plugins.clone(),
+                lock.plugin_metadatas.clone(),
+                exe_path,
+                current_dir,
+            )
+        };
+
+        let launch = Arc::new(LaunchCtx {
+            app: app.clone(),
+            game_id,
+            exe_path,
+            current_dir,
+            transaction,
+        });
+
+        let configs: Vec<Arc<PluginConfig>> = plugins
+            .iter()
+            .map(|i| Arc::new(instance_config(i)))
+            .collect();
+
+        Ok(Self {
+            launch,
+            plugins,
+            metas,
+            configs,
+        })
+    }
+
+    /// Dispatch `before_save_upload` hooks for all enabled plugins.
+    ///
+    /// Aborts on the first hook that returns an error.
+    pub async fn dispatch_before(&self, archive_filename: &str) -> Result<()> {
+        for (instance, config) in self.plugins.iter().zip(&self.configs) {
+            if !self.metas.is_enabled(instance) {
+                continue;
+            }
+            if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key()) {
+                let ctx = PluginContext {
+                    launch: self.launch.clone(),
+                    config: config.clone(),
+                };
+                handler.before_save_upload(ctx, archive_filename).await?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Dispatch `after_save_upload` hooks for all enabled plugins.
+    ///
+    /// Errors from individual hooks are logged but do not abort iteration.
+    pub async fn dispatch_after(&self, archive_filename: &str) {
+        for (instance, config) in self.plugins.iter().zip(&self.configs) {
+            if !self.metas.is_enabled(instance) {
+                continue;
+            }
+            if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key()) {
+                let ctx = PluginContext {
+                    launch: self.launch.clone(),
+                    config: config.clone(),
+                };
+                if let Err(e) = handler.after_save_upload(ctx, archive_filename).await {
+                    log::error!(
+                        "after_save_upload hook failed for plugin '{}': {e}",
+                        instance.handler_key()
+                    );
+                }
             }
         }
     }

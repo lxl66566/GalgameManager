@@ -61,7 +61,7 @@ impl GameWrapperPlugin {
 impl super::PluginHandler for GameWrapperPlugin {
     /// Provide a launch override that replaces the default game spawn.
     fn get_launch_override(&self, ctx: &PluginContext) -> Result<Option<StartCtx>> {
-        let PluginConfig::GameWrapper(ref config) = ctx.config else {
+        let PluginConfig::GameWrapper(config) = &*ctx.config else {
             return Ok(None);
         };
 

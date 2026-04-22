@@ -11,7 +11,7 @@ use crate::{
     error::{Error, Result},
     exec::{GAME_LOOP_HANDLES, launch_game_with_plugins},
     logging::LogLevel,
-    plugin::{Transaction, dispatch_after_save_upload, dispatch_before_save_upload},
+    plugin::{SaveUploadDispatcher, Transaction},
     sync::{MyOperation, UploadConfigStatus},
     utils::list_dir_all,
 };
@@ -167,10 +167,9 @@ pub async fn upload_archive(app: AppHandle, game_id: u32, archive_filename: Stri
     );
 
     let tx = Transaction::new();
+    let save_dispatcher = SaveUploadDispatcher::new(&app, game_id, tx.clone())?;
 
-    // Dispatch before_save_upload hooks
-    if let Err(e) = dispatch_before_save_upload(&app, game_id, &archive_filename, tx.clone()).await
-    {
+    if let Err(e) = save_dispatcher.dispatch_before(&archive_filename).await {
         tx.rollback();
         return Err(e);
     }
@@ -187,8 +186,7 @@ pub async fn upload_archive(app: AppHandle, game_id: u32, archive_filename: Stri
         return Err(e);
     }
 
-    // Dispatch after_save_upload hooks (non-fatal)
-    dispatch_after_save_upload(&app, game_id, &archive_filename, tx.clone()).await;
+    save_dispatcher.dispatch_after(&archive_filename).await;
 
     Ok(())
 }
@@ -243,10 +241,10 @@ pub async fn upload_config(app: AppHandle, safe: bool) -> Result<UploadConfigSta
     let op = build_operator_with_varmap(&app)?;
     let res = op.upload_config(&app, safe).await?;
     #[cfg(feature = "config-daily-backup")]
-    if matches!(res, UploadConfigStatus::Uploaded) {
-        if let Err(e) = op.replicate_config().await {
-            log::error!("Failed to replicate config: {e}");
-        }
+    if matches!(res, UploadConfigStatus::Uploaded)
+        && let Err(e) = op.replicate_config().await
+    {
+        log::error!("Failed to replicate config: {e}");
     }
     Ok(res)
 }

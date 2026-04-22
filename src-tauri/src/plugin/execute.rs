@@ -137,7 +137,7 @@ impl ExecutePlugin {
     }
 
     fn try_execute(&self, ctx: &super::PluginContext, phase: ExecutePhase) -> Result<()> {
-        let super::PluginConfig::Execute(ref config) = ctx.config else {
+        let super::PluginConfig::Execute(config) = &*ctx.config else {
             return Ok(());
         };
 

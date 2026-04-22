@@ -69,7 +69,7 @@ mod win_impl {
     #[async_trait::async_trait]
     impl PluginHandler for VoiceZerointerruptPlugin {
         async fn before_game_start(&self, ctx: PluginContext) -> Result<()> {
-            let PluginConfig::VoiceZerointerrupt(ref config) = ctx.config else {
+            let PluginConfig::VoiceZerointerrupt(config) = &*ctx.config else {
                 return Ok(());
             };
 

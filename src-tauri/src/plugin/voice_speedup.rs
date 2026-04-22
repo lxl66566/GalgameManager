@@ -89,7 +89,7 @@ mod win_impl {
     #[async_trait::async_trait]
     impl PluginHandler for VoiceSpeedupPlugin {
         async fn before_game_start(&self, ctx: PluginContext) -> Result<()> {
-            let PluginConfig::VoiceSpeedup(ref config) = ctx.config else {
+            let PluginConfig::VoiceSpeedup(config) = &*ctx.config else {
                 return Ok(());
             };
 
@@ -135,7 +135,7 @@ mod win_impl {
         }
 
         async fn after_game_start(&self, ctx: PluginContext) -> Result<()> {
-            let PluginConfig::VoiceSpeedup(ref config) = ctx.config else {
+            let PluginConfig::VoiceSpeedup(config) = &*ctx.config else {
                 return Ok(());
             };
 

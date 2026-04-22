@@ -200,11 +200,17 @@ pub fn run() {
                         }
                         Ok(UploadConfigStatus::Conflict) => {
                             warn!("[minimize] conflict detected");
-                            notify("\u{26a0}\u{fe0f} Sync Conflict", "Remote configuration is newer \u{2014} please pull first");
+                            notify(
+                                "\u{26a0}\u{fe0f} Sync Conflict",
+                                "Remote configuration is newer \u{2014} please pull first",
+                            );
                         }
                         Err(e) => {
                             error!("[minimize] failed to upload config: {e}");
-                            notify("\u{274c} Sync Failed", &format!("Failed to upload configuration: {e}"));
+                            notify(
+                                "\u{274c} Sync Failed",
+                                &format!("Failed to upload configuration: {e}"),
+                            );
                         }
                     }
                 });
@@ -219,12 +225,7 @@ pub fn run() {
                         bindings::upload_config(app.clone(), true).await
                     });
                     let notify = |title: &str, body: &str| {
-                        _ = app
-                            .notification()
-                            .builder()
-                            .title(title)
-                            .body(body)
-                            .show();
+                        _ = app.notification().builder().title(title).body(body).show();
                     };
                     match res {
                         Ok(UploadConfigStatus::Uploaded) => {
@@ -243,14 +244,20 @@ pub fn run() {
                         }
                         Ok(UploadConfigStatus::Conflict) => {
                             warn!("[exit] conflict detected");
-                            notify("\u{26a0}\u{fe0f} Sync Conflict", "Remote configuration is newer \u{2014} please pull first");
+                            notify(
+                                "\u{26a0}\u{fe0f} Sync Conflict",
+                                "Remote configuration is newer \u{2014} please pull first",
+                            );
                             before_exit();
                             std::thread::sleep(std::time::Duration::from_secs(1));
                             std::process::exit(0);
                         }
                         Err(e) => {
                             error!("[exit] failed to upload config: {e}");
-                            notify("\u{274c} Sync Failed", &format!("Failed to upload configuration: {e}"));
+                            notify(
+                                "\u{274c} Sync Failed",
+                                &format!("Failed to upload configuration: {e}"),
+                            );
                             before_exit();
                             std::thread::sleep(std::time::Duration::from_secs(1));
                             std::process::exit(1);

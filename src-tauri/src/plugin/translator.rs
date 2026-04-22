@@ -4,6 +4,8 @@
 //! alongside the game. It delegates all execution logic to the Execute plugin
 //! by converting its own config to an `ExecuteGameConfig` at runtime.
 
+use std::sync::Arc;
+
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -90,14 +92,14 @@ impl TranslatorPlugin {
 #[async_trait::async_trait]
 impl super::PluginHandler for TranslatorPlugin {
     async fn before_game_start(&self, ctx: PluginContext) -> Result<()> {
-        let PluginConfig::Translator(ref config) = ctx.config else {
+        let PluginConfig::Translator(config) = &*ctx.config else {
             return Ok(());
         };
 
         let inner_config = config.to_execute_config();
         let inner_ctx = PluginContext {
             launch: ctx.launch.clone(),
-            config: PluginConfig::Execute(inner_config),
+            config: Arc::new(PluginConfig::Execute(inner_config)),
         };
 
         if let Some(handler) = PLUGIN_REGISTRY.get(super::execute::PLUGIN_ID) {
@@ -107,14 +109,14 @@ impl super::PluginHandler for TranslatorPlugin {
     }
 
     async fn after_game_start(&self, ctx: PluginContext) -> Result<()> {
-        let PluginConfig::Translator(ref config) = ctx.config else {
+        let PluginConfig::Translator(config) = &*ctx.config else {
             return Ok(());
         };
 
         let inner_config = config.to_execute_config();
         let inner_ctx = PluginContext {
             launch: ctx.launch.clone(),
-            config: PluginConfig::Execute(inner_config),
+            config: Arc::new(PluginConfig::Execute(inner_config)),
         };
 
         if let Some(handler) = PLUGIN_REGISTRY.get(super::execute::PLUGIN_ID) {
@@ -124,14 +126,14 @@ impl super::PluginHandler for TranslatorPlugin {
     }
 
     async fn after_game_exit(&self, ctx: PluginContext) -> Result<()> {
-        let PluginConfig::Translator(ref config) = ctx.config else {
+        let PluginConfig::Translator(config) = &*ctx.config else {
             return Ok(());
         };
 
         let inner_config = config.to_execute_config();
         let inner_ctx = PluginContext {
             launch: ctx.launch,
-            config: PluginConfig::Execute(inner_config),
+            config: Arc::new(PluginConfig::Execute(inner_config)),
         };
 
         if let Some(handler) = PLUGIN_REGISTRY.get(super::execute::PLUGIN_ID) {
