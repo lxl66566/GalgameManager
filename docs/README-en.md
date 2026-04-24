@@ -23,6 +23,12 @@ A game launcher based on Tauri + SolidJS, primarily designed for managing and pl
 
 ## Changelog
 
+### v1.1.1
+
+- Performance optimization: reduced game launch time
+- UI optimization: fixed screen flickering when uploading saves
+- Notification optimization: automatic uploads when exiting or minimizing will now trigger a system notification indicating the upload result
+
 ### v1.1.0
 
 - Transaction rollback mechanism: If the game or a subsequent plugin fails to start, the effects caused by previous plugins (DLLs, registry entries) will be rolled back

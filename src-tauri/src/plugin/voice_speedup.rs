@@ -73,9 +73,8 @@ mod win_impl {
 
     use super::{ArchPreference, SpeedupProvider};
     use crate::{
-        db::CONFIG,
-        error::{Error, Result},
-        plugin::{CleanupPhase, PluginConfig, PluginContext, PluginHandler}, // 引入 CleanupPhase
+        error::Result,
+        plugin::{CleanupPhase, PluginConfig, PluginContext, PluginHandler},
         utils::audio_speed_hack,
     };
 
@@ -90,49 +89,39 @@ mod win_impl {
     #[async_trait::async_trait]
     impl PluginHandler for VoiceSpeedupPlugin {
         async fn before_game_start(&self, ctx: PluginContext) -> Result<()> {
-            let PluginConfig::VoiceSpeedup(ref config) = ctx.config else {
+            let PluginConfig::VoiceSpeedup(config) = &*ctx.config else {
                 return Ok(());
             };
 
-            let exe_path = {
-                let lock = CONFIG.lock();
-                let raw = lock
-                    .get_game_by_id(ctx.game_id)?
-                    .excutable_path
-                    .as_ref()
-                    .ok_or(Error::Launch)?;
-                lock.resolve_var(raw)?
-            };
-
-            let game_dir = Path::new(&exe_path).parent().ok_or(Error::InvalidPath)?;
+            let game_dir = Path::new(&ctx.launch.current_dir);
 
             let system = match config.arch {
-                ArchPreference::Auto => audio_speed_hack::System::detect(&exe_path)
+                ArchPreference::Auto => audio_speed_hack::System::detect(&ctx.launch.exe_path)
                     .unwrap_or(audio_speed_hack::System::X64),
                 ArchPreference::X86 => audio_speed_hack::System::X86,
                 ArchPreference::X64 => audio_speed_hack::System::X64,
             };
 
-            // 1. 解压 DLL 并注册退出时清理
             let files =
                 audio_speed_hack::extract_speedup_assets(system, game_dir, config.provider)?;
-            ctx.transaction
+            ctx.launch
+                .transaction
                 .add_cleanup(CleanupPhase::AfterGameExit, move || {
                     audio_speed_hack::cleanup_files(&files);
                 });
 
-            // 2. 设置环境变量并注册退出时清理
             audio_speed_hack::set_speedup_env(config.speed)?;
-            ctx.transaction
+            ctx.launch
+                .transaction
                 .add_cleanup(CleanupPhase::AfterGameExit, || {
                     audio_speed_hack::remove_speedup_env();
                 });
 
-            // 3. 设置注册表并注册启动后清理
             let used_mmdevapi = config.provider == SpeedupProvider::MMDevAPI;
             if used_mmdevapi {
                 audio_speed_hack::set_mmdevapi_registry()?;
-                ctx.transaction
+                ctx.launch
+                    .transaction
                     .add_cleanup(CleanupPhase::AfterGameStart, || {
                         audio_speed_hack::clean_mmdevapi_registry();
                     });
@@ -140,13 +129,13 @@ mod win_impl {
 
             info!(
                 "VoiceSpeedup: prepared for game {} (speed={:.1}, provider={:?}, arch={system})",
-                ctx.game_id, config.speed, config.provider
+                ctx.launch.game_id, config.speed, config.provider
             );
             Ok(())
         }
 
         async fn after_game_start(&self, ctx: PluginContext) -> Result<()> {
-            let PluginConfig::VoiceSpeedup(ref config) = ctx.config else {
+            let PluginConfig::VoiceSpeedup(config) = &*ctx.config else {
                 return Ok(());
             };
 

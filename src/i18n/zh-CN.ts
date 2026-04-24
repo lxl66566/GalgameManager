@@ -249,6 +249,7 @@ export const dict: DeepPartial<RawDictionary> = {
     checkRemoteConfigFailed: '检查远端配置失败',
     configAutoUploadFailed: '配置自动上传失败',
     configAutoUploadSuccess: '配置自动上传成功',
+    configUploadConflict: '远端配置比本地更新，无法自动上传',
     configUploadFailed: '配置上传失败',
     configUploadSuccess: '配置上传成功',
     deleteArchiveFailed: '删除关联的存档失败: ',

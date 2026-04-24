@@ -61,7 +61,7 @@ impl GameWrapperPlugin {
 impl super::PluginHandler for GameWrapperPlugin {
     /// Provide a launch override that replaces the default game spawn.
     fn get_launch_override(&self, ctx: &PluginContext) -> Result<Option<StartCtx>> {
-        let PluginConfig::GameWrapper(ref config) = ctx.config else {
+        let PluginConfig::GameWrapper(config) = &*ctx.config else {
             return Ok(None);
         };
 
@@ -69,19 +69,16 @@ impl super::PluginHandler for GameWrapperPlugin {
             return Ok(None);
         }
 
-        // `{}` is always required for game_wrapper
         let start_ctx = resolve_cmd_config(
-            ctx.game_id,
+            &ctx.launch.exe_path,
+            &ctx.launch.current_dir,
             &config.cmd,
             &config.current_dir,
             &config.env,
-            true, // require `{}` placeholder
+            true,
         )?;
 
-        log::info!(
-            "GameWrapperPlugin: overriding launch with '{}'",
-            start_ctx.cmd,
-        );
+        log::info!("GameWrapperPlugin: overriding launch with {start_ctx}");
         Ok(Some(start_ctx))
     }
 }

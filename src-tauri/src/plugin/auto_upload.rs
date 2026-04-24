@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager as _;
 use ts_rs::TS;
 
-use super::{PluginContext, Transaction, dispatch_after_save_upload, dispatch_before_save_upload};
+use super::{PluginContext, SaveUploadDispatcher, Transaction};
 use crate::{
     error::Result,
     utils::toast::{ToastVariant, dismiss_toast, emit_loading_toast, emit_toast},
@@ -57,20 +57,20 @@ impl super::PluginHandler for AutoUploadPlugin {
     async fn after_game_exit(&self, ctx: PluginContext) -> Result<()> {
         let game = {
             let lock = crate::db::CONFIG.lock();
-            lock.get_game_by_id(ctx.game_id)?.clone()
+            lock.get_game_by_id(ctx.launch.game_id)?.clone()
         };
         let game_name = game.name.clone();
 
         if game.save_paths.is_empty() {
             log::info!(
                 "AutoUploadPlugin: game {} has no save paths, skipping",
-                ctx.game_id
+                ctx.launch.game_id
             );
             return Ok(());
         }
 
-        let data_dir = ctx.app.path().app_local_data_dir()?;
-        let game_backup_dir = data_dir.join("backup").join(ctx.game_id.to_string());
+        let data_dir = ctx.launch.app.path().app_local_data_dir()?;
+        let game_backup_dir = data_dir.join("backup").join(ctx.launch.game_id.to_string());
 
         let (archive_conf, device_name, storage, varmap, io_timeout, non_io_timeout) = {
             let lock = crate::db::CONFIG.lock();
@@ -88,8 +88,10 @@ impl super::PluginHandler for AutoUploadPlugin {
             )
         };
 
-        // Create local archive
-        log::info!("AutoUploadPlugin: archiving saves for game {}", ctx.game_id);
+        log::info!(
+            "AutoUploadPlugin: archiving saves for game {}",
+            ctx.launch.game_id
+        );
         let archive_filename = match crate::archive::archive_impl(
             &device_name,
             &archive_conf,
@@ -100,74 +102,75 @@ impl super::PluginHandler for AutoUploadPlugin {
             Err(e) => {
                 let msg = format!("{HINT_ARCHIVE_FAILED}{game_name}: {e}");
                 log::error!("AutoUpload: {msg}");
-                emit_toast(&ctx.app, ToastVariant::Error, msg);
+                emit_toast(&ctx.launch.app, ToastVariant::Error, msg);
                 return Err(e);
             }
         };
 
-        // Upload to remote if storage is configured
         if storage.is_not_set() {
             log::warn!("AutoUploadPlugin: storage not configured, skipping upload");
             return Ok(());
         }
 
-        // Show loading toast while uploading
-        let loading_toast_id = format!("auto_upload_{}", ctx.game_id);
+        let loading_toast_id = format!("auto_upload_{}", ctx.launch.game_id);
         emit_loading_toast(
-            &ctx.app,
+            &ctx.launch.app,
             format!("{HINT_UPLOADING}{game_name}"),
             &loading_toast_id,
         );
 
         let op = match storage.build_operator_with_timeouts(
-            &ctx.app,
+            &ctx.launch.app,
             &varmap,
             io_timeout,
             non_io_timeout,
         ) {
             Ok(op) => op,
             Err(e) => {
-                dismiss_toast(&ctx.app, &loading_toast_id);
+                dismiss_toast(&ctx.launch.app, &loading_toast_id);
                 let msg = format!("{HINT_UPLOAD_FAILED}{game_name}: {e}");
                 log::error!("AutoUpload: {msg}");
-                emit_toast(&ctx.app, ToastVariant::Error, msg);
+                emit_toast(&ctx.launch.app, ToastVariant::Error, msg);
                 return Err(e);
             }
         };
 
-        // Dispatch before_save_upload hooks
         let tx = Transaction::new();
-        if let Err(e) =
-            dispatch_before_save_upload(&ctx.app, ctx.game_id, &archive_filename, tx.clone()).await
-        {
+        let save_dispatcher =
+            SaveUploadDispatcher::new(&ctx.launch.app, ctx.launch.game_id, tx.clone())?;
+
+        if let Err(e) = save_dispatcher.dispatch_before(&archive_filename).await {
             tx.rollback();
-            dismiss_toast(&ctx.app, &loading_toast_id);
+            dismiss_toast(&ctx.launch.app, &loading_toast_id);
             let msg = format!("{HINT_UPLOAD_FAILED}{game_name}: {e}");
             log::error!("AutoUpload: {msg}");
-            emit_toast(&ctx.app, ToastVariant::Error, msg);
+            emit_toast(&ctx.launch.app, ToastVariant::Error, msg);
             return Err(e);
         }
 
         if let Err(e) = op
-            .upload_archive(ctx.game_id, &archive_filename, &data_dir.join("backup"))
+            .upload_archive(
+                ctx.launch.game_id,
+                &archive_filename,
+                &data_dir.join("backup"),
+            )
             .await
         {
             tx.rollback();
-            dismiss_toast(&ctx.app, &loading_toast_id);
+            dismiss_toast(&ctx.launch.app, &loading_toast_id);
             let msg = format!("{HINT_UPLOAD_FAILED}{game_name}: {e}");
             log::error!("AutoUpload: {msg}");
-            emit_toast(&ctx.app, ToastVariant::Error, msg);
+            emit_toast(&ctx.launch.app, ToastVariant::Error, msg);
             return Err(e);
         }
 
-        // Dispatch after_save_upload hooks (non-fatal)
-        dispatch_after_save_upload(&ctx.app, ctx.game_id, &archive_filename, tx.clone()).await;
+        save_dispatcher.dispatch_after(&archive_filename).await;
         tx.execute_after_exit();
 
-        dismiss_toast(&ctx.app, &loading_toast_id);
+        dismiss_toast(&ctx.launch.app, &loading_toast_id);
         let msg = format!("{HINT_UPLOAD_SUCCESS}{game_name}");
         log::info!("AutoUpload: {msg}");
-        emit_toast(&ctx.app, ToastVariant::Success, msg);
+        emit_toast(&ctx.launch.app, ToastVariant::Success, msg);
         Ok(())
     }
 }

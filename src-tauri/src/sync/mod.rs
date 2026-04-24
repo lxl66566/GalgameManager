@@ -11,7 +11,9 @@ use ::opendal::{
 };
 use log::{info, warn};
 pub use opendal::{LocalOperator, S3Operator, WebdavOperator};
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter as _};
+use ts_rs::TS;
 
 use crate::{
     archive::ArchiveInfo,
@@ -33,6 +35,19 @@ const EVENT_SYNC_FAILED: &str = "sync://failed";
 /// Default timeouts used as fallback.
 pub const DEFAULT_IO_TIMEOUT: Duration = Duration::from_secs(60);
 pub const DEFAULT_NON_IO_TIMEOUT: Duration = Duration::from_secs(15);
+
+/// Outcome of a safe config upload attempt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum UploadConfigStatus {
+    /// Config was successfully uploaded to remote.
+    Uploaded,
+    /// Local config has not changed since last sync — upload skipped.
+    LocalClean,
+    /// Remote config is newer than local base — conflict detected.
+    Conflict,
+}
 
 #[async_trait::async_trait]
 pub trait MyOperation {
@@ -110,12 +125,7 @@ pub trait MyOperation {
     ///
     /// - safe=true: will not upload config if local is clean or remote config
     ///   is newer
-    ///
-    /// # Returns
-    ///
-    /// bool indicates whether config really uploaded. If unsafe, it'll always
-    /// return true.
-    async fn upload_config(&self, app: &AppHandle, safe: bool) -> Result<bool> {
+    async fn upload_config(&self, app: &AppHandle, safe: bool) -> Result<UploadConfigStatus> {
         // Local Clean Check
         let local_config = CONFIG.lock().clone();
         let local_last_sync = local_config.last_sync.unwrap_or_default();
@@ -124,7 +134,7 @@ pub trait MyOperation {
                 "Local clean (updated {} <= sync {}), skip upload",
                 local_config.last_updated, local_last_sync
             );
-            return Ok(false);
+            return Ok(UploadConfigStatus::LocalClean);
         }
 
         let remote_config = self.get_remote_config().await?;
@@ -135,7 +145,7 @@ pub trait MyOperation {
                     "Conflict detected! Remote ({}) > Local Base Sync ({}). Please pull first.",
                     remote_config.last_updated, local_last_sync
                 );
-                return Ok(false);
+                return Ok(UploadConfigStatus::Conflict);
             }
 
             // Games times check
@@ -156,7 +166,7 @@ pub trait MyOperation {
             locked_config.last_sync = Some(local_config.last_updated);
             locked_config.save_and_emit_no_update(app)?;
         }
-        Ok(true)
+        Ok(UploadConfigStatus::Uploaded)
     }
 
     /// Apply remote config to local config

@@ -53,8 +53,7 @@ mod win_impl {
 
     use super::ArchPreference;
     use crate::{
-        db::CONFIG,
-        error::{Error, Result},
+        error::Result,
         plugin::{CleanupPhase, PluginConfig, PluginContext, PluginHandler},
         utils::audio_speed_hack,
     };
@@ -70,41 +69,29 @@ mod win_impl {
     #[async_trait::async_trait]
     impl PluginHandler for VoiceZerointerruptPlugin {
         async fn before_game_start(&self, ctx: PluginContext) -> Result<()> {
-            let PluginConfig::VoiceZerointerrupt(ref config) = ctx.config else {
+            let PluginConfig::VoiceZerointerrupt(config) = &*ctx.config else {
                 return Ok(());
             };
 
-            // Resolve the game's executable path
-            let exe_path = {
-                let lock = CONFIG.lock();
-                let raw = lock
-                    .get_game_by_id(ctx.game_id)?
-                    .excutable_path
-                    .as_ref()
-                    .ok_or(Error::Launch)?;
-                lock.resolve_var(raw)?
-            };
+            let game_dir = Path::new(&ctx.launch.current_dir);
 
-            let game_dir = Path::new(&exe_path).parent().ok_or(Error::InvalidPath)?;
-
-            // Determine architecture based on user preference
             let system = match config.arch {
-                ArchPreference::Auto => audio_speed_hack::System::detect(&exe_path)
+                ArchPreference::Auto => audio_speed_hack::System::detect(&ctx.launch.exe_path)
                     .unwrap_or(audio_speed_hack::System::X64),
                 ArchPreference::X86 => audio_speed_hack::System::X86,
                 ArchPreference::X64 => audio_speed_hack::System::X64,
             };
 
-            // Extract DLLs for ZeroInterrupt and register cleanup
             let files = audio_speed_hack::extract_zerointerrupt_assets(system, game_dir)?;
-            ctx.transaction
+            ctx.launch
+                .transaction
                 .add_cleanup(CleanupPhase::AfterGameExit, move || {
                     audio_speed_hack::cleanup_files(&files);
                 });
 
             info!(
                 "VoiceZerointerrupt: prepared for game {} (arch={system})",
-                ctx.game_id,
+                ctx.launch.game_id,
             );
             Ok(())
         }

@@ -4,11 +4,13 @@
 //! integration. It delegates all execution logic to the GameWrapper plugin by
 //! converting its own config to a `GameWrapperGameConfig` at runtime.
 
+use std::sync::Arc;
+
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use super::{PLUGIN_REGISTRY, PluginConfig, PluginContext, config::GameWrapperGameConfig};
-use crate::{error::Result, exec::StartCtx, plugin::Transaction};
+use crate::{error::Result, exec::StartCtx};
 
 /// Plugin identifier used in the registry and config.
 pub const PLUGIN_ID: &str = "localeEmulator";
@@ -79,7 +81,7 @@ impl LocaleEmulatorPlugin {
 impl super::PluginHandler for LocaleEmulatorPlugin {
     /// Delegate to the GameWrapper handler for launch override.
     fn get_launch_override(&self, ctx: &PluginContext) -> Result<Option<StartCtx>> {
-        let PluginConfig::LocaleEmulator(ref config) = ctx.config else {
+        let PluginConfig::LocaleEmulator(config) = &*ctx.config else {
             return Ok(None);
         };
 
@@ -89,10 +91,8 @@ impl super::PluginHandler for LocaleEmulatorPlugin {
 
         let inner_config = config.to_game_wrapper_config();
         let inner_ctx = PluginContext {
-            app: ctx.app.clone(),
-            game_id: ctx.game_id,
-            config: PluginConfig::GameWrapper(inner_config),
-            transaction: Transaction::new(),
+            launch: ctx.launch.clone(),
+            config: Arc::new(PluginConfig::GameWrapper(inner_config)),
         };
 
         if let Some(handler) = PLUGIN_REGISTRY.get(super::game_wrapper::PLUGIN_ID) {

@@ -249,6 +249,7 @@ export const dict = {
     checkRemoteConfigFailed: 'Failed to check remote config',
     configAutoUploadFailed: 'Config auto upload failed',
     configAutoUploadSuccess: 'Config auto upload successfully',
+    configUploadConflict: 'Remote config is newer, cannot perform auto upload',
     configUploadFailed: 'Config upload failed',
     configUploadSuccess: 'Config upload successfully',
     deleteArchiveFailed: 'Delete related archives failed: ',

@@ -133,7 +133,7 @@ const GamePage = (): JSX.Element => {
       lastPlayedTime: null,
       lastUploadTime: null
     }
-    log.info(`add newGame: ${newGame}`)
+    log.info(`add newGame: ${JSON.stringify(newGame)}`)
     setEditingIndex(null)
     setEditingGameInfo(newGame)
     setEditMode(false)

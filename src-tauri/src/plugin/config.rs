@@ -11,8 +11,8 @@
 //! 3. Add a new variant to `PluginInstance` below.
 //! 4. Add a new field to `PluginMetadatas` below.
 //! 5. Add a new variant to `PluginConfig` below.
-//! 6. Update `handler_key()`, `is_enabled()`, and `make_plugin_context()` in
-//!    `mod.rs` with one match arm each.
+//! 6. Update `handler_key()` and `is_enabled()` in their respective modules,
+//!    and add a match arm to `instance_config()` in `mod.rs`.
 //! 7. Register the handler in the `PluginRegistry` constructor in `mod.rs`.
 
 use serde::{Deserialize, Serialize};

@@ -3,6 +3,7 @@ import { type Config } from '@bindings/Config'
 import type { Device } from '@bindings/Device'
 import type { Game } from '@bindings/Game'
 import type { Settings } from '@bindings/Settings'
+import type { UploadConfigStatus } from '@bindings/UploadConfigStatus'
 import { myToast, type ToastVariant } from '@components/ui/myToast'
 import * as i18n from '@solid-primitives/i18n'
 import { invoke } from '@tauri-apps/api/core'
@@ -10,7 +11,7 @@ import { listen } from '@tauri-apps/api/event'
 import { log } from '@utils/log'
 import { type Dictionary } from '~/i18n'
 import { onCleanup, onMount } from 'solid-js'
-import { createStore, produce, unwrap } from 'solid-js/store'
+import { createStore, produce, reconcile, unwrap } from 'solid-js/store'
 import toast from 'solid-toast'
 import { currentDeviceId } from './Singleton'
 
@@ -192,7 +193,7 @@ export const useConfigInit = (t?: i18n.Translator<Dictionary>) => {
       // 1. 监听 Rust 端的主动推送
       const fn = await listen<Config>('config://updated', event => {
         console.log('Config updated from Rust:', event.payload)
-        setConfig(event.payload)
+        setConfig(reconcile(event.payload))
       })
 
       // 如果 await 期间组件已卸载，立即注销监听，防止内存泄漏
@@ -220,7 +221,7 @@ export const useConfigInit = (t?: i18n.Translator<Dictionary>) => {
 const refreshConfig = async () => {
   try {
     const data = await invoke<Config>('get_config')
-    setConfig(data)
+    setConfig(reconcile(data))
   } catch (e) {
     console.error('Failed to load local config:', e)
     toast.error(`Failed to load local config: ${e}`)
@@ -258,7 +259,7 @@ export const checkAndPullRemote = async (
             label: t('ui.withdraw'),
             variant: 'secondary',
             onClick: () => {
-              setConfig(oldConfig)
+              setConfig(reconcile(oldConfig))
               // 恢复旧配置到磁盘
               ;(async () => {
                 invoke('save_config', { newConfig: oldConfig })
@@ -282,9 +283,11 @@ export const checkAndPullRemote = async (
 export const performAutoUpload = async (t: i18n.Translator<Dictionary>) => {
   log.info('[ConfigAutoUpload] Triggered')
   try {
-    const res = await invoke<boolean>('upload_config', { safe: true })
-    if (res) {
+    const res = await invoke<UploadConfigStatus>('upload_config', { safe: true })
+    if (res === 'uploaded') {
       toast.success(t('hint.configAutoUploadSuccess'))
+    } else if (res === 'conflict') {
+      toast.error(t('hint.configUploadConflict'))
     }
   } catch (e) {
     toast.error(t('hint.configAutoUploadFailed') + ': ' + e)
@@ -294,8 +297,12 @@ export const performAutoUpload = async (t: i18n.Translator<Dictionary>) => {
 export const performManualUpload = async (t: i18n.Translator<Dictionary>) => {
   log.info('[ConfigManualUpload] Triggered')
   try {
-    await invoke<boolean>('upload_config', { safe: false })
-    toast.success(t('hint.configUploadSuccess'))
+    const res = await invoke<UploadConfigStatus>('upload_config', { safe: false })
+    if (res === 'uploaded') {
+      toast.success(t('hint.configUploadSuccess'))
+    } else if (res === 'conflict') {
+      toast.error(t('hint.configUploadConflict'))
+    }
   } catch (e) {
     toast.error(t('hint.configUploadFailed') + ': ' + e)
   }
