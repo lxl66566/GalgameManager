@@ -217,7 +217,9 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
                 );
             }
             StartCtx {
-                cmd: launch.exe_path.clone(),
+                cmd: shlex::try_quote(&launch.exe_path)
+                    .unwrap_or_else(|_| launch.exe_path.clone().into())
+                    .into_owned(),
                 current_dir,
                 env: None,
             }
