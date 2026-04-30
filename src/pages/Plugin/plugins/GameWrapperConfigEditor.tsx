@@ -80,7 +80,7 @@ export const GAME_WRAPPER_PLUGIN: PluginDefinition<'gameWrapper'> = {
     id: 'gameWrapper',
     nameKey: 'plugin.gameWrapper.name',
     descriptionKey: 'plugin.gameWrapper.description',
-    version: '1.1.1',
+    version: '1.1.2',
     author: 'BUILTIN',
     links: []
   },

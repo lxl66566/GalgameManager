@@ -23,6 +23,10 @@ A game launcher based on Tauri + SolidJS, primarily designed for managing and pl
 
 ## Changelog
 
+### v1.1.2
+
+- Fix: Games with spaces in the path cannot be launched
+
 ### v1.1.1
 
 - Performance optimization: reduced game launch time

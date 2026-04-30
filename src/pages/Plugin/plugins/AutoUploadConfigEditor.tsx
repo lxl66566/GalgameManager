@@ -27,7 +27,7 @@ export const AUTO_UPLOAD_PLUGIN: PluginDefinition<'autoUpload'> = {
     id: 'autoUpload',
     nameKey: 'plugin.autoUpload.name',
     descriptionKey: 'plugin.autoUpload.description',
-    version: '1.1.1',
+    version: '1.1.2',
     author: 'BUILTIN',
     links: []
   },
