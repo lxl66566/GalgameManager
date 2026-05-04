@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 import { log } from '@utils/log'
+import { isWindows } from '@utils/platform'
 import { resolveVarForDevice } from '@utils/resolveVar'
 import { useConfig } from '~/store'
 import {
@@ -28,6 +29,15 @@ interface ImageProps {
  * - No in-memory cache is kept; images are always served from the filesystem
  *   through the custom protocol, keeping JS heap usage minimal.
  */
+// Tauri v2 custom protocol URL differs by platform:
+//   Windows/Android → http://{scheme}.localhost/{path}
+//   Linux/macOS/iOS → {scheme}://localhost/{path}
+function galimgUrl(hash: string): string {
+  return isWindows
+    ? `http://galimg.localhost/${hash}`
+    : `galimg://localhost/${hash}`
+}
+
 const CachedImage: Component<ImageProps> = props => {
   const { config } = useConfig()
 
@@ -88,7 +98,7 @@ const CachedImage: Component<ImageProps> = props => {
         >
           {imageHash() ? (
             <img
-              src={`http://galimg.localhost/${imageHash()!}`}
+              src={galimgUrl(imageHash()!)}
               alt={props.alt}
               class="w-full h-full object-cover animate-in fade-in duration-300"
             />
