@@ -1,42 +1,93 @@
 // src/utils/time/createRelativeTime.ts
+//
+// Builds a memo that re-renders a "last played" string for a single
+// game card. Honors the per-user TimeDisplay settings (language override
+// + relative/absolute format + custom absolute pattern) by reading them
+// off the supplied `options` accessor.
+import type { TimeDisplayConfig } from '@bindings/TimeDisplayConfig'
+import type { Locale } from '~/i18n'
+import {
+  formatAbsoluteIso,
+  formatTimeAgo,
+  formatTimeAgoLocale,
+  type TFunc
+} from '.'
 import { createMemo, createSignal, onCleanup, type Accessor } from 'solid-js'
-import { formatTimeAgo, type TFunc } from '.'
+
+export interface TimeDisplayOptions {
+  /** Effective locale after resolving `timeDisplay.language`. */
+  locale: Accessor<Locale>
+  /** Time display config from settings. */
+  config: Accessor<TimeDisplayConfig>
+}
+
+const DEFAULT_OPTIONS: TimeDisplayOptions = {
+  locale: () => 'en-US',
+  config: () => ({
+    language: 'auto',
+    format: 'relative',
+    absoluteFormat: 'YYYY-MM-DD HH:mm'
+  })
+}
 
 /**
- * 创建一个随时间自动更新的相对时间字符串
- * @param timeTarget - 目标时间的时间戳字符串 (Accessor)
- * @param t - i18n 翻译函数
- * @param intervalMs - 刷新间隔，默认为 60000ms (1分钟)
+ * Create a memo that re-computes the relative time string on a fixed
+ * interval (default 1 minute) so "2 minutes ago" eventually becomes
+ * "3 minutes ago" without re-rendering the parent.
+ *
+ * Pass `options` to honor `AppearanceConfig.timeDisplay`. When `options`
+ * is omitted the function behaves exactly like the old API (uses the
+ * caller's translator and the relative format), keeping call sites
+ * that haven't migrated yet working unchanged.
  */
 export function createRelativeTime(
   timeTarget: Accessor<string | null>,
   t: TFunc,
-  intervalMs = 60000
+  intervalMs = 60000,
+  options: TimeDisplayOptions = DEFAULT_OPTIONS
 ) {
-  // 1. 创建一个"心跳"信号
+  // Heartbeat that triggers recomputation every `intervalMs`.
   const [tick, setTick] = createSignal(Date.now())
-
-  // 2. 设置定时器驱动心跳
-  const timer = setInterval(() => {
-    setTick(Date.now())
-  }, intervalMs)
-
-  // 3. 组件销毁时清理定时器
+  const timer = setInterval(() => setTick(Date.now()), intervalMs)
   onCleanup(() => clearInterval(timer))
 
-  // 4. 返回 Memo，它同时依赖 目标时间 和 心跳
   return createMemo(() => {
-    const time = timeTarget()
-    // 订阅 tick 变化，强制触发重新计算
+    // Subscribe to tick so the memo refreshes on the heartbeat.
     tick()
-    return formatTimeAgo(time, t)
+    const time = timeTarget()
+    const cfg = options.config()
+
+    if (cfg.format === 'absolute') {
+      return formatAbsoluteIso(time, cfg.absoluteFormat)
+    }
+
+    // Relative format. `language: 'auto'` defers to the caller's
+    // translator so we keep reusing the global i18n dict (and any
+    // future dict updates); an explicit override goes through the
+    // locale-keyed table.
+    if (cfg.language === 'auto') {
+      return formatTimeAgo(time, t)
+    }
+    return formatTimeAgoLocale(time, options.locale())
   })
 }
 
 /*
 
-使用方法：
-const timeAgo = createRelativeTime(() => props.game.lastPlayedTime);
-timeAgo() 即可获取相对时间字符串
+Usage (legacy):
+
+  const timeAgo = createRelativeTime(() => props.game.lastPlayedTime, t);
+
+Usage (with options):
+
+  const timeAgo = createRelativeTime(
+    () => props.game.lastPlayedTime,
+    t,
+    60_000,
+    {
+      locale: () => resolveTimeLanguage(config.settings.appearance.timeDisplay.language, locale()),
+      config: () => config.settings.appearance.timeDisplay
+    }
+  );
 
 */

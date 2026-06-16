@@ -1,11 +1,20 @@
-// 简单的日期转换工具
+// Time / duration formatting helpers.
+//
+// The "relative" formatter can run in either the global UI language or
+// an override chosen by the user (see `TimeLanguage` in
+// `AppearanceConfig`). The "absolute" formatter implements a small
+// subset of moment/dayjs tokens — enough for the configurable pattern
+// exposed in Settings → Appearance → Time Display.
 import type { Translator } from '@solid-primitives/i18n'
+import type { Locale } from '~/i18n'
 import type { RawDictionary } from '~/i18n/en-US'
 
 export type TFunc = Translator<
   import('@solid-primitives/i18n').Flatten<RawDictionary>,
   string
 >
+
+// ── duration helpers ────────────────────────────────────────────────────────
 
 const dateToInput = (isoStr: string | null) => {
   if (!isoStr) return ''
@@ -40,7 +49,53 @@ const displayDuration = (d: [number, number]) => {
   return `${form.h}h${form.m}m`
 }
 
-const formatTimeAgo = (dateStr: string | null, t: TFunc) => {
+// ── relative time ───────────────────────────────────────────────────────────
+
+/**
+ * Statically-defined relative-time strings, keyed by locale.
+ *
+ * We intentionally don't reuse the global i18n dictionary here so the
+ * home-page timestamps can be rendered in a different language than
+ * the rest of the UI (the `timeDisplay.language` setting).
+ */
+const RELATIVE_TIME_DICT: Record<Locale, {
+  never: string
+  justNow: string
+  minutesAgo: (n: number) => string
+  hoursAgo: (n: number) => string
+  daysAgo: (n: number) => string
+  monthsAgo: (n: number) => string
+  yearsAgo: (n: number) => string
+}> = {
+  'en-US': {
+    never: 'Never',
+    justNow: 'Just now',
+    minutesAgo: n => `${n}m ago`,
+    hoursAgo: n => `${n}h ago`,
+    daysAgo: n => `${n}d ago`,
+    monthsAgo: n => `${n}mo ago`,
+    yearsAgo: n => `${n}y ago`
+  },
+  'zh-CN': {
+    never: '永不',
+    justNow: '刚刚',
+    minutesAgo: n => `${n} 分钟前`,
+    hoursAgo: n => `${n} 小时前`,
+    daysAgo: n => `${n} 天前`,
+    monthsAgo: n => `${n} 个月前`,
+    yearsAgo: n => `${n} 年前`
+  }
+}
+
+/**
+ * Format an ISO timestamp as a relative time string, using either the
+ * global translator or the override locale selected in
+ * `AppearanceConfig.timeDisplay`.
+ *
+ * Passing the global `t` keeps backward compatibility for callers that
+ * haven't migrated yet — they get the same strings they used to.
+ */
+const formatTimeAgo = (dateStr: string | null, t: TFunc): string => {
   if (!dateStr) return t('time.never')
 
   const date = new Date(dateStr)
@@ -66,11 +121,86 @@ const formatTimeAgo = (dateStr: string | null, t: TFunc) => {
   return t('time.yearsAgo', { n: String(diffYears) })
 }
 
+/**
+ * Variant of {@link formatTimeAgo} that takes an explicit locale
+ * instead of a translator. Used by the home page when the user has
+ * selected a per-timestamp language override.
+ */
+const formatTimeAgoLocale = (dateStr: string | null, locale: Locale): string => {
+  const dict = RELATIVE_TIME_DICT[locale] ?? RELATIVE_TIME_DICT['en-US']
+  if (!dateStr) return dict.never
+
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diffSecs = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+  if (diffSecs < 60) return dict.justNow
+  const diffMins = Math.floor(diffSecs / 60)
+  if (diffMins < 60) return dict.minutesAgo(diffMins)
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return dict.hoursAgo(diffHours)
+  const diffDays = Math.floor(diffHours / 24)
+  if (diffDays < 30) return dict.daysAgo(diffDays)
+  const diffMonths = Math.floor(diffDays / 30)
+  if (diffMonths < 12) return dict.monthsAgo(diffMonths)
+  return dict.yearsAgo(Math.floor(diffDays / 365))
+}
+
+// ── absolute time ───────────────────────────────────────────────────────────
+
+/**
+ * Apply a strftime-ish / dayjs-ish pattern to a Date.
+ *
+ * Supported tokens (longest-first so `MM` doesn't shadow `M`):
+ *   YYYY  YY  MM  DD  HH  mm  ss
+ *
+ * Anything else is copied verbatim, so users can write separators like
+ * `-`, `/`, `:` and literal text. Two-hour timezones / AM-PM are out
+ * of scope for v1.
+ */
+const formatAbsolute = (date: Date, pattern: string): string => {
+  const pad2 = (n: number) => (n < 10 ? `0${n}` : String(n))
+
+  // Tokens are matched longest-first so two-char tokens win over
+  // single-char ones.
+  const tokens: Array<[string, string]> = [
+    ['YYYY', String(date.getFullYear())],
+    ['YY', String(date.getFullYear()).slice(-2)],
+    ['MM', pad2(date.getMonth() + 1)],
+    ['DD', pad2(date.getDate())],
+    ['HH', pad2(date.getHours())],
+    ['mm', pad2(date.getMinutes())],
+    ['ss', pad2(date.getSeconds())]
+  ]
+
+  // Single regex that matches any token; alternation is ordered so the
+  // longest match wins, mirroring the array above.
+  const re = /YYYY|YY|MM|DD|HH|mm|ss/g
+  return pattern.replace(re, m => {
+    const hit = tokens.find(([k]) => k === m)
+    return hit ? hit[1] : m
+  })
+}
+
+/**
+ * Format an ISO timestamp using an absolute pattern. Falls back to the
+ * relative formatter when the pattern is empty/invalid.
+ */
+const formatAbsoluteIso = (dateStr: string | null, pattern: string): string => {
+  if (!dateStr) return RELATIVE_TIME_DICT['en-US'].never
+  const p = pattern?.trim()
+  if (!p) return dateStr
+  return formatAbsolute(new Date(dateStr), p)
+}
+
 export {
   dateToInput,
   inputToDate,
   durationToForm,
   durationToSecs,
   displayDuration,
-  formatTimeAgo
+  formatTimeAgo,
+  formatTimeAgoLocale,
+  formatAbsolute,
+  formatAbsoluteIso
 }

@@ -18,6 +18,22 @@ export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P]
 }
 
+/**
+ * Resolve a `TimeLanguage` setting into a concrete locale, falling back
+ * to the global locale when set to `auto`.
+ *
+ * Used by the home page so a user can render "last played" timestamps
+ * in, say, English even though their UI is set to Simplified Chinese.
+ */
+export function resolveTimeLanguage(
+  override: 'auto' | 'en' | 'zh',
+  globalLocale: Locale
+): Locale {
+  if (override === 'en') return 'en-US'
+  if (override === 'zh') return 'zh-CN'
+  return globalLocale
+}
+
 const dictmap = {
   'zh-CN': zh.dict
 }

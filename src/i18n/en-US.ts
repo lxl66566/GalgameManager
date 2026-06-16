@@ -236,7 +236,21 @@ export const dict = {
       theme: 'Theme',
       themeSystem: 'System Default',
       themeLight: 'Light',
-      themeDark: 'Dark'
+      themeDark: 'Dark',
+      timeDisplay: {
+        self: 'Time Display',
+        language: 'Timestamp Language',
+        languageDesc: 'Override the language used for "last played" timestamps',
+        languageAuto: 'Follow UI language',
+        format: 'Timestamp Format',
+        formatRelative: 'Relative ("2d ago")',
+        formatAbsolute: 'Absolute (custom pattern)',
+        absoluteFormat: 'Absolute Pattern',
+        absoluteFormatDesc:
+          'Tokens: YYYY YY MM DD HH mm ss — e.g. "YYYY-MM-DD HH:mm"',
+        absoluteFormatPlaceholder: 'YYYY-MM-DD HH:mm',
+        preview: 'Preview'
+      }
     },
     launch: {
       timestat: 'Time Stat',
