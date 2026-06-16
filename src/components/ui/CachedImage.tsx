@@ -33,9 +33,7 @@ interface ImageProps {
 //   Windows/Android → http://{scheme}.localhost/{path}
 //   Linux/macOS/iOS → {scheme}://localhost/{path}
 function galimgUrl(hash: string): string {
-  return isWindows
-    ? `http://galimg.localhost/${hash}`
-    : `galimg://localhost/${hash}`
+  return isWindows ? `http://galimg.localhost/${hash}` : `galimg://localhost/${hash}`
 }
 
 const CachedImage: Component<ImageProps> = props => {

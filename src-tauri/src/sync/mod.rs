@@ -256,8 +256,7 @@ pub trait BuildOperator {
             // build_operator just stored the operator, so this must succeed;
             // fall back to a proper error instead of panicking if the
             // precondition ever breaks.
-            self.get_operator()
-                .ok_or(Error::ProviderNotSet)
+            self.get_operator().ok_or(Error::ProviderNotSet)
         }
     }
 }

@@ -9,7 +9,6 @@
 import { FormField, FormSwitch } from '@components/ui/form'
 import { useI18n } from '~/i18n'
 import type { JSX } from 'solid-js'
-
 import type { ConfigEditorProps } from './types'
 
 export function AutoAddMetaEditor<T extends { autoAdd: boolean }>(

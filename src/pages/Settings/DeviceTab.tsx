@@ -58,11 +58,19 @@ export const DeviceTab: Component = () => {
   return (
     <div class="max-w-4xl w-full mx-auto">
       <Suspense
-        fallback={<div class="p-8 text-center text-gray-500">{t('settings.device.loadingInfo')}</div>}
+        fallback={
+          <div class="p-8 text-center text-gray-500">
+            {t('settings.device.loadingInfo')}
+          </div>
+        }
       >
         <Show
           when={device()}
-          fallback={<div class="p-8 text-center text-red-500">{t('settings.device.notFound')}</div>}
+          fallback={
+            <div class="p-8 text-center text-red-500">
+              {t('settings.device.notFound')}
+            </div>
+          }
         >
           {dev => (
             <>

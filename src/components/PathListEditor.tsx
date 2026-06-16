@@ -8,13 +8,7 @@ import { useVarMap } from '@utils/useVarMap'
 import { useVarWarning } from '@utils/useVarWarning'
 import { useI18n } from '~/i18n'
 import { FiFilePlus, FiFolderPlus } from 'solid-icons/fi'
-import {
-  createResource,
-  createSignal,
-  For,
-  Show,
-  type Component
-} from 'solid-js'
+import { createResource, createSignal, For, Show, type Component } from 'solid-js'
 
 interface PathListEditorProps {
   paths: string[]

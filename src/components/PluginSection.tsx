@@ -261,8 +261,9 @@ export default function PluginSection(props: PluginSectionProps) {
                       // point we only know the config is *some* game config.
                       // Cast the component to a union-aware editor instead of
                       // falling back to `any`, so the config stays typed.
-                      const Editor =
-                        d.GameEditor as Component<ConfigEditorProps<AnyGameConfig>>
+                      const Editor = d.GameEditor as Component<
+                        ConfigEditorProps<AnyGameConfig>
+                      >
                       const config = (instance as { config: AnyGameConfig }).config
                       return (
                         <div class="border-t border-gray-200 dark:border-gray-600/50 px-3 py-2 bg-gray-50/50 dark:bg-gray-900/20">

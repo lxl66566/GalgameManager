@@ -2,7 +2,10 @@
 import type { Translator } from '@solid-primitives/i18n'
 import type { RawDictionary } from '~/i18n/en-US'
 
-export type TFunc = Translator<import('@solid-primitives/i18n').Flatten<RawDictionary>, string>
+export type TFunc = Translator<
+  import('@solid-primitives/i18n').Flatten<RawDictionary>,
+  string
+>
 
 const dateToInput = (isoStr: string | null) => {
   if (!isoStr) return ''

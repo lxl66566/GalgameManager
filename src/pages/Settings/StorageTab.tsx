@@ -74,7 +74,11 @@ const S3Form: Component<{
   const { t } = useI18n()
   return (
     <SettingSubGroup>
-      <SettingRow label={t('settings.storage.Endpoint')} description={t('settings.storage.s3EndpointDesc')} indent>
+      <SettingRow
+        label={t('settings.storage.Endpoint')}
+        description={t('settings.storage.s3EndpointDesc')}
+        indent
+      >
         <Input
           value={props.config.endpoint || ''}
           onChange={e => props.onChange('endpoint', e.currentTarget.value)}

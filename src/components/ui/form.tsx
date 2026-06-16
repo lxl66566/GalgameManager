@@ -249,7 +249,10 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
   const varMap = useVarMap()
 
   // Var validation — checks for unknown {key} references
-  const varWarning = useVarWarning(() => props.value, () => props.checkVars !== false)
+  const varWarning = useVarWarning(
+    () => props.value,
+    () => props.checkVars !== false
+  )
 
   // Path existence validation — async check via `paths_exist`
   const [pathExistWarning] = createResource(

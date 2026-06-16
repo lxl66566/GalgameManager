@@ -14,9 +14,7 @@ use ts_rs::TS;
 use crate::{
     db::CONFIG,
     error::{Error, Result},
-    plugin::{
-        LaunchCtx, PluginConfig, Transaction, enabled_plugin_contexts, instance_config,
-    },
+    plugin::{LaunchCtx, PluginConfig, Transaction, enabled_plugin_contexts, instance_config},
 };
 
 #[cfg(not(windows))]

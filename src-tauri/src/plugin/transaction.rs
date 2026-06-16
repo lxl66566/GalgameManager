@@ -1,5 +1,6 @@
-use parking_lot::Mutex;
 use std::sync::Arc;
+
+use parking_lot::Mutex;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CleanupPhase {
