@@ -15,7 +15,7 @@ use crate::{
     db::CONFIG,
     error::{Error, Result},
     plugin::{
-        LaunchCtx, PLUGIN_REGISTRY, PluginConfig, PluginContext, Transaction, instance_config,
+        LaunchCtx, PluginConfig, Transaction, enabled_plugin_contexts, instance_config,
     },
 };
 
@@ -167,37 +167,21 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
     });
 
     // 1. before_game_start hooks
-    for (instance, config) in plugins.iter().zip(configs.iter()) {
-        if !metas.is_enabled(instance) {
-            continue;
-        }
-        if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key()) {
-            let ctx = PluginContext {
-                launch: launch.clone(),
-                config: config.clone(),
-            };
-            if let Err(e) = handler.before_game_start(ctx).await {
-                launch.transaction.rollback();
-                return Err(e);
-            }
+    for (handler_key, handler, ctx) in enabled_plugin_contexts(&plugins, &configs, &metas, &launch)
+    {
+        if let Err(e) = handler.before_game_start(ctx).await {
+            log::error!("Plugin '{handler_key}' before_game_start failed: {e}");
+            launch.transaction.rollback();
+            return Err(e);
         }
     }
 
     // 2. get_launch_override hooks
     let mut launch_override = None;
-    for (instance, config) in plugins.iter().zip(configs.iter()) {
-        if !metas.is_enabled(instance) {
-            continue;
-        }
-        if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key()) {
-            let ctx = PluginContext {
-                launch: launch.clone(),
-                config: config.clone(),
-            };
-            if let Some(override_ctx) = handler.get_launch_override(&ctx)? {
-                launch_override = Some(override_ctx);
-                break;
-            }
+    for (_, handler, ctx) in enabled_plugin_contexts(&plugins, &configs, &metas, &launch) {
+        if let Some(override_ctx) = handler.get_launch_override(&ctx)? {
+            launch_override = Some(override_ctx);
+            break;
         }
     }
 
@@ -238,18 +222,11 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
     let start_res = tauri::async_runtime::spawn(async move {
         let rx_res = game_start_rx.await;
         if rx_res.is_ok() {
-            for (instance, config) in plugins_start.iter().zip(configs_start.iter()) {
-                if !metas_start.is_enabled(instance) {
-                    continue;
-                }
-                if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key()) {
-                    let ctx = PluginContext {
-                        launch: launch_start.clone(),
-                        config: config.clone(),
-                    };
-                    if let Err(e) = handler.after_game_start(ctx).await {
-                        log::error!("Plugin after_game_start failed: {}", e);
-                    }
+            for (handler_key, handler, ctx) in
+                enabled_plugin_contexts(&plugins_start, &configs_start, &metas_start, &launch_start)
+            {
+                if let Err(e) = handler.after_game_start(ctx).await {
+                    log::error!("Plugin '{handler_key}' after_game_start failed: {e}");
                 }
             }
         }
@@ -265,18 +242,11 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
     let exit_res = tauri::async_runtime::spawn(async move {
         let rx_res = game_exit_rx.await;
         if rx_res.is_ok() {
-            for (instance, config) in plugins_exit.iter().zip(configs_exit.iter()) {
-                if !metas_exit.is_enabled(instance) {
-                    continue;
-                }
-                if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key()) {
-                    let ctx = PluginContext {
-                        launch: launch_exit.clone(),
-                        config: config.clone(),
-                    };
-                    if let Err(e) = handler.after_game_exit(ctx).await {
-                        log::error!("Plugin after_game_exit failed: {}", e);
-                    }
+            for (handler_key, handler, ctx) in
+                enabled_plugin_contexts(&plugins_exit, &configs_exit, &metas_exit, &launch_exit)
+            {
+                if let Err(e) = handler.after_game_exit(ctx).await {
+                    log::error!("Plugin '{handler_key}' after_game_exit failed: {e}");
                 }
             }
         }

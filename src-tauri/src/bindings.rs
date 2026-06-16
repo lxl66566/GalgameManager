@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, path::PathBuf};
 
 use chrono::Utc;
 use config_file2::Storable;
@@ -56,10 +56,20 @@ pub async fn prepare_image(url: String, hash: Option<String>) -> Result<String> 
 
 // region archive
 
+/// Resolve the local backup directory for a game's archives:
+/// `<app_local_data>/backup/<game_id>`.
+#[inline]
+fn game_backup_dir(app: &AppHandle, game_id: u32) -> Result<PathBuf> {
+    Ok(app
+        .path()
+        .app_local_data_dir()?
+        .join("backup")
+        .join(game_id.to_string()))
+}
+
 #[tauri::command]
 pub fn list_local_archive(app: AppHandle, game_id: u32) -> Result<Vec<ArchiveInfo>> {
-    let data_dir = app.path().app_local_data_dir()?;
-    let game_backup_dir = data_dir.join("backup").join(game_id.to_string());
+    let game_backup_dir = game_backup_dir(&app, game_id)?;
     if !game_backup_dir.exists() {
         return Ok(vec![]);
     }
@@ -68,8 +78,7 @@ pub fn list_local_archive(app: AppHandle, game_id: u32) -> Result<Vec<ArchiveInf
 
 #[tauri::command]
 pub fn delete_local_archive(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
-    let data_dir = app.path().app_local_data_dir()?;
-    let game_backup_dir = data_dir.join("backup").join(game_id.to_string());
+    let game_backup_dir = game_backup_dir(&app, game_id)?;
     let archive_path = game_backup_dir.join(archive_filename);
     fs::remove_file(&archive_path)?;
     info!("delete local archive: {}", archive_path.display());
@@ -78,8 +87,7 @@ pub fn delete_local_archive(app: AppHandle, game_id: u32, archive_filename: Stri
 
 #[tauri::command]
 pub fn delete_local_archive_all(app: AppHandle, game_id: u32) -> Result<()> {
-    let data_dir = app.path().app_local_data_dir()?;
-    let game_backup_dir = data_dir.join("backup").join(game_id.to_string());
+    let game_backup_dir = game_backup_dir(&app, game_id)?;
     fs::remove_dir_all(&game_backup_dir)?;
     info!("delete all local archive: {}", game_backup_dir.display());
     Ok(())
@@ -92,8 +100,7 @@ pub fn rename_local_archive(
     archive_filename: String,
     new_archive_filename: String,
 ) -> Result<()> {
-    let data_dir = app.path().app_local_data_dir()?;
-    let game_backup_dir = data_dir.join("backup").join(game_id.to_string());
+    let game_backup_dir = game_backup_dir(&app, game_id)?;
     let archive_path = game_backup_dir.join(archive_filename);
     let new_archive_path = game_backup_dir.join(new_archive_filename);
     fs::rename(&archive_path, &new_archive_path)?;
@@ -107,8 +114,7 @@ pub fn rename_local_archive(
 
 #[tauri::command]
 pub fn archive(app: AppHandle, game_id: u32) -> Result<String> {
-    let data_dir = app.path().app_local_data_dir()?;
-    let game_backup_dir = data_dir.join("backup").join(game_id.to_string());
+    let game_backup_dir = game_backup_dir(&app, game_id)?;
 
     let lock = CONFIG.lock();
     let archive_conf = lock.settings.archive.clone();
@@ -125,8 +131,7 @@ pub fn archive(app: AppHandle, game_id: u32) -> Result<String> {
 
 #[tauri::command]
 pub fn extract(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
-    let data_dir = app.path().app_local_data_dir()?;
-    let game_backup_dir = data_dir.join("backup").join(game_id.to_string());
+    let game_backup_dir = game_backup_dir(&app, game_id)?;
 
     let lock = CONFIG.lock();
     let archive_conf = lock.settings.archive.clone();

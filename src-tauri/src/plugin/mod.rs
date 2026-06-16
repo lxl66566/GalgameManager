@@ -248,6 +248,38 @@ pub(crate) fn instance_config(instance: &PluginInstance) -> PluginConfig {
     }
 }
 
+/// Build a `(handler_key, handler, context)` triple for every enabled plugin,
+/// in registration order.
+///
+/// This centralizes the "skip disabled plugins -> look up handler -> build
+/// [`PluginContext`]" boilerplate that is otherwise repeated by every lifecycle
+/// hook dispatch loop (before_game_start / get_launch_override /
+/// after_game_start / after_game_exit / save-upload dispatch).
+pub(crate) fn enabled_plugin_contexts<'a>(
+    plugins: &'a [PluginInstance],
+    configs: &'a [Arc<PluginConfig>],
+    metas: &PluginMetadatas,
+    launch: &Arc<LaunchCtx>,
+) -> Vec<(&'a str, &'a dyn PluginHandler, PluginContext)> {
+    plugins
+        .iter()
+        .zip(configs.iter())
+        .filter(|(instance, _)| metas.is_enabled(instance))
+        .filter_map(|(instance, config)| {
+            PLUGIN_REGISTRY.get(instance.handler_key()).map(|handler| {
+                (
+                    instance.handler_key(),
+                    handler,
+                    PluginContext {
+                        launch: launch.clone(),
+                        config: config.clone(),
+                    },
+                )
+            })
+        })
+        .collect()
+}
+
 /// Pre-computed context for dispatching save-upload plugin hooks.
 ///
 /// A single upload operation needs to call `before_save_upload` and
@@ -310,17 +342,10 @@ impl SaveUploadDispatcher {
     ///
     /// Aborts on the first hook that returns an error.
     pub async fn dispatch_before(&self, archive_filename: &str) -> Result<()> {
-        for (instance, config) in self.plugins.iter().zip(&self.configs) {
-            if !self.metas.is_enabled(instance) {
-                continue;
-            }
-            if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key()) {
-                let ctx = PluginContext {
-                    launch: self.launch.clone(),
-                    config: config.clone(),
-                };
-                handler.before_save_upload(ctx, archive_filename).await?;
-            }
+        for (_, handler, ctx) in
+            enabled_plugin_contexts(&self.plugins, &self.configs, &self.metas, &self.launch)
+        {
+            handler.before_save_upload(ctx, archive_filename).await?;
         }
         Ok(())
     }
@@ -329,21 +354,11 @@ impl SaveUploadDispatcher {
     ///
     /// Errors from individual hooks are logged but do not abort iteration.
     pub async fn dispatch_after(&self, archive_filename: &str) {
-        for (instance, config) in self.plugins.iter().zip(&self.configs) {
-            if !self.metas.is_enabled(instance) {
-                continue;
-            }
-            if let Some(handler) = PLUGIN_REGISTRY.get(instance.handler_key()) {
-                let ctx = PluginContext {
-                    launch: self.launch.clone(),
-                    config: config.clone(),
-                };
-                if let Err(e) = handler.after_save_upload(ctx, archive_filename).await {
-                    log::error!(
-                        "after_save_upload hook failed for plugin '{}': {e}",
-                        instance.handler_key()
-                    );
-                }
+        for (handler_key, handler, ctx) in
+            enabled_plugin_contexts(&self.plugins, &self.configs, &self.metas, &self.launch)
+        {
+            if let Err(e) = handler.after_save_upload(ctx, archive_filename).await {
+                log::error!("after_save_upload hook failed for plugin '{handler_key}': {e}");
             }
         }
     }
