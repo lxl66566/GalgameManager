@@ -28,6 +28,7 @@ import {
   createMemo,
   createSignal,
   For,
+  onCleanup,
   onMount,
   Show,
   type Accessor,
@@ -35,6 +36,7 @@ import {
 } from 'solid-js'
 import { unwrap } from 'solid-js/store'
 import toast from 'solid-toast'
+import { Virtualizer } from 'virtua/solid'
 import GameEditModal from './GameEditModal'
 import { GameItem, GameItemWrapper } from './GameItem'
 import { ArchiveSyncModal } from './SyncModal'
@@ -71,6 +73,18 @@ const GamePage = (): JSX.Element => {
       }
     })
     getSortType().then(setSortType)
+
+    // Track the grid scroll container width to recompute the responsive column
+    // count. clientWidth excludes the scrollbar but includes padding, which the
+    // column formula accounts for.
+    const el = gridScrollRef
+    if (el) {
+      const update = () => setScrollWidth(el.clientWidth)
+      update()
+      const ro = new ResizeObserver(update)
+      ro.observe(el)
+      onCleanup(() => ro.disconnect())
+    }
   })
 
   const sortedGames = createMemo(() => {
@@ -107,6 +121,38 @@ const GamePage = (): JSX.Element => {
   const getRealIndex = (gameId: number) => {
     return config.games.findIndex(g => g.id === gameId)
   }
+
+  // ── Virtualized responsive grid ───────────────────────────────────────────
+  // The game grid uses CSS auto-fill columns (minmax(11rem,1fr)). Virtual
+  // scrolling needs a known column count, so we measure the scroll container
+  // and chunk games into rows of that width. This keeps the layout responsive
+  // while only rendering the visible rows.
+  const MIN_CARD_PX = 11 * 16 // 11rem
+  const CARD_GAP_PX = 24 // gap-x-6 (1.5rem)
+  const PAD_RIGHT_PX = 16 // pr-4 (1rem)
+  let gridScrollRef: HTMLDivElement | undefined
+  const [scrollWidth, setScrollWidth] = createSignal(0)
+
+  // Match the old `auto-fill, minmax(11rem,1fr)` + gap-x-6 + pr-4 grid:
+  // columns = floor((clientWidth - pr-4 + gap) / (minCard + gap))
+  const columns = createMemo(() => {
+    const w = scrollWidth()
+    if (w === 0) return 1
+    return Math.max(
+      1,
+      Math.floor((w - PAD_RIGHT_PX + CARD_GAP_PX) / (MIN_CARD_PX + CARD_GAP_PX))
+    )
+  })
+
+  const rows = createMemo<Game[][]>(() => {
+    const cols = columns()
+    const games = sortedGames()
+    const out: Game[][] = []
+    for (let i = 0; i < games.length; i += cols) out.push(games.slice(i, i + cols))
+    // Always keep at least one (possibly empty) row to host the "add" card.
+    if (out.length === 0) out.push([])
+    return out
+  })
 
   const findNextGameId = () => {
     const nextId = config.games.reduce((maxId, game) => {
@@ -389,49 +435,72 @@ const GamePage = (): JSX.Element => {
             }}
           />
         </div>
-        <div class="flex-1 grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-x-6 gap-y-6 pb-5 pr-4 overflow-y-auto custom-scrollbar">
-          <For each={sortedGames()}>
-            {game => {
-              // 获取真实索引用于操作
-              const realIndex = () => getRealIndex(game.id)
-
+        <div
+          ref={gridScrollRef}
+          class="flex-1 overflow-y-auto custom-scrollbar pr-4 pb-5"
+          style={{ 'overflow-anchor': 'none' }}
+        >
+          <Virtualizer data={rows()}>
+            {(row, rowIndex) => {
+              const isLastRow = () => rowIndex() === rows().length - 1
               return (
-                <GameItem
-                  game={game}
-                  // 所有的操作回调都使用 realIndex()
-                  onStart={() => handleStart(realIndex())}
-                  onEdit={() => openEditModal(realIndex())}
-                  onBackup={() => handleBackup(realIndex())}
-                  onSync={() => openSyncModal(realIndex())}
-                  onImageHashUpdate={newhash =>
-                    handleImageHashUpdate(realIndex(), newhash)
-                  }
-                  onContextMenuAction={action => handleContextMenuAction(game.id, action)}
-                  isBackingUp={backingUpIds().includes(game.id)}
-                  isPlaying={playingIds().includes(game.id)}
-                />
+                <div
+                  class="grid gap-x-6 pb-6"
+                  style={{
+                    'grid-template-columns': `repeat(${columns()}, minmax(11rem, 1fr))`
+                  }}
+                >
+                  <For each={row}>
+                    {game => {
+                      // 获取真实索引用于操作
+                      const realIndex = () => getRealIndex(game.id)
+
+                      return (
+                        <GameItem
+                          game={game}
+                          // 所有的操作回调都使用 realIndex()
+                          onStart={() => handleStart(realIndex())}
+                          onEdit={() => openEditModal(realIndex())}
+                          onBackup={() => handleBackup(realIndex())}
+                          onSync={() => openSyncModal(realIndex())}
+                          onImageHashUpdate={newhash =>
+                            handleImageHashUpdate(realIndex(), newhash)
+                          }
+                          onContextMenuAction={action =>
+                            handleContextMenuAction(game.id, action)
+                          }
+                          isBackingUp={backingUpIds().includes(game.id)}
+                          isPlaying={playingIds().includes(game.id)}
+                        />
+                      )
+                    }}
+                  </For>
+
+                  {/* "add" card flows as the final grid cell on the last row */}
+                  <Show when={isLastRow()}>
+                    <GameItemWrapper extra_class="border-2 border-dashed border-gray-300 dark:border-gray-600 bg-transparent shadow-none hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                      <div
+                        class="flex flex-col flex-1 items-center justify-center text-center cursor-pointer w-full h-full group"
+                        onClick={() => openGameAddModal()}
+                      >
+                        <DropArea
+                          callback={handleDropAdd}
+                          class="w-full h-full flex flex-col items-center justify-center"
+                        >
+                          <AiTwotonePlusCircle class="w-16 h-16 text-gray-400 group-hover:text-blue-500 transition-colors duration-300" />
+                          <p class="text-gray-500 dark:text-gray-400 text-sm mt-2 px-4 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
+                            {t('game.clickToAdd')}
+                            <br />
+                            {t('game.orDrag')}
+                          </p>
+                        </DropArea>
+                      </div>
+                    </GameItemWrapper>
+                  </Show>
+                </div>
               )
             }}
-          </For>
-
-          <GameItemWrapper extra_class="border-2 border-dashed border-gray-300 dark:border-gray-600 bg-transparent shadow-none hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-            <div
-              class="flex flex-col flex-1 items-center justify-center text-center cursor-pointer w-full h-full group"
-              onClick={() => openGameAddModal()}
-            >
-              <DropArea
-                callback={handleDropAdd}
-                class="w-full h-full flex flex-col items-center justify-center"
-              >
-                <AiTwotonePlusCircle class="w-16 h-16 text-gray-400 group-hover:text-blue-500 transition-colors duration-300" />
-                <p class="text-gray-500 dark:text-gray-400 text-sm mt-2 px-4 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
-                  {t('game.clickToAdd')}
-                  <br />
-                  {t('game.orDrag')}
-                </p>
-              </DropArea>
-            </div>
-          </GameItemWrapper>
+          </Virtualizer>
         </div>
       </div>
 

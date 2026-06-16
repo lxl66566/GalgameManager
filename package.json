@@ -47,6 +47,7 @@
     "solid-toast": "^0.5.0",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
-    "unocss-preset-scrollbar-hide": "^1.0.1"
+    "unocss-preset-scrollbar-hide": "^1.0.1",
+    "virtua": "^0.49.1"
   }
 }
