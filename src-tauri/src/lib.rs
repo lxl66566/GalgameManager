@@ -163,7 +163,9 @@ pub fn run() {
                 ..
             } => {
                 api.prevent_close();
-                app.get_webview_window("main").unwrap().hide().unwrap();
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.hide();
+                }
                 // minimize notification
                 let seen_path = CONFIG_DIR.join("minimize_seen");
                 if !seen_path.exists() {
@@ -218,7 +220,9 @@ pub fn run() {
             tauri::RunEvent::ExitRequested { api, code, .. } => {
                 _ = app.save_window_state(StateFlags::all());
                 if code == Some(114514) {
-                    app.get_webview_window("main").unwrap().minimize().unwrap();
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.minimize();
+                    }
                     api.prevent_exit();
                     info!("[exit] uploading config...");
                     let res = tauri::async_runtime::block_on(async move {

@@ -26,7 +26,10 @@ use crate::{
 
 pub static CONFIG_DIR: Lazy<PathBuf> = Lazy::new(|| {
     let dir = home::home_dir()
-        .expect("cannot find home dir on your OS!")
+        .unwrap_or_else(|| {
+            warn!("cannot find home dir; falling back to current directory");
+            PathBuf::from(".")
+        })
         .join(".config")
         .join(env!("CARGO_PKG_NAME"));
     _ = fs::create_dir_all(&dir);
@@ -37,9 +40,19 @@ pub static CONFIG_FILENAME: &str = "config.toml";
 pub static CONFIG_PATH: Lazy<PathBuf> = Lazy::new(|| CONFIG_DIR.join(CONFIG_FILENAME));
 
 pub static CONFIG: Lazy<Mutex<Config>> = Lazy::new(|| {
-    Mutex::new(migrate(
-        Config::load_or_default(CONFIG_PATH.as_path()).expect("load config file failed!"),
-    ))
+    let config = match Config::load_or_default(CONFIG_PATH.as_path()) {
+        Ok(c) => c,
+        Err(e) => {
+            // A corrupted config used to panic the whole app on startup. Instead
+            // back the broken file up so the user can recover it manually, then
+            // start from a clean default.
+            log::error!("failed to load config, using default: {e}");
+            let backup = CONFIG_PATH.with_extension("toml.bak");
+            let _ = fs::rename(CONFIG_PATH.as_path(), &backup);
+            Config::default()
+        }
+    };
+    Mutex::new(migrate(config))
 });
 
 impl Storable for Config {
