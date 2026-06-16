@@ -217,9 +217,10 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
                 );
             }
             StartCtx {
-                cmd: shlex::try_quote(&launch.exe_path)
-                    .unwrap_or_else(|_| launch.exe_path.clone().into())
-                    .into_owned(),
+                cmd: match shlex::try_quote(&launch.exe_path) {
+                    Ok(quoted) => quoted.into_owned(),
+                    Err(_) => launch.exe_path.clone(),
+                },
                 current_dir,
                 env: None,
             }
@@ -314,7 +315,7 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
 
 fn update_game_time(app: &tauri::AppHandle, game_id: u32, dur: chrono::TimeDelta) -> Result<()> {
     let mut lock = CONFIG.lock();
-    let game = lock.get_game_by_id_mut(game_id).unwrap();
+    let game = lock.get_game_by_id_mut(game_id)?;
     game.use_time += dur;
     game.last_played_time = Some(chrono::Utc::now());
     log::info!(
