@@ -243,10 +243,10 @@ export const dict = {
         languageDesc: 'Override the language used for "last played" timestamps',
         languageAuto: 'Follow UI language',
         format: 'Timestamp Format',
-        formatRelative: 'Relative ("2d ago")',
-        formatAbsolute: 'Absolute (custom pattern)',
+        formatRelative: 'Relative',
+        formatAbsolute: 'Absolute',
         absoluteFormat: 'Absolute Pattern',
-        absoluteFormatDesc: 'Tokens: YYYY YY MM DD HH mm ss — e.g. "YYYY-MM-DD HH:mm"',
+        absoluteFormatDesc: 'dayjs format string, e.g. "YYYY-MM-DD HH:mm"',
         absoluteFormatPlaceholder: 'YYYY-MM-DD HH:mm',
         preview: 'Preview'
       }

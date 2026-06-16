@@ -2,9 +2,9 @@
 //
 // The "relative" formatter can run in either the global UI language or
 // an override chosen by the user (see `TimeLanguage` in
-// `AppearanceConfig`). The "absolute" formatter implements a small
-// subset of moment/dayjs tokens — enough for the configurable pattern
-// exposed in Settings → Appearance → Time Display.
+// `AppearanceConfig`). The "absolute" formatter delegates to dayjs
+// so users can specify any pattern supported by dayjs.
+import dayjs from 'dayjs'
 import type { Translator } from '@solid-primitives/i18n'
 import type { Locale } from '~/i18n'
 import type { RawDictionary } from '~/i18n/en-US'
@@ -152,48 +152,14 @@ const formatTimeAgoLocale = (dateStr: string | null, locale: Locale): string => 
 // ── absolute time ───────────────────────────────────────────────────────────
 
 /**
- * Apply a strftime-ish / dayjs-ish pattern to a Date.
- *
- * Supported tokens (longest-first so `MM` doesn't shadow `M`):
- *   YYYY  YY  MM  DD  HH  mm  ss
- *
- * Anything else is copied verbatim, so users can write separators like
- * `-`, `/`, `:` and literal text. Two-hour timezones / AM-PM are out
- * of scope for v1.
- */
-const formatAbsolute = (date: Date, pattern: string): string => {
-  const pad2 = (n: number) => (n < 10 ? `0${n}` : String(n))
-
-  // Tokens are matched longest-first so two-char tokens win over
-  // single-char ones.
-  const tokens: Array<[string, string]> = [
-    ['YYYY', String(date.getFullYear())],
-    ['YY', String(date.getFullYear()).slice(-2)],
-    ['MM', pad2(date.getMonth() + 1)],
-    ['DD', pad2(date.getDate())],
-    ['HH', pad2(date.getHours())],
-    ['mm', pad2(date.getMinutes())],
-    ['ss', pad2(date.getSeconds())]
-  ]
-
-  // Single regex that matches any token; alternation is ordered so the
-  // longest match wins, mirroring the array above.
-  const re = /YYYY|YY|MM|DD|HH|mm|ss/g
-  return pattern.replace(re, m => {
-    const hit = tokens.find(([k]) => k === m)
-    return hit ? hit[1] : m
-  })
-}
-
-/**
- * Format an ISO timestamp using an absolute pattern. Falls back to the
- * relative formatter when the pattern is empty/invalid.
+ * Format an ISO timestamp using a dayjs pattern. Falls back to the
+ * raw ISO string when the pattern is empty/invalid.
  */
 const formatAbsoluteIso = (dateStr: string | null, pattern: string): string => {
   if (!dateStr) return RELATIVE_TIME_DICT['en-US'].never
   const p = pattern?.trim()
   if (!p) return dateStr
-  return formatAbsolute(new Date(dateStr), p)
+  return dayjs(dateStr).format(p)
 }
 
 export {
@@ -204,6 +170,5 @@ export {
   displayDuration,
   formatTimeAgo,
   formatTimeAgoLocale,
-  formatAbsolute,
   formatAbsoluteIso
 }

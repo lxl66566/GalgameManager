@@ -88,27 +88,6 @@ const TimeDisplaySection: Component = () => {
 
   return (
     <SettingSection title={t('settings.appearance.timeDisplay.self')}>
-      <SettingRow
-        label={t('settings.appearance.timeDisplay.language')}
-        description={t('settings.appearance.timeDisplay.languageDesc')}
-      >
-        <Select
-          value={cfg().language}
-          onChange={e =>
-            actions.updateSettings(
-              s =>
-                (s.appearance.timeDisplay.language = e.currentTarget
-                  .value as TimeLanguage)
-            )
-          }
-          options={[
-            { label: t('settings.appearance.timeDisplay.languageAuto'), value: 'auto' },
-            { label: 'English', value: 'en' },
-            { label: '简体中文', value: 'zh' }
-          ]}
-        />
-      </SettingRow>
-
       <SettingRow label={t('settings.appearance.timeDisplay.format')}>
         <Select
           value={cfg().format}
@@ -129,6 +108,32 @@ const TimeDisplaySection: Component = () => {
           ]}
         />
       </SettingRow>
+
+      {cfg().format === 'relative' && (
+        <SettingSubGroup>
+          <SettingRow
+            label={t('settings.appearance.timeDisplay.language')}
+            description={t('settings.appearance.timeDisplay.languageDesc')}
+            indent
+          >
+            <Select
+              value={cfg().language}
+              onChange={e =>
+                actions.updateSettings(
+                  s =>
+                    (s.appearance.timeDisplay.language = e.currentTarget
+                      .value as TimeLanguage)
+                )
+              }
+              options={[
+                { label: t('settings.appearance.timeDisplay.languageAuto'), value: 'auto' },
+                { label: 'English', value: 'en' },
+                { label: '简体中文', value: 'zh' }
+              ]}
+            />
+          </SettingRow>
+        </SettingSubGroup>
+      )}
 
       {cfg().format === 'absolute' && (
         <SettingSubGroup>
@@ -154,11 +159,16 @@ const TimeDisplaySection: Component = () => {
         </SettingSubGroup>
       )}
 
-      <SettingRow label={t('settings.appearance.timeDisplay.preview')}>
-        <span class="text-sm font-mono text-gray-700 dark:text-gray-200">
-          {cfg().format === 'absolute' ? previewAbsolute() : previewRelative()}
-        </span>
-      </SettingRow>
+      <SettingSubGroup>
+        <SettingRow
+          label={t('settings.appearance.timeDisplay.preview')}
+          indent
+        >
+          <span class="text-sm font-mono text-gray-700 dark:text-gray-200">
+            {cfg().format === 'absolute' ? previewAbsolute() : previewRelative()}
+          </span>
+        </SettingRow>
+      </SettingSubGroup>
     </SettingSection>
   )
 }

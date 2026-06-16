@@ -245,10 +245,10 @@ export const dict: DeepPartial<RawDictionary> = {
         languageDesc: '单独指定"上次游玩"时间的显示语言，不影响全局语言',
         languageAuto: '跟随界面语言',
         format: '时间格式',
-        formatRelative: '相对时间（2 天前）',
-        formatAbsolute: '绝对时间（自定义格式）',
+        formatRelative: '相对时间',
+        formatAbsolute: '绝对时间',
         absoluteFormat: '绝对时间模板',
-        absoluteFormatDesc: '可用占位符：YYYY YY MM DD HH mm ss，例如 "YYYY-MM-DD HH:mm"',
+        absoluteFormatDesc: 'dayjs format string，例如 "YYYY-MM-DD HH:mm"',
         absoluteFormatPlaceholder: 'YYYY-MM-DD HH:mm',
         preview: '预览'
       }
