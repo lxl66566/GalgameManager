@@ -253,27 +253,38 @@ export default function PluginSection(props: PluginSectionProps) {
                     </button>
                   </div>
 
-                  <Show when={isExpanded() && def()?.GameEditor && 'config' in instance}>
+                  <Show when={isExpanded()}>
                     {(() => {
                       const d = def()
-                      if (!d?.GameEditor) return null
-                      // The editor varies per plugin, but at this dispatch
-                      // point we only know the config is *some* game config.
-                      // Cast the component to a union-aware editor instead of
-                      // falling back to `any`, so the config stays typed.
-                      const Editor = d.GameEditor as Component<
-                        ConfigEditorProps<AnyGameConfig>
-                      >
-                      const config = (instance as { config: AnyGameConfig }).config
+                      // Plugin has a per-game editor → render it.
+                      if (d?.GameEditor && 'config' in instance) {
+                        // The editor varies per plugin, but at this dispatch
+                        // point we only know the config is *some* game
+                        // config. Cast the component to a union-aware editor
+                        // instead of falling back to `any`, so the config
+                        // stays typed.
+                        const Editor = d.GameEditor as Component<
+                          ConfigEditorProps<AnyGameConfig>
+                        >
+                        const config = (instance as { config: AnyGameConfig }).config
+                        return (
+                          <div class="border-t border-gray-200 dark:border-gray-600/50 px-3 py-2 bg-gray-50/50 dark:bg-gray-900/20">
+                            <Dynamic
+                              component={Editor}
+                              config={config}
+                              onCommit={(values: Record<string, unknown>) =>
+                                handleUpdateConfig(index(), values)
+                              }
+                            />
+                          </div>
+                        )
+                      }
+                      // No editor for this plugin type (e.g. AutoUpload).
+                      // Without this branch the chevron flips but nothing
+                      // appears, which looks like the click was a no-op.
                       return (
-                        <div class="border-t border-gray-200 dark:border-gray-600/50 px-3 py-2 bg-gray-50/50 dark:bg-gray-900/20">
-                          <Dynamic
-                            component={Editor}
-                            config={config}
-                            onCommit={(values: Record<string, unknown>) =>
-                              handleUpdateConfig(index(), values)
-                            }
-                          />
+                        <div class="border-t border-gray-200 dark:border-gray-600/50 px-3 py-2 bg-gray-50/50 dark:bg-gray-900/20 text-xs text-gray-400 dark:text-gray-500 italic">
+                          {t('plugin.configEmpty')}
                         </div>
                       )
                     })()}
