@@ -101,7 +101,12 @@ const DEFAULT_CONFIG: Config = {
     },
     appearance: {
       theme: 'system',
-      language: 'zh-CN'
+      language: 'zh-CN',
+      timeDisplay: {
+        language: 'auto',
+        format: 'relative',
+        absoluteFormat: 'YYYY-MM-DD HH:mm'
+      }
     },
     launch: {
       precisionMode: true

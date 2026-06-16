@@ -4,11 +4,12 @@ import { ContextMenu, type ContextMenuEntry } from '@components/ui/ContextMenu'
 import { GameActionButton } from '@components/ui/GameActionButton'
 import { displayDuration } from '@utils/time'
 import { createRelativeTime } from '@utils/time/createRelativeTime'
-import { useI18n } from '~/i18n'
+import { resolveTimeLanguage, useI18n } from '~/i18n'
+import { useConfig } from '~/store'
 import { AiOutlineCloudUpload, AiOutlineEdit, AiOutlineSync } from 'solid-icons/ai'
 import { FaRegularCirclePlay, FaSolidGamepad } from 'solid-icons/fa'
 import { FiFolder } from 'solid-icons/fi'
-import { Show, type JSX } from 'solid-js'
+import { createMemo, Show, type JSX } from 'solid-js'
 
 // --- 组件：游戏卡片 ---
 interface GameItemProps {
@@ -25,8 +26,22 @@ interface GameItemProps {
 }
 
 export const GameItem = (props: GameItemProps) => {
-  const { t } = useI18n()
-  const timeAgo = createRelativeTime(() => props.game.lastPlayedTime, t)
+  const { t, locale } = useI18n()
+  const { config } = useConfig()
+  // Resolve the timestamp locale on demand so changes in either the
+  // global UI language or the per-timestamp override take effect.
+  const timeLocale = createMemo(() =>
+    resolveTimeLanguage(config.settings.appearance.timeDisplay.language, locale())
+  )
+  const timeAgo = createRelativeTime(
+    () => props.game.lastPlayedTime,
+    t,
+    60_000,
+    {
+      locale: timeLocale,
+      config: () => config.settings.appearance.timeDisplay
+    }
+  )
 
   const titleSizeClass = () => {
     const len = props.game.name.length
