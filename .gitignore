@@ -150,3 +150,5 @@ src-tauri/gen
 # nixos
 
 .direnv
+
+.opencode

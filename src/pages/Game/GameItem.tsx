@@ -26,7 +26,7 @@ interface GameItemProps {
 
 export const GameItem = (props: GameItemProps) => {
   const { t } = useI18n()
-  const timeAgo = createRelativeTime(() => props.game.lastPlayedTime)
+  const timeAgo = createRelativeTime(() => props.game.lastPlayedTime, t)
 
   const titleSizeClass = () => {
     const len = props.game.name.length
@@ -77,7 +77,7 @@ export const GameItem = (props: GameItemProps) => {
               {/* 居中图标与文字 */}
               <FaSolidGamepad class="w-14 h-14 text-emerald-400 animate-pulse drop-shadow-lg" />
               <span class="mt-2 text-emerald-100 font-bold text-xs tracking-widest uppercase">
-                playing
+                {t('game.playing')}
               </span>
 
               {/* 右上角呼吸灯 (Ping Animation) */}
@@ -108,7 +108,7 @@ export const GameItem = (props: GameItemProps) => {
             {/* 左侧：上次游玩时间 */}
             <div
               class="flex items-center text-gray-400 dark:text-gray-500"
-              title={`Last played: ${props.game.lastPlayedTime || 'Never'}`}
+              title={`${t('game.lastPlayedLabel')}${props.game.lastPlayedTime || t('time.never')}`}
             >
               {/* <History class="w-3 h-3 mr-1" /> */}
               <span>{timeAgo()}</span>
@@ -117,7 +117,7 @@ export const GameItem = (props: GameItemProps) => {
             {/* 右侧：总游玩时长 */}
             <div
               class="text-gray-500 dark:text-gray-400 font-medium"
-              title="Total play time"
+              title={t('game.totalPlayTime')}
             >
               {displayDuration(props.game.useTime)}
             </div>

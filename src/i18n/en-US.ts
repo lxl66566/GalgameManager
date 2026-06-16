@@ -9,6 +9,15 @@ export const dict = {
     minute: 'minute',
     hour: 'hour'
   },
+  time: {
+    never: 'Never',
+    justNow: 'Just now',
+    minutesAgo: '{{n}}m ago',
+    hoursAgo: '{{n}}h ago',
+    daysAgo: '{{n}}d ago',
+    monthsAgo: '{{n}}mo ago',
+    yearsAgo: '{{n}}y ago'
+  },
   ui: {
     browse: 'Browse',
     select: 'Select',
@@ -29,6 +38,10 @@ export const dict = {
     none: 'None'
   },
   game: {
+    self: 'Games',
+    playing: 'playing',
+    lastPlayedLabel: 'Last played: ',
+    totalPlayTime: 'Total play time',
     sortType: {
       id: 'Default',
       name: 'Name',
@@ -82,7 +95,6 @@ export const dict = {
     backupButtonHint: 'Backup saves and push to remote',
     openSyncModal: 'Open Sync Panel',
     clickToAdd: 'Click to add',
-    self: 'Game',
     orDrag: 'or drag executable file here',
     context: {
       openDir: 'Open Game Directory'
@@ -199,7 +211,12 @@ export const dict = {
       ioTimeoutDesc:
         'Timeout for data transfer operations (upload / download), in seconds',
       nonIoTimeout: 'Operation Timeout',
-      nonIoTimeoutDesc: 'Timeout for remote operations (list / delete), in seconds'
+      nonIoTimeoutDesc: 'Timeout for remote operations (list / delete), in seconds',
+      s3EndpointDesc: 'Leave empty for AWS',
+      s3Region: 'Region',
+      s3Bucket: 'Bucket Name',
+      s3AccessKey: 'Access Key',
+      s3SecretKey: 'Secret Key'
     },
     compression: {
       self: 'Archive',
@@ -216,7 +233,10 @@ export const dict = {
       forceOp: 'Forced Operation'
     },
     appearance: {
-      theme: 'Theme'
+      theme: 'Theme',
+      themeSystem: 'System Default',
+      themeLight: 'Light',
+      themeDark: 'Dark'
     },
     launch: {
       timestat: 'Time Stat',
@@ -238,7 +258,9 @@ export const dict = {
       editVariableName: 'Edit Variable Name',
       editVariableValue: 'Edit Variable Value',
       noVariablesDefined: 'No variables defined.',
-      variableAlreadyExists: 'Variable already exists: '
+      variableAlreadyExists: 'Variable already exists: ',
+      loadingInfo: 'Loading device info...',
+      notFound: 'Device not found.'
     }
   },
   hint: {

@@ -66,7 +66,7 @@ export const I18nProvider: FlowComponent = props => {
 
   // 生成翻译函数 t
   // translator 会自动处理响应性，当 dict 更新时 t 也会更新
-  const t = i18n.translator(dict)
+  const t = i18n.translator(dict, i18n.resolveTemplate)
 
   // --- 3. 动态样式逻辑 ---
   createEffect(() => {

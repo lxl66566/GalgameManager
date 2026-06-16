@@ -13,6 +13,15 @@ export const dict: DeepPartial<RawDictionary> = {
     minute: '分钟',
     hour: '小时'
   },
+  time: {
+    never: '永不',
+    justNow: '刚刚',
+    minutesAgo: '{{n}} 分钟前',
+    hoursAgo: '{{n}} 小时前',
+    daysAgo: '{{n}} 天前',
+    monthsAgo: '{{n}} 个月前',
+    yearsAgo: '{{n}} 年前'
+  },
   ui: {
     browse: '浏览',
     select: '选择',
@@ -83,6 +92,9 @@ export const dict: DeepPartial<RawDictionary> = {
       }
     },
     editGame: '编辑游戏',
+    playing: '运行中',
+    lastPlayedLabel: '上次游玩：',
+    totalPlayTime: '总游玩时长',
     backupButtonHint: '备份存档并上传至远程',
     openSyncModal: '打开同步面板',
     clickToAdd: '点击添加',
@@ -201,7 +213,12 @@ export const dict: DeepPartial<RawDictionary> = {
       ioTimeout: '传输超时',
       ioTimeoutDesc: '数据传输操作（上传/下载）的超时时间，单位：秒',
       nonIoTimeout: '操作超时',
-      nonIoTimeoutDesc: '远端操作（列表/删除）的超时时间，单位：秒'
+      nonIoTimeoutDesc: '远端操作（列表/删除）的超时时间，单位：秒',
+      s3EndpointDesc: '留空则使用 AWS',
+      s3Region: 'Region',
+      s3Bucket: 'Bucket Name',
+      s3AccessKey: 'Access Key',
+      s3SecretKey: 'Secret Key'
     },
     compression: {
       self: '归档',
@@ -218,7 +235,10 @@ export const dict: DeepPartial<RawDictionary> = {
       forceOp: '强制上传/下载'
     },
     appearance: {
-      theme: '主题'
+      theme: '主题',
+      themeSystem: '跟随系统',
+      themeLight: '浅色',
+      themeDark: '深色'
     },
     launch: {
       timestat: '时长统计',
@@ -238,7 +258,9 @@ export const dict: DeepPartial<RawDictionary> = {
       editVariableName: '编辑变量名称',
       editVariableValue: '编辑变量值',
       noVariablesDefined: '无变量',
-      variableAlreadyExists: '变量已存在: '
+      variableAlreadyExists: '变量已存在: ',
+      loadingInfo: '正在加载设备信息...',
+      notFound: '未找到设备。'
     }
   },
   hint: {

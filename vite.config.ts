@@ -53,6 +53,10 @@ export default defineConfig({
       '~': path.resolve(__dirname, './src')
     }
   },
+  esbuild: {
+    jsx: 'automatic',
+    jsxImportSource: 'solid-js'
+  },
   optimizeDeps: {
     // virtua's solid entry ships .jsx with a @jsxImportSource solid-js pragma;
     // let vite-plugin-solid transform it instead of esbuild's dep optimizer.

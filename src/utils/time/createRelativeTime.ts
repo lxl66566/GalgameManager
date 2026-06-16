@@ -1,17 +1,19 @@
 // src/utils/time/createRelativeTime.ts
 import { createMemo, createSignal, onCleanup, type Accessor } from 'solid-js'
-import { formatTimeAgo } from '.'
+import { formatTimeAgo, type TFunc } from '.'
 
 /**
  * 创建一个随时间自动更新的相对时间字符串
  * @param timeTarget - 目标时间的时间戳字符串 (Accessor)
+ * @param t - i18n 翻译函数
  * @param intervalMs - 刷新间隔，默认为 60000ms (1分钟)
  */
 export function createRelativeTime(
   timeTarget: Accessor<string | null>,
+  t: TFunc,
   intervalMs = 60000
 ) {
-  // 1. 创建一个“心跳”信号
+  // 1. 创建一个"心跳"信号
   const [tick, setTick] = createSignal(Date.now())
 
   // 2. 设置定时器驱动心跳
@@ -27,7 +29,7 @@ export function createRelativeTime(
     const time = timeTarget()
     // 订阅 tick 变化，强制触发重新计算
     tick()
-    return formatTimeAgo(time)
+    return formatTimeAgo(time, t)
   })
 }
 

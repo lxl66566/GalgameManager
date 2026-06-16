@@ -70,46 +70,49 @@ const WebDavForm: Component<{
 const S3Form: Component<{
   config: S3Config
   onChange: (key: keyof S3Config, value: string) => void
-}> = props => (
-  <SettingSubGroup>
-    <SettingRow label="Endpoint" description="Leave empty for AWS" indent>
-      <Input
-        value={props.config.endpoint || ''}
-        onChange={e => props.onChange('endpoint', e.currentTarget.value)}
-        placeholder=""
-      />
-    </SettingRow>
-    <SettingRow label="Region" indent>
-      <Input
-        class="w-32"
-        value={props.config.region}
-        onChange={e => props.onChange('region', e.currentTarget.value)}
-        placeholder=""
-      />
-    </SettingRow>
-    <SettingRow label="Bucket Name" indent>
-      <Input
-        value={props.config.bucket}
-        onChange={e => props.onChange('bucket', e.currentTarget.value)}
-        placeholder=""
-      />
-    </SettingRow>
-    <SettingRow label="Access Key" indent>
-      <Input
-        type="password"
-        value={props.config.accessKey}
-        onChange={e => props.onChange('accessKey', e.currentTarget.value)}
-      />
-    </SettingRow>
-    <SettingRow label="Secret Key" indent>
-      <Input
-        type="password"
-        value={props.config.secretKey}
-        onChange={e => props.onChange('secretKey', e.currentTarget.value)}
-      />
-    </SettingRow>
-  </SettingSubGroup>
-)
+}> = props => {
+  const { t } = useI18n()
+  return (
+    <SettingSubGroup>
+      <SettingRow label={t('settings.storage.Endpoint')} description={t('settings.storage.s3EndpointDesc')} indent>
+        <Input
+          value={props.config.endpoint || ''}
+          onChange={e => props.onChange('endpoint', e.currentTarget.value)}
+          placeholder=""
+        />
+      </SettingRow>
+      <SettingRow label={t('settings.storage.s3Region')} indent>
+        <Input
+          class="w-32"
+          value={props.config.region}
+          onChange={e => props.onChange('region', e.currentTarget.value)}
+          placeholder=""
+        />
+      </SettingRow>
+      <SettingRow label={t('settings.storage.s3Bucket')} indent>
+        <Input
+          value={props.config.bucket}
+          onChange={e => props.onChange('bucket', e.currentTarget.value)}
+          placeholder=""
+        />
+      </SettingRow>
+      <SettingRow label={t('settings.storage.s3AccessKey')} indent>
+        <Input
+          type="password"
+          value={props.config.accessKey}
+          onChange={e => props.onChange('accessKey', e.currentTarget.value)}
+        />
+      </SettingRow>
+      <SettingRow label={t('settings.storage.s3SecretKey')} indent>
+        <Input
+          type="password"
+          value={props.config.secretKey}
+          onChange={e => props.onChange('secretKey', e.currentTarget.value)}
+        />
+      </SettingRow>
+    </SettingSubGroup>
+  )
+}
 
 // --- 新增子组件：Local 表单 ---
 const LocalForm: Component<{

@@ -1,4 +1,9 @@
 // 简单的日期转换工具
+import type { Translator } from '@solid-primitives/i18n'
+import type { RawDictionary } from '~/i18n/en-US'
+
+export type TFunc = Translator<import('@solid-primitives/i18n').Flatten<RawDictionary>, string>
+
 const dateToInput = (isoStr: string | null) => {
   if (!isoStr) return ''
   // 假设后端给的是 ISO 格式 (UTC)，我们需要转为本地时间给 input 显示
@@ -32,30 +37,30 @@ const displayDuration = (d: [number, number]) => {
   return `${form.h}h${form.m}m`
 }
 
-const formatTimeAgo = (dateStr: string | null) => {
-  if (!dateStr) return 'Never'
+const formatTimeAgo = (dateStr: string | null, t: TFunc) => {
+  if (!dateStr) return t('time.never')
 
   const date = new Date(dateStr)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffSecs = Math.floor(diffMs / 1000)
 
-  if (diffSecs < 60) return 'Just now'
+  if (diffSecs < 60) return t('time.justNow')
 
   const diffMins = Math.floor(diffSecs / 60)
-  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffMins < 60) return t('time.minutesAgo', { n: String(diffMins) })
 
   const diffHours = Math.floor(diffMins / 60)
-  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffHours < 24) return t('time.hoursAgo', { n: String(diffHours) })
 
   const diffDays = Math.floor(diffHours / 24)
-  if (diffDays < 30) return `${diffDays}d ago`
+  if (diffDays < 30) return t('time.daysAgo', { n: String(diffDays) })
 
   const diffMonths = Math.floor(diffDays / 30)
-  if (diffMonths < 12) return `${diffMonths}mo ago`
+  if (diffMonths < 12) return t('time.monthsAgo', { n: String(diffMonths) })
 
   const diffYears = Math.floor(diffDays / 365)
-  return `${diffYears}y ago`
+  return t('time.yearsAgo', { n: String(diffYears) })
 }
 
 export {

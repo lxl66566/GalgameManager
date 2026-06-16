@@ -26,9 +26,9 @@ export const AppearanceTab: Component = () => {
               )
             }}
             options={[
-              { label: 'System Default', value: 'system' },
-              { label: 'Light', value: 'light' },
-              { label: 'Dark', value: 'dark' }
+              { label: t('settings.appearance.themeSystem'), value: 'system' },
+              { label: t('settings.appearance.themeLight'), value: 'light' },
+              { label: t('settings.appearance.themeDark'), value: 'dark' }
             ]}
           />
         </SettingRow>
