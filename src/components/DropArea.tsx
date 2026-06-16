@@ -25,9 +25,12 @@ export function DropArea(props: DropAreaProps) {
 
   // 存储取消监听的函数
   let unlisteners: UnlistenFn[] = []
+  // Tracks whether the component has been disposed. If listeners finish
+  // registering after unmount, we must tear them down immediately.
+  let disposed = false
 
   const setupListeners = async () => {
-    unlisteners = await Promise.all([
+    const listeners = await Promise.all([
       listen('tauri://drag-enter', () => {
         setHovering(true)
       }),
@@ -43,6 +46,12 @@ export function DropArea(props: DropAreaProps) {
         }
       })
     ])
+    if (disposed) {
+      // Component unmounted while we were still registering listeners.
+      listeners.forEach(fn => fn())
+    } else {
+      unlisteners = listeners
+    }
   }
 
   // 初始化监听
@@ -50,6 +59,7 @@ export function DropArea(props: DropAreaProps) {
 
   // 组件卸载时清理监听，保证 Robust
   onCleanup(() => {
+    disposed = true
     unlisteners.forEach(fn => fn())
   })
 
