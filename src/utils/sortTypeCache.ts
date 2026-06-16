@@ -7,6 +7,7 @@
 
 import { type SortType } from '@bindings/SortType'
 import { BaseDirectory, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
+import { log } from '@utils/log'
 
 const SORT_TYPE_FILENAME = '.config/GalgameManager/sort_type'
 const DEFAULT_SORT_TYPE: SortType = 'id'
@@ -45,7 +46,9 @@ export function setSortType(type: SortType): void {
   cached = type
   writeTextFile(SORT_TYPE_FILENAME, type, {
     baseDir: BaseDirectory.Home
-  }).catch(() => {
-    // Silently ignore write failures; the in-memory cache is still valid.
+  }).catch(e => {
+    // The in-memory cache is still valid, but surface the failure for
+    // diagnostics instead of swallowing it completely.
+    log.warn('Failed to persist sort type:', e)
   })
 }

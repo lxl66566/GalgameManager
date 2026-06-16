@@ -299,6 +299,8 @@ export const dict: DeepPartial<RawDictionary> = {
     exePathNotAbsolute: '游戏启动路径解析后不是绝对路径，可能导致启动失败',
     pathNotExist: '路径在当前设备上不存在',
     partialPathNotExist: '部分路径在当前设备上不存在',
+    resolveExeFailed: '无法解析游戏路径（可能存在未定义的变量）',
+    selectImageFailed: '选择图片失败',
     unknownVar: '未知变量: '
   }
 }

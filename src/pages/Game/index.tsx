@@ -231,7 +231,13 @@ const GamePage = (): JSX.Element => {
           }
         })
         .catch(() => {
-          // resolve_var failed (e.g. unresolved variable), silently ignore
+          // resolve_var failed (e.g. unresolved variable) — notify the user
+          // instead of silently ignoring, so they know the path is broken.
+          myToast({
+            variant: 'warning',
+            title: t('game.edit.exePath'),
+            message: t('hint.resolveExeFailed')
+          })
         })
     }
   }

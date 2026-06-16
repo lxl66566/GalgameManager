@@ -143,6 +143,10 @@ export default function GameEditModal(props: GameEditModalProps) {
       }
     } catch (e) {
       console.error(e)
+      myToast({
+        variant: 'error',
+        message: t('hint.selectImageFailed') + ': ' + e
+      })
     }
   }
 

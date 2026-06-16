@@ -300,6 +300,8 @@ export const dict = {
       'Resolved executable path is not absolute, which may cause launch failure',
     pathNotExist: 'Path does not exist on this device',
     partialPathNotExist: 'Partial path does not exist on this device',
+    resolveExeFailed: 'Failed to resolve game path (possibly an undefined variable)',
+    selectImageFailed: 'Failed to select image',
     unknownVar: 'Unknown variable(s): '
   }
 }
