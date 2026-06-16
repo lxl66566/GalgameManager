@@ -13,6 +13,7 @@ import {
   SettingSubGroup
 } from '@components/ui/settings'
 import { invoke } from '@tauri-apps/api/core'
+import { debounce } from '@utils/debounce'
 import { extractUnknownVars } from '@utils/resolveVar'
 import { useVarMap } from '@utils/useVarMap'
 import { useI18n } from '~/i18n'
@@ -168,7 +169,7 @@ const CompressionForm: Component<{
     // 1. 如果规则禁用，强制重置为默认/最小值
     if (rule.disabled) {
       const resetVal = rule.min
-      props.actions.updateSettings(s => (s.archive.level = resetVal))
+      props.actions.updateSettingsDebounced(s => (s.archive.level = resetVal))
       target.value = resetVal.toString() // 强制回填
       return
     }
@@ -183,8 +184,8 @@ const CompressionForm: Component<{
       if (val > rule.max) val = rule.max
     }
 
-    // 3. 更新 Store
-    props.actions.updateSettings(s => (s.archive.level = val))
+    // 3. 更新 Store（debounce 磁盘写入）
+    props.actions.updateSettingsDebounced(s => (s.archive.level = val))
 
     // 4. 关键步骤：如果 DOM 显示的值与计算后的值不一致，手动强制回填
     // 这解决了 "输入99 -> Store保持22 -> 界面仍显示99" 的问题
@@ -238,6 +239,10 @@ export const StorageTab: Component = () => {
   // 获取当前的 provider 字符串
   const currentProvider = () => config.settings.storage.provider
 
+  // Debounced operator cache invalidation: avoids an IPC call per keystroke
+  // while editing storage connection fields.
+  const cleanOperatorDebounced = debounce(() => invoke('clean_current_operator'), 500)
+
   // 切换 Provider：只修改 provider 字段，不触碰具体配置
   const handleProviderChange = (e: Event) => {
     const newProvider = (e.target as HTMLSelectElement).value as StorageProvider
@@ -247,28 +252,28 @@ export const StorageTab: Component = () => {
     invoke('clean_current_operator')
   }
 
-  // 更新 WebDAV 配置
+  // 更新 WebDAV 配置（文本输入，debounce 磁盘写入）
   const updateWebDav = (key: keyof WebDavConfig, value: string) => {
-    actions.updateSettings(s => {
+    actions.updateSettingsDebounced(s => {
       s.storage.webdav[key] = value
     })
-    invoke('clean_current_operator')
+    cleanOperatorDebounced()
   }
 
-  // 更新 S3 配置
+  // 更新 S3 配置（文本输入，debounce 磁盘写入）
   const updateS3 = (key: keyof S3Config, value: string) => {
-    actions.updateSettings(s => {
+    actions.updateSettingsDebounced(s => {
       s.storage.s3[key] = value
     })
-    invoke('clean_current_operator')
+    cleanOperatorDebounced()
   }
 
-  // 更新 Local 配置
+  // 更新 Local 配置（文本输入，debounce 磁盘写入）
   const updateLocal = (value: string) => {
-    actions.updateSettings(s => {
+    actions.updateSettingsDebounced(s => {
       s.storage.local.path = value
     })
-    invoke('clean_current_operator')
+    cleanOperatorDebounced()
   }
 
   // 上传配置
@@ -326,7 +331,7 @@ export const StorageTab: Component = () => {
             type="number"
             value={config.settings.syncIoTimeoutSecs}
             onChange={e =>
-              actions.updateSettings(
+              actions.updateSettingsDebounced(
                 s => (s.syncIoTimeoutSecs = parseInt(e.currentTarget.value) || 60)
               )
             }
@@ -341,7 +346,7 @@ export const StorageTab: Component = () => {
             type="number"
             value={config.settings.syncNonIoTimeoutSecs}
             onChange={e =>
-              actions.updateSettings(
+              actions.updateSettingsDebounced(
                 s => (s.syncNonIoTimeoutSecs = parseInt(e.currentTarget.value) || 15)
               )
             }
@@ -360,7 +365,7 @@ export const StorageTab: Component = () => {
           <Input
             value={config.settings.autoSyncInterval}
             onChange={e =>
-              actions.updateSettings(
+              actions.updateSettingsDebounced(
                 s => (s.autoSyncInterval = parseInt(e.currentTarget.value))
               )
             }

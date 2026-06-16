@@ -318,11 +318,26 @@ const save = async () => {
   }
 }
 
+// Debounced config persistence: coalesces rapid mutations (e.g. typing in a
+// settings text field) into a single disk write instead of one per keystroke.
+// Per the project rule, config writes must not happen in frequent callbacks
+// such as an input's onChange.
+let saveDebounceTimer: ReturnType<typeof setTimeout> | undefined
+const SAVE_DEBOUNCE_MS = 500
+const scheduleSave = () => {
+  if (saveDebounceTimer) clearTimeout(saveDebounceTimer)
+  saveDebounceTimer = setTimeout(() => {
+    saveDebounceTimer = undefined
+    void save()
+  }, SAVE_DEBOUNCE_MS)
+}
+
 export const useConfig = () => {
   return {
     config,
     refresh: refreshConfig,
     save,
+    saveDebounced: scheduleSave,
     actions: {
       addGame: (game: Game) => {
         game.addedTime = new Date().toISOString()
@@ -366,6 +381,12 @@ export const useConfig = () => {
         setConfig(produce(state => fn(state.settings)))
         save()
       },
+      /** Like {@link updateSettings} but debounces the disk write — use this in
+       *  frequent callbacks such as a text input's onChange. */
+      updateSettingsDebounced: (fn: (settings: Settings) => void) => {
+        setConfig(produce(state => fn(state.settings)))
+        scheduleSave()
+      },
       getCurrentDevice: async (): Promise<Device | undefined> => {
         const uid = await currentDeviceId()
         return config.devices.find(d => d.uid === uid)
@@ -395,6 +416,22 @@ export const useConfig = () => {
           })
         )
         save()
+      },
+      /** Like {@link updateCurrentDevice} but debounces the disk write. */
+      updateCurrentDeviceDebounced: async (device: Device) => {
+        const uid = await currentDeviceId()
+        const deviceUnwrap = unwrap(device)
+        setConfig(
+          produce(state => {
+            const index = state.devices.findIndex(d => d.uid === uid)
+            if (index !== -1) {
+              state.devices[index] = deviceUnwrap
+            } else {
+              state.devices.push(deviceUnwrap)
+            }
+          })
+        )
+        scheduleSave()
       },
       mutate: (fn: (state: Config) => void) => {
         setConfig(produce(fn))

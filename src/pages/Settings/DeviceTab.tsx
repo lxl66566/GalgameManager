@@ -16,7 +16,10 @@ export const DeviceTab: Component = () => {
   })
 
   // 2. 核心修改逻辑：克隆 -> 修改 -> 乐观更新 UI -> 提交到 Store
-  const modifyDevice = async (modifier: (d: Device) => void) => {
+  const modifyDevice = async (
+    modifier: (d: Device) => void,
+    commit: (device: Device) => Promise<void>
+  ) => {
     const current = device()
     if (!current) return
 
@@ -32,17 +35,23 @@ export const DeviceTab: Component = () => {
     // 第三步：乐观更新 (Optimistic Update)
     // 将修改后的新对象塞回 Resource，触发 UI 更新
     mutate(next)
-    await actions.updateCurrentDevice(next)
+    await commit(next)
   }
 
-  // Persists to disk: modifyDevice → actions.updateCurrentDevice → save()
+  // 设备名是文本输入，debounce 磁盘写入
   const handleNameChange = (name: string) => {
-    modifyDevice(d => (d.name = name))
+    void modifyDevice(
+      d => (d.name = name),
+      d => actions.updateCurrentDeviceDebounced(d)
+    )
   }
 
-  // Persists to disk: modifyDevice → actions.updateCurrentDevice → save()
+  // 变量表是表单提交（非频繁回调），立即写入
   const handleVariablesCommit = (newVars: Record<string, string>) => {
-    modifyDevice(d => (d.variables = newVars))
+    void modifyDevice(
+      d => (d.variables = newVars),
+      d => actions.updateCurrentDevice(d)
+    )
     log.info('Variables updated')
   }
 
