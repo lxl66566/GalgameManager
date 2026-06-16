@@ -253,7 +253,11 @@ pub trait BuildOperator {
             Ok(op)
         } else {
             self.build_operator(ctx, io_timeout, non_io_timeout)?;
-            Ok(self.get_operator().unwrap())
+            // build_operator just stored the operator, so this must succeed;
+            // fall back to a proper error instead of panicking if the
+            // precondition ever breaks.
+            self.get_operator()
+                .ok_or(Error::ProviderNotSet)
         }
     }
 }
@@ -305,7 +309,10 @@ impl BuildOperator for WebDavConfig {
         let ctx = ctx.clone();
         let notify = move |err: &::opendal::Error, _dur: Duration| {
             log::warn!("webdav sync failed: {err}");
-            ctx.emit(EVENT_SYNC_FAILED, err.to_string()).unwrap();
+            // Emitting can only fail if the app/event loop is shutting down;
+            // there's nothing useful to do with that, and unwinding from inside
+            // an opendal notify callback would abort the process.
+            let _ = ctx.emit(EVENT_SYNC_FAILED, err.to_string());
         };
 
         let operator = Operator::new(
@@ -355,7 +362,10 @@ impl BuildOperator for S3Config {
         let ctx = ctx.clone();
         let notify = move |err: &::opendal::Error, _dur: Duration| {
             log::warn!("s3 sync failed: {err}");
-            ctx.emit(EVENT_SYNC_FAILED, err.to_string()).unwrap();
+            // Emitting can only fail if the app/event loop is shutting down;
+            // there's nothing useful to do with that, and unwinding from inside
+            // an opendal notify callback would abort the process.
+            let _ = ctx.emit(EVENT_SYNC_FAILED, err.to_string());
         };
 
         let operator = Operator::new(

@@ -29,6 +29,12 @@ pub struct GameJob {
     handle: HANDLE,
 }
 
+// SAFETY: A Job Object handle is an opaque kernel object. The Windows API
+// explicitly allows assigning processes to (and querying) a Job from any
+// thread, and `GameJob` performs no shared mutable access outside of the
+// `&self` calls that hand the handle to the API. The handle is only freed
+// once in `Drop`, from a single owner. Therefore it is safe to move the
+// handle between threads (`Send`) and share references (`Sync`).
 unsafe impl Send for GameJob {}
 
 unsafe impl Sync for GameJob {}

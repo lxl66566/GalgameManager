@@ -1,4 +1,5 @@
-use std::sync::{Arc, Mutex};
+use parking_lot::Mutex;
+use std::sync::Arc;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CleanupPhase {
@@ -24,20 +25,20 @@ impl Transaction {
     /// 注册一个清理任务，任务会按照注册的相反顺序（LIFO）执行
     pub fn add_cleanup<F: FnOnce() + Send + Sync + 'static>(&self, phase: CleanupPhase, f: F) {
         match phase {
-            CleanupPhase::AfterGameStart => self.after_start.lock().unwrap().push(Box::new(f)),
-            CleanupPhase::AfterGameExit => self.after_exit.lock().unwrap().push(Box::new(f)),
+            CleanupPhase::AfterGameStart => self.after_start.lock().push(Box::new(f)),
+            CleanupPhase::AfterGameExit => self.after_exit.lock().push(Box::new(f)),
         }
     }
 
     pub fn execute_after_start(&self) {
-        let tasks = std::mem::take(&mut *self.after_start.lock().unwrap());
+        let tasks = std::mem::take(&mut *self.after_start.lock());
         for task in tasks.into_iter().rev() {
             task();
         }
     }
 
     pub fn execute_after_exit(&self) {
-        let tasks = std::mem::take(&mut *self.after_exit.lock().unwrap());
+        let tasks = std::mem::take(&mut *self.after_exit.lock());
         for task in tasks.into_iter().rev() {
             task();
         }
