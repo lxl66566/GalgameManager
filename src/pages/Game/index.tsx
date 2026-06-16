@@ -59,12 +59,13 @@ const GamePage = (): JSX.Element => {
   onMount(() => {
     invoke<number[]>('running_game_ids').then(ids => {
       setPlayingIds(ids)
-      for (const id of playingIds()) {
+      for (const id of ids) {
         once<boolean>(`game://exit/${id}`, event => {
           console.log(`Game ${id} exited, success: ${event.payload}`)
-          setPlayingIds(prev => prev.filter(id => id !== id))
+          setPlayingIds(prev => prev.filter(pid => pid !== id))
           if (!event.payload) {
-            toast.error(name + t('hint.exitAbnormally'))
+            const gameName = config.games.find(g => g.id === id)?.name ?? ''
+            toast.error(gameName + t('hint.exitAbnormally'))
           }
         })
       }
