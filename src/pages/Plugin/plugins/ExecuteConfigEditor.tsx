@@ -2,7 +2,6 @@
  * Execute plugin — self-contained definition file.
  */
 import type { ExecuteGameConfig } from '@bindings/ExecuteGameConfig'
-import type { ExecutePluginMeta } from '@bindings/ExecutePluginMeta'
 import {
   FormField,
   FormInput,
@@ -14,23 +13,8 @@ import { FormTableEditor } from '@components/ui/FormTableEditor'
 import { useI18n } from '~/i18n'
 import { isWindows } from '~/utils/platform'
 import { createMemo } from 'solid-js'
+import { AutoAddMetaEditor } from './AutoAddMetaEditor'
 import type { ConfigEditorProps, PluginDefinition } from './types'
-
-function ExecuteMetaEditor(props: ConfigEditorProps<ExecutePluginMeta>) {
-  const { t } = useI18n()
-  return (
-    <div class="flex flex-wrap gap-3 items-start">
-      <FormField label={t('plugin.autoAdd')} class="w-auto">
-        <FormSwitch
-          checked={props.config.autoAdd}
-          onChange={(checked: boolean) =>
-            props.onCommit({ ...props.config, autoAdd: checked })
-          }
-        />
-      </FormField>
-    </div>
-  )
-}
 
 function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
   const { t } = useI18n()
@@ -182,6 +166,6 @@ export const EXECUTE_PLUGIN: PluginDefinition<'execute'> = {
     env: {},
     exitSignal: 'none'
   },
-  MetaEditor: ExecuteMetaEditor,
+  MetaEditor: AutoAddMetaEditor,
   GameEditor: ExecuteGameConfigEditor
 }

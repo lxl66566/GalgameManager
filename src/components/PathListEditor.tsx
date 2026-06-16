@@ -3,12 +3,12 @@ import { GameEditLabel } from '@components/ui/GameEditLabel'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { fuckBackslash } from '@utils/path'
-import { extractUnknownVars, resolveVar } from '@utils/resolveVar'
+import { resolveVar } from '@utils/resolveVar'
 import { useVarMap } from '@utils/useVarMap'
+import { useVarWarning } from '@utils/useVarWarning'
 import { useI18n } from '~/i18n'
 import { FiFilePlus, FiFolderPlus } from 'solid-icons/fi'
 import {
-  createMemo,
   createResource,
   createSignal,
   For,
@@ -83,20 +83,10 @@ export default function PathListEditor(props: PathListEditorProps) {
   // ─── Validations ──────────────────────────────────────────────────────────
 
   /** Check if any save path contains unknown variable references. */
-  const varWarning = createMemo(() => {
-    if (!props.checkVars) return undefined
-    const vm = varMap()
-    if (!vm) return undefined
-    const allUnknown = new Set<string>()
-    for (const p of props.paths) {
-      for (const u of extractUnknownVars(p, vm)) {
-        allUnknown.add(u)
-      }
-    }
-    return allUnknown.size > 0
-      ? t('hint.unknownVar') + [...allUnknown].join(', ')
-      : undefined
-  })
+  const varWarning = useVarWarning(
+    () => props.paths,
+    () => !!props.checkVars
+  )
 
   /** Check if any resolved path does not exist on disk. */
   const [pathExistWarning] = createResource(

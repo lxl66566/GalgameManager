@@ -14,8 +14,7 @@ import {
 } from '@components/ui/settings'
 import { invoke } from '@tauri-apps/api/core'
 import { debounce } from '@utils/debounce'
-import { extractUnknownVars } from '@utils/resolveVar'
-import { useVarMap } from '@utils/useVarMap'
+import { useVarWarning } from '@utils/useVarWarning'
 import { useI18n } from '~/i18n'
 import { checkAndPullRemote, performManualUpload, useConfig } from '~/store'
 import { FiDownload, FiLoader, FiUpload } from 'solid-icons/fi'
@@ -118,14 +117,8 @@ const LocalForm: Component<{
   onChange: (value: string) => void
 }> = props => {
   const { t } = useI18n()
-  const varMap = useVarMap()
 
-  const varWarning = createMemo(() => {
-    const vm = varMap()
-    if (!vm) return undefined
-    const unknown = extractUnknownVars(props.path, vm)
-    return unknown.length > 0 ? t('hint.unknownVar') + unknown.join(', ') : undefined
-  })
+  const varWarning = useVarWarning(() => props.path)
 
   return (
     <SettingSubGroup>

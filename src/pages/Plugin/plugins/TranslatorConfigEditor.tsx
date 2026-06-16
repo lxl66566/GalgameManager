@@ -5,32 +5,10 @@
  * tools alongside the game. Only exposes cmd, currentDir, and exitSignal fields.
  */
 import type { TranslatorGameConfig } from '@bindings/TranslatorGameConfig'
-import type { TranslatorPluginMeta } from '@bindings/TranslatorPluginMeta'
-import {
-  FormField,
-  FormInput,
-  FormPathInput,
-  FormSelect,
-  FormSwitch
-} from '@components/ui/form'
+import { FormField, FormInput, FormPathInput, FormSelect } from '@components/ui/form'
 import { useI18n } from '~/i18n'
+import { AutoAddMetaEditor } from './AutoAddMetaEditor'
 import type { ConfigEditorProps, PluginDefinition } from './types'
-
-function TranslatorMetaEditor(props: ConfigEditorProps<TranslatorPluginMeta>) {
-  const { t } = useI18n()
-  return (
-    <div class="flex flex-wrap gap-3 items-start">
-      <FormField label={t('plugin.autoAdd')} class="w-auto">
-        <FormSwitch
-          checked={props.config.autoAdd}
-          onChange={(checked: boolean) =>
-            props.onCommit({ ...props.config, autoAdd: checked })
-          }
-        />
-      </FormField>
-    </div>
-  )
-}
 
 function TranslatorGameConfigEditor(props: ConfigEditorProps<TranslatorGameConfig>) {
   const { t } = useI18n()
@@ -107,6 +85,6 @@ export const TRANSLATOR_PLUGIN: PluginDefinition<'translator'> = {
     currentDir: '',
     exitSignal: 'sigterm'
   },
-  MetaEditor: TranslatorMetaEditor,
+  MetaEditor: AutoAddMetaEditor,
   GameEditor: TranslatorGameConfigEditor
 }

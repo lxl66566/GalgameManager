@@ -4,27 +4,11 @@
  * Replaces the game spawn command. Always substitutes `{}` with game exe path.
  */
 import type { GameWrapperGameConfig } from '@bindings/GameWrapperGameConfig'
-import type { GameWrapperPluginMeta } from '@bindings/GameWrapperPluginMeta'
-import { FormField, FormInput, FormPathInput, FormSwitch } from '@components/ui/form'
+import { FormField, FormInput, FormPathInput } from '@components/ui/form'
 import { FormTableEditor } from '@components/ui/FormTableEditor'
 import { useI18n } from '~/i18n'
+import { AutoAddMetaEditor } from './AutoAddMetaEditor'
 import type { ConfigEditorProps, PluginDefinition } from './types'
-
-function GameWrapperMetaEditor(props: ConfigEditorProps<GameWrapperPluginMeta>) {
-  const { t } = useI18n()
-  return (
-    <div class="flex flex-wrap gap-3 items-start">
-      <FormField label={t('plugin.autoAdd')} class="w-auto">
-        <FormSwitch
-          checked={props.config.autoAdd}
-          onChange={(checked: boolean) =>
-            props.onCommit({ ...props.config, autoAdd: checked })
-          }
-        />
-      </FormField>
-    </div>
-  )
-}
 
 function GameWrapperGameConfigEditor(props: ConfigEditorProps<GameWrapperGameConfig>) {
   const { t } = useI18n()
@@ -90,6 +74,6 @@ export const GAME_WRAPPER_PLUGIN: PluginDefinition<'gameWrapper'> = {
     currentDir: '',
     env: {}
   },
-  MetaEditor: GameWrapperMetaEditor,
+  MetaEditor: AutoAddMetaEditor,
   GameEditor: GameWrapperGameConfigEditor
 }

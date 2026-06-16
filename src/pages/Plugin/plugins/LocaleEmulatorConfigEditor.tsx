@@ -5,26 +5,10 @@
  * integration. Only exposes the cmd field.
  */
 import type { LocaleEmulatorGameConfig } from '@bindings/LocaleEmulatorGameConfig'
-import type { LocaleEmulatorPluginMeta } from '@bindings/LocaleEmulatorPluginMeta'
-import { FormField, FormInput, FormSwitch } from '@components/ui/form'
+import { FormField, FormInput } from '@components/ui/form'
 import { useI18n } from '~/i18n'
+import { AutoAddMetaEditor } from './AutoAddMetaEditor'
 import type { ConfigEditorProps, PluginDefinition } from './types'
-
-function LocaleEmulatorMetaEditor(props: ConfigEditorProps<LocaleEmulatorPluginMeta>) {
-  const { t } = useI18n()
-  return (
-    <div class="flex flex-wrap gap-3 items-start">
-      <FormField label={t('plugin.autoAdd')} class="w-auto">
-        <FormSwitch
-          checked={props.config.autoAdd}
-          onChange={(checked: boolean) =>
-            props.onCommit({ ...props.config, autoAdd: checked })
-          }
-        />
-      </FormField>
-    </div>
-  )
-}
 
 function LocaleEmulatorGameConfigEditor(
   props: ConfigEditorProps<LocaleEmulatorGameConfig>
@@ -73,6 +57,6 @@ export const LOCALE_EMULATOR_PLUGIN: PluginDefinition<'localeEmulator'> = {
   configDefaults: {
     cmd: 'your_path/LEProc.exe "{}"'
   },
-  MetaEditor: LocaleEmulatorMetaEditor,
+  MetaEditor: AutoAddMetaEditor,
   GameEditor: LocaleEmulatorGameConfigEditor
 }

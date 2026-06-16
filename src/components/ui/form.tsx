@@ -9,13 +9,13 @@ import { Tooltip } from '@kobalte/core/tooltip'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { fuckBackslash } from '@utils/path'
-import { extractUnknownVars, resolveVar } from '@utils/resolveVar'
+import { resolveVar } from '@utils/resolveVar'
 import { useVarMap } from '@utils/useVarMap'
+import { useVarWarning } from '@utils/useVarWarning'
 import { useI18n } from '~/i18n'
 import { cn } from '~/lib/utils'
 import { FiFolder, FiInfo } from 'solid-icons/fi'
 import {
-  createMemo,
   createResource,
   mergeProps,
   Show,
@@ -71,14 +71,10 @@ export const FormInput: Component<FormInputProps> = props => {
     'value'
   ])
 
-  const varWarning = createMemo(() => {
-    if (!local.checkVars) return undefined
-    const vm = varMap()
-    if (!vm) return undefined
-    const val = typeof local.value === 'string' ? local.value : ''
-    const unknown = extractUnknownVars(val, vm)
-    return unknown.length > 0 ? t('hint.unknownVar') + unknown.join(', ') : undefined
-  })
+  const varWarning = useVarWarning(
+    () => (typeof local.value === 'string' ? local.value : ''),
+    () => !!local.checkVars
+  )
 
   return (
     <div class="flex flex-col w-full">
@@ -253,13 +249,7 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
   const varMap = useVarMap()
 
   // Var validation — checks for unknown {key} references
-  const varWarning = createMemo(() => {
-    if (props.checkVars === false) return undefined
-    const vm = varMap()
-    if (!vm) return undefined
-    const unknown = extractUnknownVars(props.value, vm)
-    return unknown.length > 0 ? t('hint.unknownVar') + unknown.join(', ') : undefined
-  })
+  const varWarning = useVarWarning(() => props.value, () => props.checkVars !== false)
 
   // Path existence validation — async check via `paths_exist`
   const [pathExistWarning] = createResource(

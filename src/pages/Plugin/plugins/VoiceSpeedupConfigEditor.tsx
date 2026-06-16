@@ -2,26 +2,10 @@
  * VoiceSpeedup plugin — self-contained definition file.
  */
 import type { VoiceSpeedupGameConfig } from '@bindings/VoiceSpeedupGameConfig'
-import type { VoiceSpeedupPluginMeta } from '@bindings/VoiceSpeedupPluginMeta'
-import { FormField, FormInput, FormSelect, FormSwitch } from '@components/ui/form'
+import { FormField, FormInput, FormSelect } from '@components/ui/form'
 import { useI18n } from '~/i18n'
+import { AutoAddMetaEditor } from './AutoAddMetaEditor'
 import type { ConfigEditorProps, PluginDefinition } from './types'
-
-function VoiceSpeedupMetaEditor(props: ConfigEditorProps<VoiceSpeedupPluginMeta>) {
-  const { t } = useI18n()
-  return (
-    <div class="flex flex-wrap gap-3 items-start">
-      <FormField label={t('plugin.autoAdd')} class="w-auto">
-        <FormSwitch
-          checked={props.config.autoAdd}
-          onChange={(checked: boolean) =>
-            props.onCommit({ ...props.config, autoAdd: checked })
-          }
-        />
-      </FormField>
-    </div>
-  )
-}
 
 function VoiceSpeedupGameConfigEditor(props: ConfigEditorProps<VoiceSpeedupGameConfig>) {
   const { t } = useI18n()
@@ -109,6 +93,6 @@ export const VOICE_SPEEDUP_PLUGIN: PluginDefinition<'voiceSpeedup'> = {
   },
   metaKey: 'voiceSpeedup',
   configDefaults: { speed: 1.5, provider: 'mmdevapi', arch: 'auto' },
-  MetaEditor: VoiceSpeedupMetaEditor,
+  MetaEditor: AutoAddMetaEditor,
   GameEditor: VoiceSpeedupGameConfigEditor
 }
