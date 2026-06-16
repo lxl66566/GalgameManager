@@ -72,6 +72,12 @@ export type PluginId = keyof PluginTypeMap
 export type PluginMetaOf<K extends PluginId> = PluginTypeMap[K]['meta']
 export type PluginGameConfigOf<K extends PluginId> = PluginTypeMap[K]['gameConfig']
 
+/** Union of every plugin's per-game config (autoUpload has none, so it is
+ *  excluded by `NonNullable`). Used at the dynamic `Dynamic` dispatch
+ *  boundary where a specific editor cannot be statically correlated with its
+ *  config. */
+export type AnyGameConfig = NonNullable<PluginGameConfigOf<PluginId>>
+
 // ── Plugin definition ────────────────────────────────────────────────────────
 
 export interface PluginDefinition<K extends PluginId> {

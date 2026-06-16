@@ -6,10 +6,16 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { useI18n, type Dictionary } from '~/i18n'
 import { useConfig } from '~/store'
 import { FiChevronDown, FiChevronUp, FiExternalLink } from 'solid-icons/fi'
-import { createSignal } from 'solid-js'
+import { createSignal, type Component } from 'solid-js'
 import { Dynamic, For, Show } from 'solid-js/web'
 import { PLUGIN_REGISTRY, type AnyPluginDef } from './plugins'
-import { getPluginMeta, patchPluginMeta, type PluginId } from './plugins/types'
+import {
+  getPluginMeta,
+  patchPluginMeta,
+  type AnyGameConfig,
+  type ConfigEditorProps,
+  type PluginId
+} from './plugins/types'
 import { PLUGINS } from './registry'
 
 export default function PluginPage() {
@@ -164,11 +170,15 @@ export default function PluginPage() {
                             </p>
                             <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm p-3">
                               <Dynamic
-                                component={def.GameEditor!}
+                                component={
+                                  def.GameEditor! as Component<
+                                    ConfigEditorProps<AnyGameConfig>
+                                  >
+                                }
                                 config={
                                   (meta() as Record<string, unknown>)[
                                     'configDefaults'
-                                  ] as any
+                                  ] as AnyGameConfig
                                 }
                                 onCommit={(newDefaults: Record<string, unknown>) => {
                                   // Persists to disk: actions.mutate → save()

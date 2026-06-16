@@ -6,7 +6,11 @@ import type { PluginInstance } from '@bindings/PluginInstance'
 import type { PluginMetadatas } from '@bindings/PluginMetadatas'
 import { useI18n, type Dictionary } from '~/i18n'
 import { PLUGIN_REGISTRY, type AnyPluginDef } from '~/pages/Plugin/plugins'
-import { buildNewInstance } from '~/pages/Plugin/plugins/types'
+import {
+  buildNewInstance,
+  type AnyGameConfig,
+  type ConfigEditorProps
+} from '~/pages/Plugin/plugins/types'
 import { useConfig } from '~/store'
 import {
   FiArrowDown,
@@ -16,7 +20,7 @@ import {
   FiPlus,
   FiTrash2
 } from 'solid-icons/fi'
-import { createSignal } from 'solid-js'
+import { createSignal, type Component } from 'solid-js'
 import { Dynamic, For, Show } from 'solid-js/web'
 
 interface PluginSectionProps {
@@ -253,18 +257,18 @@ export default function PluginSection(props: PluginSectionProps) {
                     {(() => {
                       const d = def()
                       if (!d?.GameEditor) return null
+                      // The editor varies per plugin, but at this dispatch
+                      // point we only know the config is *some* game config.
+                      // Cast the component to a union-aware editor instead of
+                      // falling back to `any`, so the config stays typed.
+                      const Editor =
+                        d.GameEditor as Component<ConfigEditorProps<AnyGameConfig>>
+                      const config = (instance as { config: AnyGameConfig }).config
                       return (
                         <div class="border-t border-gray-200 dark:border-gray-600/50 px-3 py-2 bg-gray-50/50 dark:bg-gray-900/20">
                           <Dynamic
-                            component={d.GameEditor}
-                            config={
-                              (
-                                instance as {
-                                  pluginId: string
-                                  config: Record<string, unknown>
-                                }
-                              ).config as any
-                            }
+                            component={Editor}
+                            config={config}
                             onCommit={(values: Record<string, unknown>) =>
                               handleUpdateConfig(index(), values)
                             }
