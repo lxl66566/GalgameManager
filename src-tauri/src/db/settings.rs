@@ -217,6 +217,7 @@ pub enum ThemeMode {
 pub struct AppearanceConfig {
     pub theme: ThemeMode,
     pub language: String,
+    pub time_display: TimeDisplayConfig,
 }
 
 impl Default for AppearanceConfig {
@@ -224,6 +225,59 @@ impl Default for AppearanceConfig {
         Self {
             theme: ThemeMode::System,
             language: sys_locale::get_locale().unwrap_or_else(|| "en-US".to_string()),
+            time_display: Default::default(),
+        }
+    }
+}
+
+/// Which language the home-page "last played" timestamp should render
+/// in, independent of the global UI language.
+#[derive(Debug, Default, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, TS)]
+#[ts(export)]
+#[serde(rename_all = "camelCase")]
+pub enum TimeLanguage {
+    /// Follow the global UI language.
+    #[default]
+    Auto,
+    /// Force English regardless of the UI language.
+    En,
+    /// Force Simplified Chinese regardless of the UI language.
+    Zh,
+}
+
+/// Display style for the home-page "last played" timestamp.
+#[derive(Debug, Default, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, TS)]
+#[ts(export)]
+#[serde(rename_all = "camelCase")]
+pub enum TimeFormat {
+    /// "2 days ago" / "2d ago" — current behavior.
+    #[default]
+    Relative,
+    /// Fixed strftime-like formatted string (see `absolute_format`).
+    Absolute,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, TS)]
+#[ts(export)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
+pub struct TimeDisplayConfig {
+    pub language: TimeLanguage,
+    pub format: TimeFormat,
+    /// Token-based format used when `format == Absolute`.
+    ///
+    /// Supported tokens (moment/dayjs-style):
+    /// `YYYY` `YY` `MM` `DD` `HH` `mm` `ss`.
+    /// Default: `"YYYY-MM-DD HH:mm"`.
+    pub absolute_format: String,
+}
+
+impl Default for TimeDisplayConfig {
+    fn default() -> Self {
+        Self {
+            language: TimeLanguage::Auto,
+            format: TimeFormat::Relative,
+            absolute_format: "YYYY-MM-DD HH:mm".to_string(),
         }
     }
 }
