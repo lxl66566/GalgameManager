@@ -17,10 +17,16 @@ use crate::{
     plugin::{LaunchCtx, PluginConfig, Transaction, enabled_plugin_contexts, instance_config},
 };
 
-#[cfg(not(windows))]
+#[cfg(all(unix, not(target_os = "linux")))]
 mod unix;
-#[cfg(not(windows))]
+#[cfg(all(unix, not(target_os = "linux")))]
 pub use unix::*;
+
+#[cfg(target_os = "linux")]
+mod linux;
+#[cfg(target_os = "linux")]
+pub use linux::*;
+
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
@@ -49,7 +55,12 @@ impl fmt::Display for StartCtx {
 }
 
 impl StartCtx {
-    pub fn build_command(&self) -> Result<Command> {
+    /// Resolved pieces of a [`StartCtx`]: the executable, its
+    /// positional args, an optional working directory, and an optional
+    /// environment overlay. Factored into a tuple so alternative
+    /// launchers (e.g. `systemd-run`) can reuse the same resolution
+    /// logic without rebuilding a [`std::process::Command`].
+    pub fn resolved_parts(&self) -> Result<ResolvedParts> {
         let mut parts = shlex::split(&self.cmd)
             .ok_or_else(|| Error::InvalidCommand(self.cmd.clone()))?
             .into_iter();
@@ -58,6 +69,7 @@ impl StartCtx {
             .next()
             .ok_or_else(|| Error::InvalidCommand(self.cmd.clone()))?;
 
+        let args: Vec<String> = parts.collect();
         let program_path = PathBuf::from(&program);
 
         let (resolved_program, resolved_current_dir) = if program_path.is_relative() {
@@ -94,18 +106,28 @@ impl StartCtx {
             (program_path, cd)
         };
 
-        // 2. 组装并配置标准库的 Command
-        let mut cmd = Command::new(resolved_program);
+        Ok(ResolvedParts {
+            program: resolved_program,
+            args,
+            current_dir: resolved_current_dir,
+            env: self.env.clone(),
+        })
+    }
 
-        for arg in parts {
+    pub fn build_command(&self) -> Result<Command> {
+        let parts = self.resolved_parts()?;
+
+        let mut cmd = Command::new(parts.program);
+
+        for arg in parts.args {
             cmd.arg(arg);
         }
 
-        if let Some(cd) = resolved_current_dir {
+        if let Some(cd) = parts.current_dir {
             cmd.current_dir(cd);
         }
 
-        if let Some(env) = &self.env {
+        if let Some(env) = parts.env {
             for (k, v) in env {
                 cmd.env(k, v);
             }
@@ -124,6 +146,16 @@ impl StartCtx {
         let std_cmd = self.build_command()?;
         Ok(tokio::process::Command::from(std_cmd))
     }
+}
+
+/// Owned, fully-resolved view of a [`StartCtx`] used by alternative
+/// launchers (e.g. `systemd-run`) that need the program/args/cwd/env
+/// as plain values instead of a [`Command`].
+pub struct ResolvedParts {
+    pub program: PathBuf,
+    pub args: Vec<String>,
+    pub current_dir: Option<String>,
+    pub env: Option<std::collections::HashMap<String, String>>,
 }
 pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()> {
     let (plugins, metas, exe_path, current_dir) = {
