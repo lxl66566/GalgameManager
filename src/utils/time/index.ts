@@ -58,15 +58,18 @@ const displayDuration = (d: [number, number]) => {
  * home-page timestamps can be rendered in a different language than
  * the rest of the UI (the `timeDisplay.language` setting).
  */
-const RELATIVE_TIME_DICT: Record<Locale, {
-  never: string
-  justNow: string
-  minutesAgo: (n: number) => string
-  hoursAgo: (n: number) => string
-  daysAgo: (n: number) => string
-  monthsAgo: (n: number) => string
-  yearsAgo: (n: number) => string
-}> = {
+const RELATIVE_TIME_DICT: Record<
+  Locale,
+  {
+    never: string
+    justNow: string
+    minutesAgo: (n: number) => string
+    hoursAgo: (n: number) => string
+    daysAgo: (n: number) => string
+    monthsAgo: (n: number) => string
+    yearsAgo: (n: number) => string
+  }
+> = {
   'en-US': {
     never: 'Never',
     justNow: 'Just now',

@@ -33,15 +33,10 @@ export const GameItem = (props: GameItemProps) => {
   const timeLocale = createMemo(() =>
     resolveTimeLanguage(config.settings.appearance.timeDisplay.language, locale())
   )
-  const timeAgo = createRelativeTime(
-    () => props.game.lastPlayedTime,
-    t,
-    60_000,
-    {
-      locale: timeLocale,
-      config: () => config.settings.appearance.timeDisplay
-    }
-  )
+  const timeAgo = createRelativeTime(() => props.game.lastPlayedTime, t, 60_000, {
+    locale: timeLocale,
+    config: () => config.settings.appearance.timeDisplay
+  })
 
   const titleSizeClass = () => {
     const len = props.game.name.length

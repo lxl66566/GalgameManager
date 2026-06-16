@@ -246,8 +246,7 @@ export const dict = {
         formatRelative: 'Relative ("2d ago")',
         formatAbsolute: 'Absolute (custom pattern)',
         absoluteFormat: 'Absolute Pattern',
-        absoluteFormatDesc:
-          'Tokens: YYYY YY MM DD HH mm ss — e.g. "YYYY-MM-DD HH:mm"',
+        absoluteFormatDesc: 'Tokens: YYYY YY MM DD HH mm ss — e.g. "YYYY-MM-DD HH:mm"',
         absoluteFormatPlaceholder: 'YYYY-MM-DD HH:mm',
         preview: 'Preview'
       }

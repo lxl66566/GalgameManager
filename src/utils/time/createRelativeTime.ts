@@ -6,13 +6,8 @@
 // off the supplied `options` accessor.
 import type { TimeDisplayConfig } from '@bindings/TimeDisplayConfig'
 import type { Locale } from '~/i18n'
-import {
-  formatAbsoluteIso,
-  formatTimeAgo,
-  formatTimeAgoLocale,
-  type TFunc
-} from '.'
 import { createMemo, createSignal, onCleanup, type Accessor } from 'solid-js'
+import { formatAbsoluteIso, formatTimeAgo, formatTimeAgoLocale, type TFunc } from '.'
 
 export interface TimeDisplayOptions {
   /** Effective locale after resolving `timeDisplay.language`. */

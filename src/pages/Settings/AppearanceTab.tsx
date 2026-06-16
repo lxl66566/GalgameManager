@@ -7,11 +7,16 @@
 import { type ThemeMode } from '@bindings/ThemeMode'
 import { type TimeFormat } from '@bindings/TimeFormat'
 import { type TimeLanguage } from '@bindings/TimeLanguage'
-import { Select, SettingRow, SettingSection, SettingSubGroup } from '@components/ui/settings'
+import {
+  Select,
+  SettingRow,
+  SettingSection,
+  SettingSubGroup
+} from '@components/ui/settings'
 import { useColorMode } from '@kobalte/core/color-mode'
+import { formatAbsoluteIso, formatTimeAgoLocale } from '@utils/time'
 import { resolveTimeLanguage, useI18n } from '~/i18n'
 import { useConfig } from '~/store'
-import { formatAbsoluteIso, formatTimeAgoLocale } from '@utils/time'
 import { IoLanguage } from 'solid-icons/io'
 import { createMemo, type Component } from 'solid-js'
 
@@ -74,8 +79,12 @@ const TimeDisplaySection: Component = () => {
     d.setHours(d.getHours() - 50)
     return d.toISOString()
   }
-  const previewRelative = createMemo(() => formatTimeAgoLocale(previewIso(), timeLocale()))
-  const previewAbsolute = createMemo(() => formatAbsoluteIso(previewIso(), cfg().absoluteFormat))
+  const previewRelative = createMemo(() =>
+    formatTimeAgoLocale(previewIso(), timeLocale())
+  )
+  const previewAbsolute = createMemo(() =>
+    formatAbsoluteIso(previewIso(), cfg().absoluteFormat)
+  )
 
   return (
     <SettingSection title={t('settings.appearance.timeDisplay.self')}>
@@ -88,8 +97,8 @@ const TimeDisplaySection: Component = () => {
           onChange={e =>
             actions.updateSettings(
               s =>
-                (s.appearance.timeDisplay.language =
-                  e.currentTarget.value as TimeLanguage)
+                (s.appearance.timeDisplay.language = e.currentTarget
+                  .value as TimeLanguage)
             )
           }
           options={[
@@ -105,9 +114,7 @@ const TimeDisplaySection: Component = () => {
           value={cfg().format}
           onChange={e =>
             actions.updateSettings(
-              s =>
-                (s.appearance.timeDisplay.format =
-                  e.currentTarget.value as TimeFormat)
+              s => (s.appearance.timeDisplay.format = e.currentTarget.value as TimeFormat)
             )
           }
           options={[
