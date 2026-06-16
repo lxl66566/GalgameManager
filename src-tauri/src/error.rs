@@ -14,8 +14,8 @@ pub enum Error {
     #[error("Config operation error: {0}")]
     Config(#[from] config_file2::error::Error),
 
-    #[error("Clone error")]
-    Clone,
+    #[error("Cloned error: {0}")]
+    Cloned(String),
 
     #[error("Could not resolve var: {0}")]
     ResolveVar(#[from] easy_strfmt::Error),
@@ -77,14 +77,12 @@ pub enum Error {
 
 impl Clone for Error {
     fn clone(&self) -> Self {
-        match self {
-            Error::Device(e) => Error::Device(e.clone()),
-            Error::PluginCommand { plugin, .. } => Error::PluginCommand {
-                plugin,
-                source: Box::new(Self::Clone),
-            },
-            _ => Self::Clone,
-        }
+        // The underlying error types (io::Error, reqwest::Error, etc.) don't
+        // implement Clone, so a true deep clone is impossible. Instead we
+        // preserve the full formatted error message so that debugging info and
+        // the original error context are never lost (the previous impl collapsed
+        // every variant into a useless "Clone error").
+        Error::Cloned(self.to_string())
     }
 }
 
