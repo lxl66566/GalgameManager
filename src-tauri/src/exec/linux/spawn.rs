@@ -4,15 +4,16 @@
 //! every descendant of the spawned program (wrappers, helpers, the game
 //! itself) ends up in the same cgroup, which we poll via `cgroup.procs`.
 
-use std::path::{Path, PathBuf};
-use std::process::Stdio;
-use std::time::Duration;
+use std::{
+    path::{Path, PathBuf},
+    process::Stdio,
+    time::Duration,
+};
 
 use tokio::process::Command;
 
-use crate::error::{Error, Result};
-
 use super::super::StartCtx;
+use crate::error::{Error, Result};
 
 /// Heuristic check: do we have a usable user systemd manager?
 ///
@@ -20,8 +21,8 @@ use super::super::StartCtx;
 /// 1. `systemd-run` to be on `$PATH` (otherwise we can't spawn the scope).
 /// 2. `XDG_RUNTIME_DIR` to be set (systemd-run --user needs it).
 /// 3. The user manager's private socket to be present
-///    (`/run/user/$UID/systemd/private`). This is the most reliable
-///    signal that `systemctl --user` will actually talk to something.
+///    (`/run/user/$UID/systemd/private`). This is the most reliable signal that
+///    `systemctl --user` will actually talk to something.
 pub fn has_systemd_user() -> bool {
     if which("systemd-run").is_none() {
         return false;
@@ -41,11 +42,7 @@ fn which(bin: &str) -> Option<PathBuf> {
             .ok()
             .map(|m| !m.is_dir())
             .unwrap_or(false);
-        if is_exec {
-            Some(full)
-        } else {
-            None
-        }
+        if is_exec { Some(full) } else { None }
     })
 }
 
@@ -91,13 +88,10 @@ pub async fn spawn_in_scope(start_ctx: &StartCtx, unit_name: &str) -> Result<Pat
         .stdout(Stdio::null())
         .stderr(Stdio::piped());
 
-    let output = cmd
-        .output()
-        .await
-        .map_err(|e| {
-            log::warn!("systemd-run invocation failed: {e}");
-            Error::from(e)
-        })?;
+    let output = cmd.output().await.map_err(|e| {
+        log::warn!("systemd-run invocation failed: {e}");
+        Error::from(e)
+    })?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -179,5 +173,7 @@ async fn query_control_group(unit_name: &str) -> Result<String> {
 /// game loop — same effect as the child fallback.
 fn cgroup_v2_procs_path(cgroup_subpath: &str) -> PathBuf {
     let trimmed = cgroup_subpath.trim_start_matches('/');
-    Path::new("/sys/fs/cgroup").join(trimmed).join("cgroup.procs")
+    Path::new("/sys/fs/cgroup")
+        .join(trimmed)
+        .join("cgroup.procs")
 }

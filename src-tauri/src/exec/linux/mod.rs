@@ -12,20 +12,18 @@
 mod foreground;
 mod spawn;
 
-use std::path::PathBuf;
-use std::time::Duration;
+use std::{path::PathBuf, time::Duration};
 
 use chrono::TimeDelta;
 use log::{error, info, warn};
 use tauri::{AppHandle, Emitter as _};
 use tokio::{sync::oneshot, time};
 
+use super::StartCtx;
 use crate::{
     db::CONFIG,
     error::{Error, Result},
 };
-
-use super::StartCtx;
 
 /// How often the foreground state is sampled while a game is running.
 const POLL_INTERVAL: Duration = Duration::from_secs(1);
@@ -34,14 +32,13 @@ const SAVE_INTERVAL: TimeDelta = TimeDelta::seconds(60);
 
 /// Tracking strategy chosen at launch time.
 ///
-/// * `Systemd` — preferred when a user systemd session is available. We
-///   spawn the game inside a transient scope via `systemd-run --user
-///   --scope --no-block`, then poll the scope's `cgroup.procs` to know
-///   whether the game is still running and whether the focused window
-///   belongs to it.
+/// * `Systemd` — preferred when a user systemd session is available. We spawn
+///   the game inside a transient scope via `systemd-run --user --scope
+///   --no-block`, then poll the scope's `cgroup.procs` to know whether the game
+///   is still running and whether the focused window belongs to it.
 ///
-/// * `Child` — fallback for systems without systemd (or when spawning
-///   the scope fails). Behaves like the legacy unix implementation.
+/// * `Child` — fallback for systems without systemd (or when spawning the scope
+///   fails). Behaves like the legacy unix implementation.
 pub enum GameTracker {
     Systemd { procs_path: PathBuf },
     Child { child: tokio::process::Child },

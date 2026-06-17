@@ -3,11 +3,11 @@
 //! Two strategies are wired up today, composed via [`CompositeDetector`]:
 //!
 //! * [`x11::X11Detector`] — synchronous EWMH query. Works under X11 and
-//!   XWayland, but only sees X clients. Always worth trying because the
-//!   query is essentially free (one round-trip).
-//! * [`atspi::AtspiDetector`] — listens to AT-SPI focus events over
-//!   D-Bus. Works on both Wayland and X11 compositors that ship the
-//!   accessibility service (GNOME, KDE, ...).
+//!   XWayland, but only sees X clients. Always worth trying because the query
+//!   is essentially free (one round-trip).
+//! * [`atspi::AtspiDetector`] — listens to AT-SPI focus events over D-Bus.
+//!   Works on both Wayland and X11 compositors that ship the accessibility
+//!   service (GNOME, KDE, ...).
 //!
 //! ## Extending
 //!
@@ -98,9 +98,7 @@ fn detect() -> Arc<dyn ForegroundDetector> {
     }
 
     if detectors.is_empty() {
-        log::warn!(
-            "foreground: no detector available; precision mode will not count time"
-        );
+        log::warn!("foreground: no detector available; precision mode will not count time");
         return Arc::new(NoopDetector);
     }
     Arc::new(CompositeDetector::new(detectors))

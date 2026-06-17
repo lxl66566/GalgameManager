@@ -9,31 +9,36 @@
 //!
 //! 1. Connect to the session bus and install a D-Bus match rule for
 //!    `org.a11y.atspi.Event.Object.StateChanged:focused`.
-//! 2. Whenever such a signal arrives, record the sender's unique bus
-//!    name and resolve it to a unix PID via
+//! 2. Whenever such a signal arrives, record the sender's unique bus name and
+//!    resolve it to a unix PID via
 //!    `org.freedesktop.DBus.GetConnectionUnixProcessID`.
-//! 3. Cache that name→PID mapping so subsequent focus events from the
-//!    same app are free. The cache is invalidated through
-//!    `NameOwnerChanged` so we never serve a stale PID after a process
-//!    exits.
+//! 3. Cache that name→PID mapping so subsequent focus events from the same app
+//!    are free. The cache is invalidated through `NameOwnerChanged` so we never
+//!    serve a stale PID after a process exits.
 //!
 //! The listener runs on a dedicated OS thread with its own current-
 //! thread tokio runtime. State is shared via [`AtomicU32`] +
 //! [`HashMap`]; reads from [`ForegroundDetector::focused_pid`] never
 //! block.
 
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::{Arc, OnceLock};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    sync::{
+        Arc, OnceLock,
+        atomic::{AtomicU32, Ordering},
+    },
+};
 
 use futures_util::StreamExt as _;
 use parking_lot::Mutex;
-use zbus::fdo::DBusProxy;
-use zbus::message::Type;
-use zbus::names::{BusName, UniqueName};
-use zbus::zvariant::OwnedValue;
-use zbus::{Connection, MatchRule, MessageStream};
+use zbus::{
+    Connection, MatchRule, MessageStream,
+    fdo::DBusProxy,
+    message::Type,
+    names::{BusName, UniqueName},
+    zvariant::OwnedValue,
+};
 
 use super::ForegroundDetector;
 
@@ -78,11 +83,7 @@ impl AtspiDetector {
 impl ForegroundDetector for AtspiDetector {
     fn focused_pid(&self) -> Option<u32> {
         let pid = FOCUSED_PID.load(Ordering::Relaxed);
-        if pid == 0 {
-            None
-        } else {
-            Some(pid)
-        }
+        if pid == 0 { None } else { Some(pid) }
     }
 }
 

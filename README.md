@@ -2,7 +2,7 @@
 
 简体中文 | [English](./docs/README-en.md)
 
-基于 Tauri + SolidJS 的启动器，主要用于管理与游玩 Galgame。
+基于 Tauri + SolidJS 的跨平台游戏启动器，主要用于 Galgame 的管理、游玩、计时、同步等。
 
 - 跨设备同步配置与存档
   - 当前支持本地路径、WebDAV 和 S3 作为存储后端（如果有其他后端需求，可以提 issue）
@@ -25,10 +25,12 @@
 
 ### unstable
 
+- 新功能：用户可自定义「上次游玩时间」展示绝对时间或相对时间、中文或英文
+- unix 探活优化：默认使用 systemd 启动，Cgroup 追踪进程
+- unix 前台判断优化：X11 + Wayland (AT-SPI) 探活
 - 修复：unix 平台图片显示失败
 - 性能优化：主界面 grid virtua 虚拟化
 - 重构：移除多数 panic 路径
-- 修复：对用户展示更多报错信息
 
 ### v1.1.2
 

@@ -2,8 +2,8 @@
 //!
 //! Implements the EWMH dance described by the task:
 //!
-//! 1. Read `_NET_ACTIVE_WINDOW` on the root window — gives us the XID
-//!    of the focused window.
+//! 1. Read `_NET_ACTIVE_WINDOW` on the root window — gives us the XID of the
+//!    focused window.
 //! 2. Read `_NET_WM_PID` on that window — gives us its PID.
 //!
 //! Both round-trips happen lazily on each [`focused_pid`] call, so
@@ -12,10 +12,12 @@
 
 use std::sync::Arc;
 
-use x11rb::connection::Connection as _;
-use x11rb::errors::ReplyError;
-use x11rb::protocol::xproto::{AtomEnum, ConnectionExt as _, GetPropertyReply};
-use x11rb::rust_connection::RustConnection;
+use x11rb::{
+    connection::Connection as _,
+    errors::ReplyError,
+    protocol::xproto::{AtomEnum, ConnectionExt as _, GetPropertyReply},
+    rust_connection::RustConnection,
+};
 
 use super::ForegroundDetector;
 
@@ -95,18 +97,15 @@ impl X11Detector {
         property: u32,
         kind: u32,
     ) -> Result<GetPropertyReply, ReplyError> {
-        self.conn.get_property(
-            false,
-            window,
-            property,
-            kind,
-            0,
-            // We only ever need one element. Long-length in x11rb is
-            // measured in 4-byte units, so `1` is enough for both XID
-            // (CARDINAL=32-bit) and PID (CARDINAL).
-            1,
-        )?
-        .reply()
+        self.conn
+            .get_property(
+                false, window, property, kind, 0,
+                // We only ever need one element. Long-length in x11rb is
+                // measured in 4-byte units, so `1` is enough for both XID
+                // (CARDINAL=32-bit) and PID (CARDINAL).
+                1,
+            )?
+            .reply()
     }
 }
 

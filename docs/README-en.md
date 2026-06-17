@@ -2,7 +2,7 @@
 
 [简体中文](../README.md) | English
 
-A game launcher based on Tauri + SolidJS, primarily designed for managing and playing Galgame.
+A cross-platform game launcher based on Tauri + SolidJS, designed for managing, playing, tracking, and syncing Galgame.
 
 - Synchronize configurations and saves across devices
   - Currently supports local paths, WebDAV, and S3 as storage backends (if you need other backends, feel free to open an issue)
@@ -22,6 +22,15 @@ A game launcher based on Tauri + SolidJS, primarily designed for managing and pl
 ![Plugin Management](../assets/plugin.png)
 
 ## Changelog
+
+### unstable
+
+- New feature: Users can customize the display format of "Last Played Time" (absolute or relative time, Chinese or English)
+- Unix process monitoring optimization: default to systemd launch, Cgroup process tracking
+- Unix foreground detection optimization: X11 + Wayland (AT-SPI) probing
+- Fix: Unix platform image display failure
+- Performance optimization: main page grid virtualization
+- Refactor: remove most panic paths
 
 ### v1.1.2
 

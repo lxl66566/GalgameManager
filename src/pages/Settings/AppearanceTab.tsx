@@ -126,7 +126,10 @@ const TimeDisplaySection: Component = () => {
                 )
               }
               options={[
-                { label: t('settings.appearance.timeDisplay.languageAuto'), value: 'auto' },
+                {
+                  label: t('settings.appearance.timeDisplay.languageAuto'),
+                  value: 'auto'
+                },
                 { label: 'English', value: 'en' },
                 { label: '简体中文', value: 'zh' }
               ]}
@@ -160,10 +163,7 @@ const TimeDisplaySection: Component = () => {
       )}
 
       <SettingSubGroup>
-        <SettingRow
-          label={t('settings.appearance.timeDisplay.preview')}
-          indent
-        >
+        <SettingRow label={t('settings.appearance.timeDisplay.preview')} indent>
           <span class="text-sm font-mono text-gray-700 dark:text-gray-200">
             {cfg().format === 'absolute' ? previewAbsolute() : previewRelative()}
           </span>

@@ -254,8 +254,7 @@ export const dict = {
     launch: {
       timestat: 'Time Stat',
       precisionMode: 'Precision Mode',
-      precisionModeDesc:
-        'Only count time spent in foreground when window is focused. (Windows only)'
+      precisionModeDesc: 'Only count time spent in foreground when window is focused.'
     },
     device: {
       deviceIdentity: 'Device Identity',

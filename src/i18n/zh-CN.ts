@@ -256,7 +256,7 @@ export const dict: DeepPartial<RawDictionary> = {
     launch: {
       timestat: '时长统计',
       precisionMode: '精确模式',
-      precisionModeDesc: '开启后只计算游戏在前台游玩的时长（窗口焦点时长），仅限 Windows'
+      precisionModeDesc: '开启后只计算游戏在前台游玩的时长（窗口焦点时长）'
     },
     device: {
       deviceIdentity: '设备信息',
