@@ -143,34 +143,73 @@ pub async fn spawn_in_scope(start_ctx: &StartCtx, unit_name: &str) -> Result<Opt
     // descriptors. If we pipe stderr, the game holds the pipe open and
     // `output()` blocks until the game exits — by which time the scope is
     // already gone and cgroup tracking fails. With `stderr=null` the game
-    // inherits `/dev/null`, and `systemd-run --no-block` returns almost
-    // immediately after registering the scope.
+    // inherits `/dev/null`.
     cmd.stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
 
-    let status = cmd.status().await.map_err(|e| {
+    let mut child = cmd.spawn().map_err(|e| {
         log::warn!("systemd-run invocation failed: {e}");
         Error::from(e)
     })?;
 
-    if !status.success() {
-        log::warn!(
-            "systemd-run exited with {:?} (stderr suppressed; check `journalctl --user-unit {}` for details)",
-            status.code(),
-            unit_name
-        );
-        return Err(Error::Cloned(format!(
-            "systemd-run exited with status {:?}",
-            status.code()
-        )));
+    // Do NOT synchronously wait for systemd-run to exit. With some
+    // systemd versions `--no-block` does not actually decouple the
+    // launcher from the scope's lifetime, so `wait()` would block for
+    // the entire game session — by the time it returned the spawn log
+    // would fire, the UI would never see `game://spawn` until the game
+    // was already gone, and cgroup tracking would race with scope
+    // teardown.
+    //
+    // Instead we briefly poll for an immediate failure (bad args, D-Bus
+    // error, scope name conflict, ...). If systemd-run is still alive
+    // after the timeout, the scope was registered successfully and we
+    // move on; a background task reaps the orphaned parent to avoid a
+    // zombie.
+    const SYSTEMD_RUN_PROBE: Duration = Duration::from_millis(500);
+    match tokio::time::timeout(SYSTEMD_RUN_PROBE, child.wait()).await {
+        Ok(Ok(status)) if !status.success() => {
+            log::warn!(
+                "systemd-run exited with {:?} (stderr suppressed; check `journalctl --user-unit {}` for details)",
+                status.code(),
+                unit_name
+            );
+            return Err(Error::Cloned(format!(
+                "systemd-run exited with status {:?}",
+                status.code()
+            )));
+        }
+        Ok(Ok(_)) => {
+            // Clean exit: scope registered, game forking. Proceed.
+        }
+        Ok(Err(e)) => {
+            log::warn!("systemd-run wait failed: {e}");
+            return Err(Error::from(e));
+        }
+        Err(_) => {
+            // Timeout: systemd-run is still alive (blocking on the scope
+            // lifetime). Move it to a background reaper and continue.
+            log::debug!(
+                "systemd-run still running after {SYSTEMD_RUN_PROBE:?} (expected with --scope); \
+                 proceeding with scope tracking in the background"
+            );
+            tokio::spawn(async move {
+                if let Err(e) = child.wait().await {
+                    log::debug!("systemd-run background reap failed: {e}");
+                }
+            });
+        }
     }
 
     // Best-effort cgroup resolution. The scope was registered, but on
     // some systemd configurations `ControlGroup` may be briefly empty or
     // the cgroup v2 layout differs. Degrade to unit-liveness polling
     // instead of failing the whole launch.
-    let cgroup_subpath = match retry_find_cgroup(unit_name, 10, Duration::from_millis(25)).await {
+    //
+    // The budget is generous (20 × 50 ms = 1 s) because we no longer
+    // block on systemd-run's exit — registration can still be in flight
+    // right after the probe timeout.
+    let cgroup_subpath = match retry_find_cgroup(unit_name, 20, Duration::from_millis(50)).await {
         Ok(cg) => cg,
         Err(e) => {
             log::warn!(
