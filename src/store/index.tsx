@@ -172,6 +172,20 @@ const DEFAULT_CONFIG: Config = {
       configDefaults: {
         arch: 'auto'
       }
+    },
+    wine: {
+      enabled: true,
+      autoAdd: false,
+      configDefaults: {
+        prefix: '',
+        arch: 'win64',
+        esync: false,
+        fsync: false,
+        dllOverrides: {},
+        locale: '',
+        killWineserverOnExit: false,
+        extraEnv: {}
+      }
     }
   }
 }

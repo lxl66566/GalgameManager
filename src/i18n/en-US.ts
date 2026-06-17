@@ -187,7 +187,26 @@ export const dict = {
     voiceZerointerrupt: {
       name: 'ZeroInterrupt',
       description: 'Prevent voice interruption in games (dsound games only)'
-    }
+    },
+    wine: {
+      name: 'Wine',
+      description: 'Run Windows games through Wine on Linux',
+      prefix: 'Wine Prefix',
+      prefixDesc: 'WINEPREFIX path. Leave empty for the default (~/.wine). Supports ~ and {variables}',
+      prefixPlaceholder: '~/.wine',
+      arch: 'Architecture',
+      esync: 'Esync',
+      fsync: 'Fsync',
+      locale: 'Locale',
+      localePlaceholder: 'e.g. ja_JP.UTF-8',
+      dllOverrides: 'DLL Overrides',
+      addDllOverride: 'Add Override',
+      killWineserver: 'Kill Wineserver on Exit',
+      killWineserverDesc: 'Run wineserver -k after the game exits to tear down the prefix',
+      extraEnv: 'Extra Environment Variables',
+      addEnv: 'Add Variable'
+    },
+    unavailableOnPlatform: 'Platform inactive'
   },
   settings: {
     self: 'Settings',

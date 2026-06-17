@@ -13,6 +13,7 @@ import { TRANSLATOR_PLUGIN } from './TranslatorConfigEditor'
 import type { AnyPluginDef } from './types'
 import { VOICE_SPEEDUP_PLUGIN } from './VoiceSpeedupConfigEditor'
 import { VOICE_ZEROINTERRUPT_PLUGIN } from './VoiceZerointerruptConfigEditor'
+import { WINE_PLUGIN } from './WineConfigEditor'
 
 export const PLUGIN_REGISTRY: readonly AnyPluginDef[] = [
   EXECUTE_PLUGIN,
@@ -21,7 +22,8 @@ export const PLUGIN_REGISTRY: readonly AnyPluginDef[] = [
   LOCALE_EMULATOR_PLUGIN,
   TRANSLATOR_PLUGIN,
   VOICE_SPEEDUP_PLUGIN,
-  VOICE_ZEROINTERRUPT_PLUGIN
+  VOICE_ZEROINTERRUPT_PLUGIN,
+  WINE_PLUGIN
 ]
 
 export {
@@ -37,3 +39,4 @@ export { LOCALE_EMULATOR_PLUGIN } from './LocaleEmulatorConfigEditor'
 export { TRANSLATOR_PLUGIN } from './TranslatorConfigEditor'
 export { VOICE_SPEEDUP_PLUGIN } from './VoiceSpeedupConfigEditor'
 export { VOICE_ZEROINTERRUPT_PLUGIN } from './VoiceZerointerruptConfigEditor'
+export { WINE_PLUGIN } from './WineConfigEditor'

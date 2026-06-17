@@ -89,7 +89,8 @@ export const VOICE_SPEEDUP_PLUGIN: PluginDefinition<'voiceSpeedup'> = {
         label: 'GitHub',
         url: 'https://github.com/lxl66566/AudioSpeedHack'
       }
-    ]
+    ],
+    platforms: ['windows']
   },
   metaKey: 'voiceSpeedup',
   configDefaults: { speed: 1.5, provider: 'mmdevapi', arch: 'auto' },

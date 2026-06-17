@@ -157,3 +157,36 @@ mod win_impl {
 
 #[cfg(windows)]
 pub use win_impl::VoiceSpeedupPlugin;
+
+// ── Handler stub (non-Windows) ──────────────────────────────────────────────
+
+// On non-Windows platforms the handler is a silent no-op so that the plugin
+// remains visible and configurable without breaking game launches.
+#[cfg(not(windows))]
+mod stub_impl {
+    use crate::{error::Result, plugin::{PluginConfig, PluginContext, PluginHandler}};
+
+    pub struct VoiceSpeedupPlugin;
+
+    impl VoiceSpeedupPlugin {
+        pub fn new() -> Self {
+            Self
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl PluginHandler for VoiceSpeedupPlugin {
+        async fn before_game_start(&self, ctx: PluginContext) -> Result<()> {
+            if let PluginConfig::VoiceSpeedup(_) = &*ctx.config {
+                log::warn!(
+                    "VoiceSpeedup: dll injection is Windows-only, skipping for game {}",
+                    ctx.launch.game_id
+                );
+            }
+            Ok(())
+        }
+    }
+}
+
+#[cfg(not(windows))]
+pub use stub_impl::VoiceSpeedupPlugin;

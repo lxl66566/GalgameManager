@@ -7,6 +7,7 @@ mod transaction;
 mod translator;
 mod voice_speedup;
 mod voice_zerointerrupt;
+mod wine;
 
 use std::{
     collections::HashMap,
@@ -16,11 +17,12 @@ use std::{
 
 // Re-export all public config types for downstream convenience.
 pub use config::{
-    ArchPreference, AutoUploadPluginMeta, ExecuteGameConfig, ExecutePhase, ExecutePluginMeta,
-    ExitSignal, GameWrapperGameConfig, GameWrapperPluginMeta, LocaleEmulatorGameConfig,
-    LocaleEmulatorPluginMeta, PluginConfig, PluginInstance, PluginMetadatas, SpeedupProvider,
-    TranslatorGameConfig, TranslatorPluginMeta, VoiceSpeedupGameConfig, VoiceSpeedupPluginMeta,
-    VoiceZerointerruptGameConfig, VoiceZerointerruptPluginMeta,
+    ArchPreference, AutoUploadPluginMeta, DllOverride, ExecuteGameConfig, ExecutePhase,
+    ExecutePluginMeta, ExitSignal, GameWrapperGameConfig, GameWrapperPluginMeta,
+    LocaleEmulatorGameConfig, LocaleEmulatorPluginMeta, PluginConfig, PluginInstance,
+    PluginMetadatas, SpeedupProvider, TranslatorGameConfig, TranslatorPluginMeta,
+    VoiceSpeedupGameConfig, VoiceSpeedupPluginMeta, VoiceZerointerruptGameConfig,
+    VoiceZerointerruptPluginMeta, WineArch, WineGameConfig, WinePluginMeta,
 };
 use serde::Deserialize;
 use tauri::AppHandle;
@@ -199,12 +201,11 @@ impl PluginRegistry {
             locale_emulator::LocaleEmulatorPlugin::new()
         );
         register!(translator::PLUGIN_ID, translator::TranslatorPlugin::new());
-        #[cfg(windows)]
+        register!(wine::PLUGIN_ID, wine::WinePlugin::new());
         register!(
             voice_speedup::PLUGIN_ID,
             voice_speedup::VoiceSpeedupPlugin::new()
         );
-        #[cfg(windows)]
         register!(
             voice_zerointerrupt::PLUGIN_ID,
             voice_zerointerrupt::VoiceZerointerruptPlugin::new()
@@ -245,6 +246,7 @@ pub(crate) fn instance_config(instance: &PluginInstance) -> PluginConfig {
         PluginInstance::GameWrapper { config } => PluginConfig::GameWrapper(config.clone()),
         PluginInstance::LocaleEmulator { config } => PluginConfig::LocaleEmulator(config.clone()),
         PluginInstance::Translator { config } => PluginConfig::Translator(config.clone()),
+        PluginInstance::Wine { config } => PluginConfig::Wine(config.clone()),
     }
 }
 

@@ -5,6 +5,7 @@ import type { LocaleEmulatorGameConfig } from "./LocaleEmulatorGameConfig";
 import type { TranslatorGameConfig } from "./TranslatorGameConfig";
 import type { VoiceSpeedupGameConfig } from "./VoiceSpeedupGameConfig";
 import type { VoiceZerointerruptGameConfig } from "./VoiceZerointerruptGameConfig";
+import type { WineGameConfig } from "./WineGameConfig";
 
 /**
  * A plugin instance attached to a game.
@@ -20,4 +21,5 @@ export type PluginInstance =
   | { "pluginId": "voiceZerointerrupt"; config: VoiceZerointerruptGameConfig }
   | { "pluginId": "gameWrapper"; config: GameWrapperGameConfig }
   | { "pluginId": "localeEmulator"; config: LocaleEmulatorGameConfig }
-  | { "pluginId": "translator"; config: TranslatorGameConfig };
+  | { "pluginId": "translator"; config: TranslatorGameConfig }
+  | { "pluginId": "wine"; config: WineGameConfig };

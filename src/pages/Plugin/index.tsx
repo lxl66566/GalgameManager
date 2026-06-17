@@ -9,13 +9,7 @@ import { FiChevronDown, FiChevronUp, FiExternalLink } from 'solid-icons/fi'
 import { createSignal, type Component } from 'solid-js'
 import { Dynamic, For, Show } from 'solid-js/web'
 import { PLUGIN_REGISTRY, type AnyPluginDef } from './plugins'
-import {
-  getPluginMeta,
-  patchPluginMeta,
-  type AnyGameConfig,
-  type ConfigEditorProps,
-  type PluginId
-} from './plugins/types'
+import { getPluginMeta, isPluginAvailable, patchPluginMeta, type AnyGameConfig, type ConfigEditorProps, type PluginId } from './plugins/types'
 import { PLUGINS } from './registry'
 
 export default function PluginPage() {
@@ -74,6 +68,11 @@ export default function PluginPage() {
                           <span class="text-[10px] text-gray-400 dark:text-gray-500">
                             v{def.info.version}
                           </span>
+                          <Show when={!isPluginAvailable(def.info)}>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 select-none">
+                              {t('plugin.unavailableOnPlatform')}
+                            </span>
+                          </Show>
                         </div>
                         <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
                           {String(t(def.info.descriptionKey as keyof Dictionary))}

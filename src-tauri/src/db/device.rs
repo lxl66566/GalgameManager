@@ -37,8 +37,30 @@ pub trait ResolveVar {
 
 impl ResolveVar for VarMap {
     fn resolve_var(&self, s: &str) -> Result<String> {
-        Ok(strfmt(s, self)?)
+        let formatted = strfmt(s, self)?;
+        Ok(expand_tilde(&formatted))
     }
+}
+
+/// Expand a leading `~` / `~/` to the user's home directory.
+///
+/// Applied *after* [`strfmt`] so that variables whose values contain `~`
+/// (e.g. `{home}/games` → `~/games`) are also expanded. Only a leading
+/// tilde is expanded; `~user` and tildes mid-string are left untouched.
+fn expand_tilde(s: &str) -> String {
+    let Some(home) = home::home_dir() else {
+        return s.to_string();
+    };
+    if s == "~" {
+        return home.to_string_lossy().into_owned();
+    }
+    if let Some(rest) = s.strip_prefix("~/") {
+        let mut out = home.to_string_lossy().into_owned();
+        out.push('/');
+        out.push_str(rest);
+        return out;
+    }
+    s.to_string()
 }
 
 fn get_current_device_uid() -> Result<String> {

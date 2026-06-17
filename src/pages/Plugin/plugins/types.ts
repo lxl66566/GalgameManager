@@ -20,9 +20,15 @@ import type { VoiceSpeedupGameConfig } from '@bindings/VoiceSpeedupGameConfig'
 import type { VoiceSpeedupPluginMeta } from '@bindings/VoiceSpeedupPluginMeta'
 import type { VoiceZerointerruptGameConfig } from '@bindings/VoiceZerointerruptGameConfig'
 import type { VoiceZerointerruptPluginMeta } from '@bindings/VoiceZerointerruptPluginMeta'
+import type { WineGameConfig } from '@bindings/WineGameConfig'
+import type { WinePluginMeta } from '@bindings/WinePluginMeta'
 import type { Component } from 'solid-js'
+import { isLinux, isWindows } from '~/utils/platform'
 
 // ── Plugin info (presentation metadata, frontend-only) ────────────────────────
+
+/** Platforms on which a plugin's handler has a real (non no-op) effect. */
+export type PluginPlatform = 'windows' | 'linux'
 
 export interface PluginInfo {
   id: string
@@ -31,6 +37,11 @@ export interface PluginInfo {
   version: string
   author: string
   links: ReadonlyArray<{ label: string; url: string }>
+  /**
+   * Platforms where the plugin has a real effect. When omitted the plugin
+   * works everywhere. Used to show an "unavailable on this platform" hint.
+   */
+  platforms?: ReadonlyArray<PluginPlatform>
 }
 
 // ── Config editor component props ────────────────────────────────────────────
@@ -66,6 +77,7 @@ export interface PluginTypeMap {
   gameWrapper: { meta: GameWrapperPluginMeta; gameConfig: GameWrapperGameConfig }
   localeEmulator: { meta: LocaleEmulatorPluginMeta; gameConfig: LocaleEmulatorGameConfig }
   translator: { meta: TranslatorPluginMeta; gameConfig: TranslatorGameConfig }
+  wine: { meta: WinePluginMeta; gameConfig: WineGameConfig }
 }
 
 export type PluginId = keyof PluginTypeMap
@@ -125,4 +137,10 @@ export function resolveGameConfig(def: AnyPluginDef, metas: PluginMetadatas): un
     return { ...userDefaults }
   }
   return def.configDefaults ? { ...(def.configDefaults as object) } : undefined
+}
+
+/** Whether a plugin has a real (non no-op) effect on the current platform. */
+export function isPluginAvailable(info: PluginInfo): boolean {
+  if (!info.platforms) return true
+  return info.platforms.some(p => (p === 'windows' && isWindows) || (p === 'linux' && isLinux))
 }

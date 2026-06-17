@@ -43,6 +43,7 @@ pub use super::{
     translator::{TranslatorGameConfig, TranslatorPluginMeta},
     voice_speedup::{SpeedupProvider, VoiceSpeedupGameConfig, VoiceSpeedupPluginMeta},
     voice_zerointerrupt::{VoiceZerointerruptGameConfig, VoiceZerointerruptPluginMeta},
+    wine::{DllOverride, WineArch, WineGameConfig, WinePluginMeta},
 };
 
 // ── Plugin instance (tagged union)
@@ -81,6 +82,10 @@ pub enum PluginInstance {
         #[serde(default)]
         config: TranslatorGameConfig,
     },
+    Wine {
+        #[serde(default)]
+        config: WineGameConfig,
+    },
 }
 
 impl PluginInstance {
@@ -95,6 +100,7 @@ impl PluginInstance {
             Self::GameWrapper { .. } => super::game_wrapper::PLUGIN_ID,
             Self::LocaleEmulator { .. } => super::locale_emulator::PLUGIN_ID,
             Self::Translator { .. } => super::translator::PLUGIN_ID,
+            Self::Wine { .. } => super::wine::PLUGIN_ID,
         }
     }
 }
@@ -116,6 +122,7 @@ pub struct PluginMetadatas {
     pub game_wrapper: GameWrapperPluginMeta,
     pub locale_emulator: LocaleEmulatorPluginMeta,
     pub translator: TranslatorPluginMeta,
+    pub wine: WinePluginMeta,
 }
 
 impl PluginMetadatas {
@@ -129,6 +136,7 @@ impl PluginMetadatas {
             PluginInstance::GameWrapper { .. } => self.game_wrapper.enabled,
             PluginInstance::LocaleEmulator { .. } => self.locale_emulator.enabled,
             PluginInstance::Translator { .. } => self.translator.enabled,
+            PluginInstance::Wine { .. } => self.wine.enabled,
         }
     }
 }
@@ -145,4 +153,5 @@ pub enum PluginConfig {
     GameWrapper(GameWrapperGameConfig),
     LocaleEmulator(LocaleEmulatorGameConfig),
     Translator(TranslatorGameConfig),
+    Wine(WineGameConfig),
 }

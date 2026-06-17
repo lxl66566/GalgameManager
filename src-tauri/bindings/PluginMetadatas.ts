@@ -6,6 +6,7 @@ import type { LocaleEmulatorPluginMeta } from "./LocaleEmulatorPluginMeta";
 import type { TranslatorPluginMeta } from "./TranslatorPluginMeta";
 import type { VoiceSpeedupPluginMeta } from "./VoiceSpeedupPluginMeta";
 import type { VoiceZerointerruptPluginMeta } from "./VoiceZerointerruptPluginMeta";
+import type { WinePluginMeta } from "./WinePluginMeta";
 
 /**
  * Per-plugin-type metadata, keyed by plugin ID.
@@ -21,4 +22,5 @@ export type PluginMetadatas = {
   gameWrapper: GameWrapperPluginMeta;
   localeEmulator: LocaleEmulatorPluginMeta;
   translator: TranslatorPluginMeta;
+  wine: WinePluginMeta;
 };

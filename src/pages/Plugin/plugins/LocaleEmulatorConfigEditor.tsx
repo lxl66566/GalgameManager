@@ -51,7 +51,8 @@ export const LOCALE_EMULATOR_PLUGIN: PluginDefinition<'localeEmulator'> = {
         label: 'GitHub',
         url: 'https://github.com/xupefei/Locale-Emulator'
       }
-    ]
+    ],
+    platforms: ['windows']
   },
   metaKey: 'localeEmulator',
   configDefaults: {

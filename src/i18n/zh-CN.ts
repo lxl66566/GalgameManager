@@ -190,7 +190,26 @@ export const dict: DeepPartial<RawDictionary> = {
     voiceZerointerrupt: {
       name: 'ZeroInterrupt',
       description: '阻止游戏打断语音（仅限 dsound 游戏）'
-    }
+    },
+    wine: {
+      name: 'Wine',
+      description: '在 Linux 上通过 Wine 运行 Windows 游戏',
+      prefix: 'Wine 前缀',
+      prefixDesc: 'WINEPREFIX 路径。留空使用默认值（~/.wine）。支持 ~ 和 {变量}',
+      prefixPlaceholder: '~/.wine',
+      arch: '架构',
+      esync: 'Esync',
+      fsync: 'Fsync',
+      locale: '区域',
+      localePlaceholder: '如 ja_JP.UTF-8',
+      dllOverrides: 'DLL 覆盖',
+      addDllOverride: '添加覆盖',
+      killWineserver: '退出时关闭 Wineserver',
+      killWineserverDesc: '游戏退出后执行 wineserver -k 以清理 prefix',
+      extraEnv: '额外环境变量',
+      addEnv: '添加变量'
+    },
+    unavailableOnPlatform: '当前平台不生效'
   },
   settings: {
     self: '设置',
