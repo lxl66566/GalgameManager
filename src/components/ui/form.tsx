@@ -369,6 +369,11 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
 
 // ─── FormTableEditor ────────────────────────────────────────────────────────
 
+export interface FormTableEditorValueOption {
+  label: string
+  value: string
+}
+
 export interface FormTableEditorProps {
   /** Current key-value pairs */
   values: Record<string, string>
@@ -384,4 +389,12 @@ export interface FormTableEditorProps {
   /** Empty-state placeholder text */
   emptyText?: string
   class?: string
+  /**
+   * Fixed set of allowed values. When provided, the value cell renders as
+   * a `<select>` rather than a free-form `<textarea>`, useful for enum
+   * types such as Wine DLL overrides.
+   */
+  valueOptions?: readonly FormTableEditorValueOption[]
+  /** Placeholder for the value input when `valueOptions` is not provided. */
+  valuePlaceholder?: string
 }

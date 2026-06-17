@@ -46,6 +46,49 @@ fn which(bin: &str) -> Option<PathBuf> {
     })
 }
 
+/// Pre-flight check that the resolved program is actually reachable.
+///
+/// Returns `Error::Launch` ("executable not found") for programs that
+/// cannot be launched, so the caller can distinguish user-side config
+/// errors from systemd-side issues. We deliberately keep this heuristic
+/// cheap: a bare name is searched on `$PATH`, an absolute path must
+/// exist, and a relative path with a separator is checked against
+/// `current_dir` when one is set.
+fn validate_program_findable(program: &Path, current_dir: Option<&str>) -> Result<()> {
+    let prog_str = program.to_string_lossy();
+    if program.is_absolute() {
+        if program.exists() {
+            return Ok(());
+        }
+        log::warn!("validate_program_findable: absolute path not found: {prog_str}");
+        return Err(Error::Launch);
+    }
+    let has_sep = prog_str.contains('/') || prog_str.contains('\\');
+    if !has_sep {
+        // Bare command name — must be on $PATH.
+        if which(&prog_str).is_some() {
+            return Ok(());
+        }
+        log::warn!("validate_program_findable: '{prog_str}' not found on PATH");
+        return Err(Error::Launch);
+    }
+    // Relative path with a separator — resolve against current_dir if any.
+    if let Some(cd) = current_dir {
+        let joined = Path::new(cd).join(program);
+        if joined.exists() {
+            return Ok(());
+        }
+        log::warn!(
+            "validate_program_findable: relative path '{}' not found under '{}'",
+            prog_str,
+            cd
+        );
+        return Err(Error::Launch);
+    }
+    // No current_dir to resolve against — let the launcher try.
+    Ok(())
+}
+
 /// Best-effort UID discovery.
 ///
 /// We avoid pulling in `libc` just for `getuid()`: the runtime dir
@@ -60,11 +103,19 @@ fn current_uid() -> Option<u32> {
 /// returning the absolute path of the unit's `cgroup.procs` file so the
 /// caller can poll process membership.
 ///
-/// On any failure the caller is expected to fall back to direct
-/// [`tokio::process::Command::spawn`] — we never block or hang waiting
-/// for systemd here.
+/// On any failure the caller is expected to decide on a fallback strategy
+/// based on the error variant — IO errors mean `systemd-run` itself is
+/// unavailable (transient, safe to fall back to direct spawn); everything
+/// else (executable not found, invalid env, scope creation failure) is
+/// surfaced to the user instead of being silently masked.
 pub async fn spawn_in_scope(start_ctx: &StartCtx, unit_name: &str) -> Result<PathBuf> {
     let parts = start_ctx.resolved_parts()?;
+
+    // Pre-validate the program is actually findable. `systemd-run`'s own
+    // "executable not found" failure is indistinguishable from real
+    // systemd-side issues at the caller side, so we surface it eagerly as
+    // `Error::Launch` (which the caller treats as non-fallbackable).
+    validate_program_findable(&parts.program, parts.current_dir.as_deref())?;
 
     let mut cmd = Command::new("systemd-run");
     cmd.arg("--user")
@@ -100,7 +151,13 @@ pub async fn spawn_in_scope(start_ctx: &StartCtx, unit_name: &str) -> Result<Pat
             output.status.code(),
             stderr.trim()
         );
-        return Err(Error::Launch);
+        // systemd-side failure after a successful invocation: surface it
+        // so the user sees the real reason instead of a misleading
+        // fallback to direct spawn.
+        return Err(Error::Cloned(format!(
+            "systemd-run failed: {}",
+            stderr.trim()
+        )));
     }
 
     // systemd-run with --no-block returns before the unit is fully

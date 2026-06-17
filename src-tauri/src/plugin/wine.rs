@@ -61,7 +61,7 @@ impl DllOverride {
 }
 
 /// Per-game config for the Wine plugin.
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", default)]
 pub struct WineGameConfig {
     /// `WINEPREFIX` path. Supports `~` and `{variables}`. Empty falls back
@@ -81,21 +81,6 @@ pub struct WineGameConfig {
     pub kill_wineserver_on_exit: bool,
     /// Additional env vars, applied on top of the Wine-derived ones.
     pub extra_env: HashMap<String, String>,
-}
-
-impl Default for WineGameConfig {
-    fn default() -> Self {
-        Self {
-            prefix: String::new(),
-            arch: WineArch::default(),
-            esync: false,
-            fsync: false,
-            dll_overrides: BTreeMap::new(),
-            locale: String::new(),
-            kill_wineserver_on_exit: false,
-            extra_env: HashMap::new(),
-        }
-    }
 }
 
 /// Global metadata for the Wine plugin (stored in `PluginMetadatas`).

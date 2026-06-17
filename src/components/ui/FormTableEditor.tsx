@@ -4,6 +4,11 @@ import { FiPlusCircle } from 'solid-icons/fi'
 import { createSignal, For, Show, type Component } from 'solid-js'
 import toast from 'solid-toast'
 
+export interface FormTableEditorValueOption {
+  label: string
+  value: string
+}
+
 export interface FormTableEditorProps {
   values: Record<string, string>
   onCommit: (values: Record<string, string>) => void
@@ -13,10 +18,22 @@ export interface FormTableEditorProps {
   class?: string
   labelClass?: string
   emptyText?: string
+  /**
+   * Fixed set of allowed values. When provided, the value cell renders as
+   * a `<select>` rather than a free-form `<textarea>`, useful for enum
+   * types such as Wine DLL overrides. The first option is used as the
+   * default for newly added rows.
+   */
+  valueOptions?: readonly FormTableEditorValueOption[]
+  /** Placeholder for the value input when `valueOptions` is not provided. */
+  valuePlaceholder?: string
 }
 
 /**
  * Inline key-value pair editor.
+ *
+ * Values are free-form strings by default. Pass `valueOptions` to
+ * constrain values to a fixed enum (rendered as a dropdown).
  */
 export const FormTableEditor: Component<FormTableEditorProps> = props => {
   const { t } = useI18n()
@@ -33,9 +50,10 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
     el.style.height = `${el.scrollHeight}px`
   }
 
+  const defaultValue = () => props.valueOptions?.[0]?.value ?? ''
+
   const handleConfirmAdd = () => {
     const key = newKey().trim()
-    const val = newValue().trim()
     if (!key) {
       setError('Key cannot be empty')
       return
@@ -44,6 +62,8 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
       setError('Key already exists')
       return
     }
+    // For enum-valued editors, don't trim (values are precise identifiers).
+    const val = props.valueOptions ? newValue() : newValue().trim()
     props.onCommit({ ...props.values, [key]: val })
     setNewKey('')
     setNewValue('')
@@ -155,26 +175,49 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
               autofocus
             />
 
-            <textarea
-              rows={1}
-              placeholder="Value"
-              value={newValue()}
-              ref={el => setTimeout(() => autoResize(el), 0)}
-              onInput={e => {
-                autoResize(e.currentTarget)
-                setNewValue(e.currentTarget.value)
-              }}
-              onKeyDown={e => {
-                // Enter 确认添加，Shift+Enter 允许换行
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleConfirmAdd()
-                } else if (e.key === 'Escape') {
-                  handleCancelAdd()
-                }
-              }}
-              class="flex-1 mt-[1px] bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-[11px] px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none min-w-0 resize-none overflow-hidden break-all"
-            />
+            <Show
+              when={props.valueOptions}
+              fallback={
+                <textarea
+                  rows={1}
+                  placeholder={props.valuePlaceholder ?? 'Value'}
+                  value={newValue()}
+                  ref={el => setTimeout(() => autoResize(el), 0)}
+                  onInput={e => {
+                    autoResize(e.currentTarget)
+                    setNewValue(e.currentTarget.value)
+                  }}
+                  onKeyDown={e => {
+                    // Enter 确认添加，Shift+Enter 允许换行
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleConfirmAdd()
+                    } else if (e.key === 'Escape') {
+                      handleCancelAdd()
+                    }
+                  }}
+                  class="flex-1 mt-[1px] bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-[11px] px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none min-w-0 resize-none overflow-hidden break-all"
+                />
+              }
+            >
+              <select
+                value={newValue() || defaultValue()}
+                onChange={e => setNewValue(e.currentTarget.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleConfirmAdd()
+                  } else if (e.key === 'Escape') {
+                    handleCancelAdd()
+                  }
+                }}
+                class="flex-1 mt-[1px] bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-[11px] px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none min-w-0 appearance-none cursor-pointer"
+              >
+                <For each={props.valueOptions}>
+                  {opt => <option value={opt.value}>{opt.label}</option>}
+                </For>
+              </select>
+            </Show>
 
             <div class="flex gap-0.5 mt-[2px]">
               <button
@@ -219,29 +262,49 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
                   class="w-1/3 mt-[1px] min-w-[50px] bg-transparent text-blue-600 dark:text-blue-300 font-mono text-[11px] pl-0.5 pr-0.5 py-0 rounded border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:bg-gray-100 dark:focus:bg-gray-900 focus:border-blue-500 outline-none transition-all truncate"
                 />
                 <span class="text-gray-400 text-[10px] mt-[2px]">=</span>
-                <textarea
-                  rows={1}
-                  value={props.values[key] ?? ''}
-                  ref={el => setTimeout(() => autoResize(el), 0)}
-                  onInput={e => autoResize(e.currentTarget)}
-                  onKeyDown={e => {
-                    // Enter 失去焦点并保存，Shift+Enter 允许修改为多行
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      e.currentTarget.blur()
-                    }
-                  }}
-                  onBlur={e => {
-                    const newVal = e.currentTarget.value
-                    if (newVal !== (props.values[key] ?? '')) {
-                      props.onCommit({
-                        ...props.values,
-                        [key]: newVal
-                      })
-                    }
-                  }}
-                  class="flex-1 mt-[1px] bg-transparent text-gray-800 dark:text-gray-200 text-[11px] px-0.5 py-0 rounded border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:bg-gray-100 dark:focus:bg-gray-900 focus:border-blue-500 outline-none transition-all min-w-0 resize-none overflow-hidden break-all"
-                />
+                <Show
+                  when={props.valueOptions}
+                  fallback={
+                    <textarea
+                      rows={1}
+                      value={props.values[key] ?? ''}
+                      ref={el => setTimeout(() => autoResize(el), 0)}
+                      onInput={e => autoResize(e.currentTarget)}
+                      onKeyDown={e => {
+                        // Enter 失去焦点并保存，Shift+Enter 允许修改为多行
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault()
+                          e.currentTarget.blur()
+                        }
+                      }}
+                      onBlur={e => {
+                        const newVal = e.currentTarget.value
+                        if (newVal !== (props.values[key] ?? '')) {
+                          props.onCommit({
+                            ...props.values,
+                            [key]: newVal
+                          })
+                        }
+                      }}
+                      class="flex-1 mt-[1px] bg-transparent text-gray-800 dark:text-gray-200 text-[11px] px-0.5 py-0 rounded border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:bg-gray-100 dark:focus:bg-gray-900 focus:border-blue-500 outline-none transition-all min-w-0 resize-none overflow-hidden break-all"
+                    />
+                  }
+                >
+                  <select
+                    value={props.values[key] ?? defaultValue()}
+                    onChange={e => {
+                      const newVal = e.currentTarget.value
+                      if (newVal !== (props.values[key] ?? '')) {
+                        props.onCommit({ ...props.values, [key]: newVal })
+                      }
+                    }}
+                    class="flex-1 mt-[1px] bg-transparent text-gray-800 dark:text-gray-200 text-[11px] px-0.5 py-0 rounded border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:bg-gray-100 dark:focus:bg-gray-900 focus:border-blue-500 outline-none transition-all min-w-0 appearance-none cursor-pointer"
+                  >
+                    <For each={props.valueOptions}>
+                      {opt => <option value={opt.value}>{opt.label}</option>}
+                    </For>
+                  </select>
+                </Show>
                 <button
                   onClick={() => {
                     const updated = { ...props.values }

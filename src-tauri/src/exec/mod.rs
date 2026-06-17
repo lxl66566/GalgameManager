@@ -72,7 +72,23 @@ impl StartCtx {
         let args: Vec<String> = parts.collect();
         let program_path = PathBuf::from(&program);
 
-        let (resolved_program, resolved_current_dir) = if program_path.is_relative() {
+        // A "bare" command name contains no path separator (e.g. `wine`,
+        // `LEProc.exe`). It is meant to be looked up on `$PATH` and must
+        // NOT be joined with `current_dir` — otherwise `wine` next to a
+        // game exe gets mis-resolved to `<game_dir>/wine`. Only relative
+        // paths that contain a separator (`./foo`, `subdir/foo`) are
+        // joined with `current_dir`.
+        let has_path_sep = program.contains('/') || program.contains('\\');
+        let (resolved_program, resolved_current_dir) = if program_path.is_absolute() {
+            // 绝对路径：如果没有 current_dir，则从它的父目录推断
+            let cd = self.current_dir.clone().or_else(|| {
+                program_path
+                    .parent()
+                    .filter(|p| !p.as_os_str().is_empty())
+                    .map(|p| p.to_string_lossy().to_string())
+            });
+            (program_path, cd)
+        } else if has_path_sep {
             match &self.current_dir {
                 Some(cd) => {
                     // 相对路径 + 有 current_dir：拼接出系统能找到的绝对路径
@@ -96,14 +112,9 @@ impl StartCtx {
                 }
             }
         } else {
-            // 绝对路径：如果没有 current_dir，则从它的父目录推断
-            let cd = self.current_dir.clone().or_else(|| {
-                program_path
-                    .parent()
-                    .filter(|p| !p.as_os_str().is_empty())
-                    .map(|p| p.to_string_lossy().to_string())
-            });
-            (program_path, cd)
+            // Bare command name: PATH lookup. `current_dir` (if any) is
+            // still passed through as the process working directory.
+            (program_path, self.current_dir.clone())
         };
 
         Ok(ResolvedParts {

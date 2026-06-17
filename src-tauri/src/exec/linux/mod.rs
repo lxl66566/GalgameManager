@@ -110,6 +110,13 @@ pub async fn launch_game(
     // Prefer a transient systemd scope: it lets us follow the whole
     // process tree without help from the spawned binary, and survives
     // intermediate wrappers (LocaleEmulator, translator hooks, ...).
+    //
+    // Fallback to a direct child only when systemd-run itself can't be
+    // invoked (`Error::Io`); any other failure (executable not found,
+    // invalid env, scope creation refused by systemd, ...) is surfaced
+    // to the user. Otherwise a broken launch would log one warning from
+    // systemd-run *and* a second error from the direct spawn fallback,
+    // hiding the real cause.
     let tracker = if spawn::has_systemd_user() {
         let unit = format!(
             "galgame-manager-{game_id}-{pid}.scope",
@@ -120,11 +127,12 @@ pub async fn launch_game(
                 info!("Game spawned via systemd scope: {unit}");
                 GameTracker::Systemd { procs_path }
             }
-            Err(e) => {
-                warn!("systemd-run failed ({e}); falling back to direct spawn");
+            Err(Error::Io(e)) => {
+                warn!("systemd-run invocation failed ({e}); falling back to direct spawn");
                 let child = start_ctx.build_async_command()?.spawn()?;
                 GameTracker::Child { child }
             }
+            Err(e) => return Err(e),
         }
     } else {
         let child = start_ctx.build_async_command()?.spawn()?;
