@@ -12,7 +12,10 @@
 mod foreground;
 mod spawn;
 
-use std::{path::PathBuf, time::Duration};
+use std::{
+    path::PathBuf,
+    time::{Duration, Instant},
+};
 
 use chrono::TimeDelta;
 use log::{error, info, warn};
@@ -29,18 +32,32 @@ use crate::{
 const POLL_INTERVAL: Duration = Duration::from_secs(1);
 /// Persist accumulated play time at least every minute.
 const SAVE_INTERVAL: TimeDelta = TimeDelta::seconds(60);
+/// When using the [`GameTracker::SystemdUnit`] fallback, throttle the
+/// (sync, subprocess-driven) liveness check to once per N polls.
+const UNIT_LIVENESS_CACHE: Duration = Duration::from_secs(5);
 
 /// Tracking strategy chosen at launch time.
 ///
 /// * `Systemd` — preferred when a user systemd session is available. We spawn
 ///   the game inside a transient scope via `systemd-run --user --scope
-///   --no-block`, then poll the scope's `cgroup.procs` to know whether the game
-///   is still running and whether the focused window belongs to it.
+///   --no-block`, then poll the scope's `cgroup.procs` to know whether the
+///   game is still running and whether the focused window belongs to it.
 ///
-/// * `Child` — fallback for systems without systemd (or when spawning the scope
-///   fails). Behaves like the legacy unix implementation.
+/// * `SystemdUnit` — degraded systemd path. The scope was created but its
+///   cgroup could not be resolved (e.g. empty `ControlGroup` property on
+///   some systemd versions). We poll `systemctl --user is-active` instead.
+///   Process-identity focus matching is unavailable, so in precision mode
+///   any foreground window counts as focused.
+///
+/// * `Child` — fallback for systems without systemd (or when spawning the
+///   scope fails). Behaves like the legacy unix implementation.
 pub enum GameTracker {
     Systemd { procs_path: PathBuf },
+    SystemdUnit {
+        unit: String,
+        last_check: Instant,
+        cached: bool,
+    },
     Child { child: tokio::process::Child },
 }
 
@@ -51,6 +68,18 @@ impl GameTracker {
             Self::Systemd { procs_path } => read_procs(procs_path)
                 .map(|pids| !pids.is_empty())
                 .unwrap_or(false),
+            Self::SystemdUnit {
+                unit,
+                last_check,
+                cached,
+            } => {
+                let now = Instant::now();
+                if now.duration_since(*last_check) >= UNIT_LIVENESS_CACHE {
+                    *last_check = now;
+                    *cached = systemctl_unit_is_active(unit);
+                }
+                *cached
+            }
             Self::Child { child } => match child.try_wait() {
                 Ok(Some(_)) => false,
                 Ok(None) => true,
@@ -62,18 +91,24 @@ impl GameTracker {
     /// Returns `true` if the currently focused window is owned by one of
     /// the processes in this tracker.
     pub fn is_focused(&self) -> bool {
-        let Some(pid) = foreground::shared().focused_pid() else {
-            return false;
-        };
         match self {
-            Self::Systemd { procs_path } => read_procs(procs_path)
-                .map(|pids| pids.contains(&pid))
-                .unwrap_or(false),
+            Self::Systemd { procs_path } => {
+                let Some(pid) = foreground::shared().focused_pid() else {
+                    return false;
+                };
+                read_procs(procs_path)
+                    .map(|pids| pids.contains(&pid))
+                    .unwrap_or(false)
+            }
+            // No process list available — assume focus so playtime
+            // accumulates. Precision mode may over-count when the user
+            // switches away, but that is acceptable for this fallback.
+            Self::SystemdUnit { .. } => foreground::shared().focused_pid().is_some(),
             // The fallback child path only tracks the launcher PID. Many
             // galgames fork helpers or wrappers; if so, this may report
             // false negatives. That's an acceptable trade-off for the
             // non-systemd path — install systemd for accurate tracking.
-            Self::Child { child } => child.id() == Some(pid),
+            Self::Child { child } => child.id() == foreground::shared().focused_pid(),
         }
     }
 }
@@ -93,6 +128,21 @@ fn read_procs(path: &std::path::Path) -> std::io::Result<Vec<u32>> {
         }
     }
     Ok(out)
+}
+
+/// Quick liveness check for a user systemd unit. Synchronous because it
+/// is called from the (sync) `has_active_processes` and is throttled by
+/// [`UNIT_LIVENESS_CACHE`] in the caller.
+fn systemctl_unit_is_active(unit: &str) -> bool {
+    std::process::Command::new("systemctl")
+        .args(["--user", "is-active", "--quiet", unit])
+        // Suppress noise: a dead unit prints "inactive" to stdout and
+        // exits non-zero, which is the expected "no" answer here.
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
 }
 
 pub type GameLaunchRes = GameTracker;
@@ -123,9 +173,20 @@ pub async fn launch_game(
             pid = std::process::id()
         );
         match spawn::spawn_in_scope(&start_ctx, &unit).await {
-            Ok(procs_path) => {
+            Ok(Some(procs_path)) => {
                 info!("Game spawned via systemd scope: {unit}");
                 GameTracker::Systemd { procs_path }
+            }
+            Ok(None) => {
+                info!(
+                    "Game spawned via systemd scope: {unit} (cgroup tracking unavailable; \
+                     using unit-liveness polling)"
+                );
+                GameTracker::SystemdUnit {
+                    unit,
+                    last_check: Instant::now(),
+                    cached: true,
+                }
             }
             Err(Error::Io(e)) => {
                 warn!("systemd-run invocation failed ({e}); falling back to direct spawn");

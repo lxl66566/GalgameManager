@@ -99,16 +99,19 @@ fn current_uid() -> Option<u32> {
     last.parse().ok()
 }
 
-/// Spawn the resolved [`StartCtx`] command in a transient user scope,
-/// returning the absolute path of the unit's `cgroup.procs` file so the
-/// caller can poll process membership.
+/// Spawn the resolved [`StartCtx`] command in a transient user scope.
 ///
-/// On any failure the caller is expected to decide on a fallback strategy
-/// based on the error variant — IO errors mean `systemd-run` itself is
-/// unavailable (transient, safe to fall back to direct spawn); everything
-/// else (executable not found, invalid env, scope creation failure) is
-/// surfaced to the user instead of being silently masked.
-pub async fn spawn_in_scope(start_ctx: &StartCtx, unit_name: &str) -> Result<PathBuf> {
+/// On success returns `Ok(Some(procs_path))` when cgroup tracking is
+/// available, or `Ok(None)` when the scope was created but its cgroup
+/// could not be resolved (caller should fall back to unit-liveness
+/// polling).
+///
+/// Error semantics (for the caller's fallback decision):
+/// * `Error::Io` — `systemd-run` itself could not be invoked; safe to
+///   retry as a direct child spawn.
+/// * Anything else — the user's command or systemd configuration is at
+///   fault; surface the error instead of masking it.
+pub async fn spawn_in_scope(start_ctx: &StartCtx, unit_name: &str) -> Result<Option<PathBuf>> {
     let parts = start_ctx.resolved_parts()?;
 
     // Pre-validate the program is actually findable. `systemd-run`'s own
@@ -135,45 +138,59 @@ pub async fn spawn_in_scope(start_ctx: &StartCtx, unit_name: &str) -> Result<Pat
 
     cmd.arg("--").arg(&parts.program).args(parts.args);
 
+    // NB: stderr is intentionally *not* piped. With `--scope` the spawned
+    // command is forked as a child of `systemd-run` and inherits its file
+    // descriptors. If we pipe stderr, the game holds the pipe open and
+    // `output()` blocks until the game exits — by which time the scope is
+    // already gone and cgroup tracking fails. With `stderr=null` the game
+    // inherits `/dev/null`, and `systemd-run --no-block` returns almost
+    // immediately after registering the scope.
     cmd.stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::piped());
+        .stderr(Stdio::null());
 
-    let output = cmd.output().await.map_err(|e| {
+    let status = cmd.status().await.map_err(|e| {
         log::warn!("systemd-run invocation failed: {e}");
         Error::from(e)
     })?;
 
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+    if !status.success() {
         log::warn!(
-            "systemd-run exited with {:?}: {}",
-            output.status.code(),
-            stderr.trim()
+            "systemd-run exited with {:?} (stderr suppressed; check `journalctl --user-unit {}` for details)",
+            status.code(),
+            unit_name
         );
-        // systemd-side failure after a successful invocation: surface it
-        // so the user sees the real reason instead of a misleading
-        // fallback to direct spawn.
         return Err(Error::Cloned(format!(
-            "systemd-run failed: {}",
-            stderr.trim()
+            "systemd-run exited with status {:?}",
+            status.code()
         )));
     }
 
-    // systemd-run with --no-block returns before the unit is fully
-    // realized on the manager side. Give it a brief moment to land,
-    // retrying a couple of times so we don't race with the registrar.
-    let cgroup_subpath = retry_find_cgroup(unit_name, 10, Duration::from_millis(25)).await?;
+    // Best-effort cgroup resolution. The scope was registered, but on
+    // some systemd configurations `ControlGroup` may be briefly empty or
+    // the cgroup v2 layout differs. Degrade to unit-liveness polling
+    // instead of failing the whole launch.
+    let cgroup_subpath = match retry_find_cgroup(unit_name, 10, Duration::from_millis(25)).await {
+        Ok(cg) => cg,
+        Err(e) => {
+            log::warn!(
+                "cgroup resolution failed for {unit_name}: {e}; \
+                 falling back to unit-liveness polling"
+            );
+            return Ok(None);
+        }
+    };
 
     let procs_path = cgroup_v2_procs_path(&cgroup_subpath);
     if !procs_path.exists() {
         log::warn!(
-            "systemd scope {unit_name} reported cgroup {cgroup_subpath:?} but {} is missing",
+            "systemd scope {unit_name} reported cgroup {cgroup_subpath:?} but {} is missing; \
+             falling back to unit-liveness polling",
             procs_path.display()
         );
-        return Err(Error::Launch);
+        return Ok(None);
     }
-    Ok(procs_path)
+    Ok(Some(procs_path))
 }
 
 /// Query systemd for the unit's `ControlGroup` property. Retries a few
