@@ -29,6 +29,9 @@
       "allow": [
         {
           "url": "https://github.com/**"
+        },
+        {
+          "url": "https://www.winehq.org/"
         }
       ]
     }

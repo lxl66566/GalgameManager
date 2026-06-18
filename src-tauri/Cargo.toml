@@ -6,7 +6,7 @@ edition     = "2024"
 license     = "MIT"
 name        = "GalgameManager"
 repository  = "https://github.com/lxl66566/GalgameManager"
-version     = "1.1.2"
+version     = "1.2.0"
 
 [lib]
 # The `_lib` suffix may seem redundant but it is necessary
@@ -77,13 +77,13 @@ tauri-plugin-window-state    = "2.4.1"
 #       and to talk to systemd when launching games via `systemd-run --scope`.
 # futures-util: StreamExt for iterating over zbus `MessageStream`.
 [target.'cfg(target_os = "linux")'.dependencies]
-x11rb = { version = "0.13", default-features = false }
-zbus = { version = "5", default-features = false, features = ["tokio"] }
 futures-util = "0.3"
+x11rb        = { version = "0.13", default-features = false }
+zbus         = { version = "5", default-features = false, features = ["tokio"] }
 
 [dev-dependencies]
 serde_json = "1"
-tempfile = "3"
+tempfile   = "3"
 
 [features]
 config-daily-backup = []

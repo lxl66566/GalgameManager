@@ -25,13 +25,14 @@
 
 ### unstable
 
-- 新功能：自动上传存档支持限定存档数量和清理策略
+- 新插件：Wine，提升用户在 Linux 上运行原生 GalgameManager 并使用 wine 运行游戏的使用体验
+- 新功能：自动上传存档插件，支持限制存档数量和设置清理策略
+- Linux 支持精确计时：X11 + Wayland (AT-SPI)
 - 新功能：用户可自定义「上次游玩时间」展示绝对时间或相对时间、中文或英文
 - unix 探活优化：默认使用 systemd 启动，Cgroup 追踪进程
-- unix 前台判断优化：X11 + Wayland (AT-SPI) 探活
 - 修复：unix 平台图片显示失败
 - 性能优化：主界面 grid virtua 虚拟化
-- 重构：移除多数 panic 路径
+- 重构：移除多数 panic 路径，单测补充
 
 ### v1.1.2
 
