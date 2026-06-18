@@ -151,7 +151,14 @@ export const dict = {
     },
     autoUpload: {
       name: 'Auto Upload Saves',
-      description: 'Automatically archive and upload game saves when the game exits'
+      description: 'Automatically archive and upload game saves when the game exits',
+      maxKept: 'Max Kept',
+      maxKeptDesc:
+        'Max number of saves to keep per game; oldest are evicted when exceeded (0 = unlimited)',
+      retentionScope: 'Retention Scope',
+      scopeLocal: 'Local Only',
+      scopeRemote: 'Remote Only',
+      scopeBoth: 'Both'
     },
     gameWrapper: {
       name: 'Game Wrapper',
@@ -196,11 +203,14 @@ export const dict = {
         'Sets the WINEPREFIX env var. Leave empty to skip it (Wine then uses its default ~/.wine). Supports ~ and {variables}',
       prefixPlaceholder: '~/.wine',
       arch: 'WINEARCH',
-      archDesc: 'Architecture of the Wine prefix (mainly used when creating a new prefix)',
+      archDesc:
+        'Architecture of the Wine prefix (mainly used when creating a new prefix)',
       esync: 'WINEESYNC',
-      esyncDesc: 'Enables esync (sets WINEESYNC=1). Requires a compatible kernel and ulimit setup.',
+      esyncDesc:
+        'Enables esync (sets WINEESYNC=1). Requires a compatible kernel and ulimit setup.',
       fsync: 'WINEFSYNC',
-      fsyncDesc: 'Enables fsync (sets WINEFSYNC=1). Requires a compatible kernel with futex2.',
+      fsyncDesc:
+        'Enables fsync (sets WINEFSYNC=1). Requires a compatible kernel with futex2.',
       locale: 'LC_ALL',
       localeDesc:
         'Sets the LC_ALL env var. Leave empty to skip it (uses the system locale). Example: ja_JP.UTF-8',
@@ -210,7 +220,8 @@ export const dict = {
         'Override which implementation Wine loads for each DLL (native, builtin, disabled, ...)',
       addDllOverride: 'Add Override',
       killWineserver: 'wineserver -k on Exit',
-      killWineserverDesc: 'Run `wineserver -k` after the game exits to tear down the prefix',
+      killWineserverDesc:
+        'Run `wineserver -k` after the game exits to tear down the prefix',
       extraEnv: 'Extra Environment Variables',
       addEnv: 'Add Variable'
     },

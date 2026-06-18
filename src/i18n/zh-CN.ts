@@ -154,7 +154,13 @@ export const dict: DeepPartial<RawDictionary> = {
     },
     autoUpload: {
       name: '自动上传存档',
-      description: '游戏退出时自动归档并上传存档'
+      description: '游戏退出时自动归档并上传存档',
+      maxKept: '最多保留',
+      maxKeptDesc: '每个游戏最多保留的存档份数，超出时删除最旧的（0 表示不限制）',
+      retentionScope: '清理范围',
+      scopeLocal: '仅本地',
+      scopeRemote: '仅远端',
+      scopeBoth: '本地和远端'
     },
     gameWrapper: {
       name: '游戏启动包装',
@@ -205,7 +211,8 @@ export const dict: DeepPartial<RawDictionary> = {
       fsync: 'WINEFSYNC',
       fsyncDesc: '启用 fsync（设置 WINEFSYNC=1）。需要支持 futex2 的兼容内核。',
       locale: 'LC_ALL',
-      localeDesc: '设置 LC_ALL 环境变量。留空则不设置（使用系统 locale）。示例: ja_JP.UTF-8',
+      localeDesc:
+        '设置 LC_ALL 环境变量。留空则不设置（使用系统 locale）。示例: ja_JP.UTF-8',
       localePlaceholder: 'ja_JP.UTF-8',
       dllOverrides: 'WINEDLLOVERRIDES',
       dllOverridesDesc: '覆盖各 DLL 在 Wine 中的加载方式（native、builtin、disabled 等）',

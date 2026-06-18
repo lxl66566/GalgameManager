@@ -9,7 +9,15 @@ import { FiChevronDown, FiChevronUp, FiExternalLink } from 'solid-icons/fi'
 import { createSignal, type Component } from 'solid-js'
 import { Dynamic, For, Show } from 'solid-js/web'
 import { PLUGIN_REGISTRY, type AnyPluginDef } from './plugins'
-import { getPluginMeta, isPluginAvailable, patchPluginMeta, type AnyGameConfig, type ConfigEditorProps, type PluginId } from './plugins/types'
+import {
+  getPluginMeta,
+  isPluginAvailable,
+  patchPluginMeta,
+  type AnyGameConfig,
+  type AnyMeta,
+  type ConfigEditorProps,
+  type PluginId
+} from './plugins/types'
 import { PLUGINS } from './registry'
 
 export default function PluginPage() {
@@ -140,7 +148,9 @@ export default function PluginPage() {
                             </h4>
                             <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm p-3">
                               <Dynamic
-                                component={def.MetaEditor!}
+                                component={
+                                  def.MetaEditor! as Component<ConfigEditorProps<AnyMeta>>
+                                }
                                 config={meta()}
                                 onCommit={(m: Record<string, unknown>) => {
                                   // Persists to disk: actions.mutate → save()

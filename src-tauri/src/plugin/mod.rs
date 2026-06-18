@@ -238,7 +238,7 @@ pub static PLUGIN_REGISTRY: Lazy<PluginRegistry> = Lazy::new(PluginRegistry::new
 pub(crate) fn instance_config(instance: &PluginInstance) -> PluginConfig {
     match instance {
         PluginInstance::Execute { config } => PluginConfig::Execute(config.clone()),
-        PluginInstance::AutoUpload => PluginConfig::AutoUpload,
+        PluginInstance::AutoUpload { config } => PluginConfig::AutoUpload(*config),
         PluginInstance::VoiceSpeedup { config } => PluginConfig::VoiceSpeedup(config.clone()),
         PluginInstance::VoiceZerointerrupt { config } => {
             PluginConfig::VoiceZerointerrupt(config.clone())

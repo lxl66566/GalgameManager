@@ -130,7 +130,11 @@ const DEFAULT_CONFIG: Config = {
     },
     autoUpload: {
       enabled: true,
-      autoAdd: false
+      autoAdd: false,
+      configDefaults: {
+        maxKept: 20,
+        retentionScope: 'both'
+      }
     },
     gameWrapper: {
       enabled: true,

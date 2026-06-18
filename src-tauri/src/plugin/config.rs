@@ -36,7 +36,7 @@ pub enum ArchPreference {
 
 // Re-export per-plugin config types for downstream convenience.
 pub use super::{
-    auto_upload::AutoUploadPluginMeta,
+    auto_upload::{AutoUploadGameConfig, AutoUploadPluginMeta, RetentionScope},
     execute::{ExecuteGameConfig, ExecutePhase, ExecutePluginMeta, ExitSignal},
     game_wrapper::{GameWrapperGameConfig, GameWrapperPluginMeta},
     locale_emulator::{LocaleEmulatorGameConfig, LocaleEmulatorPluginMeta},
@@ -61,7 +61,10 @@ pub enum PluginInstance {
         #[serde(default)]
         config: ExecuteGameConfig,
     },
-    AutoUpload,
+    AutoUpload {
+        #[serde(default)]
+        config: AutoUploadGameConfig,
+    },
     VoiceSpeedup {
         #[serde(default)]
         config: VoiceSpeedupGameConfig,
@@ -94,7 +97,7 @@ impl PluginInstance {
     pub fn handler_key(&self) -> &'static str {
         match self {
             Self::Execute { .. } => super::execute::PLUGIN_ID,
-            Self::AutoUpload => super::auto_upload::PLUGIN_ID,
+            Self::AutoUpload { .. } => super::auto_upload::PLUGIN_ID,
             Self::VoiceSpeedup { .. } => super::voice_speedup::PLUGIN_ID,
             Self::VoiceZerointerrupt { .. } => super::voice_zerointerrupt::PLUGIN_ID,
             Self::GameWrapper { .. } => super::game_wrapper::PLUGIN_ID,
@@ -130,7 +133,7 @@ impl PluginMetadatas {
     pub fn is_enabled(&self, instance: &PluginInstance) -> bool {
         match instance {
             PluginInstance::Execute { .. } => self.execute.enabled,
-            PluginInstance::AutoUpload => self.auto_upload.enabled,
+            PluginInstance::AutoUpload { .. } => self.auto_upload.enabled,
             PluginInstance::VoiceSpeedup { .. } => self.voice_speedup.enabled,
             PluginInstance::VoiceZerointerrupt { .. } => self.voice_zerointerrupt.enabled,
             PluginInstance::GameWrapper { .. } => self.game_wrapper.enabled,
@@ -147,7 +150,7 @@ impl PluginMetadatas {
 #[derive(Debug, Clone)]
 pub enum PluginConfig {
     Execute(ExecuteGameConfig),
-    AutoUpload,
+    AutoUpload(AutoUploadGameConfig),
     VoiceSpeedup(VoiceSpeedupGameConfig),
     VoiceZerointerrupt(VoiceZerointerruptGameConfig),
     GameWrapper(GameWrapperGameConfig),

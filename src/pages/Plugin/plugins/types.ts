@@ -5,6 +5,7 @@
  * config types. All helpers are generic over `K extends PluginId`, so
  * callers get full type inference without `unknown`.
  */
+import type { AutoUploadGameConfig } from '@bindings/AutoUploadGameConfig'
 import type { AutoUploadPluginMeta } from '@bindings/AutoUploadPluginMeta'
 import type { ExecuteGameConfig } from '@bindings/ExecuteGameConfig'
 import type { ExecutePluginMeta } from '@bindings/ExecutePluginMeta'
@@ -68,7 +69,7 @@ export interface ConfigEditorProps<T> {
  */
 export interface PluginTypeMap {
   execute: { meta: ExecutePluginMeta; gameConfig: ExecuteGameConfig }
-  autoUpload: { meta: AutoUploadPluginMeta; gameConfig: undefined }
+  autoUpload: { meta: AutoUploadPluginMeta; gameConfig: AutoUploadGameConfig }
   voiceSpeedup: { meta: VoiceSpeedupPluginMeta; gameConfig: VoiceSpeedupGameConfig }
   voiceZerointerrupt: {
     meta: VoiceZerointerruptPluginMeta
@@ -84,10 +85,14 @@ export type PluginId = keyof PluginTypeMap
 export type PluginMetaOf<K extends PluginId> = PluginTypeMap[K]['meta']
 export type PluginGameConfigOf<K extends PluginId> = PluginTypeMap[K]['gameConfig']
 
-/** Union of every plugin's per-game config (autoUpload has none, so it is
- *  excluded by `NonNullable`). Used at the dynamic `Dynamic` dispatch
- *  boundary where a specific editor cannot be statically correlated with its
- *  config. */
+/** Union of every plugin's metadata. Used at the dynamic `Dynamic` dispatch
+ *  boundary where a specific meta editor cannot be statically correlated with
+ *  its metadata type. */
+export type AnyMeta = PluginMetaOf<PluginId>
+
+/** Union of every plugin's per-game config. Used at the dynamic `Dynamic`
+ *  dispatch boundary where a specific editor cannot be statically correlated
+ *  with its config. */
 export type AnyGameConfig = NonNullable<PluginGameConfigOf<PluginId>>
 
 // ── Plugin definition ────────────────────────────────────────────────────────

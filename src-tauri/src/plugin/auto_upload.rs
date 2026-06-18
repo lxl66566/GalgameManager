@@ -4,14 +4,20 @@
 //! This module is self-contained — it defines all config types **and** the
 //! handler in one place.
 
+use std::path::Path;
+
 use serde::{Deserialize, Serialize};
 use tauri::Manager as _;
 use ts_rs::TS;
 
-use super::{PluginContext, SaveUploadDispatcher, Transaction};
+use super::{PluginConfig, PluginContext, SaveUploadDispatcher, Transaction};
 use crate::{
     error::Result,
-    utils::toast::{ToastVariant, dismiss_toast, emit_loading_toast, emit_toast},
+    sync::MyOperation,
+    utils::{
+        list_dir_all,
+        toast::{ToastVariant, dismiss_toast, emit_loading_toast, emit_toast},
+    },
 };
 
 /// Plugin identifier used in the registry and config.
@@ -25,12 +31,44 @@ const HINT_UPLOADING: &str = "<hint.uploading>";
 
 // ── Config types ──
 
+/// Where the retention (末位淘汰) policy is enforced.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum RetentionScope {
+    Local,
+    Remote,
+    #[default]
+    Both,
+}
+
+/// Per-game config for the AutoUpload plugin.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+pub struct AutoUploadGameConfig {
+    /// Max number of archives to keep for this game; the oldest are evicted
+    /// (末位淘汰) once exceeded. `0` means unlimited.
+    pub max_kept: u32,
+    /// Where the retention policy is enforced.
+    pub retention_scope: RetentionScope,
+}
+
+impl Default for AutoUploadGameConfig {
+    fn default() -> Self {
+        Self {
+            max_kept: 20,
+            retention_scope: RetentionScope::Both,
+        }
+    }
+}
+
 /// Global metadata for the AutoUpload plugin (stored in `PluginMetadatas`).
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", default)]
 pub struct AutoUploadPluginMeta {
     pub enabled: bool,
     pub auto_add: bool,
+    /// Default per-game config applied when the plugin is added to a new game.
+    pub config_defaults: AutoUploadGameConfig,
 }
 
 impl Default for AutoUploadPluginMeta {
@@ -38,6 +76,7 @@ impl Default for AutoUploadPluginMeta {
         Self {
             enabled: true,
             auto_add: false,
+            config_defaults: AutoUploadGameConfig::default(),
         }
     }
 }
@@ -55,6 +94,11 @@ impl AutoUploadPlugin {
 #[async_trait::async_trait]
 impl super::PluginHandler for AutoUploadPlugin {
     async fn after_game_exit(&self, ctx: PluginContext) -> Result<()> {
+        let PluginConfig::AutoUpload(config) = &*ctx.config else {
+            return Ok(());
+        };
+        let (max_kept, retention_scope) = (config.max_kept, config.retention_scope);
+
         let game = {
             let lock = crate::db::CONFIG.lock();
             lock.get_game_by_id(ctx.launch.game_id)?.clone()
@@ -167,10 +211,79 @@ impl super::PluginHandler for AutoUploadPlugin {
         save_dispatcher.dispatch_after(&archive_filename).await;
         tx.execute_after_exit();
 
+        // Retention (末位淘汰): keep only the newest `max_kept` archives.
+        if max_kept > 0 {
+            if matches!(retention_scope, RetentionScope::Remote | RetentionScope::Both) {
+                prune_remote(&*op, ctx.launch.game_id, max_kept as usize).await;
+            }
+            if matches!(retention_scope, RetentionScope::Local | RetentionScope::Both) {
+                let local_game_dir = data_dir
+                    .join("backup")
+                    .join(ctx.launch.game_id.to_string());
+                prune_local(&local_game_dir, max_kept as usize);
+            }
+        }
+
         dismiss_toast(&ctx.launch.app, &loading_toast_id);
         let msg = format!("{HINT_UPLOAD_SUCCESS}{game_name}");
         log::info!("AutoUpload: {msg}");
         emit_toast(&ctx.launch.app, ToastVariant::Success, msg);
         Ok(())
     }
+}
+
+// ── Retention (末位淘汰) helpers ──
+
+/// Delete the oldest remote archives until at most `max_kept` remain.
+///
+/// Archive filenames are prefixed with `YYYYMMDD_HHMMSS`, so ascending
+/// lexicographic order matches chronological order. Best-effort: errors are
+/// logged and never abort the (already successful) upload.
+async fn prune_remote(op: &(dyn MyOperation + Send + Sync), game_id: u32, max_kept: usize) {
+    let archives = match op.list_archive(game_id).await {
+        Ok(a) => a,
+        Err(e) => {
+            log::warn!("AutoUpload: list remote archives failed (game {game_id}): {e}");
+            return;
+        }
+    };
+    if archives.len() <= max_kept {
+        return;
+    }
+    let mut names: Vec<String> = archives.into_iter().map(|a| a.name).collect();
+    names.sort_unstable();
+    let evict_count = names.len() - max_kept;
+    for name in names.iter().take(evict_count) {
+        if let Err(e) = op.delete_archive(game_id, name.as_str()).await {
+            log::warn!("AutoUpload: delete remote archive {name} failed (game {game_id}): {e}");
+        }
+    }
+    log::info!("AutoUpload: pruned {evict_count} remote archive(s) for game {game_id}");
+}
+
+/// Delete the oldest local archives until at most `max_kept` remain.
+fn prune_local(local_game_dir: &Path, max_kept: usize) {
+    let archives = match list_dir_all(local_game_dir) {
+        Ok(a) => a,
+        Err(e) => {
+            log::warn!(
+                "AutoUpload: list local archives failed ({}): {e}",
+                local_game_dir.display()
+            );
+            return;
+        }
+    };
+    if archives.len() <= max_kept {
+        return;
+    }
+    let mut names: Vec<String> = archives.into_iter().map(|a| a.name).collect();
+    names.sort_unstable();
+    let evict_count = names.len() - max_kept;
+    for name in names.iter().take(evict_count) {
+        let path = local_game_dir.join(name);
+        if let Err(e) = std::fs::remove_file(&path) {
+            log::warn!("AutoUpload: delete local archive {} failed: {e}", path.display());
+        }
+    }
+    log::info!("AutoUpload: pruned {evict_count} local archive(s)");
 }
