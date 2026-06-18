@@ -255,3 +255,106 @@ impl TimeCmp {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use chrono::DateTime;
+
+    use super::*;
+
+    /// Helper: build a [`Config`] with the given (id, use_time_secs,
+    /// last_played_time) tuples. `last_played_time` is given as epoch
+    /// seconds (`None` => absent).
+    fn config_with_games(spec: &[(u32, i64, Option<i64>)]) -> Config {
+        let games = spec
+            .iter()
+            .map(|(id, secs, lpt)| Game {
+                id: *id,
+                name: format!("g{id}"),
+                use_time: Duration::seconds(*secs),
+                last_played_time: lpt.and_then(|t| DateTime::from_timestamp(t, 0)),
+                ..Default::default()
+            })
+            .collect();
+        Config {
+            games,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn time_cmp_str_roundtrip() {
+        assert_eq!(TimeCmp::LessOrEqual.as_str(), "<=");
+        assert_eq!(TimeCmp::GreaterOrEqual.as_str(), ">=");
+        assert_eq!(TimeCmp::Equal.as_str(), "==");
+        assert_eq!(TimeCmp::Less.as_str(), "<");
+        assert_eq!(TimeCmp::Greater.as_str(), ">");
+    }
+
+    #[test]
+    fn check_time_passes_when_self_ge_other() {
+        // self use_time >= other use_time; both have last_played_time equal.
+        let self_c = config_with_games(&[(1, 100, Some(50)), (2, 200, Some(40))]);
+        let other = config_with_games(&[(1, 100, Some(50)), (2, 100, Some(40))]);
+        assert!(
+            self_c
+                .check_games_time_compare(&other, TimeCmp::GreaterOrEqual)
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn check_time_fails_when_self_lt_other() {
+        let self_c = config_with_games(&[(1, 50, Some(50))]);
+        let other = config_with_games(&[(1, 100, Some(50))]);
+        let err = self_c
+            .check_games_time_compare(&other, TimeCmp::GreaterOrEqual)
+            .unwrap_err();
+        assert!(matches!(err, Error::GameTimeCheckFailed(_)));
+    }
+
+    #[test]
+    fn check_time_ignores_missing_last_played_time() {
+        // Either side missing last_played_time skips that branch but
+        // still compares use_time.
+        let self_c = config_with_games(&[(1, 100, None)]);
+        let other = config_with_games(&[(1, 100, Some(50))]);
+        assert!(
+            self_c
+                .check_games_time_compare(&other, TimeCmp::GreaterOrEqual)
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn check_time_handles_disjoint_game_ids() {
+        // self has {1,3}, other has {2,3}: id=3 is compared, the rest skipped.
+        let self_c = config_with_games(&[(1, 100, Some(10)), (3, 50, Some(20))]);
+        let other = config_with_games(&[(2, 999, Some(999)), (3, 50, Some(20))]);
+        assert!(
+            self_c
+                .check_games_time_compare(&other, TimeCmp::GreaterOrEqual)
+                .is_ok()
+        );
+        // Mismatch on the shared id=3 should still fail.
+        let other2 = config_with_games(&[(3, 60, Some(20))]);
+        assert!(
+            self_c
+                .check_games_time_compare(&other2, TimeCmp::GreaterOrEqual)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn check_time_last_played_failure_overrides_use_time() {
+        let self_c = config_with_games(&[(1, 100, Some(10))]);
+        let other = config_with_games(&[(1, 100, Some(99))]);
+        // use_time equal but last_played_time: self < other, expected GE -> fail.
+        assert!(matches!(
+            self_c
+                .check_games_time_compare(&other, TimeCmp::GreaterOrEqual)
+                .unwrap_err(),
+            Error::GameTimeCheckFailed(_)
+        ));
+    }
+}

@@ -136,3 +136,65 @@ pub(crate) fn image_protocol_handler(request: tauri::http::Request<Vec<u8>>) -> 
 async fn download_image(url: &str) -> std::result::Result<Vec<u8>, reqwest::Error> {
     Ok(IMAGE_CLIENT.get(url).send().await?.bytes().await?.to_vec())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn detect_mime_jpeg() {
+        assert_eq!(detect_mime(&[0xFF, 0xD8, 0xFF, 0xE0]), "image/jpeg");
+    }
+
+    #[test]
+    fn detect_mime_png() {
+        assert_eq!(
+            detect_mime(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A]),
+            "image/png"
+        );
+    }
+
+    #[test]
+    fn detect_mime_gif() {
+        assert_eq!(detect_mime(&[0x47, 0x49, 0x46, 0x38]), "image/gif");
+    }
+
+    #[test]
+    fn detect_mime_webp() {
+        // RIFF....WEBP
+        let bytes = b"RIFF\x00\x00\x00\x00WEBP";
+        assert_eq!(detect_mime(bytes), "image/webp");
+    }
+
+    #[test]
+    fn detect_mime_too_short_returns_octet_stream() {
+        assert_eq!(detect_mime(&[0x00]), "application/octet-stream");
+        assert_eq!(detect_mime(&[]), "application/octet-stream");
+    }
+
+    #[test]
+    fn detect_mime_unknown_magic_returns_octet_stream() {
+        // Random bytes that don't match any known magic.
+        assert_eq!(
+            detect_mime(&[0x12, 0x34, 0x56, 0x78]),
+            "application/octet-stream"
+        );
+    }
+
+    #[test]
+    fn detect_mime_webp_needs_full_12_bytes() {
+        // Truncated RIFF header that doesn't reach the WEBP marker at [8..12].
+        let bytes = b"RIFF\x00\x00\x00\x00XXXX";
+        assert_eq!(detect_mime(bytes), "application/octet-stream");
+    }
+
+    #[test]
+    fn hash_image_is_stable_and_hex() {
+        // Deterministic + hex + 32 chars (16-byte / 64-bit truncated hash).
+        let h1 = hash_image(b"abc");
+        let h2 = hash_image(b"abc");
+        assert_eq!(h1, h2);
+        assert_eq!(h1.len(), 32);
+        assert!(h1.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+}

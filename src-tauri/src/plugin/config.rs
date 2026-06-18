@@ -158,3 +158,147 @@ pub enum PluginConfig {
     Translator(TranslatorGameConfig),
     Wine(WineGameConfig),
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Sample instance with a non-default value in each variant, so that
+    /// roundtrip mismatches would actually surface.
+    fn sample_instances() -> Vec<PluginInstance> {
+        vec![
+            PluginInstance::Execute {
+                config: ExecuteGameConfig {
+                    on: ExecutePhase::GameExit,
+                    cmd: "echo hi".into(),
+                    pass_exe_path: true,
+                    current_dir: "/tmp".into(),
+                    env: [("K".into(), "V".into())].into(),
+                    exit_signal: ExitSignal::Sigterm,
+                },
+            },
+            PluginInstance::AutoUpload {
+                config: AutoUploadGameConfig {
+                    max_kept: 7,
+                    retention_scope: RetentionScope::Local,
+                },
+            },
+            PluginInstance::VoiceSpeedup {
+                config: VoiceSpeedupGameConfig {
+                    speed: 2.0,
+                    provider: SpeedupProvider::DSound,
+                    arch: ArchPreference::X64,
+                },
+            },
+            PluginInstance::VoiceZerointerrupt {
+                config: VoiceZerointerruptGameConfig {
+                    arch: ArchPreference::X86,
+                },
+            },
+            PluginInstance::GameWrapper {
+                config: GameWrapperGameConfig {
+                    cmd: "wine {}".into(),
+                    current_dir: "/x".into(),
+                    env: [("A".into(), "B".into())].into(),
+                },
+            },
+            PluginInstance::LocaleEmulator {
+                config: LocaleEmulatorGameConfig {
+                    cmd: "LEProc.exe {}".into(),
+                },
+            },
+            PluginInstance::Translator {
+                config: TranslatorGameConfig {
+                    cmd: "t {}".into(),
+                    current_dir: "/t".into(),
+                    exit_signal: ExitSignal::Sigkill,
+                },
+            },
+            PluginInstance::Wine {
+                config: WineGameConfig {
+                    prefix: "/prefix".into(),
+                    arch: WineArch::Win32,
+                    esync: true,
+                    fsync: false,
+                    dll_overrides: [("d3d9".into(), DllOverride::Native)].into(),
+                    locale: "ja_JP.UTF-8".into(),
+                    kill_wineserver_on_exit: true,
+                    extra_env: [("X".into(), "Y".into())].into(),
+                },
+            },
+        ]
+    }
+
+    #[test]
+    fn every_variant_has_distinct_handler_key() {
+        let instances = sample_instances();
+        let keys: Vec<&str> = instances.iter().map(|i| i.handler_key()).collect();
+        // No duplicate handler keys.
+        let mut sorted = keys.clone();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(keys.len(), sorted.len(), "duplicate handler_key detected");
+        // Sanity: a few well-known ids are present.
+        assert!(keys.contains(&"execute"));
+        assert!(keys.contains(&"wine"));
+        assert!(keys.contains(&"autoUpload"));
+    }
+
+    #[test]
+    fn plugin_instance_serde_roundtrip_preserves_variant_and_values() {
+        // The `#[serde(tag = "pluginId")]` tag is what the frontend uses to
+        // discriminate variants; ensure we can deserialize exactly what we
+        // serialize, including the camelCase tag form.
+        for inst in sample_instances() {
+            let json = serde_json::to_string(&inst).unwrap();
+            let back: PluginInstance = serde_json::from_str(&json).unwrap();
+            // Re-serialize and compare bytes — cheap way to assert full equality
+            // without manually deriving PartialEq across all sub-types.
+            assert_eq!(serde_json::to_string(&back).unwrap(), json);
+        }
+    }
+
+    #[test]
+    fn plugin_instance_uses_camel_case_tag() {
+        // Frontend (TS bindings) expects camelCase ids; verify a couple.
+        let json = serde_json::to_string(&PluginInstance::AutoUpload {
+            config: AutoUploadGameConfig::default(),
+        })
+        .unwrap();
+        assert!(json.contains(r#""pluginId":"autoUpload""#), "got: {json}");
+
+        let json = serde_json::to_string(&PluginInstance::VoiceZerointerrupt {
+            config: VoiceZerointerruptGameConfig::default(),
+        })
+        .unwrap();
+        assert!(
+            json.contains(r#""pluginId":"voiceZerointerrupt""#),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn metadata_is_enabled_matches_variant() {
+        // Build a metadata bag where every plugin is enabled.
+        let mut metas = PluginMetadatas::default();
+        metas.execute.enabled = true;
+        metas.auto_upload.enabled = true;
+        metas.voice_speedup.enabled = true;
+        metas.voice_zerointerrupt.enabled = true;
+        metas.game_wrapper.enabled = true;
+        metas.locale_emulator.enabled = true;
+        metas.translator.enabled = true;
+        metas.wine.enabled = true;
+
+        for inst in &sample_instances() {
+            assert!(metas.is_enabled(inst), "{:?} should be enabled", inst);
+        }
+
+        // Disable one and check the corresponding variant flips.
+        metas.wine.enabled = false;
+        let wine = PluginInstance::Wine {
+            config: WineGameConfig::default(),
+        };
+        assert!(!metas.is_enabled(&wine));
+    }
+}

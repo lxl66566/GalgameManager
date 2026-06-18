@@ -162,6 +162,7 @@ impl StartCtx {
 /// Owned, fully-resolved view of a [`StartCtx`] used by alternative
 /// launchers (e.g. `systemd-run`) that need the program/args/cwd/env
 /// as plain values instead of a [`Command`].
+#[derive(Debug)]
 pub struct ResolvedParts {
     pub program: PathBuf,
     pub args: Vec<String>,
@@ -335,4 +336,135 @@ fn update_game_time(app: &tauri::AppHandle, game_id: u32, dur: chrono::TimeDelta
         game.use_time
     );
     lock.save_and_emit(app)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_cmd_is_invalid() {
+        // shlex::split returns None on unbalanced quotes, but for "" we get
+        // an empty iter → InvalidCommand error.
+        let err = StartCtx {
+            cmd: "".to_string(),
+            ..Default::default()
+        }
+        .resolved_parts()
+        .unwrap_err();
+        assert!(matches!(err, Error::InvalidCommand(_)));
+    }
+
+    #[test]
+    fn absolute_program_infers_current_dir_from_parent() {
+        // Use forward-slash absolute paths so shlex doesn't strip backslashes
+        // (shlex treats `\` as an escape). On Windows, `C:/...` is still
+        // considered absolute by Path::is_absolute.
+        let abs = if cfg!(windows) {
+            "C:/usr/bin/foo.exe"
+        } else {
+            "/usr/bin/foo"
+        };
+        let ctx = StartCtx {
+            cmd: format!("{abs} --bar baz"),
+            current_dir: None,
+            env: None,
+        };
+        let parts = ctx.resolved_parts().unwrap();
+        assert_eq!(parts.program, PathBuf::from(abs));
+        assert_eq!(parts.args, vec!["--bar".to_string(), "baz".to_string()]);
+        let parent = PathBuf::from(abs);
+        let expected_parent = parent.parent().unwrap();
+        assert_eq!(
+            parts.current_dir.as_deref().map(Path::new),
+            Some(expected_parent)
+        );
+    }
+
+    #[test]
+    fn explicit_current_dir_overrides_parent_inference() {
+        let abs = if cfg!(windows) {
+            "C:/usr/bin/foo.exe"
+        } else {
+            "/usr/bin/foo"
+        };
+        let cwd = if cfg!(windows) { "C:/cwd" } else { "/cwd" };
+        let ctx = StartCtx {
+            cmd: abs.to_string(),
+            current_dir: Some(cwd.to_string()),
+            env: None,
+        };
+        let parts = ctx.resolved_parts().unwrap();
+        // The program stays absolute; only cwd changes.
+        assert_eq!(parts.program, PathBuf::from(abs));
+        assert_eq!(parts.current_dir.as_deref(), Some(cwd));
+    }
+
+    #[test]
+    fn bare_command_keeps_current_dir_as_is() {
+        // Bare name (no path separator) must NOT be joined with current_dir —
+        // otherwise `wine` next to a game exe would be mis-resolved to
+        // `<game_dir>/wine`. Regression test for that historical bug.
+        let cwd = if cfg!(windows) {
+            "C:/games/foo"
+        } else {
+            "/games/foo"
+        };
+        let ctx = StartCtx {
+            cmd: "wine notepad".to_string(),
+            current_dir: Some(cwd.to_string()),
+            env: None,
+        };
+        let parts = ctx.resolved_parts().unwrap();
+        assert_eq!(parts.program, PathBuf::from("wine"));
+        assert_eq!(parts.args, vec!["notepad".to_string()]);
+        assert_eq!(parts.current_dir.as_deref(), Some(cwd));
+    }
+
+    #[test]
+    fn relative_program_with_cd_is_joined() {
+        // A relative path that contains a separator (./foo or subdir/foo)
+        // must be resolved against current_dir to a fully-qualified path.
+        let cwd = if cfg!(windows) {
+            "C:/parent"
+        } else {
+            "/parent"
+        };
+        let ctx = StartCtx {
+            cmd: "./helper --x".to_string(),
+            current_dir: Some(cwd.to_string()),
+            env: None,
+        };
+        let parts = ctx.resolved_parts().unwrap();
+        let expected = Path::new(cwd).join("./helper");
+        assert_eq!(parts.program, expected);
+        assert_eq!(parts.current_dir.as_deref(), Some(cwd));
+    }
+
+    #[test]
+    fn empty_args_when_program_only() {
+        // No arg parsing surprises: a single-token cmd yields empty args
+        // and the program is preserved verbatim.
+        let ctx = StartCtx {
+            cmd: "foo".to_string(),
+            current_dir: None,
+            env: None,
+        };
+        let parts = ctx.resolved_parts().unwrap();
+        assert_eq!(parts.program, PathBuf::from("foo"));
+        assert!(parts.args.is_empty());
+        assert!(parts.current_dir.is_none());
+        assert!(parts.env.is_none());
+    }
+
+    #[test]
+    fn unbalanced_quote_in_cmd_errors() {
+        let err = StartCtx {
+            cmd: r#"echo 'broken"#.to_string(),
+            ..Default::default()
+        }
+        .resolved_parts()
+        .unwrap_err();
+        assert!(matches!(err, Error::InvalidCommand(_)));
+    }
 }
