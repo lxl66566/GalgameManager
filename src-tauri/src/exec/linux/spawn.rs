@@ -107,10 +107,10 @@ fn current_uid() -> Option<u32> {
 /// polling).
 ///
 /// Error semantics (for the caller's fallback decision):
-/// * `Error::Io` — `systemd-run` itself could not be invoked; safe to
-///   retry as a direct child spawn.
-/// * Anything else — the user's command or systemd configuration is at
-///   fault; surface the error instead of masking it.
+/// * `Error::Io` — `systemd-run` itself could not be invoked; safe to retry as
+///   a direct child spawn.
+/// * Anything else — the user's command or systemd configuration is at fault;
+///   surface the error instead of masking it.
 pub async fn spawn_in_scope(start_ctx: &StartCtx, unit_name: &str) -> Result<Option<PathBuf>> {
     let parts = start_ctx.resolved_parts()?;
 

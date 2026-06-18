@@ -40,25 +40,29 @@ const UNIT_LIVENESS_CACHE: Duration = Duration::from_secs(5);
 ///
 /// * `Systemd` — preferred when a user systemd session is available. We spawn
 ///   the game inside a transient scope via `systemd-run --user --scope
-///   --no-block`, then poll the scope's `cgroup.procs` to know whether the
-///   game is still running and whether the focused window belongs to it.
+///   --no-block`, then poll the scope's `cgroup.procs` to know whether the game
+///   is still running and whether the focused window belongs to it.
 ///
 /// * `SystemdUnit` — degraded systemd path. The scope was created but its
-///   cgroup could not be resolved (e.g. empty `ControlGroup` property on
-///   some systemd versions). We poll `systemctl --user is-active` instead.
-///   Process-identity focus matching is unavailable, so in precision mode
-///   any foreground window counts as focused.
+///   cgroup could not be resolved (e.g. empty `ControlGroup` property on some
+///   systemd versions). We poll `systemctl --user is-active` instead.
+///   Process-identity focus matching is unavailable, so in precision mode any
+///   foreground window counts as focused.
 ///
-/// * `Child` — fallback for systems without systemd (or when spawning the
-///   scope fails). Behaves like the legacy unix implementation.
+/// * `Child` — fallback for systems without systemd (or when spawning the scope
+///   fails). Behaves like the legacy unix implementation.
 pub enum GameTracker {
-    Systemd { procs_path: PathBuf },
+    Systemd {
+        procs_path: PathBuf,
+    },
     SystemdUnit {
         unit: String,
         last_check: Instant,
         cached: bool,
     },
-    Child { child: tokio::process::Child },
+    Child {
+        child: tokio::process::Child,
+    },
 }
 
 impl GameTracker {

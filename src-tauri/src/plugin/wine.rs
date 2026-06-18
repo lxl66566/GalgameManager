@@ -10,10 +10,8 @@ use std::collections::{BTreeMap, HashMap};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::error::Result;
-
 use super::{PluginConfig, PluginContext};
-use crate::exec::StartCtx;
+use crate::{error::Result, exec::StartCtx};
 
 /// Plugin identifier used in the registry and config.
 pub const PLUGIN_ID: &str = "wine";
@@ -129,7 +127,7 @@ impl super::PluginHandler for WinePlugin {
                 ctx.launch.game_id
             );
             let _ = config;
-            return Ok(None);
+            Ok(None)
         }
 
         #[cfg(target_os = "linux")]
@@ -146,7 +144,10 @@ impl super::PluginHandler for WinePlugin {
             let mut env: HashMap<String, String> = config.extra_env.clone();
 
             if !config.prefix.is_empty() {
-                env.insert("WINEPREFIX".to_string(), varmap.resolve_var(&config.prefix)?);
+                env.insert(
+                    "WINEPREFIX".to_string(),
+                    varmap.resolve_var(&config.prefix)?,
+                );
             }
             env.insert(
                 "WINEARCH".to_string(),
@@ -229,7 +230,9 @@ impl super::PluginHandler for WinePlugin {
                 if config.prefix.is_empty() {
                     String::new()
                 } else {
-                    lock.varmap().resolve_var(&config.prefix).unwrap_or_default()
+                    lock.varmap()
+                        .resolve_var(&config.prefix)
+                        .unwrap_or_default()
                 }
             };
 

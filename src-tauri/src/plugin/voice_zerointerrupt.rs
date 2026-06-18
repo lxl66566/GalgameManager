@@ -112,7 +112,10 @@ pub use win_impl::VoiceZerointerruptPlugin;
 // remains visible and configurable without breaking game launches.
 #[cfg(not(windows))]
 mod stub_impl {
-    use crate::{error::Result, plugin::{PluginConfig, PluginContext, PluginHandler}};
+    use crate::{
+        error::Result,
+        plugin::{PluginConfig, PluginContext, PluginHandler},
+    };
 
     pub struct VoiceZerointerruptPlugin;
 

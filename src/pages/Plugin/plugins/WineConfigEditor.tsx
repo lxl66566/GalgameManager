@@ -8,7 +8,13 @@
 import type { DllOverride } from '@bindings/DllOverride'
 import type { WineArch } from '@bindings/WineArch'
 import type { WineGameConfig } from '@bindings/WineGameConfig'
-import { FormField, FormInput, FormPathInput, FormSelect, FormSwitch } from '@components/ui/form'
+import {
+  FormField,
+  FormInput,
+  FormPathInput,
+  FormSelect,
+  FormSwitch
+} from '@components/ui/form'
 import { FormTableEditor } from '@components/ui/FormTableEditor'
 import { useI18n } from '~/i18n'
 import { type Component } from 'solid-js'
@@ -119,7 +125,9 @@ function WineGameConfigEditor(props: ConfigEditorProps<WineGameConfig>) {
       >
         <FormSwitch
           checked={props.config.esync}
-          onChange={(checked: boolean) => props.onCommit({ ...props.config, esync: checked })}
+          onChange={(checked: boolean) =>
+            props.onCommit({ ...props.config, esync: checked })
+          }
         />
       </FormField>
 
@@ -130,7 +138,9 @@ function WineGameConfigEditor(props: ConfigEditorProps<WineGameConfig>) {
       >
         <FormSwitch
           checked={props.config.fsync}
-          onChange={(checked: boolean) => props.onCommit({ ...props.config, fsync: checked })}
+          onChange={(checked: boolean) =>
+            props.onCommit({ ...props.config, fsync: checked })
+          }
         />
       </FormField>
 

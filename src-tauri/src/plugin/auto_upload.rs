@@ -213,13 +213,17 @@ impl super::PluginHandler for AutoUploadPlugin {
 
         // Retention (末位淘汰): keep only the newest `max_kept` archives.
         if max_kept > 0 {
-            if matches!(retention_scope, RetentionScope::Remote | RetentionScope::Both) {
+            if matches!(
+                retention_scope,
+                RetentionScope::Remote | RetentionScope::Both
+            ) {
                 prune_remote(&*op, ctx.launch.game_id, max_kept as usize).await;
             }
-            if matches!(retention_scope, RetentionScope::Local | RetentionScope::Both) {
-                let local_game_dir = data_dir
-                    .join("backup")
-                    .join(ctx.launch.game_id.to_string());
+            if matches!(
+                retention_scope,
+                RetentionScope::Local | RetentionScope::Both
+            ) {
+                let local_game_dir = data_dir.join("backup").join(ctx.launch.game_id.to_string());
                 prune_local(&local_game_dir, max_kept as usize);
             }
         }
@@ -282,7 +286,10 @@ fn prune_local(local_game_dir: &Path, max_kept: usize) {
     for name in names.iter().take(evict_count) {
         let path = local_game_dir.join(name);
         if let Err(e) = std::fs::remove_file(&path) {
-            log::warn!("AutoUpload: delete local archive {} failed: {e}", path.display());
+            log::warn!(
+                "AutoUpload: delete local archive {} failed: {e}",
+                path.display()
+            );
         }
     }
     log::info!("AutoUpload: pruned {evict_count} local archive(s)");
