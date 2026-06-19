@@ -5,6 +5,7 @@ import { GameActionButton } from '@components/ui/GameActionButton'
 import { displayDuration } from '@utils/time'
 import { createRelativeTime } from '@utils/time/createRelativeTime'
 import { resolveTimeLanguage, useI18n } from '~/i18n'
+import { cn } from '~/lib/utils'
 import { useConfig } from '~/store'
 import { AiOutlineCloudUpload, AiOutlineEdit, AiOutlineSync } from 'solid-icons/ai'
 import { FaRegularCirclePlay, FaSolidGamepad } from 'solid-icons/fa'
@@ -102,7 +103,13 @@ export const GameItem = (props: GameItemProps) => {
 
       {/* 下半部分：详情与工具栏区域 */}
 
-      <div class="relative flex-1 bg-white dark:bg-slate-700 p-4 group/info overflow-hidden">
+      <div
+        class={cn(
+          'relative flex-1 bg-white dark:bg-slate-700 group/info overflow-hidden',
+          // absolute 需要更多空间
+          config.settings.appearance.timeDisplay.format === 'absolute' ? 'p-3' : 'p-4'
+        )}
+      >
         {/* 游戏信息容器 */}
         <div class="flex flex-col h-full justify-center transition-opacity duration-300 group-hover/info:opacity-40">
           {/* 1. 游戏标题：动态字号 + 截断 */}
@@ -115,18 +122,18 @@ export const GameItem = (props: GameItemProps) => {
 
           {/* 2. 信息行：左右分布 */}
           <div class="flex items-center justify-between mt-1.5 font-mono text-xs">
-            {/* 左侧：上次游玩时间 */}
+            {/* 左侧：上次游玩时间（min-w-0 + truncate 防止过长时换行顶掉标题） */}
             <div
-              class="flex items-center text-gray-400 dark:text-gray-500"
+              class="flex items-center min-w-0 text-gray-400 dark:text-gray-500"
               title={`${t('game.lastPlayedLabel')}${props.game.lastPlayedTime || t('time.never')}`}
             >
-              {/* <History class="w-3 h-3 mr-1" /> */}
-              <span>{timeAgo()}</span>
+              {/* <History class="w-3 h-3 mr-1 shrink-0" /> */}
+              <span class="min-w-0 truncate">{timeAgo()}</span>
             </div>
 
-            {/* 右侧：总游玩时长 */}
+            {/* 右侧：总游玩时长（shrink-0 保持完整可见） */}
             <div
-              class="text-gray-500 dark:text-gray-400 font-medium"
+              class="shrink-0 whitespace-nowrap text-gray-500 dark:text-gray-400 font-medium"
               title={t('game.totalPlayTime')}
             >
               {displayDuration(props.game.useTime)}

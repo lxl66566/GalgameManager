@@ -23,9 +23,10 @@
 
 ## Changelog
 
-### unstable
+### v1.2.0
 
 - 新插件：Wine，提升用户在 Linux 上运行原生 GalgameManager 并使用 wine 运行游戏的使用体验
+  - SPEED UP 插件支持 Wine 协同（仅 dsound provider）
 - 新功能：自动上传存档插件，支持限制存档数量和设置清理策略
 - Linux 支持精确计时：X11 + Wayland (AT-SPI)
 - 新功能：用户可自定义「上次游玩时间」展示绝对时间或相对时间、中文或英文

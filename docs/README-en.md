@@ -23,14 +23,17 @@ A cross-platform game launcher based on Tauri + SolidJS, designed for managing, 
 
 ## Changelog
 
-### unstable
+### v1.2.0
 
-- New feature: Users can customize the display format of "Last Played Time" (absolute or relative time, Chinese or English)
-- Unix process monitoring optimization: default to systemd launch, Cgroup process tracking
-- Unix foreground detection optimization: X11 + Wayland (AT-SPI) probing
-- Fix: Unix platform image display failure
-- Performance optimization: main page grid virtualization
-- Refactor: remove most panic paths
+- New plugin: Wine, improving the user experience of running native GalgameManager on Linux and launching games via wine
+  - SPEED UP plugin now supports Wine collaboration (dsound provider only)
+- New feature: auto-upload plugin support for limiting the number of archives and configurable cleanup policies
+- Precise timing support on Linux: X11 + Wayland (AT-SPI)
+- New feature: Users can customize the "Last Played Time" display as absolute or relative time, in Chinese or English
+- Unix liveness detection optimization: now uses systemd startup by default, with Cgroup process tracking
+- Fix: Image display failure on Unix platforms
+- Performance optimization: Grid virtualization in the main interface
+- Refactor: Removed most panic paths, supplemented with unit tests
 
 ### v1.1.2
 
