@@ -23,13 +23,13 @@ import type { VoiceZerointerruptGameConfig } from '@bindings/VoiceZerointerruptG
 import type { VoiceZerointerruptPluginMeta } from '@bindings/VoiceZerointerruptPluginMeta'
 import type { WineGameConfig } from '@bindings/WineGameConfig'
 import type { WinePluginMeta } from '@bindings/WinePluginMeta'
-import { isLinux, isWindows } from '~/utils/platform'
+import { isLinux, isMac, isWindows } from '~/utils/platform'
 import type { Component } from 'solid-js'
 
 // ── Plugin info (presentation metadata, frontend-only) ────────────────────────
 
 /** Platforms on which a plugin's handler has a real (non no-op) effect. */
-export type PluginPlatform = 'windows' | 'linux'
+export type PluginPlatform = 'windows' | 'linux' | 'macos'
 
 export interface PluginInfo {
   id: string
@@ -148,6 +148,9 @@ export function resolveGameConfig(def: AnyPluginDef, metas: PluginMetadatas): un
 export function isPluginAvailable(info: PluginInfo): boolean {
   if (!info.platforms) return true
   return info.platforms.some(
-    p => (p === 'windows' && isWindows) || (p === 'linux' && isLinux)
+    p =>
+      (p === 'windows' && isWindows) ||
+      (p === 'linux' && isLinux) ||
+      (p === 'macos' && isMac)
   )
 }

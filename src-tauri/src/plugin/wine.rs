@@ -102,6 +102,27 @@ impl Default for WinePluginMeta {
 
 // ── Handler ─────────────────────────────────────────────────────────────────
 
+/// Resolve the Wine prefix (`WINEPREFIX`) configured for a game, if any.
+///
+/// Returns `None` when the game has no Wine plugin, or its `prefix` is empty
+/// (Wine's default `~/.wine`). Used by audio-DLL plugins to target
+/// `wine regedit` at the correct prefix.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+pub(crate) fn wine_prefix_for_game(game_id: u32) -> Option<String> {
+    use crate::plugin::PluginInstance;
+
+    let lock = crate::db::CONFIG.lock();
+    let game = lock.get_game_by_id(game_id).ok()?;
+    let prefix = game.plugins.iter().find_map(|p| match p {
+        PluginInstance::Wine { config } => Some(config.prefix.as_str()),
+        _ => None,
+    })?;
+    if prefix.is_empty() {
+        return None;
+    }
+    lock.resolve_var(prefix).ok()
+}
+
 pub struct WinePlugin;
 
 impl WinePlugin {
@@ -141,7 +162,15 @@ impl super::PluginHandler for WinePlugin {
                 lock.varmap().clone()
             };
 
+            // Pull plugin-contributed overlays (populated during
+            // `before_game_start`, e.g. by the audio-DLL plugins).
+            let env_overlay = ctx.launch.env_overlay.lock().clone();
+            let dll_overlay = ctx.launch.dll_override_overlay.lock().clone();
+
             let mut env: HashMap<String, String> = config.extra_env.clone();
+            // Plugin-computed env (e.g. SPEEDUP) takes precedence over raw
+            // extras, but is itself overridden by the Wine-specific keys below.
+            env.extend(env_overlay);
 
             if !config.prefix.is_empty() {
                 env.insert(
@@ -162,9 +191,14 @@ impl super::PluginHandler for WinePlugin {
             if config.fsync {
                 env.insert("WINEFSYNC".to_string(), "1".to_string());
             }
-            if !config.dll_overrides.is_empty() {
-                let joined: String = config
-                    .dll_overrides
+            // Merge DLL overrides: start with plugin requests, then let the
+            // user's explicit config win (so user settings are respected).
+            let mut dll_overrides = dll_overlay;
+            for (dll, o) in &config.dll_overrides {
+                dll_overrides.insert(dll.clone(), *o);
+            }
+            if !dll_overrides.is_empty() {
+                let joined: String = dll_overrides
                     .iter()
                     .map(|(dll, o)| format!("{dll}={}", o.as_wine_str()))
                     .collect::<Vec<_>>()

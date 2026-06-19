@@ -30,8 +30,10 @@ dashmap                   = "6.1.0"
 easy_strfmt               = { path = "./easy_strfmt", features = ["indexmap"] }
 flexi_logger              = { version = "0.31.7", features = ["compress"] }
 futures                   = "0.3.31"
+goblin                    = "0.10.4"
 hex                       = "0.4.3"
 home                      = "0.5.12"
+include_assets            = { version = "1.0.0", default-features = false, features = ["zstd"] }
 indexmap                  = { version = "2.14.0", features = ["serde"] }
 log                       = "0.4.29"
 machine-uid               = "0.5.4"
@@ -52,7 +54,7 @@ tauri-plugin-fs           = "2.4.4"
 tauri-plugin-notification = "2.3.3"
 tauri-plugin-opener       = "2.5.3"
 thiserror                 = "2.0.18"
-tokio                     = { version = "1", features = ["fs", "macros", "process", "time"] }
+tokio                     = { version = "1", features = ["fs", "macros", "process", "rt", "time"] }
 tokio-util                = { version = "0.7", features = ["compat"] }
 toml                      = "1.1.2"
 ts-rs                     = { version = "12.0", features = ["format", "chrono-impl", "indexmap-impl", "no-serde-warnings"] }
@@ -60,8 +62,6 @@ walkdir                   = "2.5.0"
 # tauri-plugin-sql  = { version = "2.2.0", features = ["sqlite"] }
 
 [target.'cfg(windows)'.dependencies]
-goblin               = "0.10.4"
-include_assets       = { version = "1.0.0", default-features = false, features = ["zstd"] }
 windows              = { version = "0.62", features = ["Win32_System_JobObjects", "Win32_System_Threading", "Win32_Foundation", "Win32_Security", "Win32_UI_WindowsAndMessaging"] }
 windows-env          = "0.2.0"
 windows-result       = { version = "0.4" }

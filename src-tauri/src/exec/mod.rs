@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     path::{Path, PathBuf},
     process::{Child, Command},
     sync::{Arc, LazyLock as Lazy},
@@ -6,6 +7,7 @@ use std::{
 
 use dashmap::DashMap;
 use log::{debug, info, warn};
+use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, async_runtime::JoinHandle};
 use tokio::sync::oneshot;
@@ -206,6 +208,8 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
         exe_path,
         current_dir,
         transaction: Transaction::new(),
+        env_overlay: Mutex::new(HashMap::new()),
+        dll_override_overlay: Mutex::new(HashMap::new()),
     });
 
     // 1. before_game_start hooks

@@ -1,4 +1,3 @@
-#[cfg(windows)]
 pub mod audio_speed_hack;
 pub mod toast;
 

@@ -24,6 +24,7 @@ pub use config::{
     VoiceSpeedupGameConfig, VoiceSpeedupPluginMeta, VoiceZerointerruptGameConfig,
     VoiceZerointerruptPluginMeta, WineArch, WineGameConfig, WinePluginMeta,
 };
+use parking_lot::Mutex;
 use serde::Deserialize;
 use tauri::AppHandle;
 pub use transaction::{CleanupPhase, Transaction};
@@ -49,6 +50,14 @@ pub struct LaunchCtx {
     /// Parent directory of the game executable (may be empty).
     pub current_dir: String,
     pub transaction: Transaction,
+    /// Env vars contributed by plugins during `before_game_start`, merged into
+    /// the launch env by launch-override plugins (e.g. Wine) before spawning.
+    /// Used on Linux to pass e.g. `SPEEDUP` into the Wine process.
+    pub env_overlay: Mutex<HashMap<String, String>>,
+    /// DLL-override requests (DLL name → override) contributed by plugins,
+    /// merged into `WINEDLLOVERRIDES` by the Wine plugin. A request is applied
+    /// only when the user hasn't explicitly configured that DLL.
+    pub dll_override_overlay: Mutex<HashMap<String, DllOverride>>,
 }
 
 /// Context passed to plugin lifecycle hooks.
@@ -325,6 +334,8 @@ impl SaveUploadDispatcher {
             exe_path,
             current_dir,
             transaction,
+            env_overlay: Mutex::new(HashMap::new()),
+            dll_override_overlay: Mutex::new(HashMap::new()),
         });
 
         let configs: Vec<Arc<PluginConfig>> = plugins

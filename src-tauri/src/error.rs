@@ -70,7 +70,6 @@ pub enum Error {
         source: Box<Self>,
     },
 
-    #[cfg(windows)]
     #[error("PE parse error: {0}")]
     PeParse(#[from] goblin::error::Error),
 }

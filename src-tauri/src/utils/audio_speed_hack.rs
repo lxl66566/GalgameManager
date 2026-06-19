@@ -2,21 +2,21 @@
 //! VoiceZerointerrupt).
 //!
 //! Provides PE architecture detection, DLL extraction from embedded assets,
-//! Windows registry manipulation for MMDevAPI, and SPEEDUP environment
-//! variable management.
+//! and MMDevAPI COM-redirect registry setup.
 //!
-//! This entire module is **Windows-only** and is gated by `#[cfg(windows)]`
-//! in `mod.rs`.
+//! - **Extraction & architecture detection**: cross-platform (file I/O + goblin
+//!   PE parsing).
+//! - **Windows registry (HKCU)** + **SPEEDUP env var**: Windows-only.
+//! - **Wine registry (regedit)**: Linux-only, drives `wine regedit` against the
+//!   game's prefix so the MMDevAPI wrapper is picked up via COM.
 
 use std::{
     fs,
     path::{Path, PathBuf},
-    sync::LazyLock as Lazy,
 };
 
 use include_assets::{NamedArchive, include_dir};
 use log::{info, warn};
-use windows_registry_obj::{BaseKey, RegValueData, Registry};
 
 use crate::{error::Result, plugin::config::SpeedupProvider};
 
@@ -62,7 +62,7 @@ impl System {
     }
 }
 
-// ── Asset extraction helpers ───────────────────────────────────────────────
+// ── Asset extraction helpers (cross-platform) ───────────────────────────────
 
 const BACKUP_SUFFIX: &str = ".backup";
 
@@ -288,94 +288,209 @@ pub fn cleanup_files(files: &[ExtractedFile]) {
     }
 }
 
-// ── Registry ────
+// ── MMDevAPI COM redirect data (cross-platform) ─────────────────────────────
 
-static MMDEVAPI_REGISTRY_ITEMS: Lazy<Vec<Registry<'static>>> = Lazy::new(|| {
-    [
-        BaseKey::CurrentUser
-            .reg("SOFTWARE\\Classes\\CLSID\\{06CCA63E-9941-441B-B004-39F999ADA412}\\InprocServer32")
-            .with_values([
-                ("", RegValueData::ExpandableString(MMDEVAPI_DLL_NAME.into())),
-                ("ThreadingModel", RegValueData::String("both".into())),
-            ]),
-        BaseKey::CurrentUser
-            .reg("SOFTWARE\\Classes\\CLSID\\{93C063B0-68CB-4DE7-B032-8F56C1D2E99D}\\InprocServer32")
-            .with_values([
-                ("", RegValueData::ExpandableString(MMDEVAPI_DLL_NAME.into())),
-                ("ThreadingModel", RegValueData::String("both".into())),
-            ]),
-        BaseKey::CurrentUser
-            .reg("SOFTWARE\\Classes\\CLSID\\{BCDE0395-E52F-467C-8E3D-C4579291692E}\\InprocServer32")
-            .with_values([
-                ("", RegValueData::ExpandableString(MMDEVAPI_DLL_NAME.into())),
-                ("ThreadingModel", RegValueData::String("both".into())),
-            ]),
-        BaseKey::CurrentUser
-            .reg("SOFTWARE\\Classes\\CLSID\\{E2F7A62A-862B-40AE-BBC2-5C0CA9A5B7E1}\\InprocServer32")
-            .with_values([
-                ("", RegValueData::ExpandableString(MMDEVAPI_DLL_NAME.into())),
-                ("ThreadingModel", RegValueData::String("free".into())),
-            ]),
-        // WOW6432Node Entries
-        BaseKey::CurrentUser
-            .reg("SOFTWARE\\Classes\\WOW6432Node\\CLSID\\{06CCA63E-9941-441B-B004-39F999ADA412}\\InprocServer32")
-            .with_values([
-                ("", RegValueData::ExpandableString(MMDEVAPI_DLL_NAME.into())),
-                ("ThreadingModel", RegValueData::String("both".into())),
-            ]),
-        BaseKey::CurrentUser
-            .reg("SOFTWARE\\Classes\\WOW6432Node\\CLSID\\{93C063B0-68CB-4DE7-B032-8F56C1D2E99D}\\InprocServer32")
-            .with_values([
-                ("", RegValueData::ExpandableString(MMDEVAPI_DLL_NAME.into())),
-                ("ThreadingModel", RegValueData::String("both".into())),
-            ]),
-        BaseKey::CurrentUser
-            .reg("SOFTWARE\\Classes\\WOW6432Node\\CLSID\\{BCDE0395-E52F-467C-8E3D-C4579291692E}\\InprocServer32")
-            .with_values([
-                ("", RegValueData::ExpandableString(MMDEVAPI_DLL_NAME.into())),
-                ("ThreadingModel", RegValueData::String("both".into())),
-            ]),
-        BaseKey::CurrentUser
-            .reg("SOFTWARE\\Classes\\WOW6432Node\\CLSID\\{E2F7A62A-862B-40AE-BBC2-5C0CA9A5B7E1}\\InprocServer32")
-            .with_values([
-                ("", RegValueData::ExpandableString(MMDEVAPI_DLL_NAME.into())),
-                ("ThreadingModel", RegValueData::String("free".into())),
-            ]),
-    ]
-    .to_vec()
-});
-
-/// Add MMDevAPI registry entries (for MMDevAPI DLL injection).
-pub fn set_mmdevapi_registry() -> std::io::Result<()> {
-    for item in MMDEVAPI_REGISTRY_ITEMS.iter() {
-        item.set()?;
-        info!("Registry created: {:?}", item.full_path());
-    }
-    Ok(())
+/// A single MMDevAPI COM `InprocServer32` redirect entry, stored as plain data
+/// so both the Windows and Wine executors can drive off the same table.
+struct MmdevapiRegItem {
+    /// Registry path relative to `HKEY_CURRENT_USER`, with backslashes.
+    path: &'static str,
+    /// `ThreadingModel` value.
+    threading_model: &'static str,
 }
 
-/// Remove MMDevAPI registry entries.
-pub fn clean_mmdevapi_registry() {
-    for item in MMDEVAPI_REGISTRY_ITEMS.iter() {
-        match item.remove_registry() {
-            Ok(()) => info!("Registry removed: {:?}", item.full_path()),
-            Err(e) => warn!("Failed to remove registry {:?}: {e}", item.full_path()),
+/// All 8 CLSID redirect entries (4 CLSIDs × {64-bit, WOW6432Node}).
+const MMDEVAPI_REG_ITEMS: &[MmdevapiRegItem] = &[
+    MmdevapiRegItem {
+        path: r"SOFTWARE\Classes\CLSID\{06CCA63E-9941-441B-B004-39F999ADA412}\InprocServer32",
+        threading_model: "both",
+    },
+    MmdevapiRegItem {
+        path: r"SOFTWARE\Classes\CLSID\{93C063B0-68CB-4DE7-B032-8F56C1D2E99D}\InprocServer32",
+        threading_model: "both",
+    },
+    MmdevapiRegItem {
+        path: r"SOFTWARE\Classes\CLSID\{BCDE0395-E52F-467C-8E3D-C4579291692E}\InprocServer32",
+        threading_model: "both",
+    },
+    MmdevapiRegItem {
+        path: r"SOFTWARE\Classes\CLSID\{E2F7A62A-862B-40AE-BBC2-5C0CA9A5B7E1}\InprocServer32",
+        threading_model: "free",
+    },
+    // WOW6432Node entries (32-bit view)
+    MmdevapiRegItem {
+        path: r"SOFTWARE\Classes\WOW6432Node\CLSID\{06CCA63E-9941-441B-B004-39F999ADA412}\InprocServer32",
+        threading_model: "both",
+    },
+    MmdevapiRegItem {
+        path: r"SOFTWARE\Classes\WOW6432Node\CLSID\{93C063B0-68CB-4DE7-B032-8F56C1D2E99D}\InprocServer32",
+        threading_model: "both",
+    },
+    MmdevapiRegItem {
+        path: r"SOFTWARE\Classes\WOW6432Node\CLSID\{BCDE0395-E52F-467C-8E3D-C4579291692E}\InprocServer32",
+        threading_model: "both",
+    },
+    MmdevapiRegItem {
+        path: r"SOFTWARE\Classes\WOW6432Node\CLSID\{E2F7A62A-862B-40AE-BBC2-5C0CA9A5B7E1}\InprocServer32",
+        threading_model: "free",
+    },
+];
+
+// ── Windows registry + env (Windows-only) ───────────────────────────────────
+
+#[cfg(windows)]
+mod win_impl {
+    use windows_registry_obj::{BaseKey, RegValueData};
+
+    use super::{MMDEVAPI_DLL_NAME, MMDEVAPI_REG_ITEMS, SPEEDUP_ENV_NAME};
+    use crate::error::Result;
+
+    /// Add MMDevAPI registry entries (for MMDevAPI DLL injection).
+    pub fn set_mmdevapi_registry() -> std::io::Result<()> {
+        for item in MMDEVAPI_REG_ITEMS {
+            BaseKey::CurrentUser
+                .reg(item.path)
+                .with_values([
+                    ("", RegValueData::ExpandableString(MMDEVAPI_DLL_NAME.into())),
+                    (
+                        "ThreadingModel",
+                        RegValueData::String(item.threading_model.into()),
+                    ),
+                ])
+                .set()?;
+            log::info!("Registry created: HKCU\\{}", item.path);
+        }
+        Ok(())
+    }
+
+    /// Remove MMDevAPI registry entries.
+    pub fn clean_mmdevapi_registry() {
+        for item in MMDEVAPI_REG_ITEMS {
+            let reg = BaseKey::CurrentUser.reg(item.path);
+            match reg.remove_registry() {
+                Ok(()) => log::info!("Registry removed: HKCU\\{}", item.path),
+                Err(e) => log::warn!("Failed to remove registry HKCU\\{}: {e}", item.path),
+            }
+        }
+    }
+
+    // ── Environment variable ──
+
+    /// Set the SPEEDUP environment variable to the given speed value.
+    pub fn set_speedup_env(speed: f32) -> Result<()> {
+        windows_env::set(SPEEDUP_ENV_NAME, format!("{speed:.1}"))?;
+        log::info!("Set env {SPEEDUP_ENV_NAME}={speed:.1}");
+        Ok(())
+    }
+
+    /// Remove the SPEEDUP environment variable.
+    pub fn remove_speedup_env() {
+        if let Err(e) = windows_env::remove(SPEEDUP_ENV_NAME) {
+            log::warn!("Failed to remove env {SPEEDUP_ENV_NAME}: {e}");
         }
     }
 }
 
-// ── Environment variable ───────────────────────────────────────────────────
+#[cfg(windows)]
+pub use win_impl::{
+    clean_mmdevapi_registry, remove_speedup_env, set_mmdevapi_registry, set_speedup_env,
+};
 
-/// Set the SPEEDUP environment variable to the given speed value.
-pub fn set_speedup_env(speed: f32) -> Result<()> {
-    windows_env::set(SPEEDUP_ENV_NAME, format!("{speed:.1}"))?;
-    info!("Set env {SPEEDUP_ENV_NAME}={speed:.1}");
-    Ok(())
-}
+// ── Wine registry (Linux-only) ──────────────────────────────────────────────
+//
+// On Linux the audio DLLs run inside Wine, so the MMDevAPI COM redirect has to
+// land in the *prefix*'s registry. We emit a `.reg` file and import it via
+// `wine regedit /S` against the game's `WINEPREFIX`.
+//
+// These functions are synchronous (std::process) so they can run both from an
+// async hook (wrapped in `spawn_blocking`) and from a sync `Transaction`
+// cleanup closure.
 
-/// Remove the SPEEDUP environment variable.
-pub fn remove_speedup_env() {
-    if let Err(e) = windows_env::remove(SPEEDUP_ENV_NAME) {
-        warn!("Failed to remove env {SPEEDUP_ENV_NAME}: {e}");
+#[cfg(target_os = "linux")]
+mod wine_regedit {
+    use std::{
+        fs, io,
+        path::PathBuf,
+        process::{Command, Stdio},
+        time::{SystemTime, UNIX_EPOCH},
+    };
+
+    use super::{MMDEVAPI_DLL_NAME, MMDEVAPI_REG_ITEMS};
+
+    /// Build a `REGEDIT4` file body. When `delete` is true each key is prefixed
+    /// with `-`, which regedit interprets as "delete this key".
+    fn build_reg_file(delete: bool) -> String {
+        let mut s = String::from("REGEDIT4\r\n\r\n");
+        for item in MMDEVAPI_REG_ITEMS {
+            if delete {
+                s.push_str(&format!("[-HKEY_CURRENT_USER\\{}]\r\n\r\n", item.path));
+            } else {
+                s.push_str(&format!(
+                    "[HKEY_CURRENT_USER\\{}]\r\n@=\"{MMDEVAPI_DLL_NAME}\"\r\n\"ThreadingModel\"=\"{}\"\r\n\r\n",
+                    item.path, item.threading_model
+                ));
+            }
+        }
+        s
+    }
+
+    fn unique_reg_path(tag: &str) -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or_default();
+        let mut p = std::env::temp_dir();
+        p.push(format!("ggmm-{tag}-{nonce}.reg"));
+        p
+    }
+
+    /// Write `content` to a temp `.reg` file and import it with
+    /// `wine regedit /S`. `prefix` overrides `WINEPREFIX`.
+    fn run_regedit(tag: &str, prefix: Option<&str>, content: &str) -> io::Result<()> {
+        let path = unique_reg_path(tag);
+        fs::write(&path, content)?;
+
+        let mut cmd = Command::new("wine");
+        cmd.args(["regedit", "/S"]).arg(&path);
+        if let Some(p) = prefix {
+            cmd.env("WINEPREFIX", p);
+        }
+        // Discard wine's stdout/stderr (prefix-init noise) to avoid pipe stalls.
+        cmd.stdout(Stdio::null());
+        cmd.stderr(Stdio::null());
+
+        let status_result = cmd.status();
+        // Always clean up the temp file, even on error.
+        let _ = fs::remove_file(&path);
+        let status = status_result?;
+        if !status.success() {
+            return Err(io::Error::other(format!(
+                "wine regedit exited with {status}"
+            )));
+        }
+        Ok(())
+    }
+
+    /// Add MMDevAPI registry entries to the Wine prefix.
+    pub fn set_mmdevapi_registry(prefix: Option<&str>) -> io::Result<()> {
+        let content = build_reg_file(false);
+        run_regedit("mmdevapi-set", prefix, &content)?;
+        log::info!(
+            "Wine MMDevAPI registry set ({} entries)",
+            MMDEVAPI_REG_ITEMS.len()
+        );
+        Ok(())
+    }
+
+    /// Remove MMDevAPI registry entries from the Wine prefix. Best-effort.
+    pub fn clean_mmdevapi_registry(prefix: Option<&str>) {
+        let content = build_reg_file(true);
+        match run_regedit("mmdevapi-del", prefix, &content) {
+            Ok(()) => log::info!("Wine MMDevAPI registry cleaned"),
+            Err(e) => log::warn!("Failed to clean wine MMDevAPI registry: {e}"),
+        }
     }
 }
+
+#[cfg(target_os = "linux")]
+pub use wine_regedit::{clean_mmdevapi_registry, set_mmdevapi_registry};

@@ -45,8 +45,7 @@ export const VOICE_ZEROINTERRUPT_PLUGIN: PluginDefinition<'voiceZerointerrupt'> 
         label: 'GitHub',
         url: 'https://github.com/lxl66566/AudioSpeedHack'
       }
-    ],
-    platforms: ['windows']
+    ]
   },
   metaKey: 'voiceZerointerrupt',
   configDefaults: { arch: 'auto' },

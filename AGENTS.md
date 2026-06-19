@@ -15,12 +15,10 @@ temperature: 0
 
 ## 开发守则
 
-- 使用 `bun run check` 检查 tsx 代码。
-- 使用 `bun run test` 运行 TS 单测（vitest）。
-- 在 `src-tauri` 下使用 `cargo test` 运行 Rust 单测/集成测试。
-- 修改了 Rust 代码后，请在 src-tauri 下执行 `cargo test export_bindings` 更新 bindings。（别问，直接执行即可）
+- `bun run check` 检查 tsx 代码，`bun run test` 运行 TS 单测（vitest），在 `src-tauri` 下使用 `cargo test` 运行 Rust 单测/集成测试。
+- 修改了 Rust 代码后，请在 src-tauri 下执行 `cargo test export_bindings` 更新 bindings。（别尝试找这个测试，别问为什么，直接执行即可）
 - 不要删除运行逻辑相关的关键注释和日志
-- 原子化 commit。
+- 对于复杂任务，请遵循原子化 commit
 
 # 项目规范
 
