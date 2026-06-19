@@ -227,10 +227,7 @@ mod linux_impl {
                         overlay.insert("dsound".to_string(), DllOverride::NativeBuiltin);
                     }
                     SpeedupProvider::MMDevAPI => {
-                        overlay.insert(
-                            "MMDevAPI".to_string(),
-                            DllOverride::NativeBuiltin,
-                        );
+                        overlay.insert("MMDevAPI".to_string(), DllOverride::NativeBuiltin);
                     }
                 }
                 // SoundTouch.dll is also extracted to the game directory and

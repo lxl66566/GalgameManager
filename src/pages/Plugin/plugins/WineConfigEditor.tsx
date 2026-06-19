@@ -175,7 +175,7 @@ export const WINE_PLUGIN: PluginDefinition<'wine'> = {
     id: 'wine',
     nameKey: 'plugin.wine.name',
     descriptionKey: 'plugin.wine.description',
-    version: '1.0.0',
+    version: '1.2.0',
     author: 'BUILTIN',
     links: [{ label: 'WineHQ', url: 'https://www.winehq.org/' }],
     platforms: ['linux']

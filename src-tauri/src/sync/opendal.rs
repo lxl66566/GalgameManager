@@ -134,7 +134,7 @@ impl super::MyOperation for Operator {
 
     async fn delete_archive_all(&self, game_id: u32) -> Result<()> {
         let remote_path = format!("{}/", game_id);
-        self.remove_all(&remote_path).await?;
+        self.delete_with(&remote_path).recursive(true).await?;
         Ok(())
     }
 

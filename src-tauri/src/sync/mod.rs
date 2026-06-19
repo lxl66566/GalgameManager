@@ -6,7 +6,7 @@ use std::{
 
 use ::opendal::{
     Operator,
-    layers::{LoggingLayer, RetryLayer, TimeoutLayer},
+    layers::{LoggingLayer, RetryEvent, RetryLayer, TimeoutLayer},
     services,
 };
 use log::{info, warn};
@@ -306,7 +306,8 @@ impl BuildOperator for WebDavConfig {
         non_io_timeout: Duration,
     ) -> Result<()> {
         let ctx = ctx.clone();
-        let notify = move |err: &::opendal::Error, _dur: Duration| {
+        let notify = move |event: RetryEvent| {
+            let err = event.err;
             log::warn!("webdav sync failed: {err}");
             // Emitting can only fail if the app/event loop is shutting down;
             // there's nothing useful to do with that, and unwinding from inside
@@ -359,7 +360,8 @@ impl BuildOperator for S3Config {
         non_io_timeout: Duration,
     ) -> Result<()> {
         let ctx = ctx.clone();
-        let notify = move |err: &::opendal::Error, _dur: Duration| {
+        let notify = move |event: RetryEvent| {
+            let err = event.err;
             log::warn!("s3 sync failed: {err}");
             // Emitting can only fail if the app/event loop is shutting down;
             // there's nothing useful to do with that, and unwinding from inside
