@@ -191,12 +191,14 @@ export const dict: DeepPartial<RawDictionary> = {
       name: 'SPEED UP!',
       description: '加速游戏音频播放',
       speed: '加速倍率',
-      provider: '注入方式'
+      provider: '注入方式',
+      mmdevapiWarn: 'MMDevAPI 注入方式在 Linux/Wine 下不可用，请使用 dsound。'
     },
     voiceZerointerrupt: {
       name: 'ZeroInterrupt',
       description: '阻止游戏打断语音（仅限 dsound 游戏）'
     },
+    wineRequired: '此插件仅在 Linux Wine 下可用，请先添加 Wine 插件。',
     wine: {
       name: 'Wine',
       description: '在 Linux 上通过 Wine 运行 Windows 游戏',

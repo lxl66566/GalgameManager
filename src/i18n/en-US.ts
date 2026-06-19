@@ -189,12 +189,15 @@ export const dict = {
       name: 'SPEED UP!',
       description: 'Accelerate game audio playback',
       speed: 'Speed Multiplier',
-      provider: 'Provider'
+      provider: 'Provider',
+      mmdevapiWarn:
+        "MMDevAPI provider is unsupported on Linux/Wine. Use 'dsound' instead."
     },
     voiceZerointerrupt: {
       name: 'ZeroInterrupt',
       description: 'Prevent voice interruption in games (dsound games only)'
     },
+    wineRequired: 'This plugin requires the Wine plugin to be enabled on Linux.',
     wine: {
       name: 'Wine',
       description: 'Run Windows games through Wine on Linux',

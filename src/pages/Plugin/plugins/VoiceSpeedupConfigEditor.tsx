@@ -2,13 +2,21 @@
  * VoiceSpeedup plugin — self-contained definition file.
  */
 import type { VoiceSpeedupGameConfig } from '@bindings/VoiceSpeedupGameConfig'
+import { FieldHint } from '@components/ui/FieldHint'
 import { FormField, FormInput, FormSelect } from '@components/ui/form'
-import { useI18n } from '~/i18n'
+import { useI18n, type Dictionary } from '~/i18n'
+import { useConfig } from '~/store'
+import { isLinux } from '~/utils/platform'
+import { Show } from 'solid-js/web'
 import { AutoAddMetaEditor } from './AutoAddMetaEditor'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 
 function VoiceSpeedupGameConfigEditor(props: ConfigEditorProps<VoiceSpeedupGameConfig>) {
   const { t } = useI18n()
+  const { config } = useConfig()
+
+  const showMmdevapiWarn = () => isLinux && props.config.provider === 'mmdevapi'
+  const showWineRequired = () => isLinux && config.pluginMetadatas.wine?.enabled === false
 
   /** Parse a speed value from user input, clamped to [1.0, 2.0]. */
   const parseSpeed = (raw: string): number | null => {
@@ -19,60 +27,74 @@ function VoiceSpeedupGameConfigEditor(props: ConfigEditorProps<VoiceSpeedupGameC
   }
 
   return (
-    <div class="flex flex-wrap gap-5 items-start">
-      <FormField label={t('plugin.voiceSpeedup.speed')} class="w-28">
-        <FormInput
-          class="w-full"
-          type="text"
-          inputmode="decimal"
-          value={String(props.config.speed)}
-          onBlur={(e: FocusEvent) => {
-            // Normalize on blur: reformat to clean decimal
-            const el = e.target as HTMLInputElement
-            const parsed = parseSpeed(el.value)
-            if (parsed !== null) {
-              el.value = String(parsed)
-              props.onCommit({ ...props.config, speed: parsed })
-            } else {
-              // Reset to current config value if invalid
-              el.value = String(props.config.speed)
+    <div class="flex flex-col gap-2">
+      <div class="flex flex-wrap gap-5 items-start">
+        <FormField label={t('plugin.voiceSpeedup.speed')} class="w-28">
+          <FormInput
+            class="w-full"
+            type="text"
+            inputmode="decimal"
+            value={String(props.config.speed)}
+            onBlur={(e: FocusEvent) => {
+              // Normalize on blur: reformat to clean decimal
+              const el = e.target as HTMLInputElement
+              const parsed = parseSpeed(el.value)
+              if (parsed !== null) {
+                el.value = String(parsed)
+                props.onCommit({ ...props.config, speed: parsed })
+              } else {
+                // Reset to current config value if invalid
+                el.value = String(props.config.speed)
+              }
+            }}
+          />
+        </FormField>
+        <FormField label={t('plugin.voiceSpeedup.provider')} class="w-28">
+          <FormSelect
+            class="w-full"
+            options={[
+              { label: 'MMDevAPI', value: 'mmdevapi' },
+              { label: 'dsound', value: 'dsound' }
+            ]}
+            value={props.config.provider}
+            onChange={(e: Event) =>
+              props.onCommit({
+                ...props.config,
+                provider: (e.target as HTMLSelectElement).value as 'mmdevapi' | 'dsound'
+              })
             }
-          }}
+          />
+        </FormField>
+        <FormField label={t('plugin.arch')} class="w-28">
+          <FormSelect
+            class="w-full"
+            options={[
+              { label: t('plugin.archAuto'), value: 'auto' },
+              { label: 'x86', value: 'x86' },
+              { label: 'x64', value: 'x64' }
+            ]}
+            value={props.config.arch}
+            onChange={(e: Event) =>
+              props.onCommit({
+                ...props.config,
+                arch: (e.target as HTMLSelectElement).value as 'auto' | 'x86' | 'x64'
+              })
+            }
+          />
+        </FormField>
+      </div>
+      <Show when={showMmdevapiWarn()}>
+        <FieldHint
+          variant="warning"
+          text={String(t('plugin.voiceSpeedup.mmdevapiWarn' as keyof Dictionary))}
         />
-      </FormField>
-      <FormField label={t('plugin.voiceSpeedup.provider')} class="w-28">
-        <FormSelect
-          class="w-full"
-          options={[
-            { label: 'MMDevAPI', value: 'mmdevapi' },
-            { label: 'dsound', value: 'dsound' }
-          ]}
-          value={props.config.provider}
-          onChange={(e: Event) =>
-            props.onCommit({
-              ...props.config,
-              provider: (e.target as HTMLSelectElement).value as 'mmdevapi' | 'dsound'
-            })
-          }
+      </Show>
+      <Show when={showWineRequired()}>
+        <FieldHint
+          variant="warning"
+          text={String(t('plugin.wineRequired' as keyof Dictionary))}
         />
-      </FormField>
-      <FormField label={t('plugin.arch')} class="w-28">
-        <FormSelect
-          class="w-full"
-          options={[
-            { label: t('plugin.archAuto'), value: 'auto' },
-            { label: 'x86', value: 'x86' },
-            { label: 'x64', value: 'x64' }
-          ]}
-          value={props.config.arch}
-          onChange={(e: Event) =>
-            props.onCommit({
-              ...props.config,
-              arch: (e.target as HTMLSelectElement).value as 'auto' | 'x86' | 'x64'
-            })
-          }
-        />
-      </FormField>
+      </Show>
     </div>
   )
 }
