@@ -1,8 +1,14 @@
 [package]
 authors     = ["lxl66566 <lxl66566@gmail.com>"]
-description = "A fast and flexible string formatting crate for maps and custom types"
+categories  = ["template-engine", "text-processing"]
+description = "A string formatting crate for maps and custom types"
 edition     = "2024"
+homepage    = "https://github.com/lxl66566/GalgameManager/src-tauri/easy_strfmt"
+keywords    = ["string", "format", "template", "strfmt"]
+license     = "MIT OR Apache-2.0"
 name        = "easy_strfmt"
+readme      = "README.md"
+repository  = "https://github.com/lxl66566/GalgameManager"
 version     = "0.1.0"
 
 [features]
