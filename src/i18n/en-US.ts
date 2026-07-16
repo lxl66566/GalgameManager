@@ -8,7 +8,10 @@ export const dict = {
   unit: {
     second: 'second',
     minute: 'minute',
-    hour: 'hour'
+    hour: 'hour',
+    secondShort: 's',
+    minuteShort: 'm',
+    hourShort: 'h'
   },
   time: {
     never: 'Never',
@@ -389,10 +392,19 @@ export const dict = {
   },
   stats: {
     self: 'Statistics',
-    dailyPlaytime: 'Daily Playtime',
-    noData: 'No playtime data yet. Start playing a game to see your statistics!',
+    noData:
+      'No playtime data in this period. Start playing a game to see your statistics!',
     totalLabel: 'Total',
-    last7Days: 'Last 7 Days'
+    perGameTitle: 'Per-game playtime',
+    noDataInScope: 'No playtime in this period',
+    backToCurrent: 'Now',
+    prevPeriod: 'Previous period',
+    nextPeriod: 'Next period',
+    granularity: {
+      week: 'Week',
+      month: 'Month',
+      year: 'Year'
+    }
   }
 }
 

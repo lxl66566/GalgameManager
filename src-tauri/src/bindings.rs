@@ -333,19 +333,10 @@ pub fn open_game_dir(game_id: u32) -> Result<()> {
 
 // region daily playtime
 
-/// Returns per-game daily playtime: game_id -> date -> seconds.
-/// Aggregated from each game's own `daily_playtime` map.
-#[tauri::command]
-pub fn get_daily_playtime() -> std::collections::HashMap<u32, std::collections::HashMap<String, u32>>
-{
-    let mut out = std::collections::HashMap::new();
-    for game in &CONFIG.lock().games {
-        if !game.daily_playtime.is_empty() {
-            out.insert(game.id, game.daily_playtime.clone());
-        }
-    }
-    out
-}
+// NOTE: there is intentionally no `get_daily_playtime` command. The stats page
+// reads `daily_playtime` from the reactive config store (`config://updated`),
+// which is emitted by `update_game_time` on every save — keeping one source of
+// truth and giving the charts live updates for free.
 
 #[tauri::command]
 pub fn clear_all_daily_playtime() -> Result<()> {

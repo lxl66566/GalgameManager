@@ -12,7 +12,10 @@ export const dict: DeepPartial<RawDictionary> = {
   unit: {
     second: '秒',
     minute: '分钟',
-    hour: '小时'
+    hour: '小时',
+    secondShort: '秒',
+    minuteShort: '分钟',
+    hourShort: '小时'
   },
   time: {
     never: '永不',
@@ -108,10 +111,18 @@ export const dict: DeepPartial<RawDictionary> = {
   },
   stats: {
     self: '统计',
-    dailyPlaytime: '每日游玩时长',
-    noData: '暂无游玩数据，启动游戏即可开始统计！',
+    noData: '该时间段内暂无游玩数据，启动游戏即可开始统计！',
     totalLabel: '总计',
-    last7Days: '最近 7 天'
+    perGameTitle: '分游戏时长',
+    noDataInScope: '该时间段内暂无游玩记录',
+    backToCurrent: '回到本期',
+    prevPeriod: '上一期',
+    nextPeriod: '下一期',
+    granularity: {
+      week: '周',
+      month: '月',
+      year: '年'
+    }
   },
   plugin: {
     title: '插件',
