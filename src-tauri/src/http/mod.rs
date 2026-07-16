@@ -1,9 +1,16 @@
-use std::{fs, path::PathBuf, sync::LazyLock as Lazy, time::Duration};
+use std::{
+    fs,
+    path::PathBuf,
+    sync::{Arc, LazyLock as Lazy},
+    time::Duration,
+};
 
+use dashmap::DashMap;
 use log::{debug, info};
 use reqwest::{Client, header};
 use sha2::{Digest, Sha256};
 use tauri::http::Response;
+use tokio::sync::Mutex as AsyncMutex;
 
 use crate::error::Result;
 
@@ -81,27 +88,77 @@ pub async fn prepare_image(path_or_url: &str, hash: Option<&str>) -> Result<Stri
         }
     }
 
-    // Fetch bytes from URL or local filesystem
-    let bytes = if path_or_url.starts_with("http") {
-        let data = download_image(path_or_url).await?;
-        info!("downloaded image: {}", path_or_url);
-        data
-    } else {
-        fs::read(path_or_url)?
-    };
+    if !path_or_url.starts_with("http") {
+        // Local file: nothing to dedup — read bytes and (re)hash.
+        let bytes = fs::read(path_or_url)?;
+        // For local files prefer the provided hash when available, otherwise
+        // recompute from content.
+        let hash = if let Some(hash) = hash {
+            hash.to_string()
+        } else {
+            hash_image(&bytes)
+        };
+        fs::write(IMAGE_CACHE_DIR.join(&hash), &bytes)?;
+        return Ok(hash);
+    }
 
-    // For URLs always recompute hash from content; for local files prefer provided
-    // hash
-    let hash = if !path_or_url.starts_with("http")
-        && let Some(hash) = hash
-    {
-        hash.to_string()
-    } else {
-        hash_image(&bytes)
-    };
+    // Remote URL: single-flight so that N concurrent calls for the same URL
+    // share a single HTTP download. This happens in practice when the
+    // virtualized grid remounts the same card several times during the startup
+    // layout storm (columns/scrollWidth changing as CSS loads) — each remount
+    // issues a fresh `prepare_image` before the first one has finished and
+    // propagated its hash back to the store.
+    download_single_flight(path_or_url).await
+}
 
-    fs::write(IMAGE_CACHE_DIR.join(&hash), &bytes)?;
-    Ok(hash)
+/// Per-URL in-flight download dedup. Maps URL -> shared slot.
+///
+/// The slot is an async mutex guarding an optional resolved content hash:
+/// - `None`  -> no successful download yet for this URL (holder should
+///   download)
+/// - `Some`  -> resolved hash from a finished download (returnable to
+///   followers)
+///
+/// The leader (first acquirer finding `None`) performs the HTTP fetch, writes
+/// the cache file and stores the hash. Concurrent/following callers that lock
+/// the same slot simply return the stored hash without re-downloading.
+///
+/// Entries are kept for the session as a small URL->hash cache (bounded by the
+/// number of distinct image URLs, i.e. the number of games); a missing disk
+/// file invalidates the cached entry so a manually-cleared cache is re-fetched.
+/// On a failed download the slot stays `None`, so waiters retry (serialized) —
+/// acceptable since image failures are rare.
+static INFLIGHT_DOWNLOADS: Lazy<DashMap<String, Arc<AsyncMutex<Option<String>>>>> =
+    Lazy::new(DashMap::new);
+
+async fn download_single_flight(url: &str) -> Result<String> {
+    // Clone the Arc out of the DashMap without holding the entry guard across
+    // the await below.
+    let slot: Arc<AsyncMutex<Option<String>>> = INFLIGHT_DOWNLOADS
+        .entry(url.to_string())
+        .or_insert_with(|| Arc::new(AsyncMutex::new(None)))
+        .value()
+        .clone();
+
+    let mut guard = slot.lock().await;
+
+    // A previous caller may have already finished this download.
+    if let Some(resolved) = guard.as_ref() {
+        if IMAGE_CACHE_DIR.join(resolved).exists() {
+            debug!("image download shared (single-flight): {}", url);
+            return Ok(resolved.clone());
+        }
+        // Disk cache vanished (e.g. manually cleared) — invalidate and retry.
+        *guard = None;
+    }
+
+    // We are the leader: actually download.
+    let bytes = download_image(url).await?;
+    info!("downloaded image: {}", url);
+    let resolved = hash_image(&bytes);
+    fs::write(IMAGE_CACHE_DIR.join(&resolved), &bytes)?;
+    *guard = Some(resolved.clone());
+    Ok(resolved)
 }
 
 /// Handler for the `galimg` custom URI scheme.

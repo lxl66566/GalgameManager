@@ -377,6 +377,21 @@ export const useConfig = () => {
         )
         save()
       },
+      /** Patch a single game's `imageSha256` in place (reference-preserving)
+       *  and persist with a debounced write. Keeping the game object identity
+       *  stable avoids re-mounting its card in the virtualized grid and avoids
+       *  an unnecessary full `replaceGame` + immediate disk write each time an
+       *  image finishes downloading (which can fire many times at startup). */
+      setImageHash: (index: number, hash: string) => {
+        setConfig(
+          produce(state => {
+            if (state.games[index]?.imageSha256 !== hash) {
+              state.games[index].imageSha256 = hash
+            }
+          })
+        )
+        scheduleSave()
+      },
       updateDeviceVar: (deviceUid: string, key: string, value: string) => {
         setConfig(
           produce(state => {

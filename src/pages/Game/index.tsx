@@ -144,13 +144,33 @@ const GamePage = (): JSX.Element => {
     )
   })
 
+  // Holds the previous chunk array so identical rows can keep a stable
+  // reference across recomputes (see `rows` memo below).
+  let prevRows: Game[][] = []
   const rows = createMemo<Game[][]>(() => {
     const cols = columns()
     const games = sortedGames()
     const out: Game[][] = []
-    for (let i = 0; i < games.length; i += cols) out.push(games.slice(i, i + cols))
+    for (let i = 0, r = 0; i < games.length; i += cols, r++) {
+      const chunk = games.slice(i, i + cols)
+      // Reuse the previous chunk reference when its game references are
+      // unchanged. virtua's <For> keys data items by reference, so a brand-new
+      // chunk array on every recompute forces it to unmount+remount every
+      // visible row (re-running each card's createResource, re-fetching its
+      // image). Keeping stable references skips the remount whenever the
+      // underlying games didn't move — e.g. a config://updated reconcile or an
+      // image-hash patch that changes the games array identity but not its
+      // contents.
+      const prev = prevRows[r]
+      if (prev && prev.length === chunk.length && chunk.every((g, k) => g === prev[k])) {
+        out.push(prev)
+      } else {
+        out.push(chunk)
+      }
+    }
     // Always keep at least one (possibly empty) row to host the "add" card.
     if (out.length === 0) out.push([])
+    prevRows = out
     return out
   })
 
@@ -201,11 +221,7 @@ const GamePage = (): JSX.Element => {
   }
 
   const handleImageHashUpdate = (index: number, newHash: string) => {
-    console.log('handleImageHashUpdate', index, newHash)
-    const game = config.games[index]
-    if (!game) return
-    game.imageSha256 = newHash
-    actions.replaceGame(index, game)
+    actions.setImageHash(index, newHash)
   }
 
   // 游戏启动逻辑 — delegated to the global runtime store so listeners and
