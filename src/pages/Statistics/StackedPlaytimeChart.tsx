@@ -8,8 +8,9 @@
 //   `{ bucketKey, gameId }` upward and shows a tooltip; `gameId` is set when
 //   the cursor is exactly on that game's segment, so the tooltip can gray out
 //   the other games.
-// - `focusGameId` (hovering the per-game list) re-bases that game's segments
-//   onto the x axis and fades all other games to gray, without rescaling.
+// - `focusGameId` (hovering the per-game list) moves that game's segments to
+//   the x axis and re-stacks the other games (grayed) on top, so columns
+//   keep their total height with no gaps and no rescaling.
 import { useColorMode } from '@kobalte/core'
 import * as d3 from 'd3'
 import {
@@ -162,11 +163,18 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
     const dur = renderedOnce ? TRANSITION_MS : 0
 
     // ── stacked segments ────────────────────────────────────────────────
+    // Stacking order: in focus mode the focused game goes first (re-based
+    // onto the x axis) and the rest pile on top in their original order, so
+    // the column keeps its total height with no gaps.
+    const order =
+      focus == null
+        ? series
+        : [...series.filter(s => s.id === focus), ...series.filter(s => s.id !== focus)]
     const segs: Seg[] = []
     for (const b of data) {
       let acc = 0
       let last: Seg | null = null
-      for (const s of series) {
+      for (const s of order) {
         const v = b.perGame.get(s.id) ?? 0
         if (v <= 0) continue
         const seg: Seg = {
@@ -184,18 +192,15 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
       if (last) last.isTop = true
     }
 
-    // In focus mode the focused game is re-stacked from the baseline; the
-    // others stay in place but fade out (the y scale is kept, so proportions
-    // stay comparable).
-    const segY = (d: Seg): number =>
-      focus != null && d.gameId === focus ? y(d.v / factor) : y(d.y1 / factor)
+    // Unfocused segments keep their cumulative position but fade to gray;
+    // the y scale is never re-based, so proportions stay comparable.
+    const segY = (d: Seg): number => y(d.y1 / factor)
     const segH = (d: Seg): number => Math.max(0, innerH - y(d.v / factor))
     const segFill = (d: Seg): string =>
       focus != null && d.gameId !== focus
         ? theme.dim
         : (colorOf.get(d.gameId) ?? theme.dim)
-    const segOpacity = (d: Seg): number =>
-      focus != null && d.gameId !== focus ? 0.25 : 1
+    const segOpacity = (d: Seg): number => (focus != null && d.gameId !== focus ? 0.4 : 1)
     const segRx = (d: Seg): number =>
       focus != null ? (d.gameId === focus ? 2.5 : 1) : d.isTop ? 2.5 : 0
 
@@ -389,9 +394,10 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
       const [, my] = d3.pointer(event, node)
 
       // Hit-test stacked segments top-down to know which game is hovered.
+      // Must use the same stacking order as the rendering above.
       let gameId: number | null = null
       let acc = 0
-      for (const s of series) {
+      for (const s of order) {
         const v = d.perGame.get(s.id) ?? 0
         if (v <= 0) continue
         const yTop = y((acc + v) / factor)
