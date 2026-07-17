@@ -394,7 +394,18 @@ export const dict = {
     self: 'Statistics',
     noData:
       'No playtime data in this period. Start playing a game to see your statistics!',
-    totalLabel: 'Total',
+    periodPlaytime: {
+      current: {
+        week: "This week's playtime",
+        month: "This month's playtime",
+        year: "This year's playtime"
+      },
+      other: {
+        week: "That week's playtime",
+        month: "That month's playtime",
+        year: "That year's playtime"
+      }
+    },
     perGameTitle: 'Per-game playtime',
     noDataInScope: 'No playtime in this period',
     backToCurrent: 'Now',

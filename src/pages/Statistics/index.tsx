@@ -218,7 +218,10 @@ const StatisticsPage: Component = () => {
             </span>
 
             <span class="ml-auto text-sm text-gray-500 dark:text-gray-400">
-              {t('stats.totalLabel')}:{' '}
+              {t(
+                `stats.periodPlaytime.${offset() === 0 ? 'current' : 'other'}.${granularity()}`
+              )}
+              :{' '}
               <span class="font-bold text-gray-900 dark:text-gray-100">
                 {formatDuration(rangeTotalSecs(), units())}
               </span>

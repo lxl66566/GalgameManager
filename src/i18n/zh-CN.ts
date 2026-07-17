@@ -112,7 +112,18 @@ export const dict: DeepPartial<RawDictionary> = {
   stats: {
     self: '统计',
     noData: '该时间段内暂无游玩数据，启动游戏即可开始统计！',
-    totalLabel: '总计',
+    periodPlaytime: {
+      current: {
+        week: '本周游玩时长',
+        month: '本月游玩时长',
+        year: '本年游玩时长'
+      },
+      other: {
+        week: '当周游玩时长',
+        month: '当月游玩时长',
+        year: '当年游玩时长'
+      }
+    },
     perGameTitle: '分游戏时长',
     noDataInScope: '该时间段内暂无游玩记录',
     backToCurrent: '回到本期',
