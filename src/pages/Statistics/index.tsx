@@ -24,7 +24,7 @@ import {
   Show,
   type Component
 } from 'solid-js'
-import { goldenColor, imageColor } from './gameColors'
+import { goldenColor } from './gameColors'
 import GamePlaytimeBars, { type GameBarRow } from './GamePlaytimeBars'
 import StackedPlaytimeChart, {
   type ChartHover,
@@ -74,27 +74,17 @@ const StatisticsPage: Component = () => {
       .sort((a, b) => (tot.get(b.id) ?? 0) - (tot.get(a.id) ?? 0))
   })
 
-  // Colors: dominant color extracted from the cover image when available
-  // (streams in asynchronously), golden-angle HSL fallback otherwise. Both
-  // are keyed by game id, so colors stay stable across hovers and ranges.
-  const [imageColors, setImageColors] = createSignal<ReadonlyMap<number, string>>(
-    new Map()
-  )
-  createEffect(() => {
-    for (const g of activeGames()) {
-      const hash = g.imageSha256
-      if (!hash || imageColors().has(g.id)) continue
-      void imageColor(hash).then(color => {
-        if (color) setImageColors(prev => new Map(prev).set(g.id, color))
-      })
-    }
-  })
-
+  // Colors: the cover-derived accent color is computed once on the Rust side
+  // (piggybacking on `prepare_image` when a cover first loads anywhere in the
+  // app) and cached on `Game.coverColor`, so it is available synchronously
+  // here. Games without a usable cover fall back to a deterministic
+  // golden-angle HSL color. Both are keyed by game id, so colors stay stable
+  // across hovers and ranges.
   const series = createMemo<ChartSeriesItem[]>(() =>
     activeGames().map(g => ({
       id: g.id,
       name: g.name,
-      color: imageColors().get(g.id) ?? goldenColor(g.id)
+      color: g.coverColor ?? goldenColor(g.id)
     }))
   )
   const colorOf = createMemo(() => new Map(series().map(s => [s.id, s.color] as const)))

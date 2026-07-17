@@ -42,6 +42,7 @@ fn sample_config() -> Config {
         ),
         last_upload_time: None,
         daily_playtime: Default::default(),
+        cover_color: None,
         plugins: vec![],
     });
     cfg

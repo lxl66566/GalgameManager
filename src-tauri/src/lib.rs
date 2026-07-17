@@ -1,5 +1,6 @@
 pub mod archive;
 mod bindings;
+pub mod color;
 pub mod db;
 pub mod error;
 pub mod exec;

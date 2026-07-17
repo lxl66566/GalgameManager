@@ -382,12 +382,31 @@ export const useConfig = () => {
        *  and persist with a debounced write. Keeping the game object identity
        *  stable avoids re-mounting its card in the virtualized grid and avoids
        *  an unnecessary full `replaceGame` + immediate disk write each time an
-       *  image finishes downloading (which can fire many times at startup). */
+       *  image finishes downloading (which can fire many times at startup).
+       *  When the resolved hash differs from the stored one (the cover
+       *  actually changed), `coverColor` is invalidated so the next load
+       *  re-extracts a fresh accent color. */
       setImageHash: (index: number, hash: string) => {
         setConfig(
           produce(state => {
-            if (state.games[index]?.imageSha256 !== hash) {
-              state.games[index].imageSha256 = hash
+            const g = state.games[index]
+            if (g && g.imageSha256 !== hash) {
+              g.imageSha256 = hash
+              g.coverColor = null
+            }
+          })
+        )
+        scheduleSave()
+      },
+      /** Patch a single game's `coverColor` in place (reference-preserving)
+       *  and persist with a debounced write. Paired with `setImageHash`:
+       *  clearing happens there (on image change), setting happens here (once
+       *  the backend has extracted the color for the current cover). */
+      setCoverColor: (index: number, color: string) => {
+        setConfig(
+          produce(state => {
+            if (state.games[index]) {
+              state.games[index].coverColor = color
             }
           })
         )

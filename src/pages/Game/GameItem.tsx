@@ -20,6 +20,8 @@ interface GameItemProps {
   onBackup: () => void
   onSync: () => void
   onImageHashUpdate: (newHash: string) => void
+  /** Receives a freshly extracted cover color (see CachedImage.extractColor). */
+  onCoverColorUpdate: (color: string) => void
   onContextMenuAction?: (action: string) => void
   // 接收状态
   isBackingUp?: boolean
@@ -70,7 +72,9 @@ export const GameItem = (props: GameItemProps) => {
             hash={props.game.imageSha256}
             alt={props.game.name}
             class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            extractColor={!props.game.coverColor}
             onHashUpdate={props.onImageHashUpdate}
+            onColorExtracted={props.onCoverColorUpdate}
           />
 
           {/* 状态层：使用 Show 进行互斥显示 */}

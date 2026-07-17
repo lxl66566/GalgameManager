@@ -17,6 +17,13 @@ interface ImageProps {
   alt?: string
   class?: string
   onHashUpdate?: (newHash: string) => void
+  /** When true, ask the backend to also derive an accent color from this
+   *  image. Callers set this to "color not yet cached" (e.g.
+   *  `!game.coverColor`) so each image is decoded at most once. */
+  extractColor?: boolean
+  /** Fires with a freshly extracted "#RRGGBB" color. Only called when
+   *  `extractColor` is true and the backend actually computed one. */
+  onColorExtracted?: (color: string) => void
 }
 
 /**
@@ -26,6 +33,8 @@ interface ImageProps {
  *   this device. Rust handles the fast-path (cache hit) efficiently.
  * - This guarantees images display correctly even when a hash was synced from
  *   another device but the local cache is missing.
+ * - When `extractColor` is set, the same `prepare_image` call additionally
+ *   derives a dominant accent color — no second IPC round-trip is needed.
  * - No in-memory cache is kept; images are always served from the filesystem
  *   through the custom protocol, keeping JS heap usage minimal.
  */
@@ -40,23 +49,30 @@ const CachedImage: Component<ImageProps> = props => {
   const { config } = useConfig()
 
   const [imageHash] = createResource(
-    () => [props.url, props.hash] as const,
+    () => [props.url, props.hash, props.extractColor] as const,
     // eslint-disable-next-line solid/reactivity -- fetcher only re-runs on key change; reactive props are safe
-    async ([rawUrl, currentHash]) => {
+    async ([rawUrl, currentHash, extractColor]) => {
       if (!rawUrl) return null
 
       const resolvedUrl = await resolveVarForDevice(rawUrl, config.devices)
       // Always call prepare_image to ensure cache exists on this device.
-      // Rust handles fast-path (cache hit) efficiently — just a file exists check.
-      const hash = await invoke<string>('prepare_image', {
+      // Rust handles fast-path (cache hit) efficiently — just a file exists
+      // check. When `extractColor` is set, the same call derives a color.
+      const [hash, color] = await invoke<[string, string | null]>('prepare_image', {
         url: resolvedUrl,
-        hash: currentHash
+        hash: currentHash,
+        needColor: extractColor ?? false
       })
 
       // Notify parent of the resolved hash (may differ from currentHash
-      // if cache was missing and had to be re-computed)
+      // if cache was missing and had to be re-computed). Fire before the
+      // color callback so a parent that clears the stale color on hash
+      // change applies the clear before the fresh color lands.
       if (hash !== currentHash) {
         props.onHashUpdate?.(hash)
+      }
+      if (color) {
+        props.onColorExtracted?.(color)
       }
 
       return hash

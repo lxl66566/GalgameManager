@@ -50,8 +50,12 @@ pub fn log(level: LogLevel, msg: String) {
 // region http
 
 #[tauri::command(async)]
-pub async fn prepare_image(url: String, hash: Option<String>) -> Result<String> {
-    crate::http::prepare_image(&url, hash.as_deref()).await
+pub async fn prepare_image(
+    url: String,
+    hash: Option<String>,
+    need_color: bool,
+) -> Result<(String, Option<String>)> {
+    crate::color::prepare_image(&url, hash.as_deref(), need_color).await
 }
 
 // region archive

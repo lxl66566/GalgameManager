@@ -224,6 +224,10 @@ const GamePage = (): JSX.Element => {
     actions.setImageHash(index, newHash)
   }
 
+  const handleCoverColorUpdate = (index: number, color: string) => {
+    actions.setCoverColor(index, color)
+  }
+
   // 游戏启动逻辑 — delegated to the global runtime store so listeners and
   // session timing survive sidebar navigation.
   const handleStart = async (index: number) => {
@@ -451,6 +455,9 @@ const GamePage = (): JSX.Element => {
                           onSync={() => openSyncModal(realIndex())}
                           onImageHashUpdate={newhash =>
                             handleImageHashUpdate(realIndex(), newhash)
+                          }
+                          onCoverColorUpdate={color =>
+                            handleCoverColorUpdate(realIndex(), color)
                           }
                           onContextMenuAction={action =>
                             handleContextMenuAction(game.id, action)

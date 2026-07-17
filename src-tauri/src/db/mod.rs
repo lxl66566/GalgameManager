@@ -102,6 +102,12 @@ pub struct Game {
     /// cleared together with the rest of the game's state.
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub daily_playtime: HashMap<String, u32>,
+    /// Cover-derived accent color (CSS hex, e.g. "#1f80c8") used by the
+    /// statistics charts. Extracted once via `prepare_image` and cached here
+    /// so repeat renders are free. Cleared by the frontend whenever the cover
+    /// URL changes, so a new cover gets a fresh color on its next load.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cover_color: Option<String>,
     #[serde(
         skip_serializing_if = "Vec::is_empty",
         default,

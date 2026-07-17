@@ -21,5 +21,12 @@ export type Game = {
    * cleared together with the rest of the game's state.
    */
   dailyPlaytime?: { [key in string]: number };
+  /**
+   * Cover-derived accent color (CSS hex, e.g. "#1f80c8") used by the
+   * statistics charts. Extracted once via `prepare_image` and cached here
+   * so repeat renders are free. Cleared by the frontend whenever the cover
+   * URL changes, so a new cover gets a fresh color on its next load.
+   */
+  coverColor?: string | null;
   plugins?: Array<PluginInstance>;
 };

@@ -126,6 +126,9 @@ export default function GameEditModal(props: GameEditModalProps) {
     if (currentInput !== (localGame.imageUrl || '')) {
       setLocalGame('imageUrl', currentInput || null)
       setLocalGame('imageSha256', null)
+      // Invalidate the cached accent color so the new cover gets a fresh
+      // extraction on its next load.
+      setLocalGame('coverColor', null)
     }
   }
 
@@ -246,8 +249,12 @@ export default function GameEditModal(props: GameEditModalProps) {
                   url={localGame.imageUrl}
                   hash={localGame.imageSha256}
                   class="object-cover w-full h-full"
+                  extractColor={!localGame.coverColor}
                   onHashUpdate={(newHash: string) => {
                     setLocalGame('imageSha256', newHash)
+                  }}
+                  onColorExtracted={(color: string) => {
+                    setLocalGame('coverColor', color)
                   }}
                 />
               </Suspense>

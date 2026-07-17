@@ -33,6 +33,7 @@ futures                   = "0.3"
 goblin                    = "0.10"
 hex                       = "0.4"
 home                      = "0.5"
+image                     = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp"] }
 include_assets            = { version = "1", default-features = false, features = ["zstd"] }
 indexmap                  = { version = "2", features = ["serde"] }
 log                       = "0.4"
