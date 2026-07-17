@@ -1,5 +1,5 @@
 // src/pages/Statistics/GamePlaytimeBars.tsx
-// Per-game horizontal bar list: [thumbnail] [name over thin bar] [duration].
+// Per-game horizontal bar list: [thumbnail] [name over (thin bar + duration)].
 // Bar length is proportional to the game's playtime within the current
 // statistics scope. Kept as HTML + CSS transitions (not d3): it is a list of
 // rich rows (images, text), where d3/SVG would only add friction.
@@ -69,17 +69,19 @@ const GamePlaytimeBars: Component<GamePlaytimeBarsProps> = props => {
                   >
                     {row.name}
                   </span>
-                  <div
-                    class="h-1.5 rounded-full transition-[width] duration-300 ease-out"
-                    style={{
-                      width: `${(row.secs / maxSecs()) * 100}%`,
-                      'background-color': row.color
-                    }}
-                  />
+                  <div class="flex items-center gap-2">
+                    <div
+                      class="h-1.5 min-w-3 rounded-full transition-[width] duration-300 ease-out"
+                      style={{
+                        width: `${(row.secs / maxSecs()) * 100}%`,
+                        'background-color': row.color
+                      }}
+                    />
+                    <span class="shrink-0 text-xs tabular-nums text-gray-500 dark:text-gray-400">
+                      {formatDuration(row.secs, props.units)}
+                    </span>
+                  </div>
                 </div>
-                <span class="shrink-0 font-mono text-base font-semibold tabular-nums text-gray-700 dark:text-gray-300">
-                  {formatDuration(row.secs, props.units)}
-                </span>
               </div>
             )
           }}

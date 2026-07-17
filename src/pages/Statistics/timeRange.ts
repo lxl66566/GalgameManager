@@ -235,13 +235,13 @@ export interface DurationUnits {
   hour: string
 }
 
-/** Compact human duration: '45s' / '20m' / '3h 20m' (units are localized). */
+/** Compact human duration: '45 s' / '20 min' / '3 h 20 min' (units are localized). */
 export function formatDuration(totalSecs: number, u: DurationUnits): string {
   const secs = Math.round(totalSecs)
-  if (secs < 60) return `${secs}${u.second}`
+  if (secs < 60) return `${secs} ${u.second}`
   const mins = Math.floor(secs / 60)
-  if (mins < 60) return `${mins}${u.minute}`
+  if (mins < 60) return `${mins} ${u.minute}`
   const h = Math.floor(mins / 60)
   const m = mins % 60
-  return m === 0 ? `${h}${u.hour}` : `${h}${u.hour} ${m}${u.minute}`
+  return m === 0 ? `${h} ${u.hour}` : `${h} ${u.hour} ${m} ${u.minute}`
 }

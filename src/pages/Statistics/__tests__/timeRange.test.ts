@@ -150,12 +150,12 @@ describe('parseDateKey / offsetForDate', () => {
 describe('formatDuration', () => {
   const u = { second: 's', minute: 'm', hour: 'h' }
 
-  it('formats seconds / minutes / hours', () => {
-    expect(formatDuration(45, u)).toBe('45s')
-    expect(formatDuration(59, u)).toBe('59s')
-    expect(formatDuration(60, u)).toBe('1m')
-    expect(formatDuration(1200, u)).toBe('20m')
-    expect(formatDuration(3600, u)).toBe('1h')
-    expect(formatDuration(3600 * 3 + 20 * 60, u)).toBe('3h 20m')
+  it('formats seconds / minutes / hours with a space before the unit', () => {
+    expect(formatDuration(45, u)).toBe('45 s')
+    expect(formatDuration(59, u)).toBe('59 s')
+    expect(formatDuration(60, u)).toBe('1 m')
+    expect(formatDuration(1200, u)).toBe('20 m')
+    expect(formatDuration(3600, u)).toBe('1 h')
+    expect(formatDuration(3600 * 3 + 20 * 60, u)).toBe('3 h 20 m')
   })
 })
