@@ -391,22 +391,30 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
     overlayMerged.on('mousemove', (event: MouseEvent, d) => {
       const node = root.node()
       if (!node) return
-      const [, my] = d3.pointer(event, node)
+      const [mx, my] = d3.pointer(event, node)
 
-      // Hit-test stacked segments top-down to know which game is hovered.
-      // Must use the same stacking order as the rendering above.
+      // The overlay spans the whole band step (bar + half padding each side)
+      // so moving between columns keeps the hover alive. But a segment is only
+      // "hit" when the cursor is truly over the bar's horizontal extent; a
+      // cursor in the side padding reports an unfocused hover (gameId = null)
+      // even when below the column's top. Same stacking order as rendering.
+      const barX = x(d.key) ?? 0
+      const overBar = mx >= barX && mx <= barX + x.bandwidth()
+
       let gameId: number | null = null
       let acc = 0
-      for (const s of order) {
-        const v = d.perGame.get(s.id) ?? 0
-        if (v <= 0) continue
-        const yTop = y((acc + v) / factor)
-        const yBot = y(acc / factor)
-        if (my >= yTop && my <= yBot) {
-          gameId = s.id
-          break
+      if (overBar) {
+        for (const s of order) {
+          const v = d.perGame.get(s.id) ?? 0
+          if (v <= 0) continue
+          const yTop = y((acc + v) / factor)
+          const yBot = y(acc / factor)
+          if (my >= yTop && my <= yBot) {
+            gameId = s.id
+            break
+          }
+          acc += v
         }
-        acc += v
       }
 
       const bandCenter = MARGIN.left + (x(d.key) ?? 0) + x.bandwidth() / 2
