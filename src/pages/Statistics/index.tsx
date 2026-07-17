@@ -10,6 +10,7 @@
 // buckets (see timeRange.ts); adding a free-form date-range picker later only
 // needs to produce a different `Bucket[]`, the charts won't change.
 import { Button } from '@components/ui/Button'
+import * as Popover from '@kobalte/core/popover'
 import { useI18n } from '~/i18n'
 import { cn } from '~/lib/utils'
 import { useConfig } from '~/store'
@@ -30,8 +31,11 @@ import StackedPlaytimeChart, {
 import {
   addDays,
   aggregate,
+  dateKey,
   formatDuration,
   localeFirstWeekday,
+  offsetForDate,
+  parseDateKey,
   perGameTotals,
   resolveSelection,
   type Granularity
@@ -108,28 +112,19 @@ const StatisticsPage: Component = () => {
 
   const rangeLabel = createMemo(() => {
     const r = range()
-    switch (granularity()) {
-      case 'year':
-        return new Intl.DateTimeFormat(locale(), { year: 'numeric' }).format(r.start)
-      case 'month':
-        return new Intl.DateTimeFormat(locale(), {
-          year: 'numeric',
-          month: 'long'
-        }).format(r.start)
-      case 'week': {
-        const fmtStart = new Intl.DateTimeFormat(locale(), {
-          year: 'numeric',
-          month: 'numeric',
-          day: 'numeric'
-        })
-        const fmtEnd = new Intl.DateTimeFormat(locale(), {
-          month: 'numeric',
-          day: 'numeric'
-        })
-        return `${fmtStart.format(r.start)} – ${fmtEnd.format(addDays(r.end, -1))}`
-      }
-    }
+    // Uniform ISO style for every granularity: '2026-07-13 - 2026-07-19'.
+    return `${dateKey(r.start)} - ${dateKey(addDays(r.end, -1))}`
   })
+
+  const [pickerOpen, setPickerOpen] = createSignal(false)
+
+  /** Jump to the week / month / year containing the picked date. */
+  const jumpToDate = (value: string) => {
+    const d = parseDateKey(value)
+    if (!d) return
+    setOffset(Math.min(0, offsetForDate(granularity(), d, weekFirstDay())))
+    setPickerOpen(false)
+  }
 
   // Rows for the per-game list: normally the whole range; while a chart
   // column is hovered, only that bucket's slice.
@@ -188,7 +183,8 @@ const StatisticsPage: Component = () => {
               </For>
             </div>
 
-            <div class="flex items-center gap-1">
+            {/* [←] [range label → date jump] [→], centered as one group */}
+            <div class="flex min-w-0 flex-1 items-center justify-center gap-1">
               <Button
                 size="icon"
                 onClick={() => setOffset(o => o - 1)}
@@ -197,6 +193,33 @@ const StatisticsPage: Component = () => {
               >
                 <FiChevronLeft />
               </Button>
+
+              <Popover.Root open={pickerOpen()} onOpenChange={setPickerOpen}>
+                <Popover.Trigger
+                  class="rounded-md px-2 py-1 text-sm font-medium tabular-nums text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  title={t('stats.jumpToDate')}
+                  aria-label={t('stats.jumpToDate')}
+                >
+                  {rangeLabel()}
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content class="z-50 rounded-lg border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                    <div class="flex flex-col gap-2">
+                      <span class="text-xs text-gray-500 dark:text-gray-400">
+                        {t('stats.jumpToDate')}
+                      </span>
+                      <input
+                        type="date"
+                        class="rounded-md border border-gray-300 bg-transparent px-2 py-1 text-sm tabular-nums dark:border-gray-600 dark:[color-scheme:dark]"
+                        value={dateKey(range().start)}
+                        max={dateKey(new Date())}
+                        onChange={e => jumpToDate(e.currentTarget.value)}
+                      />
+                    </div>
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
+
               <Button
                 size="icon"
                 onClick={() => setOffset(o => Math.min(0, o + 1))}
@@ -213,11 +236,7 @@ const StatisticsPage: Component = () => {
               </Show>
             </div>
 
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {rangeLabel()}
-            </span>
-
-            <span class="ml-auto text-sm text-gray-500 dark:text-gray-400">
+            <span class="text-sm text-gray-500 dark:text-gray-400">
               {t(
                 `stats.periodPlaytime.${offset() === 0 ? 'current' : 'other'}.${granularity()}`
               )}

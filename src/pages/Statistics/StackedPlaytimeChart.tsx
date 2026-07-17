@@ -22,7 +22,12 @@ import {
   Show,
   type Component
 } from 'solid-js'
-import { formatDuration, type BucketDatum, type DurationUnits } from './timeRange'
+import {
+  dateKey,
+  formatDuration,
+  type BucketDatum,
+  type DurationUnits
+} from './timeRange'
 
 export interface ChartSeriesItem {
   id: number
@@ -263,7 +268,7 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
       .attr('font-size', 11)
       .text(unitLabel)
 
-    // ── x axis (custom band labels, supports two-line week labels) ──────
+    // ── x axis (custom band labels, ISO-style dates to match the header) ──
     const weekdayFmt = new Intl.DateTimeFormat(locale, { weekday: 'short' })
     const monthFmt = new Intl.DateTimeFormat(locale, { month: 'short' })
     const dense = data.length > 10 && data[0].unit === 'day'
@@ -272,13 +277,14 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
       .map(b => {
         if (b.unit === 'month') return { key: b.key, label: monthFmt.format(b.start) }
         if (data.length <= 10) {
-          // Week view: '7/14 Tue' / '7/14 周二'
+          // Week view: '07-14 Tue' / '07-14 周二'
           return {
             key: b.key,
-            label: `${b.start.getMonth() + 1}/${b.start.getDate()} ${weekdayFmt.format(b.start)}`
+            label: `${dateKey(b.start).slice(5)} ${weekdayFmt.format(b.start)}`
           }
         }
-        return { key: b.key, label: String(b.start.getDate()) }
+        // Month view: '07-01' every 5 days
+        return { key: b.key, label: dateKey(b.start).slice(5) }
       })
 
     const gx = root.select<SVGGElement>('g.x-axis')
@@ -431,14 +437,8 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
 
   const tipTitle = (bucket: BucketDatum): string =>
     bucket.unit === 'day'
-      ? new Intl.DateTimeFormat(props.locale, {
-          weekday: 'short',
-          month: 'short',
-          day: 'numeric'
-        }).format(bucket.start)
-      : new Intl.DateTimeFormat(props.locale, { year: 'numeric', month: 'long' }).format(
-          bucket.start
-        )
+      ? `${dateKey(bucket.start)} ${new Intl.DateTimeFormat(props.locale, { weekday: 'short' }).format(bucket.start)}`
+      : bucket.key
 
   return (
     <div ref={wrapRef} class={`relative w-full ${props.class ?? ''}`}>

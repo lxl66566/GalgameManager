@@ -409,6 +409,7 @@ export const dict = {
     perGameTitle: 'Per-game playtime',
     noDataInScope: 'No playtime in this period',
     backToCurrent: 'Now',
+    jumpToDate: 'Pick a date to jump to its period',
     prevPeriod: 'Previous period',
     nextPeriod: 'Next period',
     granularity: {

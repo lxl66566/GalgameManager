@@ -5,6 +5,8 @@ import {
   buildMonthBuckets,
   dateKey,
   formatDuration,
+  offsetForDate,
+  parseDateKey,
   perGameTotals,
   resolveSelection,
   startOfWeek,
@@ -119,6 +121,29 @@ describe('perGameTotals', () => {
     const totals = perGameTotals(data)
     expect(totals.get(1)).toBe(1500)
     expect(totals.get(2)).toBe(300)
+  })
+})
+
+describe('parseDateKey / offsetForDate', () => {
+  it('parseDateKey round-trips dateKey and rejects garbage', () => {
+    expect(parseDateKey('2026-07-13')).toEqual(new Date(2026, 6, 13))
+    expect(parseDateKey('2026/07/13')).toBeNull()
+    expect(parseDateKey('13-07-2026')).toBeNull()
+    expect(parseDateKey('')).toBeNull()
+  })
+
+  it('week: offset counts whole weeks between the two week starts', () => {
+    expect(offsetForDate('week', new Date(2026, 6, 17), 1, NOW)).toBe(0)
+    expect(offsetForDate('week', new Date(2026, 6, 12), 1, NOW)).toBe(-1) // Sunday before
+    expect(offsetForDate('week', new Date(2026, 6, 13), 0, NOW)).toBe(0) // Sunday-first: same week
+    expect(offsetForDate('week', new Date(2026, 0, 1), 1, NOW)).toBe(-28)
+  })
+
+  it('month / year: calendar difference', () => {
+    expect(offsetForDate('month', new Date(2026, 6, 1), 1, NOW)).toBe(0)
+    expect(offsetForDate('month', new Date(2026, 0, 31), 1, NOW)).toBe(-6)
+    expect(offsetForDate('month', new Date(2027, 0, 1), 1, NOW)).toBe(6)
+    expect(offsetForDate('year', new Date(2024, 11, 31), 1, NOW)).toBe(-2)
   })
 })
 

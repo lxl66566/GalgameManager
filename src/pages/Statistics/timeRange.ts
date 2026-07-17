@@ -50,6 +50,14 @@ export const dateKey = (d: Date): string =>
 export const monthKey = (d: Date): string =>
   `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`
 
+/** Parse a 'YYYY-MM-DD' key back into a local Date; null when malformed. */
+export function parseDateKey(key: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key)
+  if (!m) return null
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
 export const addDays = (d: Date, days: number): Date => {
   const r = new Date(d)
   r.setDate(r.getDate() + days)
@@ -130,12 +138,37 @@ export function resolveSelection(
   }
 }
 
+/**
+ * Offset of the period containing `date` relative to the period containing
+ * `now`, for the given granularity. Negative when `date` is in the past.
+ * Used by the date-picker jump: pick any day → show its week / month / year.
+ */
+export function offsetForDate(
+  granularity: Granularity,
+  date: Date,
+  weekFirstDay: number,
+  now: Date = new Date()
+): number {
+  switch (granularity) {
+    case 'week': {
+      const a = startOfWeek(now, weekFirstDay)
+      const b = startOfWeek(date, weekFirstDay)
+      return Math.round((b.getTime() - a.getTime()) / (7 * DAY_MS))
+    }
+    case 'month':
+      return (
+        (date.getFullYear() - now.getFullYear()) * 12 + (date.getMonth() - now.getMonth())
+      )
+    case 'year':
+      return date.getFullYear() - now.getFullYear()
+  }
+}
+
 /** Minimal shape needed from a game — satisfied by the `Game` binding. */
 export interface DailyPlaytimeLike {
   id: number
   dailyPlaytime?: Record<string, number> | undefined
 }
-
 export interface BucketDatum extends Bucket {
   /** game id -> seconds played within this bucket (only non-zero entries). */
   perGame: Map<number, number>

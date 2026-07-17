@@ -127,6 +127,7 @@ export const dict: DeepPartial<RawDictionary> = {
     perGameTitle: '分游戏时长',
     noDataInScope: '该时间段内暂无游玩记录',
     backToCurrent: '回到本期',
+    jumpToDate: '选择日期，跳转到包含它的时段',
     prevPeriod: '上一期',
     nextPeriod: '下一期',
     granularity: {
