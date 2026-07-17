@@ -127,15 +127,27 @@ const StatisticsPage: Component = () => {
     setPickerOpen(false)
   }
 
-  // Rows for the per-game list: normally the whole range; while a chart
-  // column with data is hovered, only that bucket's slice. Hovering an
-  // empty column counts as no focus, so the list keeps the full range.
-  const rows = createMemo<GameBarRow[]>(() => {
+  // Scope key of the per-game list ('all' or a bucket key). Hovering an
+  // empty column counts as no focus ('all'), so moving across empty columns
+  // keeps the same scope — and, since `rows` derives from this key (not from
+  // raw hover), the list is not re-rendered at all.
+  const listScope = createMemo(() => {
     const h = hover()
+    if (!h) return 'all'
+    const b = bucketData().find(x => x.key === h.bucketKey)
+    return b && b.total > 0 ? b.key : 'all'
+  })
+
+  // Rows for the per-game list: normally the whole range; while a chart
+  // column with data is hovered, only that bucket's slice.
+  const rows = createMemo<GameBarRow[]>(() => {
+    const scope = listScope()
     const colors = colorOf()
     const byId = new Map(config.games.map(g => [g.id, g] as const))
-    const bucket = h ? bucketData().find(b => b.key === h.bucketKey) : undefined
-    const source = bucket && bucket.total > 0 ? bucket.perGame : totals()
+    const source =
+      scope === 'all'
+        ? totals()
+        : (bucketData().find(b => b.key === scope)?.perGame ?? new Map<number, number>())
     return [...source.entries()]
       .filter(([, secs]) => secs > 0)
       .sort((a, b) => b[1] - a[1])
@@ -152,15 +164,8 @@ const StatisticsPage: Component = () => {
       })
   })
 
-  // Scope key of the per-game list ('all' or a bucket key). Watched to
-  // replay a subtle fade-in whenever the list's data scope flips — done via
+  // Replay a subtle fade-in whenever the list's data scope flips — done via
   // WAAPI on the wrapper so rows (and their images) are never re-mounted.
-  const listScope = createMemo(() => {
-    const h = hover()
-    if (!h) return 'all'
-    const b = bucketData().find(x => x.key === h.bucketKey)
-    return b && b.total > 0 ? b.key : 'all'
-  })
   let listRef: HTMLDivElement | undefined
   createEffect(
     on(
