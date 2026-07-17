@@ -470,11 +470,8 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
                         style={{ 'background-color': dimmed() ? '#9ca3af' : r.color }}
                       />
                       <span
-                        class={`truncate ${
-                          dimmed()
-                            ? 'text-gray-400 dark:text-gray-500'
-                            : 'text-gray-700 dark:text-gray-300'
-                        }`}
+                        class="truncate"
+                        style={{ color: dimmed() ? '#9ca3af' : r.color }}
                       >
                         {r.name}
                       </span>
