@@ -1,5 +1,5 @@
 // src/pages/Statistics/GamePlaytimeBars.tsx
-// Per-game horizontal bar list: [thumbnail] [thin bar] [name + duration].
+// Per-game horizontal bar list: [thumbnail] [name over thin bar] [duration].
 // Bar length is proportional to the game's playtime within the current
 // statistics scope. Kept as HTML + CSS transitions (not d3): it is a list of
 // rich rows (images, text), where d3/SVG would only add friction.
@@ -29,12 +29,6 @@ interface GamePlaytimeBarsProps {
   units: DurationUnits
   class?: string
 }
-
-/**
- * Bars are capped to this share of the flexible middle area so the name
- * sitting right after the bar always keeps some room.
- */
-const BAR_MAX_PCT = 60
 
 const GamePlaytimeBars: Component<GamePlaytimeBarsProps> = props => {
   const { t } = useI18n()
@@ -67,25 +61,25 @@ const GamePlaytimeBars: Component<GamePlaytimeBarsProps> = props => {
                   alt={row.name}
                   class="h-10 w-10 shrink-0 rounded"
                 />
-                <div class="flex min-w-0 flex-1 items-center">
-                  <div
-                    class="h-1.5 shrink-0 rounded-full transition-[width] duration-300 ease-out"
-                    style={{
-                      width: `${(row.secs / maxSecs()) * BAR_MAX_PCT}%`,
-                      'background-color': row.color
-                    }}
-                  />
+                <div class="flex min-w-0 flex-1 flex-col gap-1">
                   <span
-                    class="ml-2 truncate text-sm font-medium"
+                    class="truncate text-sm font-medium"
                     style={{ color: row.color }}
                     title={row.name}
                   >
                     {row.name}
                   </span>
-                  <span class="ml-2 shrink-0 text-xs text-gray-400 dark:text-gray-500">
-                    {formatDuration(row.secs, props.units)}
-                  </span>
+                  <div
+                    class="h-1.5 rounded-full transition-[width] duration-300 ease-out"
+                    style={{
+                      width: `${(row.secs / maxSecs()) * 100}%`,
+                      'background-color': row.color
+                    }}
+                  />
                 </div>
+                <span class="shrink-0 font-mono text-base font-semibold tabular-nums text-gray-700 dark:text-gray-300">
+                  {formatDuration(row.secs, props.units)}
+                </span>
               </div>
             )
           }}
