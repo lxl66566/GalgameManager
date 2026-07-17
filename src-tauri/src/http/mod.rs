@@ -181,6 +181,9 @@ pub(crate) fn image_protocol_handler(request: tauri::http::Request<Vec<u8>>) -> 
                 .status(tauri::http::StatusCode::OK)
                 .header("Content-Type", mime)
                 .header("Cache-Control", "public, max-age=31536000, immutable")
+                // Allow fetch() from the app origin: the statistics page reads
+                // image bytes into a canvas to extract the dominant color.
+                .header("Access-Control-Allow-Origin", "*")
                 .body(bytes)
                 .unwrap()
         }

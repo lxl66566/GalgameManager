@@ -24,6 +24,7 @@ import {
   Show,
   type Component
 } from 'solid-js'
+import { goldenColor, imageColor } from './gameColors'
 import GamePlaytimeBars, { type GameBarRow } from './GamePlaytimeBars'
 import StackedPlaytimeChart, {
   type ChartHover,
@@ -41,23 +42,6 @@ import {
   resolveSelection,
   type Granularity
 } from './timeRange'
-
-// Distinguishable on both light and dark backgrounds. Assigned by rank
-// (longest-playing game first), so colors stay stable while hovering.
-const PALETTE = [
-  '#3b82f6', // blue
-  '#ef4444', // red
-  '#22c55e', // green
-  '#a855f7', // purple
-  '#f97316', // orange
-  '#ec4899', // pink
-  '#14b8a6', // teal
-  '#eab308', // yellow
-  '#6366f1', // indigo
-  '#84cc16', // lime
-  '#06b6d4', // cyan
-  '#f43f5e' // rose
-]
 
 const GRANULARITIES: Granularity[] = ['week', 'month', 'year']
 
@@ -90,11 +74,27 @@ const StatisticsPage: Component = () => {
       .sort((a, b) => (tot.get(b.id) ?? 0) - (tot.get(a.id) ?? 0))
   })
 
+  // Colors: dominant color extracted from the cover image when available
+  // (streams in asynchronously), golden-angle HSL fallback otherwise. Both
+  // are keyed by game id, so colors stay stable across hovers and ranges.
+  const [imageColors, setImageColors] = createSignal<ReadonlyMap<number, string>>(
+    new Map()
+  )
+  createEffect(() => {
+    for (const g of activeGames()) {
+      const hash = g.imageSha256
+      if (!hash || imageColors().has(g.id)) continue
+      void imageColor(hash).then(color => {
+        if (color) setImageColors(prev => new Map(prev).set(g.id, color))
+      })
+    }
+  })
+
   const series = createMemo<ChartSeriesItem[]>(() =>
-    activeGames().map((g, i) => ({
+    activeGames().map(g => ({
       id: g.id,
       name: g.name,
-      color: PALETTE[i % PALETTE.length]
+      color: imageColors().get(g.id) ?? goldenColor(g.id)
     }))
   )
   const colorOf = createMemo(() => new Map(series().map(s => [s.id, s.color] as const)))

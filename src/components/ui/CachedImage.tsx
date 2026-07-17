@@ -32,7 +32,7 @@ interface ImageProps {
 // Tauri v2 custom protocol URL differs by platform:
 //   Windows/Android → http://{scheme}.localhost/{path}
 //   Linux/macOS/iOS → {scheme}://localhost/{path}
-function galimgUrl(hash: string): string {
+export function galimgUrl(hash: string): string {
   return isWindows ? `http://galimg.localhost/${hash}` : `galimg://localhost/${hash}`
 }
 
