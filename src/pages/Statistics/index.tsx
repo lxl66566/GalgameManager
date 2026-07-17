@@ -20,6 +20,7 @@ import {
   createMemo,
   createSignal,
   For,
+  on,
   Show,
   type Component
 } from 'solid-js'
@@ -127,15 +128,14 @@ const StatisticsPage: Component = () => {
   }
 
   // Rows for the per-game list: normally the whole range; while a chart
-  // column is hovered, only that bucket's slice.
+  // column with data is hovered, only that bucket's slice. Hovering an
+  // empty column counts as no focus, so the list keeps the full range.
   const rows = createMemo<GameBarRow[]>(() => {
     const h = hover()
     const colors = colorOf()
     const byId = new Map(config.games.map(g => [g.id, g] as const))
-    const source = h
-      ? (bucketData().find(b => b.key === h.bucketKey)?.perGame ??
-        new Map<number, number>())
-      : totals()
+    const bucket = h ? bucketData().find(b => b.key === h.bucketKey) : undefined
+    const source = bucket && bucket.total > 0 ? bucket.perGame : totals()
     return [...source.entries()]
       .filter(([, secs]) => secs > 0)
       .sort((a, b) => b[1] - a[1])
@@ -151,6 +151,32 @@ const StatisticsPage: Component = () => {
         }
       })
   })
+
+  // Scope key of the per-game list ('all' or a bucket key). Watched to
+  // replay a subtle fade-in whenever the list's data scope flips — done via
+  // WAAPI on the wrapper so rows (and their images) are never re-mounted.
+  const listScope = createMemo(() => {
+    const h = hover()
+    if (!h) return 'all'
+    const b = bucketData().find(x => x.key === h.bucketKey)
+    return b && b.total > 0 ? b.key : 'all'
+  })
+  let listRef: HTMLDivElement | undefined
+  createEffect(
+    on(
+      listScope,
+      () => {
+        listRef?.animate(
+          [
+            { opacity: 0, transform: 'translateY(3px)' },
+            { opacity: 1, transform: 'translateY(0)' }
+          ],
+          { duration: 200, easing: 'ease-out' }
+        )
+      },
+      { defer: true }
+    )
+  )
 
   return (
     <div class="flex h-full flex-col text-gray-900 dark:text-gray-100">
@@ -272,12 +298,14 @@ const StatisticsPage: Component = () => {
               <h2 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                 {t('stats.perGameTitle')}
               </h2>
-              <GamePlaytimeBars
-                rows={rows()}
-                highlightGameId={hover()?.gameId ?? null}
-                onHoverGame={setFocusGameId}
-                units={units()}
-              />
+              <div ref={listRef}>
+                <GamePlaytimeBars
+                  rows={rows()}
+                  highlightGameId={hover()?.gameId ?? null}
+                  onHoverGame={setFocusGameId}
+                  units={units()}
+                />
+              </div>
             </div>
           </Show>
         </div>
