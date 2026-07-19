@@ -86,6 +86,9 @@ zbus         = { version = "5", default-features = false, features = ["tokio"] }
 
 [dev-dependencies]
 tempfile = "3"
+# `test-util` enables `tokio::time::pause` / `advance` and the `start_paused`
+# macro attribute, used by the config saver's throttle tests.
+tokio = { version = "1", features = ["test-util", "macros", "rt"] }
 
 [features]
 config-daily-backup = []

@@ -255,7 +255,7 @@ pub async fn game_loop(
                 session_secs: total_session.num_seconds() as u64,
             };
             app.emit(&format!("game://exit/{}", game_id), &payload)?;
-            super::update_game_time(&app, game_id, time_counter)?;
+            super::update_game_time(&app, game_id, time_counter, true)?;
             game_exit_sender
                 .send(())
                 .map_err(|_| Error::InvalidChannel("game_exit_sender"))?;
@@ -274,7 +274,7 @@ pub async fn game_loop(
 
         if time_counter >= SAVE_INTERVAL {
             total_session += time_counter;
-            super::update_game_time(&app, game_id, time_counter)?;
+            super::update_game_time(&app, game_id, time_counter, false)?;
             time_counter = TimeDelta::milliseconds(0);
         }
     }

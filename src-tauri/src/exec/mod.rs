@@ -337,7 +337,12 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
     Ok(())
 }
 
-fn update_game_time(app: &tauri::AppHandle, game_id: u32, dur: chrono::TimeDelta) -> Result<()> {
+fn update_game_time(
+    app: &tauri::AppHandle,
+    game_id: u32,
+    dur: chrono::TimeDelta,
+    force: bool,
+) -> Result<()> {
     let mut lock = CONFIG.lock();
     // Read the toggle before mutably borrowing a game to avoid a borrow clash
     // (settings and games both live on the same Config).
@@ -364,7 +369,14 @@ fn update_game_time(app: &tauri::AppHandle, game_id: u32, dur: chrono::TimeDelta
         game_id,
         game.use_time
     );
-    lock.save_and_emit(app)
+    // Periodic ticks are throttled by the writer (one disk write per
+    // MIN_INTERVAL); game exit is forced so the final session chunk is
+    // never lost to the throttle window.
+    if force {
+        lock.force_save_and_emit(app)
+    } else {
+        lock.save_and_emit(app)
+    }
 }
 
 #[cfg(test)]

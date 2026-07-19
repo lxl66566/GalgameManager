@@ -1,13 +1,12 @@
 use std::{fs, path::PathBuf};
 
 use chrono::Utc;
-use config_file2::Storable;
 use log::info;
 use tauri::{AppHandle, Manager as _};
 
 use crate::{
     archive::{ArchiveInfo, archive_impl, restore_impl},
-    db::{CONFIG, Config, device::DEVICE_UID},
+    db::{CONFIG, Config, device::DEVICE_UID, saver::ConfigSaver},
     error::{Error, Result},
     exec::{GAME_LOOP_HANDLES, launch_game_with_plugins},
     logging::LogLevel,
@@ -28,7 +27,10 @@ pub fn save_config(new_config: Config) -> Result<()> {
     let mut lock = CONFIG.lock();
     *lock = new_config;
     lock.last_updated = Utc::now();
-    lock.store()?;
+    // Throttled: emit is skipped here because the frontend already holds
+    // the freshest state and would otherwise just reconcile back to the
+    // same value. The disk write is delegated to the background writer.
+    ConfigSaver::request("frontend::save_config");
     Ok(())
 }
 
@@ -362,6 +364,8 @@ pub fn clear_all_daily_playtime() -> Result<()> {
     for game in &mut lock.games {
         game.daily_playtime.clear();
     }
-    lock.store()?;
+    // Throttled save; no emit because the frontend already clears its own
+    // store synchronously after invoking this command.
+    ConfigSaver::request("clear_all_daily_playtime");
     Ok(())
 }

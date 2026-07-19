@@ -1,5 +1,6 @@
 pub mod device;
 mod migration;
+pub mod saver;
 pub mod settings;
 
 use std::{collections::HashMap, fs, path::PathBuf, sync::LazyLock as Lazy};
@@ -220,18 +221,54 @@ impl Config {
         Ok(())
     }
 
+    /// Emit `config://updated` and request a *throttled* save through the
+    /// global [`ConfigSaver`](saver::ConfigSaver). The in-memory change is
+    /// guaranteed to reach disk within `MIN_INTERVAL`, and never more than
+    /// once per window. `last_updated` is **not** bumped here.
+    ///
+    /// The disk write is delegated to a background task, so this method
+    /// only holds the `CONFIG` mutex for the duration of the emit (a
+    /// memory-only IPC), not for file I/O.
+    #[inline]
+    pub fn save_and_emit_no_update(&self, app_handle: &AppHandle) -> Result<()> {
+        app_handle.emit("config://updated", &self)?;
+        saver::ConfigSaver::request("save_and_emit_no_update");
+        Ok(())
+    }
+
+    /// Same as [`save_and_emit_no_update`] but also bumps `last_updated`.
+    /// Use this when the mutation originates from the frontend or another
+    /// "real" user action; reserve the `_no_update` variant for internal
+    /// bookkeeping (e.g. `last_sync`).
     #[inline]
     pub fn save_and_emit(&mut self, app_handle: &AppHandle) -> Result<()> {
         self.last_updated = Utc::now();
         self.save_and_emit_no_update(app_handle)
     }
 
-    /// Save config without updating last_updated. This is useful in some cases.
+    /// Bypass the throttle and persist immediately. Use only for critical
+    /// paths (remote config apply, game exit) where waiting `MIN_INTERVAL`
+    /// could lose data.
+    ///
+    /// Caller must already hold the `CONFIG` mutex — this method calls
+    /// [`Config::store`] directly and therefore must NOT go through the
+    /// background writer task (which would deadlock waiting for the same
+    /// mutex). [`ConfigSaver::mark_externally_saved`] is then invoked to
+    /// cancel any pending throttled flush.
     #[inline]
-    pub fn save_and_emit_no_update(&mut self, app_handle: &AppHandle) -> Result<()> {
-        self.store()?;
+    pub fn force_save_and_emit_no_update(&self, app_handle: &AppHandle) -> Result<()> {
         app_handle.emit("config://updated", &self)?;
+        self.store()?;
+        saver::ConfigSaver::mark_externally_saved();
         Ok(())
+    }
+
+    /// Same as [`force_save_and_emit_no_update`] but also bumps
+    /// `last_updated`.
+    #[inline]
+    pub fn force_save_and_emit(&mut self, app_handle: &AppHandle) -> Result<()> {
+        self.last_updated = Utc::now();
+        self.force_save_and_emit_no_update(app_handle)
     }
 }
 

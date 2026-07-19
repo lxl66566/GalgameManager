@@ -58,7 +58,7 @@ pub async fn game_loop(
                     Ok(s) => info!("Game exited with status: {}", s),
                     Err(e) => error!("Error waiting for game process: {}", e),
                 }
-                super::update_game_time(&app, game_id, chunk)?;
+                super::update_game_time(&app, game_id, chunk, true)?;
                 game_exit_sender
                     .send(())
                     .map_err(|_| Error::InvalidChannel("game_exit_sender"))?;
@@ -68,7 +68,7 @@ pub async fn game_loop(
             _ = interval.tick() => {
                 let chunk = chrono::Utc::now() - last_time_saved;
                 total_session += chunk;
-                super::update_game_time(&app, game_id, chunk)?;
+                super::update_game_time(&app, game_id, chunk, false)?;
                 last_time_saved = chrono::Utc::now();
             }
         }
