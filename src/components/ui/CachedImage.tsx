@@ -73,9 +73,15 @@ const CachedImage: Component<ImageProps> = props => {
       // Always call prepare_image to ensure cache exists on this device.
       // Rust handles fast-path (cache hit) efficiently — just a file exists
       // check. When `extractColor` is set, the same call derives a color.
+      //
+      // Pass `null` (not `''`) when there's no known hash: Tauri serializes
+      // `''` as `Some("")` on the Rust side, which previously made
+      // `PathBuf::join("")` resolve to the cache directory itself and return
+      // a bogus empty hash. The backend now validates, but the right
+      // semantic on the TS side is still `null`.
       const [hash, color] = await invoke<[string, string | null]>('prepare_image', {
         url: resolvedUrl,
-        hash: currentHash,
+        sha256: currentHash || null,
         needColor: extractColor === 'true'
       })
 

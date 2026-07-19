@@ -1,18 +1,16 @@
-use std::{
-    fs,
-    path::PathBuf,
-    sync::{Arc, LazyLock as Lazy},
-    time::Duration,
-};
+use std::{fs, path::PathBuf, sync::LazyLock as Lazy, time::Duration};
 
-use dashmap::DashMap;
-use log::{debug, info};
+use dashmap::{DashMap, mapref::entry::Entry};
+use log::{debug, info, warn};
 use reqwest::{Client, header};
 use sha2::{Digest, Sha256};
 use tauri::http::Response;
-use tokio::sync::Mutex as AsyncMutex;
+use tokio::sync::broadcast::{self, error::RecvError};
 
 use crate::error::Result;
+
+/// Hex length of a cache key produced by [`hash_image`].
+pub(crate) const HASH_HEX_LEN: usize = 32;
 
 pub static CACHE_DIR: Lazy<PathBuf> = Lazy::new(|| {
     let dir = home::home_dir()
@@ -47,7 +45,13 @@ pub static IMAGE_CLIENT: Lazy<Client> = Lazy::new(|| {
 
 fn hash_image(bytes: &[u8]) -> String {
     let hash = Sha256::digest(bytes);
-    hex::encode(hash)[..32].to_string()
+    hex::encode(hash)[..HASH_HEX_LEN].to_string()
+}
+
+/// Validate that `s` is a well-formed cache key. Empty / wrong-length /
+/// non-hex strings are rejected.
+fn is_valid_hash(s: &str) -> bool {
+    s.len() == HASH_HEX_LEN && s.bytes().all(|b| b.is_ascii_hexdigit())
 }
 
 /// Detect MIME type from image magic bytes.
@@ -76,89 +80,136 @@ fn detect_mime(bytes: &[u8]) -> &'static str {
 
 /// Prepare an image: download (if URL) and cache to disk, returning the content
 /// hash. The image can then be served via the `galimg` custom protocol.
-pub async fn prepare_image(path_or_url: &str, hash: Option<&str>) -> Result<String> {
-    debug!("prepare image: {}, hash: {:?}", path_or_url, hash);
+///
+/// Flow:
+/// 1. **Disk fast-path**: if a valid `sha256` is provided and a cache file by
+///    that name exists, return immediately.
+/// 2. **Local file path**: any non-`http` argument is read from disk and
+///    (re-)hashed.
+/// 3. **Remote URL single-flight**: see [`download_single_flight`].
+pub async fn prepare_image(path_or_url: &str, sha256: Option<&str>) -> Result<String> {
+    debug!("prepare image: {}, sha256: {:?}", path_or_url, sha256);
+    let sha256 = sha256.filter(|s| is_valid_hash(s));
 
-    // Fast path: cache file already exists
-    if let Some(hash) = hash {
-        let cache_path = IMAGE_CACHE_DIR.join(hash);
+    // 1. Fast path: cache file already exists.
+    if let Some(h) = sha256 {
+        let cache_path = IMAGE_CACHE_DIR.join(h);
         if cache_path.exists() {
             debug!("image cache hit: {}", cache_path.display());
-            return Ok(hash.to_string());
+            return Ok(h.to_string());
         }
     }
 
+    // 2. Local file: read, (re-)hash, copy into the cache.
     if !path_or_url.starts_with("http") {
-        // Local file: nothing to dedup — read bytes and (re)hash.
         let bytes = fs::read(path_or_url)?;
-        // For local files prefer the provided hash when available, otherwise
-        // recompute from content.
-        let hash = if let Some(hash) = hash {
-            hash.to_string()
-        } else {
-            hash_image(&bytes)
-        };
-        fs::write(IMAGE_CACHE_DIR.join(&hash), &bytes)?;
-        return Ok(hash);
+        // Prefer a caller-provided valid hash when available; otherwise
+        // recompute from content so the cached filename matches what
+        // `galimg://` will later request.
+        let h = sha256
+            .map(String::from)
+            .unwrap_or_else(|| hash_image(&bytes));
+        fs::write(IMAGE_CACHE_DIR.join(&h), &bytes)?;
+        return Ok(h);
     }
 
-    // Remote URL: single-flight so that N concurrent calls for the same URL
-    // share a single HTTP download. This happens in practice when the
-    // virtualized grid remounts the same card several times during the startup
-    // layout storm (columns/scrollWidth changing as CSS loads) — each remount
-    // issues a fresh `prepare_image` before the first one has finished and
-    // propagated its hash back to the store.
-    download_single_flight(path_or_url).await
+    // 3. Remote URL: single-flight dedup.
+    download_single_flight(path_or_url, sha256).await
 }
 
-/// Per-URL in-flight download dedup. Maps URL -> shared slot.
+/// In-flight download pool keyed by sha256 (when known) or by URL (fallback
+/// when sha256 is `None`, e.g. first load of a config that only has
+/// `image_url`).
 ///
-/// The slot is an async mutex guarding an optional resolved content hash:
-/// - `None`  -> no successful download yet for this URL (holder should
-///   download)
-/// - `Some`  -> resolved hash from a finished download (returnable to
-///   followers)
+/// Each entry holds a [`broadcast::Sender`] that the leader uses to fan out
+/// its result to concurrent subscribers. The leader removes the entry right
+/// after sending.
 ///
-/// The leader (first acquirer finding `None`) performs the HTTP fetch, writes
-/// the cache file and stores the hash. Concurrent/following callers that lock
-/// the same slot simply return the stored hash without re-downloading.
+/// Late subscribers (those that arrive after the leader has already sent and
+/// removed the entry) get [`RecvError::Closed`]; they fall back to the disk
+/// fast-path when sha256 is known, or loop once to become the new leader when
+/// sha256 is unknown. The race is rare — and self-heals on the next render
+/// because the first successful call writes the hash back into the config via
+/// `onHashUpdate`, so subsequent calls hit the disk fast-path directly.
+static INFLIGHT: Lazy<DashMap<String, broadcast::Sender<Result<String>>>> = Lazy::new(DashMap::new);
+
+/// Single-flight wrapper around the actual HTTP download.
 ///
-/// Entries are kept for the session as a small URL->hash cache (bounded by the
-/// number of distinct image URLs, i.e. the number of games); a missing disk
-/// file invalidates the cached entry so a manually-cleared cache is re-fetched.
-/// On a failed download the slot stays `None`, so waiters retry (serialized) —
-/// acceptable since image failures are rare.
-static INFLIGHT_DOWNLOADS: Lazy<DashMap<String, Arc<AsyncMutex<Option<String>>>>> =
-    Lazy::new(DashMap::new);
+/// - If no other task is downloading this key, the current task becomes the
+///   **leader**: it performs the HTTP GET, hashes the bytes, writes the cache
+///   file, broadcasts the result, removes itself from the pool and returns.
+/// - If another task is already downloading the same key, the current task
+///   **subscribes** to that task's broadcast and returns the same result
+///   without issuing its own HTTP request.
+async fn download_single_flight(url: &str, sha256: Option<&str>) -> Result<String> {
+    // Dedup key: prefer the content hash when known (so two different URLs
+    // pointing at the same image share a download), fall back to the URL
+    // itself when the hash isn't yet known.
+    let key = sha256.map(String::from).unwrap_or_else(|| url.to_string());
 
-async fn download_single_flight(url: &str) -> Result<String> {
-    // Clone the Arc out of the DashMap without holding the entry guard across
-    // the await below.
-    let slot: Arc<AsyncMutex<Option<String>>> = INFLIGHT_DOWNLOADS
-        .entry(url.to_string())
-        .or_insert_with(|| Arc::new(AsyncMutex::new(None)))
-        .value()
-        .clone();
+    loop {
+        match INFLIGHT.entry(key.clone()) {
+            Entry::Occupied(e) => {
+                // Follower: clone the sender, release the entry guard, then
+                // await — never hold a DashMap guard across `.await`.
+                let mut rx = e.get().subscribe();
+                drop(e);
+                match rx.recv().await {
+                    Ok(r) => return r,
+                    Err(RecvError::Closed) => {
+                        // Leader finished and removed the entry (and dropped
+                        // its sender) before we subscribed. The file is on
+                        // disk now if the leader succeeded.
+                        if let Some(h) = sha256
+                            && IMAGE_CACHE_DIR.join(h).exists()
+                        {
+                            return Ok(h.to_string());
+                        }
+                        // sha256 unknown — cannot look up by hash. Loop to
+                        // become the new leader (rare race; bounded by the
+                        // tiny window between leader's send and remove).
+                        continue;
+                    }
+                    Err(RecvError::Lagged(_)) => continue,
+                }
+            }
+            Entry::Vacant(e) => {
+                // Leader: install a sender. `insert` consumes the entry
+                // guard, so no manual `drop(e)` is needed before awaiting.
+                let (tx, _rx) = broadcast::channel::<Result<String>>(1);
+                e.insert(tx.clone());
 
-    let mut guard = slot.lock().await;
-
-    // A previous caller may have already finished this download.
-    if let Some(resolved) = guard.as_ref() {
-        if IMAGE_CACHE_DIR.join(resolved).exists() {
-            debug!("image download shared (single-flight): {}", url);
-            return Ok(resolved.clone());
+                let result = download_and_cache(url, sha256).await;
+                // `send` errs only when there are no receivers — fine to
+                // ignore, the result still goes back to our own caller.
+                let _ = tx.send(result.clone());
+                INFLIGHT.remove(&key);
+                return result;
+            }
         }
-        // Disk cache vanished (e.g. manually cleared) — invalidate and retry.
-        *guard = None;
     }
+}
 
-    // We are the leader: actually download.
+/// Perform the real HTTP GET, hash the bytes, and persist into the cache.
+///
+/// If `expected` is provided and disagrees with the actual content hash, we
+/// log a warning but still use the actual hash as the cache key — trusting
+/// the bytes over the caller's claim (the caller's value may be stale from
+/// sync, or the remote image may have legitimately changed).
+async fn download_and_cache(url: &str, expected: Option<&str>) -> Result<String> {
     let bytes = download_image(url).await?;
-    info!("downloaded image: {}", url);
-    let resolved = hash_image(&bytes);
-    fs::write(IMAGE_CACHE_DIR.join(&resolved), &bytes)?;
-    *guard = Some(resolved.clone());
-    Ok(resolved)
+    info!("downloaded image: {} ({} bytes)", url, bytes.len());
+    let actual = hash_image(&bytes);
+    if let Some(exp) = expected
+        && exp != actual
+    {
+        warn!(
+            "[image] sha256 mismatch for {url}: expected {exp}, got {actual}; \
+             caching under actual hash"
+        );
+    }
+    fs::write(IMAGE_CACHE_DIR.join(&actual), &bytes)?;
+    Ok(actual)
 }
 
 /// Handler for the `galimg` custom URI scheme.
@@ -166,8 +217,10 @@ async fn download_single_flight(url: &str) -> Result<String> {
 pub(crate) fn image_protocol_handler(request: tauri::http::Request<Vec<u8>>) -> Response<Vec<u8>> {
     let hash = request.uri().path().trim_start_matches('/');
 
-    // Validate: hash consists of hex characters only
-    if hash.is_empty() || !hash.chars().all(|c| c.is_ascii_hexdigit()) {
+    // Reject anything that isn't a well-formed cache key. Without this, an
+    // empty `hash` would resolve to the cache directory itself (read errors,
+    // but more importantly it leaks filesystem structure to the webview).
+    if !is_valid_hash(hash) {
         return Response::builder()
             .status(tauri::http::StatusCode::BAD_REQUEST)
             .body(Vec::new())
@@ -260,7 +313,42 @@ mod tests {
         let h1 = hash_image(b"abc");
         let h2 = hash_image(b"abc");
         assert_eq!(h1, h2);
-        assert_eq!(h1.len(), 32);
+        assert_eq!(h1.len(), HASH_HEX_LEN);
         assert!(h1.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn is_valid_hash_accepts_real_hash() {
+        let h = hash_image(b"abc");
+        assert!(is_valid_hash(&h));
+    }
+
+    #[test]
+    fn is_valid_hash_rejects_empty_string() {
+        // The bug fix: an empty `hash` previously made `PathBuf::join("")`
+        // resolve to the cache directory itself, which `.exists()` -> bogus
+        // cache hit returning "".
+        assert!(!is_valid_hash(""));
+    }
+
+    #[test]
+    fn is_valid_hash_rejects_wrong_length() {
+        let too_short = "abc123";
+        let too_long = "a".repeat(HASH_HEX_LEN + 1);
+        assert!(!is_valid_hash(too_short));
+        assert!(!is_valid_hash(&too_long));
+    }
+
+    #[test]
+    fn is_valid_hash_rejects_non_hex() {
+        // 32 chars but contains non-hex characters.
+        let bad = "z".repeat(HASH_HEX_LEN);
+        assert!(!is_valid_hash(&bad));
+        // Note: uppercase hex (A-F) IS valid — `is_ascii_hexdigit` accepts
+        // both cases. We never produce uppercase from `hash_image`, but a
+        // manually-edited cache file could in principle be named with
+        // uppercase; the protocol handler accepts it, so we do too.
+        let upper = "A".repeat(HASH_HEX_LEN);
+        assert!(is_valid_hash(&upper));
     }
 }

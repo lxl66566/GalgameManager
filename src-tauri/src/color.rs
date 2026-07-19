@@ -42,10 +42,10 @@ use crate::{db::CONFIG, error::Result, http::IMAGE_CACHE_DIR};
 /// color derivation is best-effort).
 pub async fn prepare_image(
     path_or_url: &str,
-    hash: Option<&str>,
+    sha256: Option<&str>,
     need_color: bool,
 ) -> Result<(String, Option<String>)> {
-    let resolved = crate::http::prepare_image(path_or_url, hash).await?;
+    let resolved = crate::http::prepare_image(path_or_url, sha256).await?;
     let color = if need_color {
         compute_color(&resolved).await
     } else {

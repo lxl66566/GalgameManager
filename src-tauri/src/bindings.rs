@@ -52,10 +52,10 @@ pub fn log(level: LogLevel, msg: String) {
 #[tauri::command(async)]
 pub async fn prepare_image(
     url: String,
-    hash: Option<String>,
+    sha256: Option<String>,
     need_color: bool,
 ) -> Result<(String, Option<String>)> {
-    crate::color::prepare_image(&url, hash.as_deref(), need_color).await
+    crate::color::prepare_image(&url, sha256.as_deref(), need_color).await
 }
 
 /// Re-extract cover colors for all games in the background. See
