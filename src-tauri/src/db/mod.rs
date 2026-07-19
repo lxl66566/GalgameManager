@@ -222,13 +222,10 @@ impl Config {
     }
 
     /// Emit `config://updated` and request a *throttled* save through the
-    /// global [`ConfigSaver`](saver::ConfigSaver). The in-memory change is
-    /// guaranteed to reach disk within `MIN_INTERVAL`, and never more than
-    /// once per window. `last_updated` is **not** bumped here.
-    ///
-    /// The disk write is delegated to a background task, so this method
-    /// only holds the `CONFIG` mutex for the duration of the emit (a
-    /// memory-only IPC), not for file I/O.
+    /// global [`ConfigSaver`](saver::ConfigSaver). The change reaches disk
+    /// within `MIN_INTERVAL`, at most once per window. `last_updated` is
+    /// **not** bumped here. File I/O happens on the writer task, so the
+    /// `CONFIG` mutex is never held across disk writes.
     #[inline]
     pub fn save_and_emit_no_update(&self, app_handle: &AppHandle) -> Result<()> {
         app_handle.emit("config://updated", &self)?;
@@ -246,20 +243,21 @@ impl Config {
         self.save_and_emit_no_update(app_handle)
     }
 
-    /// Bypass the throttle and persist immediately. Use only for critical
-    /// paths (remote config apply, game exit) where waiting `MIN_INTERVAL`
-    /// could lose data.
+    /// Emit, then request an *immediate* save that bypasses the throttle.
+    /// Use only for critical paths (remote config apply, game exit) where
+    /// waiting `MIN_INTERVAL` could lose data.
     ///
-    /// Caller must already hold the `CONFIG` mutex — this method calls
-    /// [`Config::store`] directly and therefore must NOT go through the
-    /// background writer task (which would deadlock waiting for the same
-    /// mutex). [`ConfigSaver::mark_externally_saved`] is then invoked to
-    /// cancel any pending throttled flush.
+    /// The write itself is queued to the single writer task (non-blocking,
+    /// so the caller may hold the `CONFIG` mutex); serialising forced and
+    /// throttled writes through one task is what prevents a stale
+    /// throttled snapshot from overwriting a newer forced write.
     #[inline]
     pub fn force_save_and_emit_no_update(&self, app_handle: &AppHandle) -> Result<()> {
         app_handle.emit("config://updated", &self)?;
-        self.store()?;
-        saver::ConfigSaver::mark_externally_saved();
+        if !saver::ConfigSaver::request_force("force_save_and_emit_no_update") {
+            // Saver not initialised (early startup): write through directly.
+            self.store()?;
+        }
         Ok(())
     }
 

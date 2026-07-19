@@ -235,8 +235,7 @@ pub trait MyOperation {
         new_config.last_sync = Some(remote_config.last_updated);
         let old = std::mem::replace(&mut *local_config, new_config);
         // Force-flush: a remote-apply is a full-content replacement that
-        // must hit disk immediately — losing it to the throttle window
-        // would mean a crash rolls back to the pre-pull state.
+        // must not linger in the throttle window.
         local_config.force_save_and_emit_no_update(app)?;
         Ok((Some(old), false))
     }

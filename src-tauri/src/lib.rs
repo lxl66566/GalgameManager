@@ -79,10 +79,9 @@ pub fn run() {
             let res = LOG_HANDLE.set(handle);
             debug_assert!(res.is_ok());
 
-            // Spawn the throttled config-writer task as early as possible so
-            // any later code path that mutates CONFIG can rely on it being
-            // available. See [`db::saver`] for the rationale.
-            let _ = crate::db::saver::ConfigSaver::init();
+            // Spawn the config-writer task first so every later CONFIG
+            // mutation can rely on it. See [`db::saver`] for the rationale.
+            let _ = crate::db::saver::ConfigSaver::init(app.handle());
 
             #[cfg(desktop)]
             {
@@ -251,10 +250,8 @@ pub fn run() {
             }
             tauri::RunEvent::ExitRequested { api, code, .. } => {
                 _ = app.save_window_state(StateFlags::all());
-                // Always flush local config before doing anything else —
-                // even on "quit without sync" — so the most recent
-                // in-memory state survives even if the throttled writer
-                // had a pending flush at exit time.
+                // Flush config before anything else so a pending throttled
+                // write is never lost on exit.
                 crate::db::saver::ConfigSaver::force_save_blocking("app_exit");
                 if code == Some(114514) {
                     if let Some(window) = app.get_webview_window("main") {
