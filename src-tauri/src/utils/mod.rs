@@ -1,11 +1,16 @@
 pub mod audio_speed_hack;
 pub mod toast;
 
-use std::{io, path::Path};
+use std::{io, path::Path, time::Duration};
 
 use similar::TextDiff;
 
 use crate::{archive::ArchiveInfo, db::Config};
+
+pub fn format_time_delta(delta: chrono::TimeDelta) -> String {
+    let secs = delta.num_seconds().max(0) as u64;
+    humantime::format_duration(Duration::from_secs(secs)).to_string()
+}
 
 pub fn list_dir_all(path: impl AsRef<Path>) -> io::Result<Vec<ArchiveInfo>> {
     let entries = std::fs::read_dir(path)?;

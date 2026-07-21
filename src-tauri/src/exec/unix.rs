@@ -54,6 +54,11 @@ pub async fn game_loop(
                     session_secs: total_session.num_seconds() as u64,
                 };
                 app.emit(&format!("game://exit/{}", game_id), &payload)?;
+                info!(
+                    "Game exited: game_id={}, playtime={}",
+                    game_id,
+                    crate::utils::format_time_delta(total_session)
+                );
                 match status {
                     Ok(s) => info!("Game exited with status: {}", s),
                     Err(e) => error!("Error waiting for game process: {}", e),

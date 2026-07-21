@@ -33,6 +33,7 @@ flexi_logger              = { version = "0.31", features = ["compress"] }
 futures                   = "0.3"
 goblin                    = "0.10"
 hex                       = "0.4"
+humantime                 = "2"
 home                      = "0.5"
 image                     = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp"] }
 include_assets            = { version = "1", default-features = false, features = ["zstd"] }
