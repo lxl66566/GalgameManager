@@ -64,7 +64,7 @@ export async function initGameRuntime(t: TFunc): Promise<void> {
       setPlayingIds(prev => prev.filter(pid => pid !== id))
       if (!event.payload.success) {
         const gameName = useConfig().config.games.find(g => g.id === id)?.name ?? ''
-        toast.error(gameName + t('hint.exitAbnormally'))
+        showOrDefer(() => toast.error(gameName + t('hint.exitAbnormally')))
       }
     })
   }
@@ -83,8 +83,7 @@ export async function launchGame(game: Game, t: TFunc): Promise<void> {
       setPlayingIds(prev => [...prev, game.id])
       toast.success(game.name + t('hint.isRunning'))
     }),
-    once<GameExitPayload>(`game://exit/${game.id}`, event => {     
-      // Log and Show the session duration message
+    once<GameExitPayload>(`game://exit/${game.id}`, event => {
       setPlayingIds(prev => prev.filter(id => id !== game.id))
 
       const secs = event.payload.session_secs
@@ -96,7 +95,9 @@ export async function launchGame(game: Game, t: TFunc): Promise<void> {
           toast.success(`${game.name} ${t('game.sessionDuration', { duration })}`)
         )
       } else {
-        toast.error(`${game.name}${t('hint.exitAbnormally')} (${duration})`)
+        showOrDefer(() =>
+          toast.error(`${game.name}${t('hint.exitAbnormally')} (${duration})`)
+        )
       }
     })
   ])

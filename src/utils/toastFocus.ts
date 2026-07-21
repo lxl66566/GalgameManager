@@ -7,16 +7,25 @@ import { log } from '@utils/log'
 
 const pending: Array<() => void> = []
 let listenerInitialized = false
-let unlisten: (() => void) | null = null
+
+// Drain the pending queue only when the window is focused, visible, and
+// not minimized — a minimized/hidden window means the user isn't watching,
+// so toasts would go unnoticed.
+async function flush(): Promise<void> {
+  const w = getCurrentWindow()
+  const [visible, minimized] = await Promise.all([w.isVisible(), w.isMinimized()])
+  if (!visible || minimized) return
+  for (const show of pending) show()
+  pending.length = 0
+}
 
 async function ensureListener(): Promise<void> {
   if (listenerInitialized) return
   listenerInitialized = true
   try {
-    unlisten = await getCurrentWindow().onFocusChanged(({ payload: focused }) => {
+    await getCurrentWindow().onFocusChanged(({ payload: focused }) => {
       if (!focused || pending.length === 0) return
-      for (const show of pending) show()
-      pending.length = 0
+      void flush()
     })
   } catch (e) {
     listenerInitialized = false
