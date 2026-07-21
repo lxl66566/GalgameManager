@@ -90,9 +90,10 @@ export async function launchGame(game: Game, t: TFunc): Promise<void> {
       const duration = formatSessionDuration(secs * 1000)
 
       if (event.payload.success) {
-        log.info(`Game session finished. Duration: ${duration}`)
         showOrDefer(() =>
-          toast.success(`${game.name} ${t('game.sessionDuration', { duration })}`)
+          toast.success(`${game.name} ${t('game.sessionDuration', { duration })}`, {
+            duration: 7000
+          })
         )
       } else {
         showOrDefer(() =>

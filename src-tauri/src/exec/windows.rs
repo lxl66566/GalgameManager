@@ -249,7 +249,11 @@ pub async fn game_loop(
         if !job.has_active_processes() {
             // Include the final partial chunk
             total_session += time_counter;
-            info!("Game exited: game_id={}", game_id);
+            info!(
+                "Game exited: game_id={}, playtime={}",
+                game_id,
+                super::format_session_duration(total_session.num_seconds() as u64)
+            );
             let payload = super::GameExitPayload {
                 success: job.last_exit_success(),
                 session_secs: total_session.num_seconds() as u64,
