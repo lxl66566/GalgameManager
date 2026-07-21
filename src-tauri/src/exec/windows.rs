@@ -252,7 +252,7 @@ pub async fn game_loop(
             info!(
                 "Game exited: game_id={}, playtime={}",
                 game_id,
-                super::format_session_duration(total_session.num_seconds() as u64)
+                crate::utils::format_time_delta(total_session)
             );
             let payload = super::GameExitPayload {
                 success: job.last_exit_success(),

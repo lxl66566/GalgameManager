@@ -57,7 +57,7 @@ pub async fn game_loop(
                 info!(
                     "Game exited: game_id={}, playtime={}",
                     game_id,
-                    super::format_session_duration(payload.session_secs)
+                    crate::utils::format_time_delta(total_session)
                 );
                 match status {
                     Ok(s) => info!("Game exited with status: {}", s),

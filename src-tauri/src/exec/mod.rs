@@ -52,21 +52,6 @@ pub struct GameExitPayload {
     pub session_secs: u64,
 }
 
-/// Format a session length the same way as the TS-side `formatSessionDuration`
-/// ("XhYm" / "XmYs" / "Xs"), for log lines emitted when a game exits.
-pub(crate) fn format_session_duration(total_secs: u64) -> String {
-    let h = total_secs / 3600;
-    let m = (total_secs % 3600) / 60;
-    let s = total_secs % 60;
-    if h > 0 {
-        format!("{h}h{m}m")
-    } else if m > 0 {
-        format!("{m}m{s}s")
-    } else {
-        format!("{s}s")
-    }
-}
-
 use std::fmt;
 
 impl fmt::Display for StartCtx {
