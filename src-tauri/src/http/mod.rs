@@ -1,9 +1,11 @@
 use std::{fs, path::PathBuf, sync::LazyLock as Lazy, time::Duration};
 
 use backon::{ExponentialBuilder, Retryable};
+use config_file2::{LoadConfigFile, Storable};
 use dashmap::{DashMap, mapref::entry::Entry};
 use log::{debug, info, warn};
 use reqwest::{Client, header};
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tauri::http::Response;
 use tokio::sync::broadcast::{self, error::RecvError};
@@ -27,6 +29,35 @@ pub static IMAGE_CACHE_DIR: Lazy<PathBuf> = Lazy::new(|| {
     _ = fs::create_dir_all(&dir);
     dir
 });
+
+/// Persistent record of URLs that returned a 4xx client error.
+/// Once an image URL is dead it stays dead — no need to keep hammering the
+/// origin on every render / tab switch. The file lives alongside cached images
+/// so clearing the image cache also clears this list.
+static DEAD_URLS_FILE: Lazy<PathBuf> = Lazy::new(|| IMAGE_CACHE_DIR.join("dead_urls.toml"));
+static DEAD_URLS: Lazy<DashMap<String, ()>> = Lazy::new(|| {
+    let map = DashMap::new();
+    match DeadUrlCache::load_or_default(DEAD_URLS_FILE.as_path()) {
+        Ok(cache) => {
+            for url in cache.urls {
+                map.insert(url, ());
+            }
+        }
+        Err(e) => warn!("Failed to load dead URL cache: {e}"),
+    }
+    map
+});
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct DeadUrlCache {
+    urls: Vec<String>,
+}
+
+impl Storable for DeadUrlCache {
+    fn path(&self) -> impl AsRef<std::path::Path> {
+        DEAD_URLS_FILE.as_path()
+    }
+}
 
 static USER_AGENT: &str = "github:lxl66566/GalgameManager";
 
@@ -53,6 +84,39 @@ fn hash_image(bytes: &[u8]) -> String {
 /// non-hex strings are rejected.
 fn is_valid_hash(s: &str) -> bool {
     s.len() == HASH_HEX_LEN && s.bytes().all(|b| b.is_ascii_hexdigit())
+}
+
+/// Check whether a URL is known to be permanently dead (previous 4xx).
+fn is_url_dead(url: &str) -> bool {
+    DEAD_URLS.contains_key(url)
+}
+
+/// Record a URL as dead and persist to disk.
+fn mark_url_dead(url: &str) {
+    if DEAD_URLS.insert(url.to_string(), ()).is_none() {
+        persist_dead_urls();
+    }
+}
+
+/// Write the current dead-URL set to disk (best-effort; failure is logged).
+fn persist_dead_urls() {
+    let cache = DeadUrlCache {
+        urls: DEAD_URLS.iter().map(|e| e.key().clone()).collect(),
+    };
+    if let Err(e) = cache.store() {
+        warn!("Failed to persist dead URL cache: {e}");
+    }
+}
+
+/// Returns true when the error originated from an HTTP 4xx client error.
+/// These are permanent — the URL is broken, the server has spoken.
+fn is_http_client_error(err: &crate::error::Error) -> bool {
+    match err {
+        crate::error::Error::Network(ReqwestDetailedError(e)) => {
+            e.status().map_or(false, |s| s.is_client_error())
+        }
+        _ => false,
+    }
 }
 
 /// Detect MIME type from image magic bytes.
@@ -114,7 +178,10 @@ pub async fn prepare_image(path_or_url: &str, sha256: Option<&str>) -> Result<St
         return Ok(h);
     }
 
-    // 3. Remote URL: single-flight dedup.
+    // 3. Remote URL: check dead-URL cache first, then single-flight dedup.
+    if is_url_dead(path_or_url) {
+        return Err(Error::DeadUrl(path_or_url.to_string()));
+    }
     download_single_flight(path_or_url, sha256).await
 }
 
@@ -198,19 +265,28 @@ async fn download_single_flight(url: &str, sha256: Option<&str>) -> Result<Strin
 /// the bytes over the caller's claim (the caller's value may be stale from
 /// sync, or the remote image may have legitimately changed).
 async fn download_and_cache(url: &str, expected: Option<&str>) -> Result<String> {
-    let bytes = download_image(url).await?;
-    info!("downloaded image: {} ({} bytes)", url, bytes.len());
-    let actual = hash_image(&bytes);
-    if let Some(exp) = expected
-        && exp != actual
-    {
-        warn!(
-            "[image] sha256 mismatch for {url}: expected {exp}, got {actual}; \
-             caching under actual hash"
-        );
+    match download_image(url).await {
+        Ok(bytes) => {
+            info!("downloaded image: {} ({} bytes)", url, bytes.len());
+            let actual = hash_image(&bytes);
+            if let Some(exp) = expected
+                && exp != actual
+            {
+                warn!(
+                    "[image] sha256 mismatch for {url}: expected {exp}, got {actual}; \
+                     caching under actual hash"
+                );
+            }
+            fs::write(IMAGE_CACHE_DIR.join(&actual), &bytes)?;
+            Ok(actual)
+        }
+        Err(e) => {
+            if is_http_client_error(&e) {
+                mark_url_dead(url);
+            }
+            Err(e)
+        }
     }
-    fs::write(IMAGE_CACHE_DIR.join(&actual), &bytes)?;
-    Ok(actual)
 }
 
 /// Handler for the `galimg` custom URI scheme.
