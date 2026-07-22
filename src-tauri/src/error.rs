@@ -74,6 +74,9 @@ pub enum Error {
 
     #[error("PE parse error: {0}")]
     PeParse(#[from] goblin::error::Error),
+
+    #[error("Dead URL (previous 4xx client error): {0}")]
+    DeadUrl(String),
 }
 
 impl Clone for Error {
