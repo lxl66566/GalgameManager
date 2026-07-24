@@ -51,11 +51,13 @@ serde_json     = "1.0"
 # avoid the race where the frontend's stale snapshot overwrites fields the
 # Rust game loop just wrote (use_time, daily_playtime). The `list` feature
 # enables id-addressed Vec patching so we don't ship every game's daily_playtime
-# HashMap just to change one game's name.
+# HashMap just to change one game's name; `ts` derives TS bindings for the
+# list op enum. Local path: our fork carries the list/no_diff/nullable/
+# skip_serializing_none/ts features not (yet) upstream.
 sha2                      = "0.11"
 shlex                     = "2"
 similar                   = "3"
-struct-patch              = { git = "https://github.com/lxl66566/struct-patch.git", features = ["list", "serde", "nesting"] }
+struct-patch              = { path = "C:/programs/fork/struct-patch/lib", features = ["list", "serde", "nesting", "ts"] }
 sys-locale                = "0.3"
 tar                       = "0.4"
 tauri                     = { version = "2.11.3", features = ["tray-icon"] }
