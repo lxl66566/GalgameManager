@@ -35,6 +35,7 @@ dependencies = [
  "sha2 0.11.0",
  "shlex",
  "similar",
+ "struct-patch",
  "sys-locale",
  "tar",
  "tauri",
@@ -5213,6 +5214,25 @@ name = "strsim"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
+
+[[package]]
+name = "struct-patch"
+version = "0.12.7"
+source = "git+https://github.com/lxl66566/struct-patch.git#bc03e45f8a8b6d1b13bfef38250b2d30d6b15d7f"
+dependencies = [
+ "serde",
+ "struct-patch-derive",
+]
+
+[[package]]
+name = "struct-patch-derive"
+version = "0.12.7"
+source = "git+https://github.com/lxl66566/struct-patch.git#bc03e45f8a8b6d1b13bfef38250b2d30d6b15d7f"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
 
 [[package]]
 name = "subtle"

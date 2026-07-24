@@ -3,6 +3,7 @@
  */
 import { SwitchToggle } from '@components/ui/settings'
 import { openUrl } from '@tauri-apps/plugin-opener'
+import type { PluginMetadatasPatch } from '@bindings/PluginMetadatasPatch'
 import { useI18n, type Dictionary } from '~/i18n'
 import { useConfig } from '~/store'
 import { FiChevronDown, FiChevronUp, FiExternalLink } from 'solid-icons/fi'
@@ -12,11 +13,9 @@ import { PLUGIN_REGISTRY, type AnyPluginDef } from './plugins'
 import {
   getPluginMeta,
   isPluginAvailable,
-  patchPluginMeta,
   type AnyGameConfig,
   type AnyMeta,
-  type ConfigEditorProps,
-  type PluginId
+  type ConfigEditorProps
 } from './plugins/types'
 import { PLUGINS } from './registry'
 
@@ -34,11 +33,11 @@ export default function PluginPage() {
   }
 
   const setEnabled = (def: AnyPluginDef, enabled: boolean) => {
-    actions.mutate(state => {
-      state.pluginMetadatas = patchPluginMeta(def.metaKey, state.pluginMetadatas, {
-        enabled
-      })
-    })
+    // Send only `{ pluginMetadatas: { <key>: { enabled: <bool> } } }` — a
+    // single leaf flip rather than the whole `PluginMetadatas` snapshot.
+    actions.updatePluginMetadatas({
+      [def.metaKey]: { enabled }
+    } as Partial<PluginMetadatasPatch>)
   }
 
   return (
@@ -153,14 +152,12 @@ export default function PluginPage() {
                                 }
                                 config={meta()}
                                 onCommit={(m: Record<string, unknown>) => {
-                                  // Persists to disk: actions.mutate → save()
-                                  actions.mutate(state => {
-                                    state.pluginMetadatas = patchPluginMeta(
-                                      def.metaKey as PluginId,
-                                      state.pluginMetadatas,
-                                      m as Parameters<typeof patchPluginMeta>[2]
-                                    )
-                                  })
+                                  // Persists to disk via a fine-grained
+                                  // pluginMetadatas patch — only this plugin's
+                                  // metadata touches the wire.
+                                  actions.updatePluginMetadatas({
+                                    [def.metaKey]: m
+                                  } as Partial<PluginMetadatasPatch>)
                                 }}
                               />
                             </div>
@@ -190,16 +187,12 @@ export default function PluginPage() {
                                   ] as AnyGameConfig
                                 }
                                 onCommit={(newDefaults: Record<string, unknown>) => {
-                                  // Persists to disk: actions.mutate → save()
-                                  actions.mutate(state => {
-                                    state.pluginMetadatas = patchPluginMeta(
-                                      def.metaKey as PluginId,
-                                      state.pluginMetadatas,
-                                      { configDefaults: newDefaults } as Parameters<
-                                        typeof patchPluginMeta
-                                      >[2]
-                                    )
-                                  })
+                                  // Persists to disk via a fine-grained patch
+                                  // — only this plugin's `configDefaults`
+                                  // field is sent.
+                                  actions.updatePluginMetadatas({
+                                    [def.metaKey]: { configDefaults: newDefaults }
+                                  } as Partial<PluginMetadatasPatch>)
                                 }}
                               />
                             </div>

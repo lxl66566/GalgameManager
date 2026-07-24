@@ -2,11 +2,12 @@ use std::{fs, path::PathBuf};
 
 use chrono::Utc;
 use log::info;
+use struct_patch::Patch as _;
 use tauri::{AppHandle, Manager as _};
 
 use crate::{
     archive::{ArchiveInfo, archive_impl, restore_impl},
-    db::{CONFIG, Config, device::DEVICE_UID, saver::ConfigSaver},
+    db::{CONFIG, Config, ConfigPatch, device::DEVICE_UID, saver::ConfigSaver},
     error::{Error, Result},
     exec::{GAME_LOOP_HANDLES, launch_game_with_plugins},
     logging::LogLevel,
@@ -31,6 +32,27 @@ pub fn save_config(new_config: Config) -> Result<()> {
     // the freshest state and would otherwise just reconcile back to the
     // same value. The disk write is delegated to the background writer.
     ConfigSaver::request("frontend::save_config");
+    Ok(())
+}
+
+/// Apply a partial patch to the global config. Used for the common
+/// "user edited one field" save path.
+///
+/// Unlike [`save_config`], this only touches fields the patch explicitly
+/// sets, leaving everything else (notably `use_time`, `daily_playtime` and
+/// `last_played_time` just written by the game loop) untouched. This is
+/// what fixes the long-standing race where a stale frontend snapshot
+/// reverted the Rust side's recent writes.
+///
+/// `last_updated` is bumped here, same as `save_config`. The disk write is
+/// throttled; emit is skipped for the same reason as `save_config`.
+// called from frontend, do not use it in other places
+#[tauri::command]
+pub fn patch_config(patch: ConfigPatch) -> Result<()> {
+    let mut lock = CONFIG.lock();
+    lock.apply(patch);
+    lock.last_updated = Utc::now();
+    ConfigSaver::request("frontend::patch_config");
     Ok(())
 }
 

@@ -375,6 +375,7 @@ export const dict = {
     renameSuccess: 'Rename Success',
     renaming: 'Rename: ',
     restorePreviousConfigSuccess: 'Restored previous configuration',
+    restorePreviousConfigFailed: 'Failed to restore previous configuration',
     revertFailed: 'Revert Failed: ',
     reverting: 'Reverting: ',
     revertSuccess: 'Revert Success: ',

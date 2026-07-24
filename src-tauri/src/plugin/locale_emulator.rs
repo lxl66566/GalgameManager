@@ -7,6 +7,7 @@
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
+use struct_patch::Patch;
 use ts_rs::TS;
 
 use super::{PLUGIN_REGISTRY, PluginConfig, PluginContext, config::GameWrapperGameConfig};
@@ -36,11 +37,21 @@ impl Default for LocaleEmulatorGameConfig {
 }
 
 /// Global metadata for the LocaleEmulator plugin (stored in `PluginMetadatas`).
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS, Patch)]
 #[serde(rename_all = "camelCase", default)]
+#[patch(no_diff)]
+#[patch(attribute(derive(Debug, Default, Clone, Serialize, Deserialize, TS)))]
+#[patch(attribute(ts(export)))]
+#[patch(attribute(serde(rename_all = "camelCase", default)))]
 pub struct LocaleEmulatorPluginMeta {
+    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
+    #[patch(attribute(ts(optional)))]
     pub enabled: bool,
+    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
+    #[patch(attribute(ts(optional)))]
     pub auto_add: bool,
+    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
+    #[patch(attribute(ts(optional)))]
     pub config_defaults: LocaleEmulatorGameConfig,
 }
 

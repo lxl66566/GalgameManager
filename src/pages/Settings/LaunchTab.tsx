@@ -49,7 +49,7 @@ export const LaunchTab: Component = () => {
         >
           <SwitchToggle
             checked={config.settings.launch.precisionMode}
-            onChange={e => actions.updateSettings(s => (s.launch.precisionMode = e))}
+            onChange={e => actions.updateSettings({ launch: { precisionMode: e } })}
           />
         </SettingRow>
 
@@ -59,7 +59,7 @@ export const LaunchTab: Component = () => {
         >
           <SwitchToggle
             checked={config.settings.launch.dailyStat}
-            onChange={e => actions.updateSettings(s => (s.launch.dailyStat = e))}
+            onChange={e => actions.updateSettings({ launch: { dailyStat: e } })}
           />
         </SettingRow>
 
