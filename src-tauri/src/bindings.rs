@@ -381,13 +381,10 @@ pub fn open_game_dir(game_id: u32) -> Result<()> {
 // truth and giving the charts live updates for free.
 
 #[tauri::command]
-pub fn clear_all_daily_playtime() -> Result<()> {
+pub fn clear_all_daily_playtime(app: AppHandle) -> Result<()> {
     let mut lock = CONFIG.lock();
     for game in &mut lock.games {
         game.daily_playtime.clear();
     }
-    // Throttled save; no emit because the frontend already clears its own
-    // store synchronously after invoking this command.
-    ConfigSaver::request("clear_all_daily_playtime");
-    Ok(())
+    lock.save_and_emit(&app)
 }
