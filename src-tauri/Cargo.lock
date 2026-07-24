@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "GalgameManager"
-version = "1.3.0"
+version = "1.3.1"
 dependencies = [
  "async-trait",
  "backhand",
@@ -5218,6 +5218,7 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 [[package]]
 name = "struct-patch"
 version = "0.12.7"
+source = "git+https://github.com/lxl66566/struct-patch.git#4021c30188d91ceb2d2462a8ad08b6a02473e975"
 dependencies = [
  "serde",
  "struct-patch-derive",
@@ -5227,6 +5228,7 @@ dependencies = [
 [[package]]
 name = "struct-patch-derive"
 version = "0.12.7"
+source = "git+https://github.com/lxl66566/struct-patch.git#4021c30188d91ceb2d2462a8ad08b6a02473e975"
 dependencies = [
  "proc-macro2",
  "quote",

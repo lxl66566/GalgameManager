@@ -2,12 +2,18 @@
 import { type Config } from '@bindings/Config'
 import type { Device } from '@bindings/Device'
 import type { Game } from '@bindings/Game'
+import type { PluginMetadatasPatch as RustPluginMetadatasPatch } from '@bindings/PluginMetadatasPatch'
+import type { SettingsPatch as RustSettingsPatch } from '@bindings/SettingsPatch'
 import type { UploadConfigStatus } from '@bindings/UploadConfigStatus'
 import { myToast, type ToastVariant } from '@components/ui/myToast'
 import * as i18n from '@solid-primitives/i18n'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
+import { resolveBackendI18n } from '@utils/backendI18n'
+import { log } from '@utils/log'
 import {
+  appendDeviceOp,
+  appendGameOp,
   applyPatch,
   deleteGameOp,
   diffGame,
@@ -15,25 +21,19 @@ import {
   mergeConfigPatches,
   modifyDeviceOp,
   modifyGameOp,
-  appendGameOp,
-  appendDeviceOp,
   type ConfigPatch,
-  type DeepPartial,
+  type DeepPartial
 } from '@utils/patch'
-import type { PluginMetadatasPatch as RustPluginMetadatasPatch } from '@bindings/PluginMetadatasPatch'
-import type { SettingsPatch as RustSettingsPatch } from '@bindings/SettingsPatch'
-
-// Re-alias the ts-rs output through DeepPartial so callers can omit any
-// nested field (matches the wire-level `#[serde(default)]` behavior).
-type SettingsPatch = DeepPartial<RustSettingsPatch>
-type PluginMetadatasPatch = DeepPartial<RustPluginMetadatasPatch>
-import { resolveBackendI18n } from '@utils/backendI18n'
-import { log } from '@utils/log'
 import { type Dictionary } from '~/i18n'
 import { onCleanup, onMount } from 'solid-js'
 import { createStore, produce, reconcile, unwrap } from 'solid-js/store'
 import toast from 'solid-toast'
 import { currentDeviceId } from './Singleton'
+
+// Re-alias the ts-rs output through DeepPartial so callers can omit any
+// nested field (matches the wire-level `#[serde(default)]` behavior).
+type SettingsPatch = DeepPartial<RustSettingsPatch>
+type PluginMetadatasPatch = DeepPartial<RustPluginMetadatasPatch>
 
 // 由 Rust 端的 initialization_script 在页面任何脚本之前注入
 // （见 src-tauri/src/lib.rs 的 WebviewWindowBuilder::initialization_script）。
@@ -465,7 +465,7 @@ export const useConfig = () => {
           void sendPatch(
             modifyDeviceOp(uid, {
               name: deviceUnwrap.name,
-              variables: deviceUnwrap.variables,
+              variables: deviceUnwrap.variables
             })
           )
         } else {
@@ -493,7 +493,7 @@ export const useConfig = () => {
           schedulePatch(
             modifyDeviceOp(uid, {
               name: deviceUnwrap.name,
-              variables: deviceUnwrap.variables,
+              variables: deviceUnwrap.variables
             })
           )
         } else {

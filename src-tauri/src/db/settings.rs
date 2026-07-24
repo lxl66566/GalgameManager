@@ -17,18 +17,19 @@ use crate::{
 };
 
 // Patch attributes (shared by every patched config struct):
-// - The generated `SettingsPatch` gets serde/TS derives and the same camelCase rename so it
-//   round-trips through the IPC JSON the same way `Settings` does.
-// - `no_diff`: the diff is computed TS-side, so we opt out of `into_patch_by_diff`. That avoids
-//   forcing `PartialEq` on every field (the operator caches below are `RefCell`, which can't
-//   auto-derive it).
-// - `skip_serializing_none` makes absent fields disappear from the wire — that's how "no change
-//   for this field" is expressed — and `optional_fields` exposes them as optional (`T?`) on the
-//   TS side, matching the wire behavior.
-// - The composite sub-structs (storage/archive/appearance/launch) are whole-replacement
-//   (`Option<T>`), NOT nested patches: they are small and have no Rust-side writer, so the
-//   extra granularity would only buy wire bytes at the cost of a patch struct per sub-struct.
-//   The TS side expands its declarative partials into the full sub-struct before sending (see
+// - The generated `SettingsPatch` gets serde/TS derives and the same camelCase
+//   rename so it round-trips through the IPC JSON the same way `Settings` does.
+// - `no_diff`: the diff is computed TS-side, so we opt out of
+//   `into_patch_by_diff`. That avoids forcing `PartialEq` on every field (the
+//   operator caches below are `RefCell`, which can't auto-derive it).
+// - `skip_serializing_none` makes absent fields disappear from the wire —
+//   that's how "no change for this field" is expressed — and `optional_fields`
+//   exposes them as optional (`T?`) on the TS side, matching the wire behavior.
+// - The composite sub-structs (storage/archive/appearance/launch) are
+//   whole-replacement (`Option<T>`), NOT nested patches: they are small and
+//   have no Rust-side writer, so the extra granularity would only buy wire
+//   bytes at the cost of a patch struct per sub-struct. The TS side expands its
+//   declarative partials into the full sub-struct before sending (see
 //   `expandPatch` in src/utils/patch.ts).
 #[derive(Debug, Serialize, Deserialize, Clone, TS, Patch)]
 #[ts(export)]

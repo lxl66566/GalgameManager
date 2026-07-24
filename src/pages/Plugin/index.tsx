@@ -1,9 +1,9 @@
 ﻿/**
  * Plugin management page — data-driven rendering via typed helpers.
  */
+import type { PluginMetadatasPatch } from '@bindings/PluginMetadatasPatch'
 import { SwitchToggle } from '@components/ui/settings'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import type { PluginMetadatasPatch } from '@bindings/PluginMetadatasPatch'
 import { useI18n, type Dictionary } from '~/i18n'
 import { useConfig } from '~/store'
 import { FiChevronDown, FiChevronUp, FiExternalLink } from 'solid-icons/fi'

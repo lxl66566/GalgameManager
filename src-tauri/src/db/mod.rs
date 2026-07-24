@@ -74,9 +74,9 @@ impl Storable for Config {
 // Patch attributes:
 // - The generated `ConfigPatch` gets serde/TS derives and the same camelCase rename so it
 //   round-trips through the IPC JSON the same way `Config` does.
-// - `skip_serializing_none` makes absent fields disappear from the wire — that's how "no change
-//   for this field" is expressed — and `optional_fields` exposes them as optional (`T?`) on the
-//   TS side, matching the wire behavior. Both only apply to `Option`-wrapped fields, so the
+// - `skip_serializing_none` makes absent fields disappear from the wire — that's how "no change for
+//   this field" is expressed — and `optional_fields` exposes them as optional (`T?`) on the TS
+//   side, matching the wire behavior. Both only apply to `Option`-wrapped fields, so the
 //   list/nesting fields below keep their own attributes.
 // - `no_diff`: the diff is computed on the TS side, so we opt out of `into_patch_by_diff`. That
 //   avoids forcing `PartialEq` on `Settings` (which contains `RefCell` operator caches) and on

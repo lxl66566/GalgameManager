@@ -34,11 +34,12 @@ import { unwrap } from 'solid-js/store'
  * Arrays are treated as leaves (we never want to partialize array elements —
  * a `GameListOp` is always sent whole, same for `plugins`, `savePaths`,
  * `variables`, …). */
-export type DeepPartial<T> = T extends Array<unknown>
-  ? T
-  : T extends object
-    ? { [P in keyof T]?: DeepPartial<T[P]> }
-    : T
+export type DeepPartial<T> =
+  T extends Array<unknown>
+    ? T
+    : T extends object
+      ? { [P in keyof T]?: DeepPartial<T[P]> }
+      : T
 
 // Shadow the ts-rs-generated patch types with `DeepPartial<...>` versions.
 // The Rust originals have several REQUIRED nested fields (a side-effect of
@@ -145,8 +146,7 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
     typeof v === 'object' &&
     v !== null &&
     !Array.isArray(v) &&
-    (Object.getPrototypeOf(v) === Object.prototype ||
-      Object.getPrototypeOf(v) === null)
+    (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null)
   )
 }
 
@@ -162,7 +162,10 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
  * (`isPlainObject`) is the source of truth, the types just have to be
  * permissive enough to follow. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function applyPatch(target: Record<string, any>, patch: Record<string, any>): void {
+export function applyPatch(
+  target: Record<string, any>,
+  patch: Record<string, any>
+): void {
   if (!isPlainObject(target) || !isPlainObject(patch)) return
   for (const key in patch) {
     const val = patch[key]
@@ -227,8 +230,7 @@ function jsonEq<T>(a: T, b: T): boolean {
 export function diffGame(base: Game, cur: Game): GamePatch {
   const p: Record<string, unknown> = {}
   if (base.name !== cur.name) p.name = cur.name
-  if (!jsonEq(base.excutablePath, cur.excutablePath))
-    p.excutablePath = cur.excutablePath
+  if (!jsonEq(base.excutablePath, cur.excutablePath)) p.excutablePath = cur.excutablePath
   if (!jsonEq(base.savePaths, cur.savePaths)) p.savePaths = cur.savePaths
   if (!jsonEq(base.imageUrl, cur.imageUrl)) p.imageUrl = cur.imageUrl
   if (!jsonEq(base.imageSha256, cur.imageSha256)) p.imageSha256 = cur.imageSha256
@@ -238,8 +240,7 @@ export function diffGame(base: Game, cur: Game): GamePatch {
     p.lastPlayedTime = cur.lastPlayedTime
   if (!jsonEq(base.lastUploadTime, cur.lastUploadTime))
     p.lastUploadTime = cur.lastUploadTime
-  if (!jsonEq(base.dailyPlaytime, cur.dailyPlaytime))
-    p.dailyPlaytime = cur.dailyPlaytime
+  if (!jsonEq(base.dailyPlaytime, cur.dailyPlaytime)) p.dailyPlaytime = cur.dailyPlaytime
   if (!jsonEq(base.coverColor, cur.coverColor)) p.coverColor = cur.coverColor
   if (!jsonEq(base.plugins, cur.plugins)) p.plugins = cur.plugins
   return p as GamePatch

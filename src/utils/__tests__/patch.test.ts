@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest'
-import type { ConfigPatch } from '@utils/patch'
+import type { Device } from '@bindings/Device'
+import type { Game } from '@bindings/Game'
 import {
+  appendDeviceOp,
   appendGameOp,
   applyPatch,
   deleteDeviceOp,
@@ -10,10 +11,9 @@ import {
   mergeConfigPatches,
   modifyDeviceOp,
   modifyGameOp,
-  appendDeviceOp,
+  type ConfigPatch
 } from '@utils/patch'
-import type { Device } from '@bindings/Device'
-import type { Game } from '@bindings/Game'
+import { describe, expect, it } from 'vitest'
 
 // Minimal game factory — only the fields diffGame touches need realistic
 // values; the rest default via `as Game`.
@@ -31,7 +31,7 @@ function game(id: number, over: Partial<Game> = {}): Game {
     lastUploadTime: null,
     coverColor: null,
     plugins: [],
-    ...over,
+    ...over
   } as Game
 }
 
@@ -63,7 +63,10 @@ describe('diffGame', () => {
   })
 
   it('captures clearing a nullable field (coverColor: null vs string)', () => {
-    const patch = diffGame(game(1, { coverColor: '#ff0000' }), game(1, { coverColor: null }))
+    const patch = diffGame(
+      game(1, { coverColor: '#ff0000' }),
+      game(1, { coverColor: null })
+    )
     expect(patch.coverColor).toBeNull()
   })
 })
@@ -86,7 +89,7 @@ describe('appendGameOp / deleteGameOp / modifyGameOp', () => {
 
   it('modifyGameOp wraps the sub-patch with the id', () => {
     expect(modifyGameOp(3, { name: 'three' })).toEqual({
-      games: [{ op: 'modify', id: 3, value: { name: 'three' } }],
+      games: [{ op: 'modify', id: 3, value: { name: 'three' } }]
     })
   })
 })
@@ -113,13 +116,13 @@ describe('mergeConfigPatches', () => {
     // a webdav endpoint, then a username — used to lose the first patch to a
     // shallow {...a, ...b} merge, diverging the store from the backend.
     const a = {
-      settings: { storage: { webdav: { endpoint: 'https://a' } } },
+      settings: { storage: { webdav: { endpoint: 'https://a' } } }
     } as unknown as ConfigPatch
     const b = {
-      settings: { storage: { webdav: { username: 'u' } } },
+      settings: { storage: { webdav: { username: 'u' } } }
     } as unknown as ConfigPatch
     expect(mergeConfigPatches(a, b).settings).toEqual({
-      storage: { webdav: { endpoint: 'https://a', username: 'u' } },
+      storage: { webdav: { endpoint: 'https://a', username: 'u' } }
     })
   })
 
@@ -158,14 +161,19 @@ describe('applyPatch', () => {
   it('recurses into nested plain objects (2 levels)', () => {
     const t = { appearance: { theme: 'light', lang: 'en' }, launch: { mode: true } }
     applyPatch(t, { appearance: { theme: 'dark' } })
-    expect(t).toEqual({ appearance: { theme: 'dark', lang: 'en' }, launch: { mode: true } })
+    expect(t).toEqual({
+      appearance: { theme: 'dark', lang: 'en' },
+      launch: { mode: true }
+    })
   })
 
   it('recurses into three levels of nesting', () => {
     // This mirrors the deepest real-world path: settings.storage.local.path.
     const t = { storage: { local: { path: '/old', operator: 'x' }, provider: 'local' } }
     applyPatch(t, { storage: { local: { path: '/new' } } })
-    expect(t).toEqual({ storage: { local: { path: '/new', operator: 'x' }, provider: 'local' } })
+    expect(t).toEqual({
+      storage: { local: { path: '/new', operator: 'x' }, provider: 'local' }
+    })
   })
 
   it('replaces arrays wholesale (they are leaves in struct-patch)', () => {
@@ -197,8 +205,12 @@ describe('applyPatch', () => {
   })
 
   it('does nothing on null/undefined target', () => {
-    expect(() => applyPatch(null as unknown as Record<string, unknown>, { a: 1 })).not.toThrow()
-    expect(() => applyPatch(undefined as unknown as Record<string, unknown>, { a: 1 })).not.toThrow()
+    expect(() =>
+      applyPatch(null as unknown as Record<string, unknown>, { a: 1 })
+    ).not.toThrow()
+    expect(() =>
+      applyPatch(undefined as unknown as Record<string, unknown>, { a: 1 })
+    ).not.toThrow()
   })
 
   it('branch-merges at multiple keys simultaneously', () => {
@@ -235,17 +247,19 @@ describe('expandPatch', () => {
   it('expands a nested partial into the full sub-struct', () => {
     const base = {
       storage: { provider: 'webdav', webdav: { endpoint: 'https://a', username: 'old' } },
-      launch: { precisionMode: true, dailyStat: true },
+      launch: { precisionMode: true, dailyStat: true }
     }
     const patch = { storage: { webdav: { username: 'new' } } }
     expect(expandPatch(base, patch)).toEqual({
-      storage: { provider: 'webdav', webdav: { endpoint: 'https://a', username: 'new' } },
+      storage: { provider: 'webdav', webdav: { endpoint: 'https://a', username: 'new' } }
     })
   })
 
   it('passes scalars through unchanged', () => {
     const base = { autoSyncInterval: 1200, launch: { dailyStat: true } }
-    expect(expandPatch(base, { autoSyncInterval: 600 })).toEqual({ autoSyncInterval: 600 })
+    expect(expandPatch(base, { autoSyncInterval: 600 })).toEqual({
+      autoSyncInterval: 600
+    })
   })
 
   it('does not mutate the base object', () => {
@@ -257,7 +271,7 @@ describe('expandPatch', () => {
   it('replaces (not merges) array leaves inside an expanded sub-struct', () => {
     const base = { meta: { list: [1, 2, 3], flag: true } }
     expect(expandPatch(base, { meta: { list: [9] } })).toEqual({
-      meta: { list: [9], flag: true },
+      meta: { list: [9], flag: true }
     })
   })
 })
@@ -265,23 +279,27 @@ describe('expandPatch', () => {
 // ── Device list-patch builders ──────────────────────────────────────────────
 
 describe('appendDeviceOp / deleteDeviceOp / modifyDeviceOp', () => {
-  const device = { uid: 'dev-1', name: 'Dev 1', variables: { PATH: '/usr/bin' } } as Device
+  const device = {
+    uid: 'dev-1',
+    name: 'Dev 1',
+    variables: { PATH: '/usr/bin' }
+  } as Device
 
   it('appendDeviceOp wraps the device in an Append op', () => {
     expect(appendDeviceOp(device)).toEqual({
-      devices: [{ op: 'append', value: device }],
+      devices: [{ op: 'append', value: device }]
     })
   })
 
   it('deleteDeviceOp only carries the uid', () => {
     expect(deleteDeviceOp('dev-1')).toEqual({
-      devices: [{ op: 'delete', id: 'dev-1' }],
+      devices: [{ op: 'delete', id: 'dev-1' }]
     })
   })
 
   it('modifyDeviceOp wraps the sub-patch with the uid', () => {
     expect(modifyDeviceOp('dev-1', { name: 'Renamed' })).toEqual({
-      devices: [{ op: 'modify', id: 'dev-1', value: { name: 'Renamed' } }],
+      devices: [{ op: 'modify', id: 'dev-1', value: { name: 'Renamed' } }]
     })
   })
 })
