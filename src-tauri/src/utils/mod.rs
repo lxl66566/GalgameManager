@@ -1,4 +1,5 @@
 pub mod audio_speed_hack;
+pub mod persist;
 pub mod toast;
 
 use std::{io, path::Path, time::Duration};

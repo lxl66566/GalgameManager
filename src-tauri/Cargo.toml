@@ -58,6 +58,7 @@ tauri-plugin-dialog       = "2"
 tauri-plugin-fs           = "2.5"
 tauri-plugin-notification = "2.3"
 tauri-plugin-opener       = "2.5"
+tempfile                  = "3"
 thiserror                 = "2"
 tokio                     = { version = "1", features = ["fs", "macros", "process", "rt", "time"] }
 tokio-util                = { version = "0.7", features = ["compat"] }
@@ -87,9 +88,8 @@ x11rb        = { version = "0.13", default-features = false }
 zbus         = { version = "5", default-features = false, features = ["tokio"] }
 
 [dev-dependencies]
-tempfile = "3"
 # `test-util` enables `tokio::time::pause` / `advance` and the `start_paused`
-# macro attribute, used by the config saver's throttle tests.
+# macro attribute, used by the throttled-writer tests.
 tokio = { version = "1", features = ["test-util", "macros", "rt"] }
 
 [features]
