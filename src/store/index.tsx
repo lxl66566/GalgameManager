@@ -457,6 +457,10 @@ export const useConfig = () => {
         )
         // Match the local decision: modify if the device already existed,
         // otherwise append. Either way only this one device touches the wire.
+        // NOTE: the modify op enumerates every patchable `Device` field
+        // (i.e. all of `DevicePatch` — `uid` is `#[patch(skip)]`). If
+        // `Device` gains a field, add it here too or it will be silently
+        // dropped from the patch.
         if (existed) {
           void sendPatch(
             modifyDeviceOp(uid, {
