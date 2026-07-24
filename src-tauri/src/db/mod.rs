@@ -180,6 +180,10 @@ pub struct Game {
 }
 
 impl Config {
+    pub fn store(&self) -> Result<()> {
+        Ok(self.save_opts().pretty(false).execute()?)
+    }
+
     #[inline]
     pub fn get_device(&self) -> Option<&Device> {
         self.devices.iter().find(|d| d.uid == *DEVICE_UID)

@@ -20,7 +20,6 @@ use std::{
     time::Duration,
 };
 
-use config_file2::Storable;
 use tauri::AppHandle;
 use tokio::sync::{mpsc, oneshot};
 // `tokio::time::Instant` (not std's) so `tokio::time::pause()` virtualises
