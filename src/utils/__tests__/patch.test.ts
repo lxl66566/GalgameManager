@@ -165,11 +165,26 @@ describe('mergeConfigPatches', () => {
     expect(merged.games![1].op).toBe('delete')
   })
 
-  it('latest wins for non-games fields', () => {
+  it('latest wins for the same nested key', () => {
     // Cast: we only care about merge semantics here, not Settings shape.
     const a = { settings: { v: 1 } } as unknown as ConfigPatch
     const b = { settings: { v: 2 } } as unknown as ConfigPatch
     expect(mergeConfigPatches(a, b).settings).toEqual({ v: 2 })
+  })
+
+  it('deep-merges sibling nested patches (debounce coalescing must not drop edits)', () => {
+    // Regression test: two debounced updates within one window — e.g. typing
+    // a webdav endpoint, then a username — used to lose the first patch to a
+    // shallow {...a, ...b} merge, diverging the store from the backend.
+    const a = {
+      settings: { storage: { webdav: { endpoint: 'https://a' } } },
+    } as unknown as ConfigPatch
+    const b = {
+      settings: { storage: { webdav: { username: 'u' } } },
+    } as unknown as ConfigPatch
+    expect(mergeConfigPatches(a, b).settings).toEqual({
+      storage: { webdav: { endpoint: 'https://a', username: 'u' } },
+    })
   })
 
   it('merges independently-set fields', () => {

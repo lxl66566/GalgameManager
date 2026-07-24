@@ -111,10 +111,15 @@ export function appendDeviceOp(device: Device): ConfigPatch {
   return { devices: [{ op: 'append', value: device }] }
 }
 
-/** Merge two patches into one. `games` ops are concatenated (the backend
- * applies them in order, so coalescing same-id modifies is unnecessary);
- * every other field takes the right-hand (latest) value. Used by the
- * debounced patch path to coalesce rapid mutations into one IPC. */
+/** Merge two patches into one. `games`/`devices` ops are concatenated (the
+ * backend applies them in order, so coalescing same-id modifies is
+ * unnecessary); `settings`/`pluginMetadatas` are **deep**-merged (a shallow
+ * `{...a, ...b}` would silently drop sibling edits made within the same
+ * debounce window — e.g. webdav `endpoint` then `username`, both nested
+ * under `settings.storage.webdav` — diverging the store, which applied
+ * both, from the backend, which would receive only the latest). Every
+ * other field takes the right-hand (latest) value. Used by the debounced
+ * patch path to coalesce rapid mutations into one IPC. */
 export function mergeConfigPatches(a: ConfigPatch, b: ConfigPatch): ConfigPatch {
   const merged: ConfigPatch = { ...a, ...b }
   if (a.games || b.games) {
@@ -122,6 +127,16 @@ export function mergeConfigPatches(a: ConfigPatch, b: ConfigPatch): ConfigPatch 
   }
   if (a.devices || b.devices) {
     merged.devices = [...(a.devices ?? []), ...(b.devices ?? [])]
+  }
+  if (isPlainObject(a.settings) && isPlainObject(b.settings)) {
+    const s = structuredClone(a.settings)
+    applyPatch(s, b.settings)
+    merged.settings = s as ConfigPatch['settings']
+  }
+  if (isPlainObject(a.pluginMetadatas) && isPlainObject(b.pluginMetadatas)) {
+    const p = structuredClone(a.pluginMetadatas)
+    applyPatch(p, b.pluginMetadatas)
+    merged.pluginMetadatas = p as ConfigPatch['pluginMetadatas']
   }
   return merged
 }
