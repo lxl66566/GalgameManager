@@ -338,24 +338,26 @@ export const useConfig = () => {
        *  an unnecessary full `replaceGame` + immediate disk write each time an
        *  image finishes downloading (which can fire many times at startup).
        *  When the resolved hash differs from the stored one (the cover
-       *  actually changed), `coverColor` is invalidated locally so the next
-       *  load re-extracts a fresh accent color; the patch itself only carries
-       *  `imageSha256` because `coverColor` clear-via-patch is currently a
-       *  no-op on the backend (skip_wrap → null means "no change"). The next
-       *  `setCoverColor` overwrites the stale color shortly after. */
+       *  actually changed), `coverColor` is cleared too — `#[patch(nullable)]`
+       *  on the Rust side lets explicit `null` mean "clear", so the stale
+       *  accent color can't survive on disk. The next load re-extracts a
+       *  fresh color and sets it via `setCoverColor`. */
       setImageHash: (index: number, hash: string) => {
-        const id = config.games[index]?.id
-        if (id === undefined) return
+        const g = config.games[index]
+        // Bail on no-op: the patch below also clears `coverColor`, which must
+        // only happen when the cover actually changed.
+        if (!g || g.imageSha256 === hash) return
+        const id = g.id
         setConfig(
           produce(state => {
-            const g = state.games[index]
-            if (g && g.imageSha256 !== hash) {
-              g.imageSha256 = hash
-              g.coverColor = null
+            const game = state.games[index]
+            if (game) {
+              game.imageSha256 = hash
+              game.coverColor = null
             }
           })
         )
-        schedulePatch(modifyGameOp(id, { imageSha256: hash }))
+        schedulePatch(modifyGameOp(id, { imageSha256: hash, coverColor: null }))
       },
       /** Patch a single game's `coverColor` in place (reference-preserving)
        *  and persist with a debounced write. Paired with `setImageHash`:

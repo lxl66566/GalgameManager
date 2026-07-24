@@ -27,12 +27,11 @@ pub static DEVICE_UID: Lazy<&'static str> = Lazy::new(|| {
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
 #[patch(no_diff)]
+#[patch(skip_serializing_none)]
 #[patch(attribute(derive(Debug, Default, Clone, Serialize, Deserialize, TS)))]
-#[patch(attribute(ts(export)))]
+#[patch(attribute(ts(export, optional_fields)))]
 #[patch(attribute(serde(rename_all = "camelCase", default)))]
 pub struct Device {
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub name: String,
     // `uid` is the list-patch address on `Config.devices` — skipping it here
     // matches `Game::id`: the frontend must not orphan a device by rewriting
@@ -42,8 +41,6 @@ pub struct Device {
     // `variables` is an IndexMap (insertion-ordered). Sent whole on patch —
     // the typical edit is one key, but the map is small and HashMap-style
     // fine-grained patches aren't supported by struct-patch.
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub variables: VarMap,
 }
 

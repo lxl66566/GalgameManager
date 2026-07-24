@@ -3,15 +3,15 @@ import type { PluginInstance } from "./PluginInstance";
 
 export type GamePatch = {
   name?: string;
-  excutablePath?: string;
+  excutablePath?: string | null;
   savePaths?: Array<string>;
-  imageUrl?: string;
-  imageSha256?: string;
+  imageUrl?: string | null;
+  imageSha256?: string | null;
   addedTime?: string;
   useTime?: [number, number];
-  lastPlayedTime?: string;
-  lastUploadTime?: string;
+  lastPlayedTime?: string | null;
+  lastUploadTime?: string | null;
   dailyPlaytime?: { [key in string]: number };
-  coverColor?: string;
+  coverColor?: string | null;
   plugins?: Array<PluginInstance>;
 };
