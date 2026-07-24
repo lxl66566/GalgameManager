@@ -11,12 +11,12 @@
 //      we publish `GameListOp` from this module and re-export a corrected
 //      `ConfigPatch` that wires the import up.
 //
-//   2. `diffConfig` — compute a patch from (baseline, current). The baseline
-//      is the last `config://updated` payload we received from Rust; the
-//      current is the live SolidJS store. Only changed fields land in the
-//      patch, which is exactly what fixes the long-standing race where the
-//      frontend's stale snapshot reverted the Rust game loop's just-written
-//      `use_time` / `daily_playtime` / `last_played_time`.
+//   2. `diffGame` — compute a field-wise diff between two snapshots of one
+//      game, for callers (the edit dialog) that replace a whole game object
+//      but should only ship the changed fields. Only changed fields land in
+//      the patch, which is exactly what stops the frontend from clobbering
+//      fields the Rust game loop just wrote (use_time / daily_playtime /
+//      last_played_time) with a stale snapshot.
 //
 // Rust serialization of the op enum uses snake_case tags
 // (`{"op":"modify","id":1,"value":{...}}`) — see `struct-patch`'s
@@ -78,8 +78,8 @@ export type DevicePatch = DeepPartial<RustDevicePatch>
 // ── Single-op builders ────────────────────────────────────────────────────
 //
 // Thin helpers for callers that know exactly what they changed — they can
-// build a `ConfigPatch` directly and skip `diffConfig`. This is the cheap
-// path used by most store actions (addGame, removeGame, setImageHash, …).
+// build a `ConfigPatch` directly without diffing. This is the cheap path
+// used by most store actions (addGame, removeGame, setImageHash, …).
 
 /** Build a patch that appends a new game. */
 export function appendGameOp(game: Game): ConfigPatch {
@@ -220,79 +220,4 @@ export function diffGame(base: Game, cur: Game): GamePatch {
   if (!jsonEq(base.coverColor, cur.coverColor)) p.coverColor = cur.coverColor
   if (!jsonEq(base.plugins, cur.plugins)) p.plugins = cur.plugins
   return p as GamePatch
-}
-
-/** Compute a `ConfigPatch` that, when applied to `base`, yields `cur`.
- *
- * Strategy:
- *   - `games` is diffed by id (the expensive part — `dailyPlaytime` HashMaps
- *     live on individual games, so an unchanged game contributes zero ops).
- *   - `devices` / `settings` / `pluginMetadatas` are compared wholesale and
- *     sent as a full replacement only when they changed. They have no
- *     Rust-side writers, so there is no race to win by going finer.
- *   - The skip'd fields (`dbVersion`, `lastUpdated`, `lastSync`,
- *     `lastUploaded`) are not in `ConfigPatch` at all — they are system
- *     bookkeeping the frontend never owns.
- *
- * Returns `null` when the two states are identical, so callers can short-
- * circuit the IPC roundtrip. */
-export function diffConfig(base: ConfigLike, cur: ConfigLike): ConfigPatch | null {
-  const patch: ConfigPatch = {}
-  let changed = false
-
-  // games: id-addressed diff
-  const ops: GameListOp[] = []
-  const baseById = new Map<number, Game>()
-  for (const g of base.games) baseById.set(g.id, g)
-  const curIds = new Set<number>()
-  for (const cg of cur.games) {
-    curIds.add(cg.id)
-    const bg = baseById.get(cg.id)
-    if (bg === undefined) {
-      ops.push({ op: 'append', value: cg })
-    } else {
-      const gp = diffGame(bg, cg)
-      // into_patch_by_diff on the Rust side always emits a Modify (even for
-      // unchanged elements); we skip the op entirely when nothing changed,
-      // which is strictly cheaper on the wire.
-      if (Object.keys(gp).length > 0) {
-        ops.push({ op: 'modify', id: cg.id, value: gp })
-      }
-    }
-  }
-  for (const bg of base.games) {
-    if (!curIds.has(bg.id)) ops.push({ op: 'delete', id: bg.id })
-  }
-  if (ops.length > 0) {
-    patch.games = ops
-    changed = true
-  }
-
-  if (!jsonEq(base.devices, cur.devices)) {
-    patch.devices = cur.devices
-    changed = true
-  }
-  if (!jsonEq(base.settings, cur.settings)) {
-    patch.settings = cur.settings
-    changed = true
-  }
-  if (!jsonEq(base.pluginMetadatas, cur.pluginMetadatas)) {
-    patch.pluginMetadatas = cur.pluginMetadatas
-    changed = true
-  }
-
-  return changed ? patch : null
-}
-
-/** Structural subset of `Config` that `diffConfig` actually inspects. Keeps
- * the helper decoupled from the full `Config` type (e.g. tests can pass a
- * minimal fixture). */
-export interface ConfigLike {
-  games: Game[]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  devices: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  settings: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  pluginMetadatas: any
 }

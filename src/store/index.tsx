@@ -10,7 +10,6 @@ import { listen } from '@tauri-apps/api/event'
 import {
   applyPatch,
   deleteGameOp,
-  diffConfig,
   diffGame,
   mergeConfigPatches,
   modifyDeviceOp,
@@ -90,17 +89,6 @@ const startToastListener = async (t: i18n.Translator<Dictionary>) => {
 // /磁盘 config 完全一致。TS 端只消费，不复制默认值，避免漂移。
 const [config, setConfig] = createStore<Config>(window.__INITIAL_CONFIG__)
 
-// Last backend-confirmed snapshot. Used as the diff base for patch-based
-// saves so we send only what changed — that's what stops the frontend from
-// clobbering fields the Rust game loop just wrote (use_time, daily_playtime,
-// last_played_time). Updated:
-//   - on init (from the same injected snapshot as the store),
-//   - on `config://updated`,
-//   - on `refreshConfig`,
-//   - right after a successful `patch_config` (optimistically, to the live
-//     store value; see `save` for why this is safe).
-let baseline: Config = window.__INITIAL_CONFIG__
-
 export const useConfigInit = (t?: i18n.Translator<Dictionary>, onReady?: () => void) => {
   onMount(() => {
     let unlisten: (() => void) | undefined
@@ -122,7 +110,6 @@ export const useConfigInit = (t?: i18n.Translator<Dictionary>, onReady?: () => v
         : Promise.resolve(undefined)
       const listenTask = listen<Config>('config://updated', event => {
         console.log('Config updated from Rust:', event.payload)
-        baseline = event.payload
         setConfig(reconcile(event.payload))
       })
 
@@ -163,7 +150,6 @@ export const useConfigInit = (t?: i18n.Translator<Dictionary>, onReady?: () => v
 const refreshConfig = async () => {
   try {
     const data = await invoke<Config>('get_config')
-    baseline = data
     setConfig(reconcile(data))
   } catch (e) {
     console.error('Failed to load local config:', e)
@@ -207,12 +193,11 @@ export const checkAndPullRemote = async (
             onClick: () => {
               setConfig(reconcile(oldConfig))
               // 恢复旧配置到磁盘。这里必须用 save_config（全量覆盖），
-              // 不能用 patch_config——patch 是基于 baseline 的 diff，
+              // 不能用 patch_config——patch 只携带声明过的字段，
               // 而撤回的语义就是"强制恢复到这个快照"。
               ;(async () => {
                 try {
                   await invoke('save_config', { newConfig: oldConfig })
-                  baseline = oldConfig
                   toast.success(t('hint.restorePreviousConfigSuccess'))
                 } catch (e) {
                   toast.error(t('hint.restorePreviousConfigFailed') + ': ' + e)
@@ -264,40 +249,12 @@ export const performManualUpload = async (t: i18n.Translator<Dictionary>) => {
   }
 }
 
-// 用户触发的保存操作。
-//
-// 这是 generic 路径：用 diffConfig 计算 baseline → current 的 diff，发送
-// patch。已知改了什么的具体 action 应当直接构造 patch 走 `sendPatch`，
-// 跳过 diffConfig 的 JSON.stringify 开销。
-//
-// 成功后乐观更新 baseline = current。不是严格的"backend 当前状态"——
-// backend 可能独立前进过（如 use_time 累加），但 diff 是基于"上次提交的
-// 状态"，所以下次 save 仍然只发送增量，不会回退 backend 的隐式写入。
-// 下次 config://updated 到达时，baseline 会被重置为权威值。
-const save = async () => {
-  try {
-    const current = unwrap(config)
-    const patch = diffConfig(baseline, current)
-    if (patch === null) {
-      // 完全没有变化，跳过 IPC
-      return
-    }
-    await invoke('patch_config', { patch })
-    baseline = current
-  } catch (e) {
-    toast.error(`Failed to save config: ${e}`)
-    // 拉取权威状态，让 baseline / store 与 backend 重新对齐
-    void refreshConfig()
-  }
-}
-
-/** Immediate patch IPC. Use this from actions that know exactly which field
- *  they changed — skips the diffConfig cost. Baseline is advanced to the
- *  current store on success (see `save` for why this is safe). */
+/** Immediate patch IPC for actions that know exactly which field they
+ *  changed. On failure, re-sync with the backend so the store doesn't
+ *  diverge from what was actually persisted. */
 const sendPatch = async (patch: ConfigPatch) => {
   try {
     await invoke('patch_config', { patch })
-    baseline = unwrap(config)
   } catch (e) {
     toast.error(`Failed to save config: ${e}`)
     void refreshConfig()
@@ -331,7 +288,6 @@ export const useConfig = () => {
   return {
     config,
     refresh: refreshConfig,
-    save,
     actions: {
       addGame: (game: Game) => {
         game.addedTime = new Date().toISOString()
@@ -356,6 +312,12 @@ export const useConfig = () => {
       replaceGame: (index: number, game: Game) => {
         const id = config.games[index]?.id
         if (id === undefined) return
+        // Edit dialog path: we don't know which fields the user touched, so
+        // diff against the store's pre-image of this game (captured before
+        // the produce below). Fields written only by the backend (use_time,
+        // daily_playtime) are identical on both sides of the diff, so they
+        // never land in the patch and can't be reverted by a stale snapshot.
+        const preImage = unwrap(config.games[index])
         const g = unwrap(game)
         setConfig(
           produce(state => {
@@ -364,18 +326,9 @@ export const useConfig = () => {
             }
           })
         )
-        // Edit dialog path: we don't know which fields the user touched, so
-        // diff against the baseline game (NOT the whole config — just this
-        // one game). Cheap O(fields-of-one-game).
-        const baseGame = baseline.games.find(b => b.id === id)
-        if (baseGame) {
-          const gp = diffGame(baseGame, g)
-          if (Object.keys(gp).length > 0) {
-            void sendPatch(modifyGameOp(id, gp))
-          }
-        } else {
-          // Baseline lost track of this game (rare); fall back to append.
-          void sendPatch(appendGameOp(g))
+        const gp = diffGame(preImage, g)
+        if (Object.keys(gp).length > 0) {
+          void sendPatch(modifyGameOp(id, gp))
         }
       },
       /** Patch a single game's `imageSha256` in place (reference-preserving)

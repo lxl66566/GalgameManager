@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { ConfigLike, ConfigPatch, GameListOp } from '@utils/patch'
+import type { ConfigPatch } from '@utils/patch'
 import {
   appendGameOp,
   applyPatch,
   deleteDeviceOp,
   deleteGameOp,
-  diffConfig,
+  diffGame,
   mergeConfigPatches,
   modifyDeviceOp,
   modifyGameOp,
@@ -14,7 +14,7 @@ import {
 import type { Device } from '@bindings/Device'
 import type { Game } from '@bindings/Game'
 
-// Minimal game factory — only the fields diffConfig touches need realistic
+// Minimal game factory — only the fields diffGame touches need realistic
 // values; the rest default via `as Game`.
 function game(id: number, over: Partial<Game> = {}): Game {
   return {
@@ -34,101 +34,36 @@ function game(id: number, over: Partial<Game> = {}): Game {
   } as Game
 }
 
-// Build a minimal ConfigLike for tests.
-function config(games: Game[], over: Partial<ConfigLike> = {}): ConfigLike {
-  return {
-    games,
-    devices: [],
-    settings: { storage: { provider: 'none' } },
-    pluginMetadatas: {},
-    ...over,
-  }
-}
-
-describe('diffConfig', () => {
-  it('returns null when nothing changed', () => {
-    const c = config([game(1)])
-    expect(diffConfig(c, c)).toBeNull()
+describe('diffGame', () => {
+  it('returns an empty patch when nothing changed', () => {
+    expect(diffGame(game(1), game(1))).toEqual({})
   })
 
-  it('emits a single modify op for one changed field', () => {
-    const base = config([game(1, { name: 'old', useTime: [100, 0] })])
-    const cur = config([game(1, { name: 'new', useTime: [100, 0] })])
-    const patch = diffConfig(base, cur)!
-    expect(patch.games).toHaveLength(1)
-    const op = patch.games![0] as Extract<GameListOp, { op: 'modify' }>
-    expect(op.op).toBe('modify')
-    expect(op.id).toBe(1)
-    // Only the changed field is in the sub-patch.
-    expect(op.value).toEqual({ name: 'new' })
+  it('only includes changed fields', () => {
+    const patch = diffGame(
+      game(1, { name: 'old', useTime: [100, 0] }),
+      game(1, { name: 'new', useTime: [100, 0] })
+    )
+    expect(patch).toEqual({ name: 'new' })
   })
 
-  it('does NOT include unchanged games in the patch (daily_playtime stays home)', () => {
-    // This is the bandwidth win: editing game 1 must not ship game 2's
-    // large dailyPlaytime HashMap over IPC.
-    const base = config([
-      game(1, { name: 'g1' }),
-      game(2, { dailyPlaytime: { '2024-01-01': 9999 } }),
-    ])
-    const cur = config([
-      game(1, { name: 'g1-edited' }),
-      game(2, { dailyPlaytime: { '2024-01-01': 9999 } }),
-    ])
-    const patch = diffConfig(base, cur)!
-    expect(patch.games).toHaveLength(1)
-    expect((patch.games![0] as Extract<GameListOp, { op: 'modify' }>).id).toBe(1)
+  it('ignores backend-owned fields when they are identical on both sides', () => {
+    // This is the race fix: the game loop's use_time advances on the backend
+    // only, so both diff inputs carry the same stale value and the field
+    // never lands in the patch.
+    const patch = diffGame(game(1, { useTime: [100, 0] }), game(1, { useTime: [100, 0] }))
+    expect(patch.useTime).toBeUndefined()
   })
 
-  it('emits append for a newly added game', () => {
-    const base = config([game(1)])
-    const cur = config([game(1), game(2, { name: 'new' })])
-    const patch = diffConfig(base, cur)!
-    const appended = patch.games!.find(
-      o => o.op === 'append'
-    ) as Extract<GameListOp, { op: 'append' }>
-    expect(appended.value.id).toBe(2)
-  })
-
-  it('emits delete for a removed game', () => {
-    const base = config([game(1), game(2)])
-    const cur = config([game(1)])
-    const patch = diffConfig(base, cur)!
-    expect(patch.games).toEqual([{ op: 'delete', id: 2 }])
-  })
-
-  it('coalesces modify + delete across games into one ops list', () => {
-    const base = config([game(1, { name: 'a' }), game(2), game(3)])
-    const cur = config([game(1, { name: 'a2' }), game(3)])
-    const patch = diffConfig(base, cur)!
-    const ops = patch.games!
-    expect(ops).toHaveLength(2)
-    expect(ops.some(o => o.op === 'modify' && o.id === 1)).toBe(true)
-    expect(ops.some(o => o.op === 'delete' && o.id === 2)).toBe(true)
-  })
-
-  it('ships the whole devices/settings/pluginMetadatas when changed', () => {
-    const base = config([game(1)], { devices: [{ uid: 'a', name: 'A', variables: {} }] })
-    const cur = config([game(1)], { devices: [{ uid: 'a', name: 'A2', variables: {} }] })
-    const patch = diffConfig(base, cur)!
-    expect(patch.devices).toEqual(cur.devices)
-    expect(patch.games).toBeUndefined()
-  })
-
-  it('detects nested useTime tuple changes', () => {
+  it('detects useTime tuple changes', () => {
     // useTime is [secs, nanos] — JSON.stringify tuple comparison.
-    const base = config([game(1, { useTime: [100, 0] })])
-    const cur = config([game(1, { useTime: [200, 0] })])
-    const patch = diffConfig(base, cur)!
-    const op = patch.games![0] as Extract<GameListOp, { op: 'modify' }>
-    expect(op.value.useTime).toEqual([200, 0])
+    const patch = diffGame(game(1, { useTime: [100, 0] }), game(1, { useTime: [200, 0] }))
+    expect(patch.useTime).toEqual([200, 0])
   })
 
-  it('clearing a nullable field (coverColor: null vs string) is captured', () => {
-    const base = config([game(1, { coverColor: '#ff0000' })])
-    const cur = config([game(1, { coverColor: null })])
-    const patch = diffConfig(base, cur)!
-    const op = patch.games![0] as Extract<GameListOp, { op: 'modify' }>
-    expect(op.value.coverColor).toBeNull()
+  it('captures clearing a nullable field (coverColor: null vs string)', () => {
+    const patch = diffGame(game(1, { coverColor: '#ff0000' }), game(1, { coverColor: null }))
+    expect(patch.coverColor).toBeNull()
   })
 })
 
