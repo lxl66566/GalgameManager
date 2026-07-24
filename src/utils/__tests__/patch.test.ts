@@ -199,7 +199,10 @@ describe('applyPatch', () => {
 
   it('does nothing when target is not a plain object', () => {
     const arr = [1, 2, 3]
-    applyPatch(arr, { 0: 99 } as unknown as Record<string, unknown>)
+    applyPatch(
+      arr as unknown as Record<string, unknown>,
+      { 0: 99 } as unknown as Record<string, unknown>
+    )
     // Arrays should be left untouched — applyPatch only operates on plain objects.
     expect(arr).toEqual([1, 2, 3])
   })

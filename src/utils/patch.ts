@@ -157,14 +157,11 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
  *   - plain object AND target[key] is a plain object → recurse
  *   - anything else (including arrays and `null`) → assign directly
  *
- * Spelled with `Record<string, unknown>` rather than generics so the
- * recursive call doesn't need a cast at every level — the runtime check
- * (`isPlainObject`) is the source of truth, the types just have to be
- * permissive enough to follow. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ * the runtime check (`isPlainObject`) is the source of truth, so `unknown`
+ * is safe — only the one recursive call site needs a cast. */
 export function applyPatch(
-  target: Record<string, any>,
-  patch: Record<string, any>
+  target: Record<string, unknown>,
+  patch: Record<string, unknown>
 ): void {
   if (!isPlainObject(target) || !isPlainObject(patch)) return
   for (const key in patch) {
