@@ -23,6 +23,12 @@ A cross-platform game launcher based on Tauri + SolidJS, designed for managing, 
 
 ## Changelog
 
+### v1.3.1
+
+- Key fix: new image download failure
+- Fix & optimize: config update race condition could lose playtime
+- Image download optimization: retry mechanism, concurrency control
+
 ### v1.3.0
 
 - New feature: Daily playtime tracking + statistical data display + optional color pick from cover image

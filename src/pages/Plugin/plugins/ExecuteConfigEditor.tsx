@@ -149,7 +149,7 @@ export const EXECUTE_PLUGIN: PluginDefinition<'execute'> = {
     id: 'execute',
     nameKey: 'plugin.execute.name',
     descriptionKey: 'plugin.execute.description',
-    version: '1.3.0',
+    version: '1.3.1',
     author: 'BUILTIN',
     links: []
   },

@@ -104,7 +104,7 @@ export const VOICE_SPEEDUP_PLUGIN: PluginDefinition<'voiceSpeedup'> = {
     id: 'voiceSpeedup',
     nameKey: 'plugin.voiceSpeedup.name',
     descriptionKey: 'plugin.voiceSpeedup.description',
-    version: '1.3.0',
+    version: '1.3.1',
     author: 'lxl66566',
     links: [
       {

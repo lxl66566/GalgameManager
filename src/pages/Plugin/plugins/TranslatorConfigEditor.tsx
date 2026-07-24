@@ -70,7 +70,7 @@ export const TRANSLATOR_PLUGIN: PluginDefinition<'translator'> = {
     id: 'translator',
     nameKey: 'plugin.translator.name',
     descriptionKey: 'plugin.translator.description',
-    version: '1.3.0',
+    version: '1.3.1',
     author: 'BUILTIN_WRAPPER',
     links: [
       {
