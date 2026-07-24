@@ -21,6 +21,7 @@ import type { DevicePatch as RustDevicePatch } from '@bindings/DevicePatch'
 import type { Game } from '@bindings/Game'
 import type { GamePatch as RustGamePatch } from '@bindings/GamePatch'
 import type { ListPatchOp } from '@bindings/ListPatchOp'
+import { unwrap } from 'solid-js/store'
 
 /** Recursive `Partial` — like `Partial` but applied at every level of nesting.
  *
@@ -172,6 +173,40 @@ export function applyPatch(target: Record<string, any>, patch: Record<string, an
       target[key] = val
     }
   }
+}
+
+/** Expand a declarative deep-partial patch (e.g. `{ storage: { webdav:
+ *  { username } } }`) into the whole-sub-object form the backend expects.
+ *
+ * Small, race-free sub-structs (`settings.storage`, `settings.appearance`,
+ * each plugin's meta, …) are whole-replacement on the Rust side
+ * (`Option<T>` patch fields), so the wire value must be the *complete*
+ * sub-struct, not a partial. For each top-level key: a plain-object value
+ * is deep-merged onto the current store value (yielding the full
+ * sub-struct); scalars pass through unchanged.
+ *
+ * `base` may be a SolidJS store proxy — it is unwrapped and cloned before
+ * merging, so the store itself is never mutated here. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function expandPatch<T extends Record<string, any>>(
+  base: T,
+  patch: DeepPartial<T>
+): { [K in keyof T]?: T[K] } {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const out: Record<string, any> = {}
+  for (const key in patch) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const v = (patch as Record<string, any>)[key]
+    if (v === undefined) continue
+    if (isPlainObject(v) && isPlainObject(base?.[key])) {
+      const merged = structuredClone(unwrap(base[key]))
+      applyPatch(merged, v)
+      out[key] = merged
+    } else {
+      out[key] = v
+    }
+  }
+  return out as { [K in keyof T]?: T[K] }
 }
 
 // ── Diff helpers ───────────────────────────────────────────────────────────

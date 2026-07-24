@@ -7,7 +7,7 @@ use ts_rs::TS;
 
 use super::migration::deserialize_local_config_compat;
 use crate::{
-    archive::{ArchiveConfig, ArchiveConfigPatch},
+    archive::ArchiveConfig,
     db::device::VarMap,
     error::{Error, Result},
     sync::{
@@ -16,53 +16,40 @@ use crate::{
     },
 };
 
+// Patch attributes (shared by every patched config struct):
+// - The generated `SettingsPatch` gets serde/TS derives and the same camelCase rename so it
+//   round-trips through the IPC JSON the same way `Settings` does.
+// - `no_diff`: the diff is computed TS-side, so we opt out of `into_patch_by_diff`. That avoids
+//   forcing `PartialEq` on every field (the operator caches below are `RefCell`, which can't
+//   auto-derive it).
+// - `skip_serializing_none` makes absent fields disappear from the wire — that's how "no change
+//   for this field" is expressed — and `optional_fields` exposes them as optional (`T?`) on the
+//   TS side, matching the wire behavior.
+// - The composite sub-structs (storage/archive/appearance/launch) are whole-replacement
+//   (`Option<T>`), NOT nested patches: they are small and have no Rust-side writer, so the
+//   extra granularity would only buy wire bytes at the cost of a patch struct per sub-struct.
+//   The TS side expands its declarative partials into the full sub-struct before sending (see
+//   `expandPatch` in src/utils/patch.ts).
 #[derive(Debug, Serialize, Deserialize, Clone, TS, Patch)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-// `Settings` uses **nesting** for its composite sub-structs so callers can
-// patch a single leaf (e.g. `launch.dailyStat`) without serializing the
-// whole `Settings`. Each nested patch field is required in Rust but
-// `#[serde(default)]` + `#[ts(optional)]` make it both wire-optional and
-// TS-optional, so callers only send what they changed.
-//
-// `no_diff`: like `Config`/`Game`, the diff is computed TS-side and the
-// derive-side `into_patch_by_diff` would force `PartialEq` on every field
-// (the operator caches below are `RefCell`, which can't auto-derive it).
 #[patch(no_diff)]
+#[patch(skip_serializing_none)]
 #[patch(attribute(derive(Debug, Default, Clone, Serialize, Deserialize, TS)))]
-#[patch(attribute(ts(export)))]
+#[patch(attribute(ts(export, optional_fields)))]
 #[patch(attribute(serde(rename_all = "camelCase", default)))]
 pub struct Settings {
-    // Nesting fields: `#[ts(optional)]` is rejected by ts-rs on non-Option
-    // fields, so we leave the TS side as required and use `Partial<...>` in
-    // the wire-level API to make them practically optional. `#[serde(default)]
-    // fills absent fields with an empty sub-patch (all-None), which apply
-    // treats as a no-op.
-    #[patch(nesting)]
-    #[patch(attribute(serde(default)))]
     pub storage: StorageConfig,
-    #[patch(nesting)]
-    #[patch(attribute(serde(default)))]
     pub archive: ArchiveConfig,
-    #[patch(nesting)]
-    #[patch(attribute(serde(default)))]
     pub appearance: AppearanceConfig,
-    #[patch(nesting)]
-    #[patch(attribute(serde(default)))]
     pub launch: LaunchConfig,
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     /// in secs
     pub auto_sync_interval: u32,
     /// IO timeout for remote sync operations (upload/download), in seconds.
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub sync_io_timeout_secs: u32,
     /// Non-IO timeout for remote sync operations (connection/listing), in
     /// seconds.
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub sync_non_io_timeout_secs: u32,
 }
 
@@ -92,33 +79,16 @@ pub enum StorageProvider {
 }
 
 // 2. 修改：StorageConfig 现在持有所有配置 + 当前激活的 Provider
-#[derive(Debug, Default, Serialize, Deserialize, Clone, TS, Patch)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[patch(no_diff)]
-#[patch(attribute(derive(Debug, Default, Clone, Serialize, Deserialize, TS)))]
-#[patch(attribute(ts(export)))]
-#[patch(attribute(serde(rename_all = "camelCase", default)))]
 pub struct StorageConfig {
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub provider: StorageProvider, // 当前选中的后端
-    // The original field carries a backward-compat deserializer (legacy
-    // on-disk format used a different shape for `local`). The patch field
-    // is a different type (`LocalConfigPatch`) so we don't propagate the
-    // deserializer into the patch attribute — patches always come from the
-    // new code, never from a legacy TOML.
     #[serde(deserialize_with = "deserialize_local_config_compat")]
-    #[patch(nesting)]
-    #[patch(attribute(serde(default)))]
     pub local: LocalConfig, // Local 配置 (路径)
-    #[patch(nesting)]
-    #[patch(attribute(serde(default)))]
-    pub webdav: WebDavConfig, // WebDAV 配置
-    #[patch(nesting)]
-    #[patch(attribute(serde(default)))]
-    pub s3: S3Config, // S3 配置
+    pub webdav: WebDavConfig,      // WebDAV 配置
+    pub s3: S3Config,              // S3 配置
 }
 
 impl StorageConfig {
@@ -168,51 +138,29 @@ impl StorageConfig {
     }
 }
 
-#[derive(Debug, Default, Serialize, Deserialize, Clone, TS, Patch)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[patch(no_diff)]
-#[patch(attribute(derive(Debug, Default, Clone, Serialize, Deserialize, TS)))]
-#[patch(attribute(ts(export)))]
-#[patch(attribute(serde(rename_all = "camelCase", default)))]
 pub struct LocalConfig {
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub path: String,
 
-    // Runtime operator cache. Skipped from serde AND from the patch — the
-    // frontend never legitimately edits it (it's reconstructed on the Rust
-    // side whenever the relevant config fields change).
-    #[patch(skip)]
+    // Runtime operator cache, reconstructed on the Rust side whenever the
+    // relevant config fields change.
     #[serde(skip)]
     pub operator: RefCell<Option<LocalOperator>>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, TS, Patch)]
+#[derive(Debug, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[patch(no_diff)]
-#[patch(attribute(derive(Debug, Default, Clone, Serialize, Deserialize, TS)))]
-#[patch(attribute(ts(export)))]
-#[patch(attribute(serde(rename_all = "camelCase", default)))]
 pub struct WebDavConfig {
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub endpoint: String,
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub username: String,
-    #[patch(skip_wrap)]
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub password: Option<String>,
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub root_path: String,
 
-    #[patch(skip)]
     #[serde(skip)]
     pub operator: RefCell<Option<WebdavOperator>>,
 }
@@ -229,33 +177,17 @@ impl Default for WebDavConfig {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, TS, Patch)]
+#[derive(Debug, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[patch(no_diff)]
-#[patch(attribute(derive(Debug, Default, Clone, Serialize, Deserialize, TS)))]
-#[patch(attribute(ts(export)))]
-#[patch(attribute(serde(rename_all = "camelCase", default)))]
 pub struct S3Config {
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub bucket: String,
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub region: String,
-    #[patch(skip_wrap)]
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub endpoint: Option<String>,
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub access_key: String,
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub secret_key: String,
 
-    #[patch(skip)]
     #[serde(skip)]
     pub operator: RefCell<Option<S3Operator>>,
 }
@@ -273,22 +205,14 @@ impl Default for S3Config {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, TS, Patch)]
+#[derive(Debug, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[patch(no_diff)]
-#[patch(attribute(derive(Debug, Default, Clone, Serialize, Deserialize, TS)))]
-#[patch(attribute(ts(export)))]
-#[patch(attribute(serde(rename_all = "camelCase", default)))]
 pub struct LaunchConfig {
     /// 统计游玩时长启用精确模式
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub precision_mode: bool,
     /// Enable daily playtime statistics
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub daily_stat: bool,
 }
 
@@ -311,28 +235,16 @@ pub enum ThemeMode {
     System,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, TS, Patch)]
+#[derive(Debug, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[patch(no_diff)]
-#[patch(attribute(derive(Debug, Default, Clone, Serialize, Deserialize, TS)))]
-#[patch(attribute(ts(export)))]
-#[patch(attribute(serde(rename_all = "camelCase", default)))]
 pub struct AppearanceConfig {
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub theme: ThemeMode,
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub language: String,
-    #[patch(nesting)]
-    #[patch(attribute(serde(default)))]
     pub time_display: TimeDisplayConfig,
     /// Derive each game's chart color from its cover image. When off, the
     /// statistics page falls back to a deterministic golden-angle palette.
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub extract_cover_color: bool,
 }
 
@@ -374,28 +286,18 @@ pub enum TimeFormat {
     Absolute,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, TS, Patch)]
+#[derive(Debug, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[patch(no_diff)]
-#[patch(attribute(derive(Debug, Default, Clone, Serialize, Deserialize, TS)))]
-#[patch(attribute(ts(export)))]
-#[patch(attribute(serde(rename_all = "camelCase", default)))]
 pub struct TimeDisplayConfig {
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub language: TimeLanguage,
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub format: TimeFormat,
     /// Token-based format used when `format == Absolute`.
     ///
     /// Supported tokens (moment/dayjs-like):
     /// `YYYY` `YY` `MM` `DD` `HH` `mm` `ss`.
     /// Default: `"YYYY-MM-DD HH:mm"`.
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub absolute_format: String,
 }
 

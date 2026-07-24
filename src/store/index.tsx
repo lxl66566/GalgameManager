@@ -11,6 +11,7 @@ import {
   applyPatch,
   deleteGameOp,
   diffGame,
+  expandPatch,
   mergeConfigPatches,
   modifyDeviceOp,
   modifyGameOp,
@@ -391,18 +392,17 @@ export const useConfig = () => {
           )
         }
       },
-      /** Declarative settings patch. Caller passes a `SettingsPatch`
-       *  describing exactly what changed; we deep-merge it into the store
-       *  and ship the same shape as the IPC patch. Replaces the old
-       *  `updateSettings(fn)` which (1) had to be diffed and (2) shipped the
-       *  whole `Settings`. */
+      /** Declarative settings patch. Caller passes a deep-partial
+       *  `SettingsPatch` describing exactly what changed; we merge it into
+       *  the store, then expand it to the whole-sub-object wire form
+       *  (settings sub-structs are whole-replacement on the backend). */
       updateSettings: (patch: SettingsPatch) => {
         setConfig(
           produce(state => {
             applyPatch(state.settings, patch)
           })
         )
-        void sendPatch({ settings: patch })
+        void sendPatch({ settings: expandPatch(config.settings, patch) })
       },
       /** Like {@link updateSettings} but debounces the IPC. Use in frequent
        *  callbacks (e.g. text input onChange). */
@@ -412,7 +412,7 @@ export const useConfig = () => {
             applyPatch(state.settings, patch)
           })
         )
-        schedulePatch({ settings: patch })
+        schedulePatch({ settings: expandPatch(config.settings, patch) })
       },
       /** Declarative plugin-metadata patch (e.g. enabling/disabling a plugin,
        *  editing its defaults). Same pattern as `updateSettings`. */
@@ -422,7 +422,7 @@ export const useConfig = () => {
             applyPatch(state.pluginMetadatas, patch)
           })
         )
-        void sendPatch({ pluginMetadatas: patch })
+        void sendPatch({ pluginMetadatas: expandPatch(config.pluginMetadatas, patch) })
       },
       getCurrentDevice: async (): Promise<Device | undefined> => {
         const uid = await currentDeviceId()

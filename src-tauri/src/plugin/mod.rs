@@ -17,15 +17,13 @@ use std::{
 
 // Re-export all public config types for downstream convenience.
 pub use config::{
-    ArchPreference, AutoUploadPluginMeta, AutoUploadPluginMetaPatch, DllOverride,
-    ExecuteGameConfig, ExecutePhase, ExecutePluginMeta, ExecutePluginMetaPatch, ExitSignal,
-    GameWrapperGameConfig, GameWrapperPluginMeta, GameWrapperPluginMetaPatch,
-    LocaleEmulatorGameConfig, LocaleEmulatorPluginMeta, LocaleEmulatorPluginMetaPatch,
-    PluginConfig, PluginInstance, PluginMetadatas, PluginMetadatasPatch, SpeedupProvider,
-    TranslatorGameConfig, TranslatorPluginMeta, TranslatorPluginMetaPatch, VoiceSpeedupGameConfig,
-    VoiceSpeedupPluginMeta, VoiceSpeedupPluginMetaPatch, VoiceZerointerruptGameConfig,
-    VoiceZerointerruptPluginMeta, VoiceZerointerruptPluginMetaPatch, WineArch, WineGameConfig,
-    WinePluginMeta, WinePluginMetaPatch,
+    ArchPreference, AutoUploadPluginMeta, DllOverride, ExecuteGameConfig, ExecutePhase,
+    ExecutePluginMeta, ExitSignal, GameWrapperGameConfig, GameWrapperPluginMeta,
+    LocaleEmulatorGameConfig, LocaleEmulatorPluginMeta, PluginConfig, PluginInstance,
+    PluginMetadatas, PluginMetadatasPatch, SpeedupProvider, TranslatorGameConfig,
+    TranslatorPluginMeta, VoiceSpeedupGameConfig, VoiceSpeedupPluginMeta,
+    VoiceZerointerruptGameConfig, VoiceZerointerruptPluginMeta, WineArch, WineGameConfig,
+    WinePluginMeta,
 };
 use parking_lot::Mutex;
 use serde::Deserialize;

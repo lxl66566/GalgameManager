@@ -13,18 +13,13 @@ use log::warn;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use settings::Settings;
-pub use settings::{
-    AppearanceConfigPatch, LaunchConfigPatch, LocalConfigPatch, S3ConfigPatch, SettingsPatch,
-    StorageConfigPatch, TimeDisplayConfigPatch, WebDavConfigPatch,
-};
+pub use settings::SettingsPatch;
 use struct_patch::Patch;
 use tauri::{AppHandle, Emitter as _};
 use ts_rs::TS;
 
-// Re-export the auto-generated patch types so the `Patch` derive on `Config`
-// (which references them by name) can find them in scope, and so other
-// modules (e.g. `bindings::patch_config`) can take them as IPC arguments.
-pub use crate::archive::ArchiveConfigPatch;
+// Re-export the auto-generated patch types so other modules (e.g.
+// `bindings::patch_config`) can take them as IPC arguments.
 pub use crate::plugin::PluginMetadatasPatch;
 use crate::{
     db::{device::VarMap, migration::migrate},
@@ -602,28 +597,25 @@ mod tests {
         assert!(empty.is_empty());
     }
 
-    // ── Nested patches: Settings / PluginMetadatas / Device ───────────────
+    // ── Whole-replacement sub-struct patches: Settings / PluginMetadatas ──
     //
-    // These prove the deep-nesting work pays off: a single leaf flip
-    // (e.g. `appearance.theme`) reaches the backend as a tiny patch and
-    // leaves every other field of `Settings` untouched — including the
-    // `RefCell` operator caches (LocalConfig.operator, etc.), which is
-    // exactly why we can't just derive PartialEq and use into_patch_by_diff.
+    // The small, race-free sub-structs (LaunchConfig, the plugin metas, …)
+    // are replaced wholesale by the patch instead of nested — but only when
+    // the patch actually carries them, leaving everything else untouched.
 
     #[test]
-    fn settings_patch_modifies_one_leaf_without_touching_others() {
+    fn settings_patch_replaces_one_substruct_without_touching_others() {
         use crate::db::settings::{LaunchConfig, Settings};
         let mut settings = Settings::default();
         let original_storage = settings.storage.clone();
         let original_auto_sync = settings.auto_sync_interval;
 
-        // Patch only `launch.daily_stat`. The nesting lets us address this
-        // one bool without sending the rest of Settings.
+        // Carry only `launch` (whole replacement); everything else stays.
         settings.apply(SettingsPatch {
-            launch: LaunchConfigPatch {
-                daily_stat: Some(false),
+            launch: Some(LaunchConfig {
+                daily_stat: false,
                 ..Default::default()
-            },
+            }),
             ..Default::default()
         });
 
@@ -643,24 +635,22 @@ mod tests {
     }
 
     #[test]
-    fn plugin_metadatas_patch_flips_one_plugin_enabled_flag() {
-        use crate::plugin::{ExecutePluginMetaPatch, PluginMetadatas};
+    fn plugin_metadatas_patch_replaces_one_plugin_meta() {
+        use crate::plugin::{ExecutePluginMeta, PluginMetadatas};
 
         let mut metas = PluginMetadatas::default();
         let original_wine = metas.wine.clone();
-        let original_execute_auto_add = metas.execute.auto_add;
 
         metas.apply(PluginMetadatasPatch {
-            execute: ExecutePluginMetaPatch {
-                enabled: Some(false),
+            execute: Some(ExecutePluginMeta {
+                enabled: false,
                 ..Default::default()
-            },
+            }),
             ..Default::default()
         });
 
         assert!(!metas.execute.enabled);
-        // Other plugins and other fields of execute are untouched.
-        assert_eq!(metas.execute.auto_add, original_execute_auto_add);
+        // Other plugins are untouched.
         assert_eq!(format!("{:?}", metas.wine), format!("{:?}", original_wine));
     }
 
@@ -823,73 +813,8 @@ mod tests {
         assert_eq!(cfg.devices[1].uid, "c");
     }
 
-    // ── Deep nesting: Settings sub-sub-struct patches ────────────────────
-
     #[test]
-    fn storage_local_path_patches_through_three_levels_of_nesting() {
-        use crate::db::settings::Settings;
-        let mut settings = Settings::default();
-        settings.storage.local.path = "/original".into();
-        settings.storage.provider = crate::db::settings::StorageProvider::Local;
-
-        // Patch only storage.local.path — this traverses Settings→StorageConfig
-        // →LocalConfig, three levels of #[patch(nesting)].
-        settings.apply(SettingsPatch {
-            storage: StorageConfigPatch {
-                local: LocalConfigPatch {
-                    path: Some("/new-path".into()),
-                },
-                ..Default::default()
-            },
-            ..Default::default()
-        });
-
-        assert_eq!(settings.storage.local.path, "/new-path");
-        // Provider unchanged.
-        assert!(matches!(
-            settings.storage.provider,
-            crate::db::settings::StorageProvider::Local
-        ));
-    }
-
-    #[test]
-    fn appearance_time_display_patches_one_leaf_under_double_nesting() {
-        use crate::db::settings::Settings;
-        let mut settings = Settings::default();
-        settings.appearance.theme = crate::db::settings::ThemeMode::Light;
-        settings.appearance.time_display.format = crate::db::settings::TimeFormat::Relative;
-        settings.appearance.time_display.language = crate::db::settings::TimeLanguage::Auto;
-
-        // Patch only appearance.timeDisplay.format: Settings→AppearanceConfig
-        // →TimeDisplayConfig, three levels deep.
-        settings.apply(SettingsPatch {
-            appearance: AppearanceConfigPatch {
-                time_display: TimeDisplayConfigPatch {
-                    format: Some(crate::db::settings::TimeFormat::Absolute),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            ..Default::default()
-        });
-
-        assert!(matches!(
-            settings.appearance.time_display.format,
-            crate::db::settings::TimeFormat::Absolute
-        ));
-        // Unchanged leaves:
-        assert!(matches!(
-            settings.appearance.theme,
-            crate::db::settings::ThemeMode::Light
-        ));
-        assert!(matches!(
-            settings.appearance.time_display.language,
-            crate::db::settings::TimeLanguage::Auto
-        ));
-    }
-
-    #[test]
-    fn settings_patch_carries_auto_sync_interval_independent_of_nested_fields() {
+    fn settings_patch_carries_auto_sync_interval_independent_of_substructs() {
         use crate::db::settings::Settings;
         let mut settings = Settings {
             auto_sync_interval: 300,
@@ -897,18 +822,40 @@ mod tests {
         };
         let original_launch = settings.launch.clone();
 
-        // Patch a flat Settings field (not nested).
+        // Patch a flat Settings field (not a sub-struct).
         settings.apply(SettingsPatch {
             auto_sync_interval: Some(600),
             ..Default::default()
         });
 
         assert_eq!(settings.auto_sync_interval, 600);
-        // Nested fields untouched (LaunchConfig is Clone + Debug but not
+        // Sub-struct fields untouched (LaunchConfig is Clone + Debug but not
         // PartialEq — compare debug repr).
         assert_eq!(
             format!("{:?}", settings.launch),
             format!("{:?}", original_launch)
         );
+    }
+
+    #[test]
+    fn settings_patch_whole_replaces_a_substruct() {
+        use crate::db::settings::{Settings, StorageProvider};
+        let mut settings = Settings::default();
+        settings.storage.local.path = "/original".into();
+
+        // Whole-replacement: the patch carries a complete StorageConfig.
+        let mut new_storage = settings.storage.clone();
+        new_storage.local.path = "/new-path".into();
+        new_storage.provider = StorageProvider::Local;
+        settings.apply(SettingsPatch {
+            storage: Some(new_storage),
+            ..Default::default()
+        });
+
+        assert_eq!(settings.storage.local.path, "/new-path");
+        assert!(matches!(
+            settings.storage.provider,
+            crate::db::settings::StorageProvider::Local
+        ));
     }
 }

@@ -7,7 +7,6 @@
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
-use struct_patch::Patch;
 use tauri::Manager as _;
 use ts_rs::TS;
 
@@ -63,22 +62,12 @@ impl Default for AutoUploadGameConfig {
 }
 
 /// Global metadata for the AutoUpload plugin (stored in `PluginMetadatas`).
-#[derive(Debug, Clone, Serialize, Deserialize, TS, Patch)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", default)]
-#[patch(no_diff)]
-#[patch(attribute(derive(Debug, Default, Clone, Serialize, Deserialize, TS)))]
-#[patch(attribute(ts(export)))]
-#[patch(attribute(serde(rename_all = "camelCase", default)))]
 pub struct AutoUploadPluginMeta {
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub enabled: bool,
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub auto_add: bool,
     /// Default per-game config applied when the plugin is added to a new game.
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub config_defaults: AutoUploadGameConfig,
 }
 

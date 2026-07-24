@@ -9,7 +9,6 @@ use std::{
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use squashfs::SquashfsArchiver;
-use struct_patch::Patch;
 use tar::TarArchiver;
 use ts_rs::TS;
 
@@ -34,26 +33,13 @@ impl ArchiveAlgo {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, TS, Patch)]
+#[derive(Debug, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
-// Flat leaf patch: every field becomes `Option<T>`. `SettingsPatch.archive`
-// is `Option<ArchiveConfigPatch>`, so editing one field sends only that
-// field instead of the whole `ArchiveConfig`.
-#[patch(no_diff)]
-#[patch(attribute(derive(Debug, Default, Clone, Serialize, Deserialize, TS)))]
-#[patch(attribute(ts(export)))]
-#[patch(attribute(serde(rename_all = "camelCase", default)))]
 pub struct ArchiveConfig {
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub algorithm: ArchiveAlgo,
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub level: u8,
     // currently not used
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub backup_before_restore: bool,
 }
 

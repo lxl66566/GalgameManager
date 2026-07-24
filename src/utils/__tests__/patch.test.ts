@@ -6,6 +6,7 @@ import {
   deleteDeviceOp,
   deleteGameOp,
   diffGame,
+  expandPatch,
   mergeConfigPatches,
   modifyDeviceOp,
   modifyGameOp,
@@ -221,6 +222,43 @@ describe('applyPatch', () => {
     const t = { a: 1, b: { c: 2 } }
     applyPatch(t, {})
     expect(t).toEqual({ a: 1, b: { c: 2 } })
+  })
+})
+
+// ── expandPatch: partial → whole-sub-object wire form ─────────────────────
+//
+// Settings/plugin-metadatas sub-structs are whole-replacement on the Rust
+// side, so the declarative partials accepted by updateSettings must be
+// expanded against the current store value before hitting the wire.
+
+describe('expandPatch', () => {
+  it('expands a nested partial into the full sub-struct', () => {
+    const base = {
+      storage: { provider: 'webdav', webdav: { endpoint: 'https://a', username: 'old' } },
+      launch: { precisionMode: true, dailyStat: true },
+    }
+    const patch = { storage: { webdav: { username: 'new' } } }
+    expect(expandPatch(base, patch)).toEqual({
+      storage: { provider: 'webdav', webdav: { endpoint: 'https://a', username: 'new' } },
+    })
+  })
+
+  it('passes scalars through unchanged', () => {
+    const base = { autoSyncInterval: 1200, launch: { dailyStat: true } }
+    expect(expandPatch(base, { autoSyncInterval: 600 })).toEqual({ autoSyncInterval: 600 })
+  })
+
+  it('does not mutate the base object', () => {
+    const base = { launch: { precisionMode: true, dailyStat: true } }
+    expandPatch(base, { launch: { dailyStat: false } })
+    expect(base.launch.dailyStat).toBe(true)
+  })
+
+  it('replaces (not merges) array leaves inside an expanded sub-struct', () => {
+    const base = { meta: { list: [1, 2, 3], flag: true } }
+    expect(expandPatch(base, { meta: { list: [9] } })).toEqual({
+      meta: { list: [9], flag: true },
+    })
   })
 })
 

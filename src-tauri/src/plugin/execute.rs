@@ -8,7 +8,6 @@ use std::{collections::HashMap, sync::LazyLock as Lazy};
 
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
-use struct_patch::Patch;
 use ts_rs::TS;
 
 use crate::error::Result;
@@ -54,24 +53,12 @@ pub struct ExecuteGameConfig {
 }
 
 /// Global metadata for the Execute plugin (stored in `PluginMetadatas`).
-#[derive(Debug, Clone, Serialize, Deserialize, TS, Patch)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", default)]
-#[patch(no_diff)]
-#[patch(attribute(derive(Debug, Default, Clone, Serialize, Deserialize, TS)))]
-#[patch(attribute(ts(export)))]
-#[patch(attribute(serde(rename_all = "camelCase", default)))]
 pub struct ExecutePluginMeta {
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub enabled: bool,
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub auto_add: bool,
     /// Default per-game config applied when the plugin is added to a new game.
-    /// Whole-replacement on patch (no nesting) — `config_defaults` edits are
-    /// rare and the struct is small.
-    #[patch(attribute(serde(skip_serializing_if = "Option::is_none")))]
-    #[patch(attribute(ts(optional)))]
     pub config_defaults: ExecuteGameConfig,
 }
 

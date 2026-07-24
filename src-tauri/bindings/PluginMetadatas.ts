@@ -13,6 +13,13 @@ import type { WinePluginMeta } from "./WinePluginMeta";
  *
  * Stored in `Config.plugin_metadatas`. Each field corresponds to a registered
  * plugin and carries its typed metadata.
+ *
+ * Patch semantics: each plugin's meta is whole-replacement
+ * (`Option<ExecutePluginMeta>` etc.), not a nested patch — the metas are
+ * small (three fields) and have no Rust-side writer, so per-field patching
+ * would only add eight patch structs for no race-safety. The TS side
+ * expands its declarative partial into the full meta before sending (see
+ * `expandPatch` in src/utils/patch.ts).
  */
 export type PluginMetadatas = {
   execute: ExecutePluginMeta;
