@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "GalgameManager"
-version = "1.3.0"
+version = "1.3.1"
 dependencies = [
  "async-trait",
  "backhand",
@@ -35,6 +35,7 @@ dependencies = [
  "sha2 0.11.0",
  "shlex",
  "similar",
+ "struct-patch",
  "sys-locale",
  "tar",
  "tauri",
@@ -5213,6 +5214,26 @@ name = "strsim"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
+
+[[package]]
+name = "struct-patch"
+version = "0.12.7"
+source = "git+https://github.com/lxl66566/struct-patch.git#4021c30188d91ceb2d2462a8ad08b6a02473e975"
+dependencies = [
+ "serde",
+ "struct-patch-derive",
+ "ts-rs",
+]
+
+[[package]]
+name = "struct-patch-derive"
+version = "0.12.7"
+source = "git+https://github.com/lxl66566/struct-patch.git#4021c30188d91ceb2d2462a8ad08b6a02473e975"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
 
 [[package]]
 name = "subtle"

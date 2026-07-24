@@ -6,7 +6,7 @@ edition     = "2024"
 license     = "MIT"
 name        = "GalgameManager"
 repository  = "https://github.com/lxl66566/GalgameManager"
-version     = "1.3.0"
+version     = "1.3.1"
 
 [lib]
 # The `_lib` suffix may seem redundant but it is necessary
@@ -33,8 +33,8 @@ flexi_logger              = { version = "0.31", features = ["compress"] }
 futures                   = "0.3"
 goblin                    = "0.10"
 hex                       = "0.4"
-humantime                 = "2"
 home                      = "0.5"
+humantime                 = "2"
 image                     = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp"] }
 include_assets            = { version = "1", default-features = false, features = ["zstd"] }
 indexmap                  = { version = "2", features = ["serde"] }
@@ -50,6 +50,7 @@ serde_json                = "1.0"
 sha2                      = "0.11"
 shlex                     = "2"
 similar                   = "3"
+struct-patch              = { git = "https://github.com/lxl66566/struct-patch.git", features = ["list", "serde", "nesting", "ts"] }
 sys-locale                = "0.3"
 tar                       = "0.4"
 tauri                     = { version = "2.11.3", features = ["tray-icon"] }

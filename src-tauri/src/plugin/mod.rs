@@ -20,9 +20,10 @@ pub use config::{
     ArchPreference, AutoUploadPluginMeta, DllOverride, ExecuteGameConfig, ExecutePhase,
     ExecutePluginMeta, ExitSignal, GameWrapperGameConfig, GameWrapperPluginMeta,
     LocaleEmulatorGameConfig, LocaleEmulatorPluginMeta, PluginConfig, PluginInstance,
-    PluginMetadatas, SpeedupProvider, TranslatorGameConfig, TranslatorPluginMeta,
-    VoiceSpeedupGameConfig, VoiceSpeedupPluginMeta, VoiceZerointerruptGameConfig,
-    VoiceZerointerruptPluginMeta, WineArch, WineGameConfig, WinePluginMeta,
+    PluginMetadatas, PluginMetadatasPatch, SpeedupProvider, TranslatorGameConfig,
+    TranslatorPluginMeta, VoiceSpeedupGameConfig, VoiceSpeedupPluginMeta,
+    VoiceZerointerruptGameConfig, VoiceZerointerruptPluginMeta, WineArch, WineGameConfig,
+    WinePluginMeta,
 };
 use parking_lot::Mutex;
 use serde::Deserialize;

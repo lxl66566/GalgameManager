@@ -58,6 +58,7 @@ pub struct ExecuteGameConfig {
 pub struct ExecutePluginMeta {
     pub enabled: bool,
     pub auto_add: bool,
+    /// Default per-game config applied when the plugin is added to a new game.
     pub config_defaults: ExecuteGameConfig,
 }
 

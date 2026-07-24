@@ -7,5 +7,8 @@ import type { ExecuteGameConfig } from "./ExecuteGameConfig";
 export type ExecutePluginMeta = {
   enabled: boolean;
   autoAdd: boolean;
+  /**
+   * Default per-game config applied when the plugin is added to a new game.
+   */
   configDefaults: ExecuteGameConfig;
 };

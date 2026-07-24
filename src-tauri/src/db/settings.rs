@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 
 use serde::{Deserialize, Serialize};
+use struct_patch::Patch;
 use tauri::AppHandle;
 use ts_rs::TS;
 
@@ -15,10 +16,30 @@ use crate::{
     },
 };
 
-#[derive(Debug, Serialize, Deserialize, Clone, TS)]
+// Patch attributes (shared by every patched config struct):
+// - The generated `SettingsPatch` gets serde/TS derives and the same camelCase
+//   rename so it round-trips through the IPC JSON the same way `Settings` does.
+// - `no_diff`: the diff is computed TS-side, so we opt out of
+//   `into_patch_by_diff`. That avoids forcing `PartialEq` on every field (the
+//   operator caches below are `RefCell`, which can't auto-derive it).
+// - `skip_serializing_none` makes absent fields disappear from the wire —
+//   that's how "no change for this field" is expressed — and `optional_fields`
+//   exposes them as optional (`T?`) on the TS side, matching the wire behavior.
+// - The composite sub-structs (storage/archive/appearance/launch) are
+//   whole-replacement (`Option<T>`), NOT nested patches: they are small and
+//   have no Rust-side writer, so the extra granularity would only buy wire
+//   bytes at the cost of a patch struct per sub-struct. The TS side expands its
+//   declarative partials into the full sub-struct before sending (see
+//   `expandPatch` in src/utils/patch.ts).
+#[derive(Debug, Serialize, Deserialize, Clone, TS, Patch)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
+#[patch(no_diff)]
+#[patch(skip_serializing_none)]
+#[patch(attribute(derive(Debug, Default, Clone, Serialize, Deserialize, TS)))]
+#[patch(attribute(ts(export, optional_fields)))]
+#[patch(attribute(serde(rename_all = "camelCase", default)))]
 pub struct Settings {
     pub storage: StorageConfig,
     pub archive: ArchiveConfig,
@@ -125,6 +146,8 @@ impl StorageConfig {
 pub struct LocalConfig {
     pub path: String,
 
+    // Runtime operator cache, reconstructed on the Rust side whenever the
+    // relevant config fields change.
     #[serde(skip)]
     pub operator: RefCell<Option<LocalOperator>>,
 }
@@ -273,7 +296,7 @@ pub struct TimeDisplayConfig {
     pub format: TimeFormat,
     /// Token-based format used when `format == Absolute`.
     ///
-    /// Supported tokens (moment/dayjs-style):
+    /// Supported tokens (moment/dayjs-like):
     /// `YYYY` `YY` `MM` `DD` `HH` `mm` `ss`.
     /// Default: `"YYYY-MM-DD HH:mm"`.
     pub absolute_format: String,

@@ -403,6 +403,7 @@ export const dict: DeepPartial<RawDictionary> = {
     renameSuccess: '重命名成功',
     renaming: '正在重命名: ',
     restorePreviousConfigSuccess: '成功恢复到之前的配置',
+    restorePreviousConfigFailed: '恢复之前的配置失败',
     revertFailed: '恢复失败: ',
     reverting: '正在恢复存档: ',
     revertSuccess: '恢复成功: ',

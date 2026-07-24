@@ -16,6 +16,7 @@
 //! 7. Register the handler in the `PluginRegistry` constructor in `mod.rs`.
 
 use serde::{Deserialize, Serialize};
+use struct_patch::Patch;
 use ts_rs::TS;
 
 // ── Shared enums ──
@@ -115,8 +116,20 @@ impl PluginInstance {
 ///
 /// Stored in `Config.plugin_metadatas`. Each field corresponds to a registered
 /// plugin and carries its typed metadata.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+///
+/// Patch semantics: each plugin's meta is whole-replacement
+/// (`Option<ExecutePluginMeta>` etc.), not a nested patch — the metas are
+/// small (three fields) and have no Rust-side writer, so per-field patching
+/// would only add eight patch structs for no race-safety. The TS side
+/// expands its declarative partial into the full meta before sending (see
+/// `expandPatch` in src/utils/patch.ts).
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS, Patch)]
 #[serde(rename_all = "camelCase", default)]
+#[patch(no_diff)]
+#[patch(skip_serializing_none)]
+#[patch(attribute(derive(Debug, Default, Clone, Serialize, Deserialize, TS)))]
+#[patch(attribute(ts(export, optional_fields)))]
+#[patch(attribute(serde(rename_all = "camelCase", default)))]
 pub struct PluginMetadatas {
     pub execute: ExecutePluginMeta,
     pub auto_upload: AutoUploadPluginMeta,

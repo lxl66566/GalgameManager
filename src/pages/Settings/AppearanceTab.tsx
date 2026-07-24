@@ -36,9 +36,7 @@ export const AppearanceTab: Component = () => {
             onChange={e => {
               const newValue = e.currentTarget.value as ThemeMode
               setColorMode(newValue)
-              actions.updateSettings(
-                s => (s.appearance.theme = e.currentTarget.value as ThemeMode)
-              )
+              actions.updateSettings({ appearance: { theme: newValue } })
             }}
             options={[
               { label: t('settings.appearance.themeSystem'), value: 'system' },
@@ -52,7 +50,9 @@ export const AppearanceTab: Component = () => {
           <Select
             value={config.settings.appearance.language}
             onChange={e => {
-              actions.updateSettings(s => (s.appearance.language = e.currentTarget.value))
+              actions.updateSettings({
+                appearance: { language: e.currentTarget.value }
+              })
             }}
             options={[
               { label: 'English', value: 'en-US' },
@@ -74,7 +74,9 @@ export const AppearanceTab: Component = () => {
               // on the Rust side so we get symmetric logging + a single
               // `config://updated` emission that reconciles every consumer
               // (statistics charts, GameItem extractColor keying, etc.).
-              actions.updateSettings(s => (s.appearance.extractCoverColor = e))
+              actions.updateSettings({
+                appearance: { extractCoverColor: e }
+              })
               void invoke(e ? 'refresh_all_cover_colors' : 'clear_all_cover_colors')
             }}
           />
@@ -113,9 +115,11 @@ const TimeDisplaySection: Component = () => {
         <Select
           value={cfg().format}
           onChange={e =>
-            actions.updateSettings(
-              s => (s.appearance.timeDisplay.format = e.currentTarget.value as TimeFormat)
-            )
+            actions.updateSettings({
+              appearance: {
+                timeDisplay: { format: e.currentTarget.value as TimeFormat }
+              }
+            })
           }
           options={[
             {
@@ -140,11 +144,13 @@ const TimeDisplaySection: Component = () => {
             <Select
               value={cfg().language}
               onChange={e =>
-                actions.updateSettings(
-                  s =>
-                    (s.appearance.timeDisplay.language = e.currentTarget
-                      .value as TimeLanguage)
-                )
+                actions.updateSettings({
+                  appearance: {
+                    timeDisplay: {
+                      language: e.currentTarget.value as TimeLanguage
+                    }
+                  }
+                })
               }
               options={[
                 {
@@ -173,9 +179,11 @@ const TimeDisplaySection: Component = () => {
               onInput={e =>
                 // Avoid disk write per keystroke: use the debounced
                 // setter, the value still updates in-memory instantly.
-                actions.updateSettingsDebounced(
-                  s => (s.appearance.timeDisplay.absoluteFormat = e.currentTarget.value)
-                )
+                actions.updateSettingsDebounced({
+                  appearance: {
+                    timeDisplay: { absoluteFormat: e.currentTarget.value }
+                  }
+                })
               }
               placeholder={t('settings.appearance.timeDisplay.absoluteFormatPlaceholder')}
             />

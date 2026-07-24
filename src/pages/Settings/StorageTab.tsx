@@ -169,7 +169,7 @@ const CompressionForm: Component<{
     // 1. 如果规则禁用，强制重置为默认/最小值
     if (rule.disabled) {
       const resetVal = rule.min
-      props.actions.updateSettingsDebounced(s => (s.archive.level = resetVal))
+      props.actions.updateSettingsDebounced({ archive: { level: resetVal } })
       target.value = resetVal.toString() // 强制回填
       return
     }
@@ -185,7 +185,7 @@ const CompressionForm: Component<{
     }
 
     // 3. 更新 Store（debounce 磁盘写入）
-    props.actions.updateSettingsDebounced(s => (s.archive.level = val))
+    props.actions.updateSettingsDebounced({ archive: { level: val } })
 
     // 4. 关键步骤：如果 DOM 显示的值与计算后的值不一致，手动强制回填
     // 这解决了 "输入99 -> Store保持22 -> 界面仍显示99" 的问题
@@ -200,9 +200,9 @@ const CompressionForm: Component<{
         <Select
           value={props.config.algorithm}
           onChange={e =>
-            props.actions.updateSettings(
-              s => (s.archive.algorithm = e.currentTarget.value as ArchiveAlgo)
-            )
+            props.actions.updateSettings({
+              archive: { algorithm: e.currentTarget.value as ArchiveAlgo }
+            })
           }
           options={[
             { label: 'Squashfs + Zstd', value: 'squashfsZstd' },
@@ -246,33 +246,25 @@ export const StorageTab: Component = () => {
   // 切换 Provider：只修改 provider 字段，不触碰具体配置
   const handleProviderChange = (e: Event) => {
     const newProvider = (e.target as HTMLSelectElement).value as StorageProvider
-    actions.updateSettings(s => {
-      s.storage.provider = newProvider
-    })
+    actions.updateSettings({ storage: { provider: newProvider } })
     invoke('clean_current_operator')
   }
 
   // 更新 WebDAV 配置（文本输入，debounce 磁盘写入）
   const updateWebDav = (key: keyof WebDavConfig, value: string) => {
-    actions.updateSettingsDebounced(s => {
-      s.storage.webdav[key] = value
-    })
+    actions.updateSettingsDebounced({ storage: { webdav: { [key]: value } } })
     cleanOperatorDebounced()
   }
 
   // 更新 S3 配置（文本输入，debounce 磁盘写入）
   const updateS3 = (key: keyof S3Config, value: string) => {
-    actions.updateSettingsDebounced(s => {
-      s.storage.s3[key] = value
-    })
+    actions.updateSettingsDebounced({ storage: { s3: { [key]: value } } })
     cleanOperatorDebounced()
   }
 
   // 更新 Local 配置（文本输入，debounce 磁盘写入）
   const updateLocal = (value: string) => {
-    actions.updateSettingsDebounced(s => {
-      s.storage.local.path = value
-    })
+    actions.updateSettingsDebounced({ storage: { local: { path: value } } })
     cleanOperatorDebounced()
   }
 
@@ -331,9 +323,9 @@ export const StorageTab: Component = () => {
             type="number"
             value={config.settings.syncIoTimeoutSecs}
             onChange={e =>
-              actions.updateSettingsDebounced(
-                s => (s.syncIoTimeoutSecs = parseInt(e.currentTarget.value) || 60)
-              )
+              actions.updateSettingsDebounced({
+                syncIoTimeoutSecs: parseInt(e.currentTarget.value) || 60
+              })
             }
             placeholder="60"
           />
@@ -346,9 +338,9 @@ export const StorageTab: Component = () => {
             type="number"
             value={config.settings.syncNonIoTimeoutSecs}
             onChange={e =>
-              actions.updateSettingsDebounced(
-                s => (s.syncNonIoTimeoutSecs = parseInt(e.currentTarget.value) || 15)
-              )
+              actions.updateSettingsDebounced({
+                syncNonIoTimeoutSecs: parseInt(e.currentTarget.value) || 15
+              })
             }
             placeholder="15"
           />
@@ -365,9 +357,9 @@ export const StorageTab: Component = () => {
           <Input
             value={config.settings.autoSyncInterval}
             onChange={e =>
-              actions.updateSettingsDebounced(
-                s => (s.autoSyncInterval = parseInt(e.currentTarget.value))
-              )
+              actions.updateSettingsDebounced({
+                autoSyncInterval: parseInt(e.currentTarget.value)
+              })
             }
             placeholder={t('settings.config.autoSyncIntervalPlaceholder')}
           />

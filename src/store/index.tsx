@@ -2,7 +2,8 @@
 import { type Config } from '@bindings/Config'
 import type { Device } from '@bindings/Device'
 import type { Game } from '@bindings/Game'
-import type { Settings } from '@bindings/Settings'
+import type { PluginMetadatasPatch as RustPluginMetadatasPatch } from '@bindings/PluginMetadatasPatch'
+import type { SettingsPatch as RustSettingsPatch } from '@bindings/SettingsPatch'
 import type { UploadConfigStatus } from '@bindings/UploadConfigStatus'
 import { myToast, type ToastVariant } from '@components/ui/myToast'
 import * as i18n from '@solid-primitives/i18n'
@@ -10,11 +11,29 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { resolveBackendI18n } from '@utils/backendI18n'
 import { log } from '@utils/log'
+import {
+  appendDeviceOp,
+  appendGameOp,
+  applyPatch,
+  deleteGameOp,
+  diffGame,
+  expandPatch,
+  mergeConfigPatches,
+  modifyDeviceOp,
+  modifyGameOp,
+  type ConfigPatch,
+  type DeepPartial
+} from '@utils/patch'
 import { type Dictionary } from '~/i18n'
 import { onCleanup, onMount } from 'solid-js'
 import { createStore, produce, reconcile, unwrap } from 'solid-js/store'
 import toast from 'solid-toast'
 import { currentDeviceId } from './Singleton'
+
+// Re-alias the ts-rs output through DeepPartial so callers can omit any
+// nested field (matches the wire-level `#[serde(default)]` behavior).
+type SettingsPatch = DeepPartial<RustSettingsPatch>
+type PluginMetadatasPatch = DeepPartial<RustPluginMetadatasPatch>
 
 // 由 Rust 端的 initialization_script 在页面任何脚本之前注入
 // （见 src-tauri/src/lib.rs 的 WebviewWindowBuilder::initialization_script）。
@@ -174,10 +193,17 @@ export const checkAndPullRemote = async (
             variant: 'secondary',
             onClick: () => {
               setConfig(reconcile(oldConfig))
-              // 恢复旧配置到磁盘
+              // 恢复旧配置到磁盘。这里必须用 save_config（全量覆盖），
+              // 不能用 patch_config——patch 只携带声明过的字段，
+              // 而撤回的语义就是"强制恢复到这个快照"。
               ;(async () => {
-                invoke('save_config', { newConfig: oldConfig })
-                toast.success(t('hint.restorePreviousConfigSuccess'))
+                try {
+                  await invoke('save_config', { newConfig: oldConfig })
+                  toast.success(t('hint.restorePreviousConfigSuccess'))
+                } catch (e) {
+                  toast.error(t('hint.restorePreviousConfigFailed') + ': ' + e)
+                  void refreshConfig()
+                }
               })()
             }
           }
@@ -224,63 +250,87 @@ export const performManualUpload = async (t: i18n.Translator<Dictionary>) => {
   }
 }
 
-// 用户触发的保存操作
-const save = async () => {
+/** Immediate patch IPC for actions that know exactly which field they
+ *  changed. On failure, re-sync with the backend so the store doesn't
+ *  diverge from what was actually persisted. */
+const sendPatch = async (patch: ConfigPatch) => {
   try {
-    console.log('save invoked')
-    await invoke('save_config', { newConfig: unwrap(config) })
+    await invoke('patch_config', { patch })
   } catch (e) {
     toast.error(`Failed to save config: ${e}`)
+    void refreshConfig()
   }
 }
 
-// Debounced config persistence: coalesces rapid mutations (e.g. typing in a
-// settings text field) into a single disk write instead of one per keystroke.
-// Per the project rule, config writes must not happen in frequent callbacks
-// such as an input's onChange.
-let saveDebounceTimer: ReturnType<typeof setTimeout> | undefined
-const SAVE_DEBOUNCE_MS = 500
-const scheduleSave = () => {
-  if (saveDebounceTimer) clearTimeout(saveDebounceTimer)
-  saveDebounceTimer = setTimeout(() => {
-    saveDebounceTimer = undefined
-    void save()
-  }, SAVE_DEBOUNCE_MS)
+/** Debounced patch IPC with accumulation. Multiple `schedulePatch` calls
+ *  within the debounce window merge into one invoke (`games` ops concatenate,
+ *  other fields take the latest). Per the project rule, frequent callbacks
+ *  (input onChange, parallel image downloads) must go through this rather
+ *  than firing one IPC per keystroke. */
+let pendingPatch: ConfigPatch | null = null
+let patchDebounceTimer: ReturnType<typeof setTimeout> | undefined
+const PATCH_DEBOUNCE_MS = 500
+
+const flushPendingPatch = () => {
+  patchDebounceTimer = undefined
+  if (!pendingPatch) return
+  const p = pendingPatch
+  pendingPatch = null
+  void sendPatch(p)
+}
+
+const schedulePatch = (patch: ConfigPatch) => {
+  pendingPatch = pendingPatch ? mergeConfigPatches(pendingPatch, patch) : { ...patch }
+  if (patchDebounceTimer) clearTimeout(patchDebounceTimer)
+  patchDebounceTimer = setTimeout(flushPendingPatch, PATCH_DEBOUNCE_MS)
 }
 
 export const useConfig = () => {
   return {
     config,
     refresh: refreshConfig,
-    save,
-    saveDebounced: scheduleSave,
     actions: {
       addGame: (game: Game) => {
         game.addedTime = new Date().toISOString()
+        const g = unwrap(game)
         setConfig(
           produce(state => {
-            state.games.push(unwrap(game))
+            state.games.push(g)
           })
         )
-        save()
+        void sendPatch(appendGameOp(g))
       },
       removeGame: (index: number) => {
+        const id = config.games[index]?.id
+        if (id === undefined) return
         setConfig(
           produce(state => {
             state.games.splice(index, 1)
           })
         )
-        save()
+        void sendPatch(deleteGameOp(id))
       },
       replaceGame: (index: number, game: Game) => {
+        const id = config.games[index]?.id
+        if (id === undefined) return
+        // Edit dialog path: we don't know which fields the user touched, so
+        // diff against the store's pre-image of this game (captured before
+        // the produce below). Fields written only by the backend (use_time,
+        // daily_playtime) are identical on both sides of the diff, so they
+        // never land in the patch and can't be reverted by a stale snapshot.
+        const preImage = unwrap(config.games[index])
+        const g = unwrap(game)
         setConfig(
           produce(state => {
             if (state.games[index]) {
-              state.games[index] = unwrap(game)
+              state.games[index] = g
             }
           })
         )
-        save()
+        const gp = diffGame(preImage, g)
+        if (Object.keys(gp).length > 0) {
+          void sendPatch(modifyGameOp(id, gp))
+        }
       },
       /** Patch a single game's `imageSha256` in place (reference-preserving)
        *  and persist with a debounced write. Keeping the game object identity
@@ -288,25 +338,34 @@ export const useConfig = () => {
        *  an unnecessary full `replaceGame` + immediate disk write each time an
        *  image finishes downloading (which can fire many times at startup).
        *  When the resolved hash differs from the stored one (the cover
-       *  actually changed), `coverColor` is invalidated so the next load
-       *  re-extracts a fresh accent color. */
+       *  actually changed), `coverColor` is cleared too — `#[patch(nullable)]`
+       *  on the Rust side lets explicit `null` mean "clear", so the stale
+       *  accent color can't survive on disk. The next load re-extracts a
+       *  fresh color and sets it via `setCoverColor`. */
       setImageHash: (index: number, hash: string) => {
+        const g = config.games[index]
+        // Bail on no-op: the patch below also clears `coverColor`, which must
+        // only happen when the cover actually changed.
+        if (!g || g.imageSha256 === hash) return
+        const id = g.id
         setConfig(
           produce(state => {
-            const g = state.games[index]
-            if (g && g.imageSha256 !== hash) {
-              g.imageSha256 = hash
-              g.coverColor = null
+            const game = state.games[index]
+            if (game) {
+              game.imageSha256 = hash
+              game.coverColor = null
             }
           })
         )
-        scheduleSave()
+        schedulePatch(modifyGameOp(id, { imageSha256: hash, coverColor: null }))
       },
       /** Patch a single game's `coverColor` in place (reference-preserving)
        *  and persist with a debounced write. Paired with `setImageHash`:
        *  clearing happens there (on image change), setting happens here (once
        *  the backend has extracted the color for the current cover). */
       setCoverColor: (index: number, color: string) => {
+        const id = config.games[index]?.id
+        if (id === undefined) return
         setConfig(
           produce(state => {
             if (state.games[index]) {
@@ -314,7 +373,7 @@ export const useConfig = () => {
             }
           })
         )
-        scheduleSave()
+        schedulePatch(modifyGameOp(id, { coverColor: color }))
       },
       updateDeviceVar: (deviceUid: string, key: string, value: string) => {
         setConfig(
@@ -325,17 +384,47 @@ export const useConfig = () => {
             }
           })
         )
-        save()
+        // Send only the modified device's variables map (whole-map
+        // replacement — struct-patch has no per-key HashMap patch, but the
+        // var map is small).
+        const device = config.devices.find(d => d.uid === deviceUid)
+        if (device) {
+          void sendPatch(
+            modifyDeviceOp(deviceUid, { variables: { ...device.variables } })
+          )
+        }
       },
-      updateSettings: (fn: (settings: Settings) => void) => {
-        setConfig(produce(state => fn(state.settings)))
-        save()
+      /** Declarative settings patch. Caller passes a deep-partial
+       *  `SettingsPatch` describing exactly what changed; we merge it into
+       *  the store, then expand it to the whole-sub-object wire form
+       *  (settings sub-structs are whole-replacement on the backend). */
+      updateSettings: (patch: SettingsPatch) => {
+        setConfig(
+          produce(state => {
+            applyPatch(state.settings, patch)
+          })
+        )
+        void sendPatch({ settings: expandPatch(config.settings, patch) })
       },
-      /** Like {@link updateSettings} but debounces the disk write — use this in
-       *  frequent callbacks such as a text input's onChange. */
-      updateSettingsDebounced: (fn: (settings: Settings) => void) => {
-        setConfig(produce(state => fn(state.settings)))
-        scheduleSave()
+      /** Like {@link updateSettings} but debounces the IPC. Use in frequent
+       *  callbacks (e.g. text input onChange). */
+      updateSettingsDebounced: (patch: SettingsPatch) => {
+        setConfig(
+          produce(state => {
+            applyPatch(state.settings, patch)
+          })
+        )
+        schedulePatch({ settings: expandPatch(config.settings, patch) })
+      },
+      /** Declarative plugin-metadata patch (e.g. enabling/disabling a plugin,
+       *  editing its defaults). Same pattern as `updateSettings`. */
+      updatePluginMetadatas: (patch: PluginMetadatasPatch) => {
+        setConfig(
+          produce(state => {
+            applyPatch(state.pluginMetadatas, patch)
+          })
+        )
+        void sendPatch({ pluginMetadatas: expandPatch(config.pluginMetadatas, patch) })
       },
       getCurrentDevice: async (): Promise<Device | undefined> => {
         const uid = await currentDeviceId()
@@ -353,6 +442,7 @@ export const useConfig = () => {
       updateCurrentDevice: async (device: Device) => {
         const uid = await currentDeviceId()
         const deviceUnwrap = unwrap(device)
+        const existed = config.devices.some(d => d.uid === uid)
         setConfig(
           produce(state => {
             const index = state.devices.findIndex(d => d.uid === uid)
@@ -365,12 +455,28 @@ export const useConfig = () => {
             }
           })
         )
-        save()
+        // Match the local decision: modify if the device already existed,
+        // otherwise append. Either way only this one device touches the wire.
+        // NOTE: the modify op enumerates every patchable `Device` field
+        // (i.e. all of `DevicePatch` — `uid` is `#[patch(skip)]`). If
+        // `Device` gains a field, add it here too or it will be silently
+        // dropped from the patch.
+        if (existed) {
+          void sendPatch(
+            modifyDeviceOp(uid, {
+              name: deviceUnwrap.name,
+              variables: deviceUnwrap.variables
+            })
+          )
+        } else {
+          void sendPatch(appendDeviceOp(deviceUnwrap))
+        }
       },
-      /** Like {@link updateCurrentDevice} but debounces the disk write. */
+      /** Like {@link updateCurrentDevice} but debounces the IPC. */
       updateCurrentDeviceDebounced: async (device: Device) => {
         const uid = await currentDeviceId()
         const deviceUnwrap = unwrap(device)
+        const existed = config.devices.some(d => d.uid === uid)
         setConfig(
           produce(state => {
             const index = state.devices.findIndex(d => d.uid === uid)
@@ -383,11 +489,16 @@ export const useConfig = () => {
             }
           })
         )
-        scheduleSave()
-      },
-      mutate: (fn: (state: Config) => void) => {
-        setConfig(produce(fn))
-        save()
+        if (existed) {
+          schedulePatch(
+            modifyDeviceOp(uid, {
+              name: deviceUnwrap.name,
+              variables: deviceUnwrap.variables
+            })
+          )
+        } else {
+          schedulePatch(appendDeviceOp(deviceUnwrap))
+        }
       }
     }
   }

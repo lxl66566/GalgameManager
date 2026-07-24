@@ -8,7 +8,7 @@ export type TimeDisplayConfig = {
   /**
    * Token-based format used when `format == Absolute`.
    *
-   * Supported tokens (moment/dayjs-style):
+   * Supported tokens (moment/dayjs-like):
    * `YYYY` `YY` `MM` `DD` `HH` `mm` `ss`.
    * Default: `"YYYY-MM-DD HH:mm"`.
    */
