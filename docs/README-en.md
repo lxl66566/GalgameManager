@@ -25,9 +25,10 @@ A cross-platform game launcher based on Tauri + SolidJS, designed for managing, 
 
 ### v1.3.1
 
-- Key fix: new image download failure
-- Fix & optimize: config update race condition could lose playtime
-- Image download optimization: retry mechanism, concurrency control, 4xx dead url cache
+- Critical fix: Resolved failure in new image downloads.
+- Fix & optimization: Fixed a race condition in Config updates that could cause loss of game playtime.
+  - Implemented delayed write-back (debounced persistence) to prevent frequent disk writes from frontend reactivity, reducing SSD wear.
+- Image download improvements: Added retry logic, concurrency control, and failure caching for 4xx errors.
 
 ### v1.3.0
 

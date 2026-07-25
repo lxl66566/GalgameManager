@@ -23,7 +23,7 @@ temperature: 0
 
 # 项目规范
 
-这是一个基于 Tauri v2 + SolidJS + UnoCSS (tailwind preset) + bun 的 galgame 管理器。
+这是一个基于 Tauri v2 + SolidJS + UnoCSS (tailwind preset) + bun 的 galgame 管理器。支持游玩时长统计、配置与存档同步、插件系统。
 
 项目支持完整的 i18n 功能（中英文切换）和 light/dark theme，一切修改都必须考虑到 i18n、theme、屏幕比例的兼容性。
 
@@ -35,7 +35,7 @@ temperature: 0
 - i18n 内容在 src/i18n 下，使用时只能在 solidjs 组件内部调用 `useI18n()`。
 - 所有 Rust 结构需要带给 ts 侧的都使用 `ts-rs` crate 自动生成类型定义，生成位置为 `src-tauri/bindings`。ts 侧引用 bindings 时一般使用 `import { type xxx } from '@bindings/xxx'`。
 - 所有 tauri 暴露给 ts 侧的 API 都放在 `src-tauri/src/bindings.rs` 内，该文件内不写复杂逻辑。
-- TS 侧需要注意，对于配置写入磁盘的操作，不允许在频繁的回调函数里使用，例如输入框的 onChange。
+- TS 侧对于更新配置的操作，不要在频繁的回调里使用，例如输入框的 onChange。
 
 Rust 端可能 emit 的 tauri 事件如下：
 
@@ -55,6 +55,12 @@ rust features:
 ## 写入配置
 
 TS 侧一般可以用 `const { config, actions } = useConfig()` 获取配置与操作配置，参考 `src/store/index.tsx`。
+
+- Rust 侧的 Config 及其子结构使用 struct-patch 的魔改版本生成关联的 patch struct，并将类型暴露给前端。前端更新配置时构建一个 patch 并通过 IPC 传给后端，后端 apply。目的：减小 IPC payload，并且减少竞态条件（Rust 侧和 TS 侧同时写配置）的互相覆盖。核心：`src-tauri/src/db/mod.rs`（`Config`/`Game` 的 `#[patch]` proc macro），`bindings.rs` 的 `patch_config` 命令。
+  - struct-patch 魔改：1. 支持细粒度 list 操作（原库只能整个 list 替换） 2. ListPatchOp derive `ts_rs::TS`，下游零注解获得 bindings
+  - Rust 侧更新配置 emit 到前端仍然全量传。
+  - 竞态条件极少的小结构体不再细粒度 derive Patch，是 patch 收益与配置复杂性的权衡。例：SettingsPatch/PluginMetadatasPatch 为 `Option<T>` 整体替换
+- Config 延迟落盘：防抖合并写盘，避免前端响应式频繁触发磁盘写入。核心：`src-tauri/src/utils/persist.rs`（`ThrottledWriter`），`src-tauri/src/db/saver.rs`（`ConfigSaver`，60s 间隔）。
 
 ## 变量机制
 
@@ -83,4 +89,8 @@ TS 侧一般可以用 `const { config, actions } = useConfig()` 获取配置与�
 
 ## 游玩时长
 
-除了每个游戏有一个总游玩时长以外，还记录了每个游戏的每日游玩时长，并以 d3.js 联动图表形式展示在统计页面，参考 `src/pages/Statistics`。
+除了每个游戏有一个总游玩时长以外，还记录了每个游戏的每日游玩时长，并以 d3.js 联动图表形式展示在统计页面，参考 `src/pages/Statistics/*`。
+
+## 图片下载优化
+
+backon 指数退避重试；并发控制，同 URI 保证只 fetch 一次；4xx 拥有失败缓存，不重试，且区分 404 与 429 的缓存过期时长。核心：`src-tauri/src/http/image.rs`（重试/单飞去重），`src-tauri/src/http/dead_url.rs`（死 URL 缓存）。死 URL 缓存复用 `utils::persist::ThrottledWriter` 延迟落盘，避免频繁写 SSD。
