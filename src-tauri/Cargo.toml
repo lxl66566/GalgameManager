@@ -1,10 +1,13 @@
 [package]
 authors     = ["lxl66566 <lxl66566@gmail.com>"]
+categories  = ["games"]
 default-run = "GalgameManager"
 description = "Manage and sync your galgames"
 edition     = "2024"
+keywords    = ["galgame", "tauri", "save-manager", "game-manager"]
 license     = "MIT"
 name        = "GalgameManager"
+readme      = "../README.md"
 repository  = "https://github.com/lxl66566/GalgameManager"
 version     = "1.3.1"
 
@@ -20,6 +23,9 @@ missing_errors_doc      = "allow"
 missing_panics_doc      = "allow"
 multiple_crate_versions = "allow"
 pedantic                = { level = "warn", priority = -1 }
+# All wildcard-import warnings originate from `tauri::generate_handler!`
+# macro expansion, not user code — impossible to fix without patching tauri.
+wildcard_imports        = "allow"
 
 [lib]
 # The `_lib` suffix may seem redundant but it is necessary

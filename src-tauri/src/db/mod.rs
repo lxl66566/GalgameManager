@@ -56,7 +56,7 @@ pub static CONFIG: Lazy<Mutex<Config>> = Lazy::new(|| {
             let backup = CONFIG_PATH.with_extension("toml.bak");
             let _ = fs::rename(CONFIG_PATH.as_path(), &backup);
             Config::default()
-        }
+        },
     };
     Mutex::new(migrate(config))
 });
@@ -197,9 +197,7 @@ impl Config {
     #[inline]
     pub fn varmap(&self) -> &VarMap {
         static DEFAULT_VARMAP: Lazy<VarMap> = Lazy::new(VarMap::default);
-        self.get_device()
-            .map(|d| &d.variables)
-            .unwrap_or(&DEFAULT_VARMAP)
+        self.get_device().map_or(&DEFAULT_VARMAP, |d| &d.variables)
     }
 
     #[inline]
@@ -212,7 +210,7 @@ impl Config {
         self.games
             .iter()
             .find(|g| g.id == id)
-            .ok_or_else(|| crate::error::Error::GameNotFound)
+            .ok_or_else(|| Error::GameNotFound)
     }
 
     #[inline]
@@ -220,7 +218,7 @@ impl Config {
         self.games
             .iter_mut()
             .find(|g| g.id == id)
-            .ok_or_else(|| crate::error::Error::GameNotFound)
+            .ok_or_else(|| Error::GameNotFound)
     }
 
     /// Check if games last_played_time and use_time are not older than
@@ -245,43 +243,49 @@ impl Config {
         while idx_self < self_games.len() && idx_other < other_games.len() {
             let self_game = &self_games[idx_self];
             let other_game = &other_games[idx_other];
-            if self_game.id == other_game.id {
-                if let Some(self_time) = self_game.last_played_time
-                    && let Some(other_time) = other_game.last_played_time
-                    && !cmp.cmp(self_time, other_time)
-                {
-                    let error_msg = format!(
-                        "game {}, last_played_time check failed: {} {} other: {}",
-                        self_game.name,
-                        self_time,
-                        cmp.as_str(),
-                        other_time
-                    );
-                    warn!("{}", error_msg);
-                    return Err(Error::GameTimeCheckFailed(
-                        error_msg
-                            + "\nIf you still want to continue, please manually upload/download config in settings page.",
-                    ));
-                }
-                if !cmp.cmp(&self_game.use_time, &other_game.use_time) {
-                    let error_msg = format!(
-                        "game {}, use_time: {} {} other config: {}",
-                        self_game.id,
-                        self_game.use_time,
-                        cmp.as_str(),
-                        other_game.use_time
-                    );
-                    return Err(Error::GameTimeCheckFailed(
-                        error_msg
-                            + "\nIf you still want to continue, please manually upload/download config in settings page.",
-                    ));
-                }
-                idx_self += 1;
-                idx_other += 1;
-            } else if self_game.id < other_game.id {
-                idx_self += 1;
-            } else {
-                idx_other += 1;
+            match self_game.id.cmp(&other_game.id) {
+                std::cmp::Ordering::Equal => {
+                    if let Some(self_time) = self_game.last_played_time
+                        && let Some(other_time) = other_game.last_played_time
+                        && !cmp.cmp(&self_time, &other_time)
+                    {
+                        let error_msg = format!(
+                            "game {}, last_played_time check failed: {} {} other: {}",
+                            self_game.name,
+                            self_time,
+                            cmp.as_str(),
+                            other_time
+                        );
+                        warn!("{error_msg}");
+                        return Err(Error::GameTimeCheckFailed(
+                            error_msg
+                                + "\nIf you still want to continue, please manually \
+                                   upload/download config in settings page.",
+                        ));
+                    }
+                    if !cmp.cmp(&self_game.use_time, &other_game.use_time) {
+                        let error_msg = format!(
+                            "game {}, use_time: {} {} other config: {}",
+                            self_game.id,
+                            self_game.use_time,
+                            cmp.as_str(),
+                            other_game.use_time
+                        );
+                        return Err(Error::GameTimeCheckFailed(
+                            error_msg
+                                + "\nIf you still want to continue, please manually \
+                                   upload/download config in settings page.",
+                        ));
+                    }
+                    idx_self += 1;
+                    idx_other += 1;
+                },
+                std::cmp::Ordering::Less => {
+                    idx_self += 1;
+                },
+                std::cmp::Ordering::Greater => {
+                    idx_other += 1;
+                },
             }
         }
         Ok(())
@@ -336,6 +340,7 @@ impl Config {
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum TimeCmp {
     LessOrEqual,
     GreaterOrEqual,
@@ -346,7 +351,7 @@ pub enum TimeCmp {
 
 impl TimeCmp {
     #[inline]
-    pub fn cmp<T: PartialOrd>(&self, a: T, b: T) -> bool {
+    pub fn cmp<T: PartialOrd>(&self, a: &T, b: &T) -> bool {
         match self {
             TimeCmp::LessOrEqual => a <= b,
             TimeCmp::GreaterOrEqual => a >= b,
@@ -357,6 +362,7 @@ impl TimeCmp {
     }
 
     #[inline]
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             TimeCmp::LessOrEqual => "<=",
@@ -492,13 +498,10 @@ mod tests {
         // Frontend sends a patch that only touches the name. use_time is
         // absent from the sub-patch (because the frontend never edited it).
         let patch = ConfigPatch {
-            games: vec![struct_patch::list::ListPatchOp::modify(
-                1u32,
-                GamePatch {
-                    name: Some("edited".into()),
-                    ..Default::default()
-                },
-            )],
+            games: vec![struct_patch::list::ListPatchOp::modify(1u32, GamePatch {
+                name: Some("edited".into()),
+                ..Default::default()
+            })],
             ..Default::default()
         };
         backend.apply(patch);
@@ -515,13 +518,10 @@ mod tests {
         // panic and must leave the config untouched.
         let mut backend = config_with_games(&[(1, 100, None)]);
         backend.apply(ConfigPatch {
-            games: vec![struct_patch::list::ListPatchOp::modify(
-                999u32,
-                GamePatch {
-                    name: Some("ghost".into()),
-                    ..Default::default()
-                },
-            )],
+            games: vec![struct_patch::list::ListPatchOp::modify(999u32, GamePatch {
+                name: Some("ghost".into()),
+                ..Default::default()
+            })],
             ..Default::default()
         });
         assert_eq!(backend.games.len(), 1);
@@ -535,13 +535,10 @@ mod tests {
             games: vec![
                 struct_patch::list::ListPatchOp::delete(1u32),
                 // Modify on a now-deleted id: ignored.
-                struct_patch::list::ListPatchOp::modify(
-                    1u32,
-                    GamePatch {
-                        name: Some("late".into()),
-                        ..Default::default()
-                    },
-                ),
+                struct_patch::list::ListPatchOp::modify(1u32, GamePatch {
+                    name: Some("late".into()),
+                    ..Default::default()
+                }),
             ],
             ..Default::default()
         });
@@ -568,12 +565,12 @@ mod tests {
 
     #[test]
     fn patch_skipped_fields_are_not_in_config_patch() {
+        use struct_patch::Status as _;
         // db_version / last_updated / last_sync / last_uploaded are #[patch(skip)].
         let empty = Config::new_empty_patch();
         // The skipped fields don't even exist on ConfigPatch — compile-time
         // guarantee. We assert that an empty patch is empty (the Status
         // impl's is_empty).
-        use struct_patch::Status as _;
         assert!(empty.is_empty());
     }
 
@@ -798,13 +795,10 @@ mod tests {
         cfg.apply(ConfigPatch {
             devices: vec![
                 // Modify "a"
-                struct_patch::list::ListPatchOp::modify(
-                    "a".to_string(),
-                    DevicePatch {
-                        name: Some("A-edited".into()),
-                        ..Default::default()
-                    },
-                ),
+                struct_patch::list::ListPatchOp::modify("a".to_string(), DevicePatch {
+                    name: Some("A-edited".into()),
+                    ..Default::default()
+                }),
                 // Delete "b"
                 struct_patch::list::ListPatchOp::<Device, DevicePatch, String>::delete(
                     "b".to_string(),
@@ -864,9 +858,6 @@ mod tests {
         });
 
         assert_eq!(settings.storage.local.path, "/new-path");
-        assert!(matches!(
-            settings.storage.provider,
-            crate::db::settings::StorageProvider::Local
-        ));
+        assert!(matches!(settings.storage.provider, StorageProvider::Local));
     }
 }

@@ -36,11 +36,11 @@ pub(super) fn detect_mime(bytes: &[u8]) -> &'static str {
         return "application/octet-stream";
     }
     // JPEG: FF D8
-    if bytes[0] == 0xFF && bytes[1] == 0xD8 {
+    if bytes[0] == 0xff && bytes[1] == 0xd8 {
         return "image/jpeg";
     }
     // PNG: 89 50 4E 47
-    if bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47 {
+    if bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4e && bytes[3] == 0x47 {
         return "image/png";
     }
     // GIF: 47 49 46
@@ -72,17 +72,16 @@ static INFLIGHT: Lazy<DashMap<String, broadcast::Sender<Result<String>>>> = Lazy
 
 /// Single-flight wrapper around the actual HTTP download.
 ///
-/// - If no other task is downloading this key, the current task becomes the
-///   **leader**: it performs the HTTP GET, hashes the bytes, writes the cache
-///   file, broadcasts the result, removes itself from the pool and returns.
-/// - If another task is already downloading the same key, the current task
-///   **subscribes** to that task's broadcast and returns the same result
-///   without issuing its own HTTP request.
+/// - If no other task is downloading this key, the current task becomes the **leader**: it performs
+///   the HTTP GET, hashes the bytes, writes the cache file, broadcasts the result, removes itself
+///   from the pool and returns.
+/// - If another task is already downloading the same key, the current task **subscribes** to that
+///   task's broadcast and returns the same result without issuing its own HTTP request.
 pub(super) async fn download_single_flight(url: &str, sha256: Option<&str>) -> Result<String> {
     // Dedup key: prefer the content hash when known (so two different URLs
     // pointing at the same image share a download), fall back to the URL
     // itself when the hash isn't yet known.
-    let key = sha256.map(String::from).unwrap_or_else(|| url.to_string());
+    let key = sha256.map_or_else(|| url.to_string(), String::from);
 
     loop {
         match INFLIGHT.entry(key.clone()) {
@@ -105,11 +104,10 @@ pub(super) async fn download_single_flight(url: &str, sha256: Option<&str>) -> R
                         // sha256 unknown — cannot look up by hash. Loop to
                         // become the new leader (rare race; bounded by the
                         // tiny window between leader's send and remove).
-                        continue;
-                    }
-                    Err(RecvError::Lagged(_)) => continue,
+                    },
+                    Err(RecvError::Lagged(_)) => {},
                 }
-            }
+            },
             Entry::Vacant(e) => {
                 // Leader: install a sender. `insert` consumes the entry
                 // guard, so no manual `drop(e)` is needed before awaiting.
@@ -122,7 +120,7 @@ pub(super) async fn download_single_flight(url: &str, sha256: Option<&str>) -> R
                 let _ = tx.send(result.clone());
                 INFLIGHT.remove(&key);
                 return result;
-            }
+            },
         }
     }
 }
@@ -142,13 +140,13 @@ async fn download_and_cache(url: &str, expected: Option<&str>) -> Result<String>
                 && exp != actual
             {
                 warn!(
-                    "[image] sha256 mismatch for {url}: expected {exp}, got {actual}; \
-                     caching under actual hash"
+                    "[image] sha256 mismatch for {url}: expected {exp}, got {actual}; caching \
+                     under actual hash"
                 );
             }
             fs::write(IMAGE_CACHE_DIR.join(&actual), &bytes)?;
             Ok(actual)
-        }
+        },
         Err(e) => {
             // 4xx → record in dead-URL cache (with status-specific TTL). 5xx
             // and transport errors already retried in `download_image` and
@@ -159,7 +157,7 @@ async fn download_and_cache(url: &str, expected: Option<&str>) -> Result<String>
                 dead_url::mark_url_dead(url, status);
             }
             Err(e)
-        }
+        },
     }
 }
 
@@ -198,7 +196,7 @@ async fn download_image(url: &str) -> Result<Vec<u8>> {
             // The ReqwestDetailedError Display already surfaces URL, status
             // and root cause, so the top-level `Error` Display is enough —
             // no need to flatten the whole chain here.
-            log::warn!("[image] retrying download after {:?}: {}", dur, err);
+            log::warn!("[image] retrying download after {dur:?}: {err}");
         })
         .await
 }
@@ -206,10 +204,10 @@ async fn download_image(url: &str) -> Result<Vec<u8>> {
 /// Decide whether an image download error is worth retrying.
 ///
 /// - HTTP 5xx (server errors): retry — the server may recover.
-/// - HTTP 4xx (client errors): do not retry — permanent, retrying wastes a
-///   request and may hammer the origin.
-/// - Transport errors (timeout / connection reset / decode hiccup) have no HTTP
-///   status — retry, they're typically transient.
+/// - HTTP 4xx (client errors): do not retry — permanent, retrying wastes a request and may hammer
+///   the origin.
+/// - Transport errors (timeout / connection reset / decode hiccup) have no HTTP status — retry,
+///   they're typically transient.
 /// - Non-network failures (disk write, etc.) — do not retry.
 fn should_retry_image_error(err: &Error) -> bool {
     match err {
@@ -233,13 +231,13 @@ mod tests {
 
     #[test]
     fn detect_mime_jpeg() {
-        assert_eq!(detect_mime(&[0xFF, 0xD8, 0xFF, 0xE0]), "image/jpeg");
+        assert_eq!(detect_mime(&[0xff, 0xd8, 0xff, 0xe0]), "image/jpeg");
     }
 
     #[test]
     fn detect_mime_png() {
         assert_eq!(
-            detect_mime(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A]),
+            detect_mime(&[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a]),
             "image/png"
         );
     }

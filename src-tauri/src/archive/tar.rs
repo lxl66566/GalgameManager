@@ -27,7 +27,7 @@ impl super::Archive for TarArchiver {
             if !path.exists() {
                 return Err(io::Error::new(
                     io::ErrorKind::NotFound,
-                    format!("Path not found: {:?}", path),
+                    format!("Path not found: {}", path.display()),
                 ));
             }
 
@@ -78,7 +78,7 @@ impl super::Archive for TarArchiver {
                     let relative = entry_path.strip_prefix(prefix).map_err(|e| {
                         io::Error::new(
                             io::ErrorKind::InvalidData,
-                            format!("Path strip prefix error: {}", e),
+                            format!("Path strip prefix error: {e}"),
                         )
                     })?;
 

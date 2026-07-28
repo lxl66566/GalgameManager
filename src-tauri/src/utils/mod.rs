@@ -8,7 +8,11 @@ use similar::TextDiff;
 
 use crate::{archive::ArchiveInfo, db::Config};
 
+#[must_use]
 pub fn format_time_delta(delta: chrono::TimeDelta) -> String {
+    // .max(0) clamps negative durations before the u64 cast — sign loss is
+    // impossible by construction.
+    #[allow(clippy::cast_sign_loss)]
     let secs = delta.num_seconds().max(0) as u64;
     humantime::format_duration(Duration::from_secs(secs)).to_string()
 }

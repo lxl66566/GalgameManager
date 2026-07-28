@@ -4,11 +4,10 @@
 //! Provides PE architecture detection, DLL extraction from embedded assets,
 //! and MMDevAPI COM-redirect registry setup.
 //!
-//! - **Extraction & architecture detection**: cross-platform (file I/O + goblin
-//!   PE parsing).
+//! - **Extraction & architecture detection**: cross-platform (file I/O + goblin PE parsing).
 //! - **Windows registry (HKCU)** + **SPEEDUP env var**: Windows-only.
-//! - **Wine registry (regedit)**: Linux-only, drives `wine regedit` against the
-//!   game's prefix so the MMDevAPI wrapper is picked up via COM.
+//! - **Wine registry (regedit)**: Linux-only, drives `wine regedit` against the game's prefix so
+//!   the MMDevAPI wrapper is picked up via COM.
 
 use std::{
     fs,
@@ -224,11 +223,11 @@ pub fn extract_speedup_assets(
             SpeedupProvider::DSound => {
                 files.push(extract_soundtouch(system, dest)?);
                 files.push(extract_dsound_speedup(system, dest)?);
-            }
+            },
             SpeedupProvider::MMDevAPI => {
                 files.push(extract_soundtouch(system, dest)?);
                 files.push(extract_mmdevapi(system, dest)?);
-            }
+            },
         }
         Ok(())
     })();
@@ -267,10 +266,10 @@ pub fn cleanup_files(files: &[ExtractedFile]) {
             Ok(()) => info!("Cleaned up: {}", file.path.display()),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                 warn!("File not found during cleanup: {}", file.path.display());
-            }
+            },
             Err(e) => {
                 log::error!("Failed to remove {}: {e}", file.path.display());
-            }
+            },
         }
         // 2. Restore backup if one exists
         if let Some(backup) = &file.backup {
@@ -282,7 +281,7 @@ pub fn cleanup_files(files: &[ExtractedFile]) {
                 ),
                 Err(e) => {
                     log::error!("Failed to restore backup {}: {e}", backup.display());
-                }
+                },
             }
         }
     }
@@ -426,7 +425,8 @@ mod wine_regedit {
                 s.push_str(&format!("[-HKEY_CURRENT_USER\\{}]\r\n\r\n", item.path));
             } else {
                 s.push_str(&format!(
-                    "[HKEY_CURRENT_USER\\{}]\r\n@=\"{MMDEVAPI_DLL_NAME}\"\r\n\"ThreadingModel\"=\"{}\"\r\n\r\n",
+                    "[HKEY_CURRENT_USER\\{}]\r\n@=\"{MMDEVAPI_DLL_NAME}\"\r\n\"ThreadingModel\"=\"\
+                     {}\"\r\n\r\n",
                     item.path, item.threading_model
                 ));
             }

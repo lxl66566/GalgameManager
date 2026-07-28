@@ -11,8 +11,8 @@
 //! 3. Add a new variant to `PluginInstance` below.
 //! 4. Add a new field to `PluginMetadatas` below.
 //! 5. Add a new variant to `PluginConfig` below.
-//! 6. Update `handler_key()` and `is_enabled()` in their respective modules,
-//!    and add a match arm to `instance_config()` in `mod.rs`.
+//! 6. Update `handler_key()` and `is_enabled()` in their respective modules, and add a match arm to
+//!    `instance_config()` in `mod.rs`.
 //! 7. Register the handler in the `PluginRegistry` constructor in `mod.rs`.
 
 use serde::{Deserialize, Serialize};
@@ -95,6 +95,7 @@ pub enum PluginInstance {
 impl PluginInstance {
     /// Return the handler key used to look up the `PluginHandler` in the
     /// registry.
+    #[must_use]
     pub fn handler_key(&self) -> &'static str {
         match self {
             Self::Execute { .. } => super::execute::PLUGIN_ID,
@@ -143,6 +144,7 @@ pub struct PluginMetadatas {
 
 impl PluginMetadatas {
     /// Check whether the plugin that owns the given instance is enabled.
+    #[must_use]
     pub fn is_enabled(&self, instance: &PluginInstance) -> bool {
         match instance {
             PluginInstance::Execute { .. } => self.execute.enabled,
@@ -245,7 +247,7 @@ mod tests {
     #[test]
     fn every_variant_has_distinct_handler_key() {
         let instances = sample_instances();
-        let keys: Vec<&str> = instances.iter().map(|i| i.handler_key()).collect();
+        let keys: Vec<&str> = instances.iter().map(PluginInstance::handler_key).collect();
         // No duplicate handler keys.
         let mut sorted = keys.clone();
         sorted.sort_unstable();
@@ -304,7 +306,7 @@ mod tests {
         metas.wine.enabled = true;
 
         for inst in &sample_instances() {
-            assert!(metas.is_enabled(inst), "{:?} should be enabled", inst);
+            assert!(metas.is_enabled(inst), "{inst:?} should be enabled");
         }
 
         // Disable one and check the corresponding variant flips.

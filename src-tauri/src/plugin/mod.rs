@@ -133,7 +133,7 @@ pub(crate) fn resolve_cmd_config(
         let lock = crate::db::CONFIG.lock();
         lock.varmap().clone()
     };
-    varmap.insert("".to_string(), exe_path.to_string());
+    varmap.insert(String::new(), exe_path.to_string());
 
     if require_placeholder && !cmd.contains("{}") {
         return Err(Error::InvalidCommand(
@@ -226,11 +226,13 @@ impl PluginRegistry {
 
     /// Get a plugin handler by ID.
     #[inline]
+    #[must_use]
     pub fn get(&self, id: &str) -> Option<&dyn PluginHandler> {
-        self.handlers.get(id).map(|h| h.as_ref())
+        self.handlers.get(id).map(AsRef::as_ref)
     }
 
     /// Get all registered plugin IDs.
+    #[must_use]
     pub fn ids(&self) -> Vec<&str> {
         self.handlers.keys().copied().collect()
     }
@@ -252,7 +254,7 @@ pub(crate) fn instance_config(instance: &PluginInstance) -> PluginConfig {
         PluginInstance::VoiceSpeedup { config } => PluginConfig::VoiceSpeedup(config.clone()),
         PluginInstance::VoiceZerointerrupt { config } => {
             PluginConfig::VoiceZerointerrupt(config.clone())
-        }
+        },
         PluginInstance::GameWrapper { config } => PluginConfig::GameWrapper(config.clone()),
         PluginInstance::LocaleEmulator { config } => PluginConfig::LocaleEmulator(config.clone()),
         PluginInstance::Translator { config } => PluginConfig::Translator(config.clone()),
@@ -279,14 +281,10 @@ pub(crate) fn enabled_plugin_contexts<'a>(
         .filter(|(instance, _)| metas.is_enabled(instance))
         .filter_map(|(instance, config)| {
             PLUGIN_REGISTRY.get(instance.handler_key()).map(|handler| {
-                (
-                    instance.handler_key(),
-                    handler,
-                    PluginContext {
-                        launch: launch.clone(),
-                        config: config.clone(),
-                    },
-                )
+                (instance.handler_key(), handler, PluginContext {
+                    launch: launch.clone(),
+                    config: config.clone(),
+                })
             })
         })
         .collect()
@@ -318,7 +316,7 @@ impl SaveUploadDispatcher {
                         .map(|p| p.to_string_lossy().to_string())
                         .unwrap_or_default();
                     (resolved, dir)
-                }
+                },
                 None => (String::new(), String::new()),
             };
             (

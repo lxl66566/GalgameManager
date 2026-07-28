@@ -20,9 +20,8 @@ use crate::error::{Error, Result};
 /// We require:
 /// 1. `systemd-run` to be on `$PATH` (otherwise we can't spawn the scope).
 /// 2. `XDG_RUNTIME_DIR` to be set (systemd-run --user needs it).
-/// 3. The user manager's private socket to be present
-///    (`/run/user/$UID/systemd/private`). This is the most reliable signal that
-///    `systemctl --user` will actually talk to something.
+/// 3. The user manager's private socket to be present (`/run/user/$UID/systemd/private`). This is
+///    the most reliable signal that `systemctl --user` will actually talk to something.
 pub fn has_systemd_user() -> bool {
     if which("systemd-run").is_none() {
         return false;
@@ -42,7 +41,11 @@ fn which(bin: &str) -> Option<PathBuf> {
             .ok()
             .map(|m| !m.is_dir())
             .unwrap_or(false);
-        if is_exec { Some(full) } else { None }
+        if is_exec {
+            Some(full)
+        } else {
+            None
+        }
     })
 }
 
@@ -107,10 +110,10 @@ fn current_uid() -> Option<u32> {
 /// polling).
 ///
 /// Error semantics (for the caller's fallback decision):
-/// * `Error::Io` — `systemd-run` itself could not be invoked; safe to retry as
-///   a direct child spawn.
-/// * Anything else — the user's command or systemd configuration is at fault;
-///   surface the error instead of masking it.
+/// * `Error::Io` — `systemd-run` itself could not be invoked; safe to retry as a direct child
+///   spawn.
+/// * Anything else — the user's command or systemd configuration is at fault; surface the error
+///   instead of masking it.
 pub async fn spawn_in_scope(start_ctx: &StartCtx, unit_name: &str) -> Result<Option<PathBuf>> {
     let parts = start_ctx.resolved_parts()?;
 
@@ -170,7 +173,8 @@ pub async fn spawn_in_scope(start_ctx: &StartCtx, unit_name: &str) -> Result<Opt
     match tokio::time::timeout(SYSTEMD_RUN_PROBE, child.wait()).await {
         Ok(Ok(status)) if !status.success() => {
             log::warn!(
-                "systemd-run exited with {:?} (stderr suppressed; check `journalctl --user-unit {}` for details)",
+                "systemd-run exited with {:?} (stderr suppressed; check `journalctl --user-unit \
+                 {}` for details)",
                 status.code(),
                 unit_name
             );
@@ -178,14 +182,14 @@ pub async fn spawn_in_scope(start_ctx: &StartCtx, unit_name: &str) -> Result<Opt
                 "systemd-run exited with status {:?}",
                 status.code()
             )));
-        }
+        },
         Ok(Ok(_)) => {
             // Clean exit: scope registered, game forking. Proceed.
-        }
+        },
         Ok(Err(e)) => {
             log::warn!("systemd-run wait failed: {e}");
             return Err(Error::from(e));
-        }
+        },
         Err(_) => {
             // Timeout: systemd-run is still alive (blocking on the scope
             // lifetime). Move it to a background reaper and continue.
@@ -198,7 +202,7 @@ pub async fn spawn_in_scope(start_ctx: &StartCtx, unit_name: &str) -> Result<Opt
                     log::debug!("systemd-run background reap failed: {e}");
                 }
             });
-        }
+        },
     }
 
     // Best-effort cgroup resolution. The scope was registered, but on
@@ -213,11 +217,11 @@ pub async fn spawn_in_scope(start_ctx: &StartCtx, unit_name: &str) -> Result<Opt
         Ok(cg) => cg,
         Err(e) => {
             log::warn!(
-                "cgroup resolution failed for {unit_name}: {e}; \
-                 falling back to unit-liveness polling"
+                "cgroup resolution failed for {unit_name}: {e}; falling back to unit-liveness \
+                 polling"
             );
             return Ok(None);
-        }
+        },
     };
 
     let procs_path = cgroup_v2_procs_path(&cgroup_subpath);

@@ -31,14 +31,16 @@ impl super::MyOperation for LocalOperator {
     fn inner(&self) -> &Operator {
         &self.0
     }
+
     #[inline]
     fn chunkable(&self) -> bool {
         true
     }
+
     // opendal Fs lister Entry does not implement content_length, so we need to get
     // file size by ourselves
     async fn list_archive(&self, game_id: u32) -> Result<Vec<ArchiveInfo>> {
-        let path = format!("{}/", game_id);
+        let path = format!("{game_id}/");
         let mut lister = self.inner().lister_with(&path).recursive(false).await?;
         let mut archives = vec![];
         let d = lister.try_next().await?;
@@ -77,12 +79,14 @@ impl super::MyOperation for Operator {
     fn inner(&self) -> &Operator {
         self
     }
+
     #[inline]
     fn chunkable(&self) -> bool {
         self.info().full_capability().write_can_multi
     }
+
     async fn list_archive(&self, game_id: u32) -> Result<Vec<ArchiveInfo>> {
-        let path = format!("{}/", game_id);
+        let path = format!("{game_id}/");
         let mut lister = self.lister_with(&path).recursive(false).await?;
         let mut archives = vec![];
         let d = lister.try_next().await?;
@@ -105,9 +109,9 @@ impl super::MyOperation for Operator {
         backup_dir: &Path,
     ) -> Result<()> {
         // create game dir first, otherwise the upload will fail 409
-        self.create_dir(&format!("{}/", game_id)).await?;
+        self.create_dir(&format!("{game_id}/")).await?;
 
-        let remote_path = format!("{}/{}", game_id, archive_filename);
+        let remote_path = format!("{game_id}/{archive_filename}");
         let uploader = self
             .writer_with(&remote_path)
             .chunk(if self.chunkable() {
@@ -125,7 +129,7 @@ impl super::MyOperation for Operator {
     }
 
     async fn delete_archive(&self, game_id: u32, archive_filename: &str) -> Result<()> {
-        let remote_path = format!("{}/{}", game_id, archive_filename);
+        let remote_path = format!("{game_id}/{archive_filename}");
         let mut deleter = self.deleter().await?;
         deleter.delete(remote_path).await?;
         deleter.close().await?;
@@ -133,7 +137,7 @@ impl super::MyOperation for Operator {
     }
 
     async fn delete_archive_all(&self, game_id: u32) -> Result<()> {
-        let remote_path = format!("{}/", game_id);
+        let remote_path = format!("{game_id}/");
         self.delete_with(&remote_path).recursive(true).await?;
         Ok(())
     }
@@ -144,7 +148,7 @@ impl super::MyOperation for Operator {
         archive_filename: &str,
         backup_dir: &Path,
     ) -> Result<()> {
-        let remote_path = format!("{}/{}", game_id, archive_filename);
+        let remote_path = format!("{game_id}/{archive_filename}");
         let downloader = self
             .reader_with(&remote_path)
             .chunk(4 * 1024 * 1024)
@@ -168,8 +172,8 @@ impl super::MyOperation for Operator {
         archive_filename: &str,
         new_archive_filename: &str,
     ) -> Result<()> {
-        let remote_path = format!("{}/{}", game_id, archive_filename);
-        let new_remote_path = format!("{}/{}", game_id, new_archive_filename);
+        let remote_path = format!("{game_id}/{archive_filename}");
+        let new_remote_path = format!("{game_id}/{new_archive_filename}");
         self.rename(&remote_path, &new_remote_path).await?;
         Ok(())
     }
@@ -210,7 +214,7 @@ impl super::MyOperation for Operator {
     #[cfg(feature = "config-daily-backup")]
     async fn replicate_config(&self) -> Result<()> {
         let to = &format!("config_{}.toml", chrono::Local::now().format("%Y%m%d"));
-        info!("replicate config from {} to {}", CONFIG_FILENAME, to);
+        info!("replicate config from {CONFIG_FILENAME} to {to}");
         self.copy(CONFIG_FILENAME, to).await?;
         Ok(())
     }

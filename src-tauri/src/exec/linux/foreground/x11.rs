@@ -2,8 +2,7 @@
 //!
 //! Implements the EWMH dance described by the task:
 //!
-//! 1. Read `_NET_ACTIVE_WINDOW` on the root window — gives us the XID of the
-//!    focused window.
+//! 1. Read `_NET_ACTIVE_WINDOW` on the root window — gives us the XID of the focused window.
 //! 2. Read `_NET_WM_PID` on that window — gives us its PID.
 //!
 //! Both round-trips happen lazily on each [`focused_pid`] call, so
@@ -46,7 +45,7 @@ impl X11Detector {
             Err(e) => {
                 log::debug!("X11: connect failed ({e}); disabling X11 detector");
                 return None;
-            }
+            },
         };
 
         let root = {

@@ -6,6 +6,8 @@
 //! through TOML and asserting that historical config fragments still
 //! deserialize without data loss.
 
+use std::collections::HashMap;
+
 use app_lib::db::{Config, Game, TimeCmp};
 use chrono::{DateTime, Utc};
 
@@ -41,7 +43,7 @@ fn sample_config() -> Config {
                 .with_timezone(&Utc),
         ),
         last_upload_time: None,
-        daily_playtime: Default::default(),
+        daily_playtime: HashMap::default(),
         cover_color: None,
         plugins: vec![],
     });

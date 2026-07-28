@@ -1,19 +1,26 @@
+use std::cell::RefCell;
+
+use chrono::DateTime;
 use serde::{Deserialize, Deserializer};
 
-use super::{Config, settings::LocalConfig};
+use super::{
+    Config,
+    settings::{LocalConfig, Settings},
+};
+use crate::plugin::PluginMetadatas;
 
 impl Default for Config {
     #[allow(deprecated)]
     fn default() -> Self {
         Self {
             db_version: 1,
-            last_updated: Default::default(),
-            last_sync: Default::default(),
-            last_uploaded: Default::default(),
-            games: Default::default(),
-            devices: Default::default(),
-            settings: Default::default(),
-            plugin_metadatas: Default::default(),
+            last_updated: DateTime::default(),
+            last_sync: Option::default(),
+            last_uploaded: Option::default(),
+            games: Vec::default(),
+            devices: Vec::default(),
+            settings: Settings::default(),
+            plugin_metadatas: PluginMetadatas::default(),
         }
     }
 }
@@ -40,7 +47,7 @@ where
         // 如果是字符串，手动构造 LocalConfig
         LocalConfigOrString::Path(path) => Ok(LocalConfig {
             path,
-            operator: Default::default(),
+            operator: RefCell::default(),
         }),
         // 如果已经是结构体，直接返回
         LocalConfigOrString::Config(config) => Ok(config),
@@ -75,8 +82,8 @@ mod tests {
             last_uploaded: None,
             games: vec![],
             devices: vec![],
-            settings: Default::default(),
-            plugin_metadatas: Default::default(),
+            settings: Settings::default(),
+            plugin_metadatas: PluginMetadatas::default(),
         }
     }
 
@@ -126,26 +133,26 @@ mod tests {
 
     #[test]
     fn deserialize_local_config_accepts_plain_string() {
-        // Legacy config: local = "/path/to/dir"
-        let toml_str = r#"local = "/legacy""#;
         #[derive(Deserialize)]
         struct Wrap {
             #[serde(deserialize_with = "deserialize_local_config_compat")]
             local: LocalConfig,
         }
+        // Legacy config: local = "/path/to/dir"
+        let toml_str = r#"local = "/legacy""#;
         let w: Wrap = toml::from_str(toml_str).unwrap();
         assert_eq!(w.local.path, "/legacy");
     }
 
     #[test]
     fn deserialize_local_config_accepts_struct() {
-        // New config: local = { path = "/new" }
-        let toml_str = r#"local = { path = "/new" }"#;
         #[derive(Deserialize)]
         struct Wrap {
             #[serde(deserialize_with = "deserialize_local_config_compat")]
             local: LocalConfig,
         }
+        // New config: local = { path = "/new" }
+        let toml_str = r#"local = { path = "/new" }"#;
         let w: Wrap = toml::from_str(toml_str).unwrap();
         assert_eq!(w.local.path, "/new");
     }

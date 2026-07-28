@@ -118,17 +118,21 @@ impl super::PluginHandler for AutoUploadPlugin {
 
         let (archive_conf, device_name, storage, varmap, io_timeout, non_io_timeout) = {
             let lock = crate::db::CONFIG.lock();
-            let device_name = lock
-                .get_device()
-                .map(|d| d.name.clone())
-                .unwrap_or_else(|| format!("Unknown{}", lock.devices.len()));
+            let device_name = lock.get_device().map_or_else(
+                || format!("Unknown{}", lock.devices.len()),
+                |d| d.name.clone(),
+            );
             (
                 lock.settings.archive.clone(),
                 device_name,
                 lock.settings.storage.clone(),
                 lock.varmap().clone(),
-                std::time::Duration::from_secs(lock.settings.sync_io_timeout_secs.max(1) as u64),
-                std::time::Duration::from_secs(lock.settings.sync_non_io_timeout_secs.max(1) as u64),
+                std::time::Duration::from_secs(u64::from(
+                    lock.settings.sync_io_timeout_secs.max(1),
+                )),
+                std::time::Duration::from_secs(u64::from(
+                    lock.settings.sync_non_io_timeout_secs.max(1),
+                )),
             )
         };
 
@@ -139,8 +143,8 @@ impl super::PluginHandler for AutoUploadPlugin {
         let archive_filename = match crate::archive::archive_impl(
             &device_name,
             &archive_conf,
-            game_backup_dir,
-            game.save_paths,
+            &game_backup_dir,
+            &game.save_paths,
         ) {
             Ok(filename) => filename,
             Err(e) => {
@@ -148,7 +152,7 @@ impl super::PluginHandler for AutoUploadPlugin {
                 log::error!("AutoUpload: archive failed for {game_name}: {e}");
                 emit_toast(&ctx.launch.app, ToastVariant::Error, msg);
                 return Err(e);
-            }
+            },
         };
 
         if storage.is_not_set() {
@@ -176,7 +180,7 @@ impl super::PluginHandler for AutoUploadPlugin {
                 log::error!("AutoUpload: build operator failed for {game_name}: {e}");
                 emit_toast(&ctx.launch.app, ToastVariant::Error, msg);
                 return Err(e);
-            }
+            },
         };
 
         let tx = Transaction::new();
@@ -249,7 +253,7 @@ async fn prune_remote(op: &(dyn MyOperation + Send + Sync), game_id: u32, max_ke
         Err(e) => {
             log::warn!("AutoUpload: list remote archives failed (game {game_id}): {e}");
             return;
-        }
+        },
     };
     if archives.len() <= max_kept {
         return;
@@ -275,7 +279,7 @@ fn prune_local(local_game_dir: &Path, max_kept: usize) {
                 local_game_dir.display()
             );
             return;
-        }
+        },
     };
     if archives.len() <= max_kept {
         return;

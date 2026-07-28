@@ -1,3 +1,5 @@
+#![allow(clippy::unreadable_literal)] // actuallly its readable ^o^
+
 pub mod archive;
 mod bindings;
 pub mod color;
@@ -10,11 +12,19 @@ pub mod plugin;
 pub mod sync;
 pub mod utils;
 
-use bindings::*;
+use bindings::{
+    apply_remote_config, archive, clean_current_operator, clear_all_cover_colors,
+    clear_all_daily_playtime, delete_archive, delete_archive_all, delete_local_archive,
+    delete_local_archive_all, device_id, exec, extract, get_config, get_remote_config,
+    is_game_running, list_archive, list_local_archive, log, open_game_dir, patch_config,
+    paths_exist, prepare_image, pull_archive, refresh_all_cover_colors, rename_local_archive,
+    rename_remote_archive, resolve_var, running_game_ids, save_config, upload_archive,
+    upload_config,
+};
 use log::{error, info, warn};
 use sync::UploadConfigStatus;
 use tauri::{
-    Manager, WebviewUrl, WebviewWindowBuilder, generate_context,
+    AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, generate_context,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
@@ -72,9 +82,7 @@ pub fn run() {
             paths_exist,
             clear_all_daily_playtime,
         ])
-        .register_uri_scheme_protocol("galimg", |_, request| {
-            crate::http::image_protocol_handler(request)
-        })
+        .register_uri_scheme_protocol("galimg", |_, request| http::image_protocol_handler(request))
         .setup(|app| {
             let handle = init_logger(app.path().app_log_dir()?)?;
             let res = LOG_HANDLE.set(handle);
@@ -82,7 +90,7 @@ pub fn run() {
 
             // Spawn the config-writer task first so every later CONFIG
             // mutation can rely on it. See [`db::saver`] for the rationale.
-            let _ = crate::db::saver::ConfigSaver::init(app.handle());
+            let _ = db::saver::ConfigSaver::init(app.handle());
 
             #[cfg(desktop)]
             {
@@ -110,7 +118,7 @@ pub fn run() {
             let main_window = main_window.drag_and_drop(true);
             let main_window = main_window
                 .user_agent("github:lxl66566/GalgameManager")
-                .initialization_script(format!("window.__INITIAL_CONFIG__ = {config_json};",))
+                .initialization_script(format!("window.__INITIAL_CONFIG__ = {config_json};"))
                 .build()?;
 
             #[cfg(desktop)]
@@ -132,16 +140,13 @@ pub fn run() {
                 None::<&str>,
             )?;
             let quit_sync = MenuItem::with_id(app, "quit_sync", "Quit", true, None::<&str>)?;
-            let menu = Menu::with_items(
-                app,
-                &[
-                    &open_config_folder,
-                    &open_save_folder,
-                    &open_log_folder,
-                    &quit_nosync,
-                    &quit_sync,
-                ],
-            )?;
+            let menu = Menu::with_items(app, &[
+                &open_config_folder,
+                &open_save_folder,
+                &open_log_folder,
+                &quit_nosync,
+                &quit_sync,
+            ])?;
             #[allow(clippy::single_match)]
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
@@ -149,10 +154,10 @@ pub fn run() {
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "quit_sync" => {
                         app.exit(114514);
-                    }
+                    },
                     "quit_nosync" => {
                         app.exit(0);
-                    }
+                    },
                     "open_config" => _ = opener::open(CONFIG_DIR.as_os_str()),
                     "open_save" => {
                         _ = opener::open(
@@ -160,14 +165,14 @@ pub fn run() {
                                 .app_local_data_dir()
                                 .expect("failed to get app local data dir")
                                 .join("backup"),
-                        )
-                    }
+                        );
+                    },
                     "open_log" => {
                         _ = opener::open(
                             app.path().app_log_dir().expect("failed to get app log dir"),
-                        )
-                    }
-                    _ => {}
+                        );
+                    },
+                    _ => {},
                 })
                 .on_tray_icon_event(|tray, event| match event {
                     TrayIconEvent::Click {
@@ -181,8 +186,8 @@ pub fn run() {
                             let _ = window.show();
                             let _ = window.set_focus();
                         }
-                    }
-                    _ => {}
+                    },
+                    _ => {},
                 })
                 .build(app)?;
             Ok(())
@@ -223,91 +228,94 @@ pub fn run() {
                             .body(body)
                             .show();
                     };
-                    match bindings::upload_config(app, true).await {
+                    match upload_config(app, true).await {
                         Ok(UploadConfigStatus::Uploaded) => {
                             info!("[minimize] upload config success");
                             notify("\u{2705} Synced", "Configuration uploaded successfully");
-                        }
+                        },
                         Ok(UploadConfigStatus::LocalClean) => {
                             warn!("[minimize] local clean, skip upload");
                             notify("\u{23ed} Sync Skipped", "Local configuration is up to date");
-                        }
+                        },
                         Ok(UploadConfigStatus::Conflict) => {
                             warn!("[minimize] conflict detected");
                             notify(
                                 "\u{26a0}\u{fe0f} Sync Conflict",
                                 "Remote configuration is newer \u{2014} please pull first",
                             );
-                        }
+                        },
                         Err(e) => {
                             error!("[minimize] failed to upload config: {e}");
                             notify(
                                 "\u{274c} Sync Failed",
                                 &format!("Failed to upload configuration: {e}"),
                             );
-                        }
+                        },
                     }
                 });
-            }
+            },
             tauri::RunEvent::ExitRequested { api, code, .. } => {
                 _ = app.save_window_state(StateFlags::all());
                 // Flush config before anything else so a pending throttled
                 // write is never lost on exit.
-                crate::db::saver::ConfigSaver::force_save_blocking("app_exit");
+                db::saver::ConfigSaver::force_save_blocking("app_exit");
                 if code == Some(114514) {
                     if let Some(window) = app.get_webview_window("main") {
                         let _ = window.minimize();
                     }
                     api.prevent_exit();
-                    info!("[exit] uploading config...");
-                    let res = tauri::async_runtime::block_on(async move {
-                        bindings::upload_config(app.clone(), true).await
-                    });
-                    let notify = |title: &str, body: &str| {
-                        _ = app.notification().builder().title(title).body(body).show();
-                    };
-                    match res {
-                        Ok(UploadConfigStatus::Uploaded) => {
-                            info!("[exit] upload config success");
-                            notify("\u{2705} Synced", "Configuration uploaded successfully");
-                            before_exit();
-                            std::thread::sleep(std::time::Duration::from_secs(1));
-                            std::process::exit(0);
-                        }
-                        Ok(UploadConfigStatus::LocalClean) => {
-                            warn!("[exit] local clean, skip upload");
-                            notify("\u{23ed} Sync Skipped", "Local configuration is up to date");
-                            before_exit();
-                            std::thread::sleep(std::time::Duration::from_secs(1));
-                            std::process::exit(0);
-                        }
-                        Ok(UploadConfigStatus::Conflict) => {
-                            warn!("[exit] conflict detected");
-                            notify(
-                                "\u{26a0}\u{fe0f} Sync Conflict",
-                                "Remote configuration is newer \u{2014} please pull first",
-                            );
-                            before_exit();
-                            std::thread::sleep(std::time::Duration::from_secs(1));
-                            std::process::exit(0);
-                        }
-                        Err(e) => {
-                            error!("[exit] failed to upload config: {e}");
-                            notify(
-                                "\u{274c} Sync Failed",
-                                &format!("Failed to upload configuration: {e}"),
-                            );
-                            before_exit();
-                            std::thread::sleep(std::time::Duration::from_secs(1));
-                            std::process::exit(1);
-                        }
-                    }
+                    sync_and_exit(app);
                 } else {
-                    info!("exit code: {:?}", code);
+                    info!("exit code: {code:?}");
                 }
-            }
+            },
             _ => (),
         });
+}
+
+/// Upload config then exit. Called when the user clicks "Quit (with sync)".
+fn sync_and_exit(app: &AppHandle) {
+    info!("[exit] uploading config...");
+    let res = tauri::async_runtime::block_on(async move { upload_config(app.clone(), true).await });
+    let notify = |title: &str, body: &str| {
+        _ = app.notification().builder().title(title).body(body).show();
+    };
+    match res {
+        Ok(UploadConfigStatus::Uploaded) => {
+            info!("[exit] upload config success");
+            notify("\u{2705} Synced", "Configuration uploaded successfully");
+            before_exit();
+            std::thread::sleep(std::time::Duration::from_secs(1));
+            std::process::exit(0);
+        },
+        Ok(UploadConfigStatus::LocalClean) => {
+            warn!("[exit] local clean, skip upload");
+            notify("\u{23ed} Sync Skipped", "Local configuration is up to date");
+            before_exit();
+            std::thread::sleep(std::time::Duration::from_secs(1));
+            std::process::exit(0);
+        },
+        Ok(UploadConfigStatus::Conflict) => {
+            warn!("[exit] conflict detected");
+            notify(
+                "\u{26a0}\u{fe0f} Sync Conflict",
+                "Remote configuration is newer \u{2014} please pull first",
+            );
+            before_exit();
+            std::thread::sleep(std::time::Duration::from_secs(1));
+            std::process::exit(0);
+        },
+        Err(e) => {
+            error!("[exit] failed to upload config: {e}");
+            notify(
+                "\u{274c} Sync Failed",
+                &format!("Failed to upload configuration: {e}"),
+            );
+            before_exit();
+            std::thread::sleep(std::time::Duration::from_secs(1));
+            std::process::exit(1);
+        },
+    }
 }
 
 fn before_exit() {

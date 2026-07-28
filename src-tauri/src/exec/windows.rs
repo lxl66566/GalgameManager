@@ -97,12 +97,15 @@ impl GameJob {
         unsafe {
             let mut info = JOBOBJECT_BASIC_ACCOUNTING_INFORMATION::default();
             let mut return_length = 0;
+            // Struct size always fits in u32.
+            #[allow(clippy::cast_possible_truncation)]
+            let buf_size = size_of::<JOBOBJECT_BASIC_ACCOUNTING_INFORMATION>() as u32;
             let res = QueryInformationJobObject(
                 Some(self.handle),
                 JobObjectBasicAccountingInformation,
-                &mut info as *mut _ as *mut _,
-                std::mem::size_of::<JOBOBJECT_BASIC_ACCOUNTING_INFORMATION>() as u32,
-                Some(&mut return_length),
+                (&raw mut info).cast(),
+                buf_size,
+                Some(&raw mut return_length),
             );
 
             if res.is_err() {
@@ -121,12 +124,13 @@ impl GameJob {
     /// clean defensively) ⇒ success; anything else ⇒ abnormal. If we
     /// never captured a foreground PID, we conservatively report success
     /// to preserve the historical behaviour.
+    #[must_use]
     pub fn last_exit_success(&self) -> bool {
         let Some(h) = self.game_handle else {
             return true;
         };
         let mut code: u32 = 0;
-        let ok = unsafe { GetExitCodeProcess(h, &mut code).is_ok() };
+        let ok = unsafe { GetExitCodeProcess(h, &raw mut code).is_ok() };
         // !ok ⇒ the handle is somehow invalid; fall back to "clean" so we
         // don't spam false-positive abnormal toasts.
         !ok || code == 0 || code == STILL_ACTIVE
@@ -142,7 +146,7 @@ impl GameJob {
 
             // 2. 获取窗口对应的 PID
             let mut pid = 0;
-            GetWindowThreadProcessId(hwnd, Some(&mut pid));
+            GetWindowThreadProcessId(hwnd, Some(&raw mut pid));
             if pid == 0 {
                 return false;
             }
@@ -159,7 +163,7 @@ impl GameJob {
                 return false;
             };
             let mut is_in_job: BOOL = false.into();
-            let _ = IsProcessInJob(process_handle, Some(self.handle), &mut is_in_job);
+            let _ = IsProcessInJob(process_handle, Some(self.handle), &raw mut is_in_job);
             let _ = CloseHandle(process_handle);
             is_in_job.as_bool()
         };
@@ -216,17 +220,17 @@ pub async fn launch_game(
         // 关键点：将启动器加入 Job。
         // 之后启动器生成的任何子进程（游戏本体）都会自动继承进入这个 Job。
         if let Err(e) = j.assign_process(child_pid) {
-            error!("Failed to assign process to job: {:?}", e);
+            error!("Failed to assign process to job: {e:?}");
         }
         j
     };
 
     // 3. 发出事件，告知前端已经启动了
-    info!("Game spawned: game_id={}", game_id);
-    app.emit(&format!("game://spawn/{}", game_id), ())?;
+    info!("Game spawned: game_id={game_id}");
+    app.emit(&format!("game://spawn/{game_id}"), ())?;
     game_start_sender
         .send(())
-        .map_err(|_| Error::InvalidChannel("game_start_sender"))?;
+        .map_err(|()| Error::InvalidChannel("game_start_sender"))?;
 
     Ok(job)
 }
@@ -254,15 +258,18 @@ pub async fn game_loop(
                 game_id,
                 crate::utils::format_time_delta(total_session)
             );
+            // Accumulated from positive ticks — always non-negative.
+            #[allow(clippy::cast_sign_loss)]
+            let session_secs = total_session.num_seconds() as u64;
             let payload = super::GameExitPayload {
                 success: job.last_exit_success(),
-                session_secs: total_session.num_seconds() as u64,
+                session_secs,
             };
-            app.emit(&format!("game://exit/{}", game_id), &payload)?;
+            app.emit(&format!("game://exit/{game_id}"), &payload)?;
             super::update_game_time(&app, game_id, time_counter, true)?;
             game_exit_sender
                 .send(())
-                .map_err(|_| Error::InvalidChannel("game_exit_sender"))?;
+                .map_err(|()| Error::InvalidChannel("game_exit_sender"))?;
             break;
         }
 

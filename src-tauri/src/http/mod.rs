@@ -53,13 +53,12 @@ pub static IMAGE_CLIENT: Lazy<Client> = Lazy::new(|| {
 /// hash. The image can then be served via the `galimg` custom protocol.
 ///
 /// Flow:
-/// 1. **Disk fast-path**: if a valid `sha256` is provided and a cache file by
-///    that name exists, return immediately.
-/// 2. **Local file path**: any non-`http` argument is read from disk and
-///    (re-)hashed.
+/// 1. **Disk fast-path**: if a valid `sha256` is provided and a cache file by that name exists,
+///    return immediately.
+/// 2. **Local file path**: any non-`http` argument is read from disk and (re-)hashed.
 /// 3. **Remote URL single-flight**: see [`image::download_single_flight`].
 pub async fn prepare_image(path_or_url: &str, sha256: Option<&str>) -> Result<String> {
-    debug!("prepare image: {}, sha256: {:?}", path_or_url, sha256);
+    debug!("prepare image: {path_or_url}, sha256: {sha256:?}");
     let sha256 = sha256.filter(|s| is_valid_hash(s));
 
     // 1. Fast path: cache file already exists.
@@ -77,9 +76,7 @@ pub async fn prepare_image(path_or_url: &str, sha256: Option<&str>) -> Result<St
         // Prefer a caller-provided valid hash when available; otherwise
         // recompute from content so the cached filename matches what
         // `galimg://` will later request.
-        let h = sha256
-            .map(String::from)
-            .unwrap_or_else(|| hash_image(&bytes));
+        let h = sha256.map_or_else(|| hash_image(&bytes), String::from);
         fs::write(IMAGE_CACHE_DIR.join(&h), &bytes)?;
         return Ok(h);
     }
@@ -93,6 +90,8 @@ pub async fn prepare_image(path_or_url: &str, sha256: Option<&str>) -> Result<St
 
 /// Handler for the `galimg` custom URI scheme.
 /// Serves cached images from [`IMAGE_CACHE_DIR`] by hash.
+// Signature dictated by tauri's `register_uri_scheme_protocol` API.
+#[allow(clippy::needless_pass_by_value)]
 pub(crate) fn image_protocol_handler(
     request: tauri::http::Request<Vec<u8>>,
 ) -> tauri::http::Response<Vec<u8>> {
@@ -120,7 +119,7 @@ pub(crate) fn image_protocol_handler(
                 .header("Access-Control-Allow-Origin", "*")
                 .body(bytes)
                 .unwrap()
-        }
+        },
         Err(_) => tauri::http::Response::builder()
             .status(tauri::http::StatusCode::NOT_FOUND)
             .body(Vec::new())

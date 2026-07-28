@@ -36,7 +36,7 @@ type SnapshotFn = Arc<dyn Fn() -> Config + Send + Sync>;
 
 /// Type-erased "persist this config" closure. Production wires it to
 /// [`Config::store`]; the fallback path uses the same closure.
-type StoreFn = Arc<dyn Fn(&Config) -> std::result::Result<(), String> + Send + Sync>;
+type StoreFn = Arc<dyn Fn(&Config) -> Result<(), String> + Send + Sync>;
 
 /// Type-erased "report a store failure to the user" closure. Production
 /// emits a frontend toast.
@@ -85,11 +85,10 @@ impl ConfigSaver {
             // `flush` helper.
             let snapshot_for_flush = snapshot.clone();
             let store_for_flush = store.clone();
-            let flush: Arc<dyn Fn() -> std::result::Result<(), String> + Send + Sync> =
-                Arc::new(move || {
-                    let snap = snapshot_for_flush();
-                    store_for_flush(&snap)
-                });
+            let flush: Arc<dyn Fn() -> Result<(), String> + Send + Sync> = Arc::new(move || {
+                let snap = snapshot_for_flush();
+                store_for_flush(&snap)
+            });
 
             let writer =
                 ThrottledWriter::spawn("config", MIN_INTERVAL, flush, Some(Arc::clone(&toast)));
@@ -121,6 +120,7 @@ impl ConfigSaver {
     /// the writer flushes as soon as it picks the request up, so callers
     /// may hold the `CONFIG` mutex. Returns `false` if the saver is not
     /// initialised, in which case the caller should write through directly.
+    #[must_use]
     pub fn request_force(source: &'static str) -> bool {
         let Some(saver) = Self::get() else {
             log::warn!(
@@ -140,7 +140,8 @@ impl ConfigSaver {
             // Very early startup / late shutdown: never silently drop a
             // force-save request.
             log::warn!(
-                "[config-saver] saver not initialised, falling back to direct store (source={source})"
+                "[config-saver] saver not initialised, falling back to direct store \
+                 (source={source})"
             );
             let snap = crate::db::CONFIG.lock().clone();
             if let Err(e) = snap.store() {

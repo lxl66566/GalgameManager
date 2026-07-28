@@ -143,8 +143,8 @@ impl super::PluginHandler for WinePlugin {
         #[cfg(not(target_os = "linux"))]
         {
             log::warn!(
-                "WinePlugin: wine is not supported on this platform, skipping launch override \
-                 for game {}",
+                "WinePlugin: wine is not supported on this platform, skipping launch override for \
+                 game {}",
                 ctx.launch.game_id
             );
             let _ = config;
@@ -178,13 +178,10 @@ impl super::PluginHandler for WinePlugin {
                     varmap.resolve_var(&config.prefix)?,
                 );
             }
-            env.insert(
-                "WINEARCH".to_string(),
-                match config.arch {
-                    WineArch::Win32 => "win32".to_string(),
-                    WineArch::Win64 => "win64".to_string(),
-                },
-            );
+            env.insert("WINEARCH".to_string(), match config.arch {
+                WineArch::Win32 => "win32".to_string(),
+                WineArch::Win64 => "win64".to_string(),
+            });
             if config.esync {
                 env.insert("WINEESYNC".to_string(), "1".to_string());
             }

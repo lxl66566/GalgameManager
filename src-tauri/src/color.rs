@@ -1,10 +1,9 @@
 //! Cover-art accent color extraction.
 //!
 //! Two public entry points:
-//! - [`prepare_image`] wraps [`crate::http::prepare_image`] and, on demand,
-//!   derives a color from the just-cached image. This piggybacks on the
-//!   existing image-prep IPC so the frontend never needs a second round-trip
-//!   just to get a color.
+//! - [`prepare_image`] wraps [`crate::http::prepare_image`] and, on demand, derives a color from
+//!   the just-cached image. This piggybacks on the existing image-prep IPC so the frontend never
+//!   needs a second round-trip just to get a color.
 //! - [`extract_color`] is the pure, deterministic color-from-bytes function.
 //!
 //! The extractor is fully deterministic: identical image bytes always produce
@@ -13,13 +12,23 @@
 //! ordering). Strategy, all in HSL space, no quantization:
 //!
 //! 1. Decode the image and stride-sample at most ~4k opaque pixels.
-//! 2. Accumulate a saturation-weighted circular mean of the hue, plus the
-//!    weighted means of S and L. Saturation weighting lets colorful regions
-//!    dominate the average, while gray/white/black cover backgrounds (whose hue
-//!    is numerically arbitrary) contribute nothing — the result tracks the
-//!    artwork's actual palette instead of a murky mud.
-//! 3. Clamp S and L into bands that read well on both light and dark themes, so
-//!    the color is neither neon nor invisible.
+//! 2. Accumulate a saturation-weighted circular mean of the hue, plus the weighted means of S and
+//!    L. Saturation weighting lets colorful regions dominate the average, while gray/white/black
+//!    cover backgrounds (whose hue is numerically arbitrary) contribute nothing — the result tracks
+//!    the artwork's actual palette instead of a murky mud.
+//! 3. Clamp S and L into bands that read well on both light and dark themes, so the color is
+//!    neither neon nor invisible.
+
+// Color-space math uses standard single-letter notation (r/g/b/h/s/l/c/x/m)
+// and inherently lossy float↔int casts (pixel values 0–255, hue 0–360).
+// Exact float equality on `max == r` is correct because `max` IS one of r/g/b.
+#![allow(
+    clippy::many_single_char_names,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_precision_loss,
+    clippy::float_cmp
+)]
 
 use std::fs;
 
@@ -89,8 +98,7 @@ pub async fn refresh_all_cover_colors(app: &AppHandle) -> Result<()> {
         .map(|(id, url, hash)| async move {
             let color = prepare_image(&url, hash.as_deref(), true)
                 .await
-                .map(|(_, c)| c)
-                .unwrap_or(None);
+                .map_or(None, |(_, c)| c);
             (id, color)
         })
         .buffer_unordered(usize::MAX)
@@ -145,7 +153,7 @@ async fn compute_color(hash: &str) -> Option<String> {
         Err(e) => {
             log::warn!("[color] compute task failed: {e}");
             None
-        }
+        },
     }
 }
 
@@ -153,7 +161,19 @@ async fn compute_color(hash: &str) -> Option<String> {
 ///
 /// Returns `None` if the bytes cannot be decoded or the image has too little
 /// chroma to yield a meaningful hue.
+#[must_use]
 pub fn extract_color(bytes: &[u8]) -> Option<String> {
+    // 36 个色相桶，每 10 度一个
+    const BUCKETS: usize = 36;
+
+    // 记录每个像素的数据以便后续局部平均
+    struct PixelData {
+        h: f64,
+        s: f64,
+        l: f64,
+        weight: f64,
+    }
+
     let img = image::load_from_memory(bytes).ok()?.into_rgba8();
     let (w, h) = (img.width() as usize, img.height() as usize);
     if w == 0 || h == 0 {
@@ -167,17 +187,7 @@ pub fn extract_color(bytes: &[u8]) -> Option<String> {
     let step_x = step_x.max(1);
     let step_y = step_y.max(1);
 
-    // 36 个色相桶，每 10 度一个
-    const BUCKETS: usize = 36;
     let mut hue_buckets = vec![0.0f64; BUCKETS];
-
-    // 记录每个像素的数据以便后续局部平均
-    struct PixelData {
-        h: f64,
-        s: f64,
-        l: f64,
-        weight: f64,
-    }
     let mut sampled_pixels = Vec::with_capacity(4096);
 
     let mut total_weight = 0.0;
@@ -190,9 +200,9 @@ pub fn extract_color(bytes: &[u8]) -> Option<String> {
                 continue;
             }
 
-            let r = pixel[0] as f64 / 255.0;
-            let g = pixel[1] as f64 / 255.0;
-            let b = pixel[2] as f64 / 255.0;
+            let r = f64::from(pixel[0]) / 255.0;
+            let g = f64::from(pixel[1]) / 255.0;
+            let b = f64::from(pixel[2]) / 255.0;
             let (hue, s, l) = rgb_to_hsl(r, g, b);
 
             // 权重逻辑保留：过滤掉黑白灰
@@ -216,7 +226,7 @@ pub fn extract_color(bytes: &[u8]) -> Option<String> {
         }
     }
 
-    if valid_pixels == 0 || total_weight < (valid_pixels as f64) * 0.02 {
+    if valid_pixels == 0 || total_weight < f64::from(valid_pixels) * 0.02 {
         return None;
     }
 
@@ -292,7 +302,7 @@ pub fn extract_color(bytes: &[u8]) -> Option<String> {
 fn rgb_to_hsl(r: f64, g: f64, b: f64) -> (f64, f64, f64) {
     let max = r.max(g).max(b);
     let min = r.min(g).min(b);
-    let l = (max + min) / 2.0;
+    let l = f64::midpoint(max, min);
     let d = max - min;
     if d == 0.0 {
         return (0.0, 0.0, l);

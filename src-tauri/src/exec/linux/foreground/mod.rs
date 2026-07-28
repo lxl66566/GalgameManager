@@ -2,12 +2,10 @@
 //!
 //! Two strategies are wired up today, composed via [`CompositeDetector`]:
 //!
-//! * [`x11::X11Detector`] — synchronous EWMH query. Works under X11 and
-//!   XWayland, but only sees X clients. Always worth trying because the query
-//!   is essentially free (one round-trip).
-//! * [`atspi::AtspiDetector`] — listens to AT-SPI focus events over D-Bus.
-//!   Works on both Wayland and X11 compositors that ship the accessibility
-//!   service (GNOME, KDE, ...).
+//! * [`x11::X11Detector`] — synchronous EWMH query. Works under X11 and XWayland, but only sees X
+//!   clients. Always worth trying because the query is essentially free (one round-trip).
+//! * [`atspi::AtspiDetector`] — listens to AT-SPI focus events over D-Bus. Works on both Wayland
+//!   and X11 compositors that ship the accessibility service (GNOME, KDE, ...).
 //!
 //! ## Extending
 //!

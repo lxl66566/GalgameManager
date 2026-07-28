@@ -225,10 +225,10 @@ mod linux_impl {
                 match config.provider {
                     SpeedupProvider::DSound => {
                         overlay.insert("dsound".to_string(), DllOverride::NativeBuiltin);
-                    }
+                    },
                     SpeedupProvider::MMDevAPI => {
                         overlay.insert("MMDevAPI".to_string(), DllOverride::NativeBuiltin);
-                    }
+                    },
                 }
                 // SoundTouch.dll is also extracted to the game directory and
                 // loaded implicitly by the wrapper; make Wine resolve it from
@@ -258,7 +258,8 @@ mod linux_impl {
             }
 
             info!(
-                "VoiceSpeedup: prepared for game {} on Wine (speed={:.1}, provider={:?}, arch={system})",
+                "VoiceSpeedup: prepared for game {} on Wine (speed={:.1}, provider={:?}, \
+                 arch={system})",
                 ctx.launch.game_id, config.speed, config.provider
             );
             Ok(())
@@ -308,7 +309,8 @@ mod stub_impl {
         async fn before_game_start(&self, ctx: PluginContext) -> Result<()> {
             if let PluginConfig::VoiceSpeedup(_) = &*ctx.config {
                 log::warn!(
-                    "VoiceSpeedup: dll injection is not supported on this platform, skipping for game {}",
+                    "VoiceSpeedup: dll injection is not supported on this platform, skipping for \
+                     game {}",
                     ctx.launch.game_id
                 );
             }

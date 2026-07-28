@@ -17,20 +17,19 @@ use crate::{
 };
 
 // Patch attributes (shared by every patched config struct):
-// - The generated `SettingsPatch` gets serde/TS derives and the same camelCase
-//   rename so it round-trips through the IPC JSON the same way `Settings` does.
-// - `no_diff`: the diff is computed TS-side, so we opt out of
-//   `into_patch_by_diff`. That avoids forcing `PartialEq` on every field (the
-//   operator caches below are `RefCell`, which can't auto-derive it).
-// - `skip_serializing_none` makes absent fields disappear from the wire —
-//   that's how "no change for this field" is expressed — and `optional_fields`
-//   exposes them as optional (`T?`) on the TS side, matching the wire behavior.
-// - The composite sub-structs (storage/archive/appearance/launch) are
-//   whole-replacement (`Option<T>`), NOT nested patches: they are small and
-//   have no Rust-side writer, so the extra granularity would only buy wire
-//   bytes at the cost of a patch struct per sub-struct. The TS side expands its
-//   declarative partials into the full sub-struct before sending (see
-//   `expandPatch` in src/utils/patch.ts).
+// - The generated `SettingsPatch` gets serde/TS derives and the same camelCase rename so it
+//   round-trips through the IPC JSON the same way `Settings` does.
+// - `no_diff`: the diff is computed TS-side, so we opt out of `into_patch_by_diff`. That avoids
+//   forcing `PartialEq` on every field (the operator caches below are `RefCell`, which can't
+//   auto-derive it).
+// - `skip_serializing_none` makes absent fields disappear from the wire — that's how "no change for
+//   this field" is expressed — and `optional_fields` exposes them as optional (`T?`) on the TS
+//   side, matching the wire behavior.
+// - The composite sub-structs (storage/archive/appearance/launch) are whole-replacement
+//   (`Option<T>`), NOT nested patches: they are small and have no Rust-side writer, so the extra
+//   granularity would only buy wire bytes at the cost of a patch struct per sub-struct. The TS side
+//   expands its declarative partials into the full sub-struct before sending (see `expandPatch` in
+//   src/utils/patch.ts).
 #[derive(Debug, Serialize, Deserialize, Clone, TS, Patch)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
@@ -55,13 +54,16 @@ pub struct Settings {
 }
 
 impl Default for Settings {
+    // DEFAULT_*_TIMEOUT are small constants — cast to u32 never truncates.
+    #[allow(clippy::cast_possible_truncation)]
     fn default() -> Self {
         Self {
-            storage: Default::default(),
-            archive: Default::default(),
-            appearance: Default::default(),
-            launch: Default::default(),
+            storage: StorageConfig::default(),
+            archive: ArchiveConfig::default(),
+            appearance: AppearanceConfig::default(),
+            launch: LaunchConfig::default(),
             auto_sync_interval: 1200,
+            // Constants are known to fit in u32 at compile time.
             sync_io_timeout_secs: DEFAULT_IO_TIMEOUT.as_secs() as u32,
             sync_non_io_timeout_secs: DEFAULT_NON_IO_TIMEOUT.as_secs() as u32,
         }
@@ -117,15 +119,15 @@ impl StorageConfig {
             StorageProvider::Local => {
                 self.local
                     .get_operator_or_init(varmap, io_timeout, non_io_timeout)
-            }
+            },
             StorageProvider::WebDav => {
                 self.webdav
                     .get_operator_or_init(app, io_timeout, non_io_timeout)
-            }
+            },
             StorageProvider::S3 => self
                 .s3
                 .get_operator_or_init(app, io_timeout, non_io_timeout),
-            _ => Err(Error::ProviderNotSet),
+            StorageProvider::None => Err(Error::ProviderNotSet),
         }
     }
 
@@ -134,7 +136,7 @@ impl StorageConfig {
             StorageProvider::Local => self.local.remove_operator(),
             StorageProvider::WebDav => self.webdav.remove_operator(),
             StorageProvider::S3 => self.s3.remove_operator(),
-            _ => {}
+            StorageProvider::None => {},
         }
     }
 }
@@ -169,8 +171,8 @@ pub struct WebDavConfig {
 impl Default for WebDavConfig {
     fn default() -> Self {
         Self {
-            endpoint: "".to_string(),
-            username: "".to_string(),
+            endpoint: String::new(),
+            username: String::new(),
             password: None,
             root_path: concat!("/", env!("CARGO_PKG_NAME")).to_string(),
             operator: RefCell::new(None),
@@ -197,10 +199,10 @@ impl Default for S3Config {
     fn default() -> Self {
         Self {
             bucket: env!("CARGO_PKG_NAME").to_string(),
-            region: "".to_string(),
+            region: String::new(),
             endpoint: None,
-            access_key: "".to_string(),
-            secret_key: "".to_string(),
+            access_key: String::new(),
+            secret_key: String::new(),
             operator: RefCell::new(None),
         }
     }
@@ -254,7 +256,7 @@ impl Default for AppearanceConfig {
         Self {
             theme: ThemeMode::System,
             language: sys_locale::get_locale().unwrap_or_else(|| "en-US".to_string()),
-            time_display: Default::default(),
+            time_display: TimeDisplayConfig::default(),
             extract_cover_color: true,
         }
     }
@@ -324,6 +326,7 @@ pub enum SortType {
 }
 
 impl SortType {
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             SortType::Id => "id",
@@ -334,6 +337,7 @@ impl SortType {
     }
 
     #[allow(clippy::should_implement_trait)]
+    #[must_use]
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "id" => Some(SortType::Id),

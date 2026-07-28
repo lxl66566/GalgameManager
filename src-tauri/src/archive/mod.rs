@@ -25,6 +25,7 @@ pub enum ArchiveAlgo {
 }
 
 impl ArchiveAlgo {
+    #[must_use]
     pub fn ext(&self) -> &str {
         match self {
             ArchiveAlgo::SquashfsZstd => "squashfs",
@@ -64,6 +65,7 @@ pub struct ArchiveInfo {
 impl ArchiveInfo {
     /// Strip prefix from name
     #[inline]
+    #[must_use]
     pub fn strip_prefix(mut self, prefix: &str) -> Self {
         self.name = self
             .name
@@ -84,8 +86,8 @@ impl From<opendal::Entry> for ArchiveInfo {
     }
 }
 
-impl From<std::fs::DirEntry> for ArchiveInfo {
-    fn from(value: std::fs::DirEntry) -> Self {
+impl From<fs::DirEntry> for ArchiveInfo {
+    fn from(value: fs::DirEntry) -> Self {
         Self {
             name: value.file_name().to_string_lossy().to_string(),
             size: value.metadata().map(|m| m.len()).unwrap_or_default(),
@@ -119,6 +121,7 @@ impl Archive for ArchiveConfig {
             ArchiveAlgo::Tar => TarArchiver.archive(paths, writer),
         }
     }
+
     fn extract(
         &self,
         reader: impl io::Read + io::Seek + Send,
@@ -137,8 +140,8 @@ impl Archive for ArchiveConfig {
 pub fn archive_impl(
     device_name: &str,
     archive_conf: &ArchiveConfig,
-    game_backup_dir: PathBuf,
-    paths: Vec<String>,
+    game_backup_dir: &Path,
+    paths: &[String],
 ) -> Result<String> {
     // 1. 解析路径
     let target_paths: Vec<PathBuf> = paths
@@ -147,7 +150,7 @@ pub fn archive_impl(
         .collect::<Result<_>>()?;
 
     if !game_backup_dir.exists() {
-        fs::create_dir_all(&game_backup_dir)?;
+        fs::create_dir_all(game_backup_dir)?;
     }
 
     let now = chrono::Local::now();
@@ -170,29 +173,29 @@ pub fn archive_impl(
     );
 
     match archive_conf.archive(target_paths, file) {
-        Ok(_) => Ok(filename),
+        Ok(()) => Ok(filename),
         Err(e) => {
             error!("Failed to archive saves: {e}");
             if let Err(e) = fs::remove_file(&file_path) {
                 error!("Failed to revert previous created archive file: {e}");
             }
             Err(e.into())
-        }
+        },
     }
 }
 
 pub fn restore_impl(
     archive_conf: &ArchiveConfig,
-    game_backup_dir: PathBuf,
-    archive_filename: String,
-    paths: Vec<String>,
+    game_backup_dir: &Path,
+    archive_filename: &str,
+    paths: &[String],
 ) -> Result<()> {
     let target_paths: Vec<PathBuf> = paths
         .iter()
         .map(|s| resolve_var(s).map(PathBuf::from))
         .collect::<Result<_>>()?;
 
-    let archive_path = game_backup_dir.join(&archive_filename);
+    let archive_path = game_backup_dir.join(archive_filename);
 
     if !archive_path.exists() {
         return Err(io::Error::new(io::ErrorKind::NotFound, "Archive not found").into());
@@ -215,7 +218,7 @@ pub fn restore_impl(
 mod tests {
     use super::*;
 
-    fn test_archiver(archiver: impl Archive + Sized) -> io::Result<()> {
+    fn test_archiver(archiver: &(impl Archive + Sized)) -> io::Result<()> {
         // 1. Setup Source Environment
         let src_dir_1 = tempfile::tempdir()?;
         let src_path_1 = src_dir_1.path();
@@ -274,11 +277,11 @@ mod tests {
 
     #[test]
     fn test_tar_archiver() -> io::Result<()> {
-        test_archiver(TarArchiver)
+        test_archiver(&TarArchiver)
     }
 
     #[test]
     fn test_squashfs_archiver() -> io::Result<()> {
-        test_archiver(SquashfsArchiver(1))
+        test_archiver(&SquashfsArchiver(1))
     }
 }

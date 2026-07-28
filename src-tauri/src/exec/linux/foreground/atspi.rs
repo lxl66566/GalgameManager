@@ -9,12 +9,11 @@
 //!
 //! 1. Connect to the session bus and install a D-Bus match rule for
 //!    `org.a11y.atspi.Event.Object.StateChanged:focused`.
-//! 2. Whenever such a signal arrives, record the sender's unique bus name and
-//!    resolve it to a unix PID via
-//!    `org.freedesktop.DBus.GetConnectionUnixProcessID`.
-//! 3. Cache that name→PID mapping so subsequent focus events from the same app
-//!    are free. The cache is invalidated through `NameOwnerChanged` so we never
-//!    serve a stale PID after a process exits.
+//! 2. Whenever such a signal arrives, record the sender's unique bus name and resolve it to a unix
+//!    PID via `org.freedesktop.DBus.GetConnectionUnixProcessID`.
+//! 3. Cache that name→PID mapping so subsequent focus events from the same app are free. The cache
+//!    is invalidated through `NameOwnerChanged` so we never serve a stale PID after a process
+//!    exits.
 //!
 //! The listener runs on a dedicated OS thread with its own current-
 //! thread tokio runtime. State is shared via [`AtomicU32`] +
@@ -83,7 +82,11 @@ impl AtspiDetector {
 impl ForegroundDetector for AtspiDetector {
     fn focused_pid(&self) -> Option<u32> {
         let pid = FOCUSED_PID.load(Ordering::Relaxed);
-        if pid == 0 { None } else { Some(pid) }
+        if pid == 0 {
+            None
+        } else {
+            Some(pid)
+        }
     }
 }
 
@@ -100,7 +103,7 @@ fn run_listener_thread() {
         Err(e) => {
             log::warn!("AT-SPI: failed to build runtime: {e}");
             return;
-        }
+        },
     };
 
     rt.block_on(async move {
@@ -142,7 +145,7 @@ async fn run_listener() -> zbus::Result<()> {
             .body()
             .deserialize::<(String, i32, i32, OwnedValue)>()
             .ok()
-            .map(|(_, detail1, _, _)| detail1);
+            .map(|(_, detail1, ..)| detail1);
         if !matches!(gained, Some(1)) {
             continue;
         }
@@ -202,7 +205,7 @@ async fn setup_owner_change_watch(session: &Connection) {
             Err(e) => {
                 log::debug!("AT-SPI: NameOwnerChanged subscribe failed: {e}");
                 return;
-            }
+            },
         };
         while let Some(ev) = events.next().await {
             let Ok(args) = ev.args() else {

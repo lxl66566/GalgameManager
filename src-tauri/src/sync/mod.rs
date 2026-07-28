@@ -123,8 +123,7 @@ pub trait MyOperation {
     ///
     /// # Parameters
     ///
-    /// - safe=true: will not upload config if local is clean or remote config
-    ///   is newer
+    /// - safe=true: will not upload config if local is clean or remote config is newer
     async fn upload_config(&self, app: &AppHandle, safe: bool) -> Result<UploadConfigStatus> {
         // Local Clean Check
         let local_config = CONFIG.lock().clone();
@@ -146,7 +145,7 @@ pub trait MyOperation {
                 Err(e) => {
                     warn!("Failed to read remote config (safe=false), force uploading anyway: {e}");
                     None
-                }
+                },
             }
         };
         if let Some(remote_config) = remote_config {
@@ -184,8 +183,7 @@ pub trait MyOperation {
     ///
     /// # Parameters
     ///
-    /// - safe=true: will not apply config if local is dirty or remote config is
-    ///   older
+    /// - safe=true: will not apply config if local is dirty or remote config is older
     ///
     /// # Returns
     ///
@@ -209,7 +207,8 @@ pub trait MyOperation {
         // Local Clean Check
         if safe && local_config.last_updated > local_last_sync {
             warn!(
-                "Local dirty (updated {} > sync {}), cannot overwrite. Please upload or revert first.",
+                "Local dirty (updated {} > sync {}), cannot overwrite. Please upload or revert \
+                 first.",
                 local_config.last_updated, local_last_sync
             );
             return Ok((None, false));
@@ -276,12 +275,14 @@ pub trait BuildOperator {
 
 impl BuildOperator for LocalConfig {
     type CTX = VarMap;
+
     fn get_operator(&self) -> Option<Box<dyn MyOperation + Send + Sync>> {
         self.operator
             .borrow()
             .as_ref()
             .map(|o| Box::new(o.clone()) as Box<dyn MyOperation + Send + Sync>)
     }
+
     fn build_operator(
         &self,
         ctx: &VarMap,
@@ -299,6 +300,7 @@ impl BuildOperator for LocalConfig {
         *self.operator.borrow_mut() = Some(LocalOperator(operator));
         Ok(())
     }
+
     fn remove_operator(&self) {
         *self.operator.borrow_mut() = None;
     }
@@ -306,12 +308,14 @@ impl BuildOperator for LocalConfig {
 
 impl BuildOperator for WebDavConfig {
     type CTX = AppHandle;
+
     fn get_operator(&self) -> Option<Box<dyn MyOperation + Send + Sync>> {
         self.operator
             .borrow()
             .as_ref()
             .map(|o| Box::new(o.clone()) as Box<dyn MyOperation + Send + Sync>)
     }
+
     fn build_operator(
         &self,
         ctx: &Self::CTX,
@@ -360,12 +364,14 @@ impl BuildOperator for WebDavConfig {
 
 impl BuildOperator for S3Config {
     type CTX = AppHandle;
+
     fn get_operator(&self) -> Option<Box<dyn MyOperation + Send + Sync>> {
         self.operator
             .borrow()
             .as_ref()
             .map(|o| Box::new(o.clone()) as Box<dyn MyOperation + Send + Sync>)
     }
+
     fn build_operator(
         &self,
         ctx: &Self::CTX,
@@ -425,11 +431,11 @@ mod tests {
         let archive_filename = "test.txt";
 
         // store the remote files
-        let tmp_dir = tempfile::tempdir()?;
+        let tmp_dir = tempdir()?;
         let remote_path = tmp_dir.path().join("test");
 
         // store the local files
-        let src_dir = tempfile::tempdir()?;
+        let src_dir = tempdir()?;
         let src_path = src_dir.path();
         let src_archive = src_path.join(game_id.to_string()).join(archive_filename);
         fs::create_dir(src_archive.parent().unwrap())?;
@@ -440,7 +446,7 @@ mod tests {
             ..Default::default()
         };
         let op = local_conf.get_operator_or_init(
-            &Default::default(),
+            &VarMap::default(),
             DEFAULT_IO_TIMEOUT,
             DEFAULT_NON_IO_TIMEOUT,
         )?;
@@ -454,13 +460,10 @@ mod tests {
             .await
             .unwrap();
         let ls = op.list_archive(game_id).await.unwrap();
-        assert_eq!(
-            ls,
-            vec![ArchiveInfo {
-                name: archive_filename.to_string(),
-                size: 4
-            }]
-        );
+        assert_eq!(ls, vec![ArchiveInfo {
+            name: archive_filename.to_string(),
+            size: 4
+        }]);
 
         // pull
         fs::remove_file(&src_archive)?;
@@ -483,7 +486,7 @@ mod tests {
         let game_dir = backup_dir.path().join(game_id.to_string());
         fs::create_dir(&game_dir)?;
         let archive_path = game_dir.join(archive_filename);
-        fs::write(&archive_path, [0; 20 * 1024 * 1024].as_ref())?;
+        fs::write(&archive_path, vec![0u8; 20 * 1024 * 1024])?;
 
         op.upload_archive(game_id, archive_filename, backup_dir.as_ref())
             .await
@@ -496,7 +499,10 @@ mod tests {
         op.pull_archive(game_id, archive_filename, backup_dir.as_ref())
             .await
             .unwrap();
-        assert_eq!(fs::read(&archive_path)?, [0; 20 * 1024 * 1024].as_ref());
+        assert_eq!(
+            fs::read(&archive_path)?,
+            vec![0u8; 20 * 1024 * 1024].as_slice()
+        );
 
         Ok(())
     }
@@ -511,7 +517,7 @@ mod tests {
         test_big_file(
             &*local_config
                 .get_operator_or_init(
-                    &Default::default(),
+                    &VarMap::default(),
                     DEFAULT_IO_TIMEOUT,
                     DEFAULT_NON_IO_TIMEOUT,
                 )

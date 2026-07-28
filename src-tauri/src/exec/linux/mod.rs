@@ -38,19 +38,18 @@ const UNIT_LIVENESS_CACHE: Duration = Duration::from_secs(5);
 
 /// Tracking strategy chosen at launch time.
 ///
-/// * `Systemd` — preferred when a user systemd session is available. We spawn
-///   the game inside a transient scope via `systemd-run --user --scope
-///   --no-block`, then poll the scope's `cgroup.procs` to know whether the game
-///   is still running and whether the focused window belongs to it.
+/// * `Systemd` — preferred when a user systemd session is available. We spawn the game inside a
+///   transient scope via `systemd-run --user --scope --no-block`, then poll the scope's
+///   `cgroup.procs` to know whether the game is still running and whether the focused window
+///   belongs to it.
 ///
-/// * `SystemdUnit` — degraded systemd path. The scope was created but its
-///   cgroup could not be resolved (e.g. empty `ControlGroup` property on some
-///   systemd versions). We poll `systemctl --user is-active` instead.
-///   Process-identity focus matching is unavailable, so in precision mode any
-///   foreground window counts as focused.
+/// * `SystemdUnit` — degraded systemd path. The scope was created but its cgroup could not be
+///   resolved (e.g. empty `ControlGroup` property on some systemd versions). We poll `systemctl
+///   --user is-active` instead. Process-identity focus matching is unavailable, so in precision
+///   mode any foreground window counts as focused.
 ///
-/// * `Child` — fallback for systems without systemd (or when spawning the scope
-///   fails). Behaves like the legacy unix implementation.
+/// * `Child` — fallback for systems without systemd (or when spawning the scope fails). Behaves
+///   like the legacy unix implementation.
 ///
 /// The `unit` field on the systemd variants is retained so that, once the
 /// tracker reports the game has exited, we can ask systemd *how* it exited
@@ -94,7 +93,7 @@ impl GameTracker {
                     *cached = systemctl_unit_is_active(unit);
                 }
                 *cached
-            }
+            },
             Self::Child {
                 child,
                 last_success,
@@ -102,12 +101,12 @@ impl GameTracker {
                 Ok(Some(status)) => {
                     *last_success = Some(status.success());
                     false
-                }
+                },
                 Ok(None) => true,
                 Err(_) => {
                     *last_success = Some(false);
                     false
-                }
+                },
             },
         }
     }
@@ -123,7 +122,7 @@ impl GameTracker {
                 read_procs(procs_path)
                     .map(|pids| pids.contains(&pid))
                     .unwrap_or(false)
-            }
+            },
             // No process list available — assume focus so playtime
             // accumulates. Precision mode may over-count when the user
             // switches away, but that is acceptable for this fallback.
@@ -206,7 +205,7 @@ fn query_unit_result(unit: &str) -> bool {
             // spam false-positive abnormal toasts on broken systemd
             // installs.
             true
-        }
+        },
     }
 }
 
@@ -241,18 +240,18 @@ pub async fn launch_game(
             Ok(Some(procs_path)) => {
                 info!("Game spawned via systemd scope: {unit}");
                 GameTracker::Systemd { procs_path, unit }
-            }
+            },
             Ok(None) => {
                 info!(
-                    "Game spawned via systemd scope: {unit} (cgroup tracking unavailable; \
-                     using unit-liveness polling)"
+                    "Game spawned via systemd scope: {unit} (cgroup tracking unavailable; using \
+                     unit-liveness polling)"
                 );
                 GameTracker::SystemdUnit {
                     unit,
                     last_check: Instant::now(),
                     cached: true,
                 }
-            }
+            },
             Err(Error::Io(e)) => {
                 warn!("systemd-run invocation failed ({e}); falling back to direct spawn");
                 let child = start_ctx.build_async_command()?.spawn()?;
@@ -260,7 +259,7 @@ pub async fn launch_game(
                     child,
                     last_success: None,
                 }
-            }
+            },
             Err(e) => return Err(e),
         }
     } else {

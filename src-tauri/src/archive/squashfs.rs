@@ -27,12 +27,13 @@ impl SquashfsArchiver {
         let metadata = fs::symlink_metadata(path)?;
 
         // 获取 mtime (Unix 时间戳)
+        // File mtimes fit in u32 for all realistic dates (before 2106).
+        #[allow(clippy::cast_possible_truncation)]
         let mtime = metadata
             .modified()
             .ok()
             .and_then(|t| t.duration_since(SystemTime::UNIX_EPOCH).ok())
-            .map(|d| d.as_secs() as u32)
-            .unwrap_or(0);
+            .map_or(0, |d| d.as_secs() as u32);
 
         #[cfg(unix)]
         {
@@ -47,7 +48,11 @@ impl SquashfsArchiver {
         #[cfg(not(unix))]
         {
             Ok(NodeHeader {
-                permissions: if metadata.is_dir() { 0o755 } else { 0o644 },
+                permissions: if metadata.is_dir() {
+                    0o755
+                } else {
+                    0o644
+                },
                 uid: 1000,
                 gid: 1000,
                 mtime,
@@ -56,7 +61,6 @@ impl SquashfsArchiver {
     }
 
     fn get_dest_from_fullpath(
-        &self,
         fullpath: &Path,
         path_map: &HashMap<&OsStr, PathBuf>,
     ) -> io::Result<PathBuf> {
@@ -104,7 +108,7 @@ impl super::Archive for SquashfsArchiver {
 
         // 配置 zstd 压缩
         let zstd_options = Zstd {
-            compression_level: self.0 as u32,
+            compression_level: u32::from(self.0),
         };
         let compression_options = CompressionOptions::Zstd(zstd_options);
         let compressor = FilesystemCompressor::new(Compressor::Zstd, Some(compression_options))?;
@@ -180,7 +184,7 @@ impl super::Archive for SquashfsArchiver {
                 continue;
             }
 
-            let dest_path = self.get_dest_from_fullpath(&node.fullpath, &target_map)?;
+            let dest_path = Self::get_dest_from_fullpath(&node.fullpath, &target_map)?;
 
             // 处理不同类型的节点
             match &node.inner {
@@ -191,12 +195,12 @@ impl super::Archive for SquashfsArchiver {
 
                     // 恢复 mtime
                     let mtime =
-                        SystemTime::UNIX_EPOCH + Duration::from_secs(node.header.mtime as u64);
+                        SystemTime::UNIX_EPOCH + Duration::from_secs(u64::from(node.header.mtime));
                     let _ = dest_file.set_modified(mtime);
-                }
+                },
                 InnerNode::Dir(_) if !dest_path.exists() => {
                     fs::create_dir_all(&dest_path)?;
-                }
+                },
                 #[allow(unused_variables)]
                 InnerNode::Symlink(link) => {
                     #[cfg(unix)]
@@ -206,8 +210,8 @@ impl super::Archive for SquashfsArchiver {
                         }
                         std::os::unix::fs::symlink(&link.link, &dest_path)?;
                     }
-                }
-                _ => {} // 忽略字符设备等
+                },
+                _ => {}, // 忽略字符设备等
             }
 
             // 恢复权限 (Unix only)
@@ -237,21 +241,15 @@ mod tests {
         ]);
 
         let fullpath = Path::new("/a/b/c");
-        let dest_path = SquashfsArchiver(1)
-            .get_dest_from_fullpath(fullpath, &path_map)
-            .unwrap();
+        let dest_path = SquashfsArchiver::get_dest_from_fullpath(fullpath, &path_map).unwrap();
         assert_eq!(dest_path, PathBuf::from("/a/b/c"));
 
         let fullpath = Path::new("/b/c");
-        let dest_path = SquashfsArchiver(1)
-            .get_dest_from_fullpath(fullpath, &path_map)
-            .unwrap();
+        let dest_path = SquashfsArchiver::get_dest_from_fullpath(fullpath, &path_map).unwrap();
         assert_eq!(dest_path, PathBuf::from("/2/b/c"));
 
         let fullpath = Path::new("/c.txt");
-        let dest_path = SquashfsArchiver(1)
-            .get_dest_from_fullpath(fullpath, &path_map)
-            .unwrap();
+        let dest_path = SquashfsArchiver::get_dest_from_fullpath(fullpath, &path_map).unwrap();
         assert_eq!(dest_path, PathBuf::from("/c/c.txt"));
     }
 }

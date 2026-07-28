@@ -82,19 +82,19 @@ static TRACKED_PROCESSES: Lazy<DashMap<u32, Vec<(u32, ExitSignal)>>> = Lazy::new
 /// Send a signal to a process by PID.
 #[cfg(windows)]
 fn send_signal(pid: u32, signal: ExitSignal) -> Result<()> {
+    use windows::Win32::{
+        Foundation::CloseHandle,
+        System::Threading::{OpenProcess, PROCESS_TERMINATE, TerminateProcess},
+    };
     match signal {
         ExitSignal::None => Ok(()),
         ExitSignal::Sigterm | ExitSignal::Sigkill => {
             if signal == ExitSignal::Sigterm {
                 log::warn!(
-                    "SIGTERM is not natively supported on Windows, \
-                     falling back to TerminateProcess for pid {pid}"
+                    "SIGTERM is not natively supported on Windows, falling back to \
+                     TerminateProcess for pid {pid}"
                 );
             }
-            use windows::Win32::{
-                Foundation::CloseHandle,
-                System::Threading::{OpenProcess, PROCESS_TERMINATE, TerminateProcess},
-            };
             let handle = unsafe { OpenProcess(PROCESS_TERMINATE, false, pid) }
                 .map_err(|_| crate::error::Error::Launch)?;
             let res = unsafe { TerminateProcess(handle, 1) };
@@ -104,7 +104,7 @@ fn send_signal(pid: u32, signal: ExitSignal) -> Result<()> {
             res.map_err(|_| crate::error::Error::Launch)?;
             log::info!("Terminated process {pid}");
             Ok(())
-        }
+        },
     }
 }
 
@@ -124,7 +124,7 @@ fn send_signal(pid: u32, signal: ExitSignal) -> Result<()> {
                 .status()?;
             log::info!("Sent SIG{sig_name} to process {pid}");
             Ok(())
-        }
+        },
     }
 }
 
@@ -137,7 +137,7 @@ impl ExecutePlugin {
         Self
     }
 
-    fn try_execute(&self, ctx: &super::PluginContext, phase: ExecutePhase) -> Result<()> {
+    fn try_execute(ctx: &super::PluginContext, phase: ExecutePhase) -> Result<()> {
         let super::PluginConfig::Execute(config) = &*ctx.config else {
             return Ok(());
         };
@@ -187,11 +187,11 @@ impl ExecutePlugin {
 #[async_trait::async_trait]
 impl super::PluginHandler for ExecutePlugin {
     async fn before_game_start(&self, ctx: super::PluginContext) -> Result<()> {
-        self.try_execute(&ctx, ExecutePhase::BeforeGameStart)
+        Self::try_execute(&ctx, ExecutePhase::BeforeGameStart)
     }
 
     async fn after_game_start(&self, ctx: super::PluginContext) -> Result<()> {
-        self.try_execute(&ctx, ExecutePhase::AfterGameStart)
+        Self::try_execute(&ctx, ExecutePhase::AfterGameStart)
     }
 
     async fn after_game_exit(&self, ctx: super::PluginContext) -> Result<()> {
@@ -203,6 +203,6 @@ impl super::PluginHandler for ExecutePlugin {
             }
         }
 
-        self.try_execute(&ctx, ExecutePhase::GameExit)
+        Self::try_execute(&ctx, ExecutePhase::GameExit)
     }
 }

@@ -86,6 +86,7 @@ impl ThrottledWriter {
 
     /// Request an immediate flush that bypasses the throttle. Non-blocking.
     /// Returns `false` if the writer task has exited.
+    #[must_use]
     pub fn forced(&self, source: &'static str) -> bool {
         self.send_forced(source, None)
     }
@@ -94,6 +95,7 @@ impl ThrottledWriter {
     /// NOT from a runtime worker (uses `blocking_recv`). Returns `false` if
     /// the writer task has exited — callers with a fallback should then call
     /// [`ThrottledWriter::flush_direct`].
+    #[must_use]
     pub fn force_blocking(&self, source: &'static str) -> bool {
         let (done_tx, done_rx) = oneshot::channel();
         if self.send_forced(source, Some(done_tx)) {
@@ -107,6 +109,7 @@ impl ThrottledWriter {
 
     /// Low-level send used by both [`forced`] and [`force_blocking`].
     /// Returns `true` if the request was queued.
+    #[must_use]
     pub fn send_forced(&self, source: &'static str, done: Option<oneshot::Sender<()>>) -> bool {
         self.tx.send(Request::Forced { source, done }).is_ok()
     }
@@ -149,7 +152,7 @@ async fn writer_loop(
                     let flush_now =
                         last_flush.is_none_or(|t| now.duration_since(t) >= interval);
                     if flush_now {
-                        run_flush(name, source, &flush, &on_error);
+                        run_flush(name, source, &flush, on_error.as_ref());
                         last_flush = Some(Instant::now());
                         next_deadline = None;
                     } else {
@@ -162,7 +165,7 @@ async fn writer_loop(
                     }
                 }
                 Some(Request::Forced { source, done }) => {
-                    run_flush(name, source, &flush, &on_error);
+                    run_flush(name, source, &flush, on_error.as_ref());
                     last_flush = Some(Instant::now());
                     next_deadline = None;
                     if let Some(done) = done {
@@ -171,13 +174,13 @@ async fn writer_loop(
                 }
             },
             // Parks forever via `pending()` when no deadline is scheduled.
-            _ = async {
+            () = async {
                 match deadline {
                     Some(d) => tokio::time::sleep_until(d).await,
                     None => std::future::pending::<()>().await,
                 }
             } => {
-                run_flush(name, last_source, &flush, &on_error);
+                run_flush(name, last_source, &flush, on_error.as_ref());
                 last_flush = Some(Instant::now());
                 next_deadline = None;
             }
@@ -187,7 +190,7 @@ async fn writer_loop(
 }
 
 /// One snapshot+store attempt with structured logging.
-fn run_flush(name: &str, source: &str, flush: &FlushFn, on_error: &Option<OnErrorFn>) {
+fn run_flush(name: &str, source: &str, flush: &FlushFn, on_error: Option<&OnErrorFn>) {
     match flush() {
         Ok(()) => log::info!("[{name}-writer] flushed (source={source})"),
         Err(e) => {
@@ -195,7 +198,7 @@ fn run_flush(name: &str, source: &str, flush: &FlushFn, on_error: &Option<OnErro
             if let Some(cb) = on_error {
                 cb(e);
             }
-        }
+        },
     }
 }
 
@@ -353,7 +356,7 @@ mod tests {
         drop(w.tx);
         // Writer should exit cleanly once all senders are gone.
         match w.handle.await {
-            Ok(()) => {}
+            Ok(()) => {},
             Err(e) => panic!("writer task panicked: {e}"),
         }
     }

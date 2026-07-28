@@ -19,6 +19,7 @@ pub struct Transaction {
 }
 
 impl Transaction {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }

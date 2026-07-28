@@ -43,7 +43,7 @@ static DEAD_URLS: Lazy<DashMap<String, u64>> = Lazy::new(|| {
                     map.insert(url, expiry);
                 }
             }
-        }
+        },
         Err(e) => warn!("Failed to load dead URL cache: {e}"),
     }
     map
@@ -65,10 +65,10 @@ static DEAD_URL_WRITER: Lazy<ThrottledWriter> = Lazy::new(|| {
 /// TTL by HTTP status.
 ///
 /// - **429** Too Many Requests: rate limiting — retry soon (5 min).
-/// - **404 / 410**: the resource is gone — keep a long window (30 d) but don't
-///   permanently burn it (a CDN re-org / re-upload can revive it).
-/// - **Other 4xx** (401/403/422/...): may recover (hotlink protection,
-///   transient auth) — medium window (24 h).
+/// - **404 / 410**: the resource is gone — keep a long window (30 d) but don't permanently burn it
+///   (a CDN re-org / re-upload can revive it).
+/// - **Other 4xx** (401/403/422/...): may recover (hotlink protection, transient auth) — medium
+///   window (24 h).
 ///
 /// Note: 5xx is never marked dead — it's retried by the download layer.
 pub(super) fn ttl_for_status(code: StatusCode) -> Duration {
@@ -85,8 +85,7 @@ pub(super) fn ttl_for_status(code: StatusCode) -> Duration {
 fn now_secs() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0)
+        .map_or(0, |d| d.as_secs())
 }
 
 /// Is `url` known-dead *and* still within its TTL? Expired entries are
@@ -231,15 +230,12 @@ no-tab-line\n\
         // Keeps a, c, d (trim handles the leading spaces on its ts), e.
         // Drops: bad number (b), empty line, no-tab line, empty url.
         let urls: Vec<_> = parsed.iter().map(|(u, _)| u.as_str()).collect();
-        assert_eq!(
-            urls,
-            [
-                "https://a.example/x.png",
-                "https://c.example/z.png",
-                "https://d.example/w.png",
-                "https://e.example/v.png"
-            ]
-        );
+        assert_eq!(urls, [
+            "https://a.example/x.png",
+            "https://c.example/z.png",
+            "https://d.example/w.png",
+            "https://e.example/v.png"
+        ]);
         // Timestamps parse correctly, including the trimmed/CR-stripped ones.
         let expiry_e = parsed
             .iter()

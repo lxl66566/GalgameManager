@@ -196,7 +196,8 @@ mod stub_impl {
         async fn before_game_start(&self, ctx: PluginContext) -> Result<()> {
             if let PluginConfig::VoiceZerointerrupt(_) = &*ctx.config {
                 log::warn!(
-                    "VoiceZerointerrupt: dll injection is not supported on this platform, skipping for game {}",
+                    "VoiceZerointerrupt: dll injection is not supported on this platform, \
+                     skipping for game {}",
                     ctx.launch.game_id
                 );
             }

@@ -1,3 +1,9 @@
+// Tauri commands must accept owned arguments (serde deserializes from the IPC
+// payload) and uniformly return Result<T> (for IPC error propagation), even
+// when a particular command never fails. These are framework constraints, not
+// design issues — suppress the pedantic lints module-wide.
+#![allow(clippy::needless_pass_by_value, clippy::unnecessary_wraps)]
+
 use std::{fs, path::PathBuf};
 
 use chrono::Utc;
@@ -68,7 +74,7 @@ pub fn resolve_var(s: &str) -> Result<String> {
 
 #[tauri::command]
 pub fn log(level: LogLevel, msg: String) {
-    log::log!(level.into(), "{}", msg);
+    log::log!(level.into(), "{msg}");
 }
 
 // region http
@@ -168,7 +174,7 @@ pub fn archive(app: AppHandle, game_id: u32) -> Result<String> {
     drop(lock);
 
     // logged inner
-    archive_impl(&device_name, &archive_conf, game_backup_dir, paths)
+    archive_impl(&device_name, &archive_conf, &game_backup_dir, &paths)
 }
 
 #[tauri::command]
@@ -181,7 +187,7 @@ pub fn extract(app: AppHandle, game_id: u32, archive_filename: String) -> Result
     drop(lock);
 
     // logged inner
-    restore_impl(&archive_conf, game_backup_dir, archive_filename, paths)
+    restore_impl(&archive_conf, &game_backup_dir, &archive_filename, &paths)
 }
 
 // region sync
@@ -192,8 +198,9 @@ fn build_operator_with_varmap(app: &AppHandle) -> Result<Box<dyn MyOperation + S
 
     let lock = CONFIG.lock();
     let varmap = lock.varmap();
-    let io_timeout = Duration::from_secs(lock.settings.sync_io_timeout_secs.max(1) as u64);
-    let non_io_timeout = Duration::from_secs(lock.settings.sync_non_io_timeout_secs.max(1) as u64);
+    let io_timeout = Duration::from_secs(u64::from(lock.settings.sync_io_timeout_secs.max(1)));
+    let non_io_timeout =
+        Duration::from_secs(u64::from(lock.settings.sync_non_io_timeout_secs.max(1)));
     lock.settings
         .storage
         .build_operator_with_timeouts(app, varmap, io_timeout, non_io_timeout)
@@ -208,10 +215,7 @@ pub async fn list_archive(app: AppHandle, game_id: u32) -> Result<Vec<ArchiveInf
 
 #[tauri::command(async)]
 pub async fn upload_archive(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
-    info!(
-        "uploading archive: game_id={}, archive_filename={}",
-        game_id, archive_filename
-    );
+    info!("uploading archive: game_id={game_id}, archive_filename={archive_filename}");
 
     let tx = Transaction::new();
     let save_dispatcher = SaveUploadDispatcher::new(&app, game_id, tx.clone())?;
@@ -279,12 +283,12 @@ pub async fn rename_remote_archive(
 /// changed
 #[tauri::command]
 pub fn clean_current_operator() {
-    CONFIG.lock().settings.storage.clean_current_operator()
+    CONFIG.lock().settings.storage.clean_current_operator();
 }
 
 #[tauri::command(async)]
 pub async fn upload_config(app: AppHandle, safe: bool) -> Result<UploadConfigStatus> {
-    info!("upload_config triggered, safe: {}", safe);
+    info!("upload_config triggered, safe: {safe}");
     let op = build_operator_with_varmap(&app)?;
     let res = op.upload_config(&app, safe).await?;
     #[cfg(feature = "config-daily-backup")]
@@ -349,8 +353,7 @@ pub fn paths_exist(paths: Vec<String>) -> Result<Vec<bool>> {
         .iter()
         .map(|p| {
             lock.resolve_var(p)
-                .map(|resolved| std::path::Path::new(&resolved).exists())
-                .unwrap_or(false)
+                .is_ok_and(|resolved| std::path::Path::new(&resolved).exists())
         })
         .collect();
     Ok(results)

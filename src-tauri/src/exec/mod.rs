@@ -32,7 +32,7 @@ pub use linux::*;
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
-pub use windows::*;
+pub use windows::{game_loop, launch_game};
 
 pub(crate) static GAME_LOOP_HANDLES: Lazy<DashMap<u32, JoinHandle<Result<()>>>> =
     Lazy::new(DashMap::new);
@@ -41,7 +41,7 @@ pub(crate) static GAME_LOOP_HANDLES: Lazy<DashMap<u32, JoinHandle<Result<()>>>> 
 pub struct StartCtx {
     pub cmd: String,
     pub current_dir: Option<String>,
-    pub env: Option<std::collections::HashMap<String, String>>,
+    pub env: Option<HashMap<String, String>>,
 }
 
 /// Payload emitted with `game://exit/{id}`.
@@ -99,27 +99,22 @@ impl StartCtx {
             });
             (program_path, cd)
         } else if has_path_sep {
-            match &self.current_dir {
-                Some(cd) => {
-                    // 相对路径 + 有 current_dir：拼接出系统能找到的绝对路径
-                    let joined = Path::new(cd).join(&program_path);
-                    debug!(
-                        "Relative program '{}' specified with current_dir '{}', joined to '{}'",
-                        program,
-                        cd,
-                        joined.display()
-                    );
-                    (joined, Some(cd.clone()))
-                }
-                None => {
-                    warn!(
-                        "Relative program '{}' specified without a working \
-                         directory; the OS will search in PATH and the \
-                         process CWD",
-                        program
-                    );
-                    (program_path, None)
-                }
+            if let Some(cd) = &self.current_dir {
+                // 相对路径 + 有 current_dir：拼接出系统能找到的绝对路径
+                let joined = Path::new(cd).join(&program_path);
+                debug!(
+                    "Relative program '{}' specified with current_dir '{}', joined to '{}'",
+                    program,
+                    cd,
+                    joined.display()
+                );
+                (joined, Some(cd.clone()))
+            } else {
+                warn!(
+                    "Relative program '{program}' specified without a working directory; the OS \
+                     will search in PATH and the process CWD"
+                );
+                (program_path, None)
             }
         } else {
             // Bare command name: PATH lookup. `current_dir` (if any) is
@@ -177,7 +172,7 @@ pub struct ResolvedParts {
     pub program: PathBuf,
     pub args: Vec<String>,
     pub current_dir: Option<String>,
-    pub env: Option<std::collections::HashMap<String, String>>,
+    pub env: Option<HashMap<String, String>>,
 }
 pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()> {
     let (plugins, metas, exe_path, current_dir) = {
@@ -239,29 +234,28 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
         }
     }
 
-    let start_ctx = match launch_override {
-        Some(ctx) => ctx,
-        None => {
-            let current_dir = if launch.current_dir.is_empty() {
-                None
-            } else {
-                Some(launch.current_dir.clone())
-            };
-            let exe = Path::new(&launch.exe_path);
-            if exe.is_relative() && current_dir.is_none() {
-                warn!(
-                    "Game executable '{}' is relative without a resolvable parent directory...",
-                    launch.exe_path
-                );
-            }
-            StartCtx {
-                cmd: match shlex::try_quote(&launch.exe_path) {
-                    Ok(quoted) => quoted.into_owned(),
-                    Err(_) => launch.exe_path.clone(),
-                },
-                current_dir,
-                env: None,
-            }
+    let start_ctx = if let Some(ctx) = launch_override {
+        ctx
+    } else {
+        let current_dir = if launch.current_dir.is_empty() {
+            None
+        } else {
+            Some(launch.current_dir.clone())
+        };
+        let exe = Path::new(&launch.exe_path);
+        if exe.is_relative() && current_dir.is_none() {
+            warn!(
+                "Game executable '{}' is relative without a resolvable parent directory...",
+                launch.exe_path
+            );
+        }
+        StartCtx {
+            cmd: match shlex::try_quote(&launch.exe_path) {
+                Ok(quoted) => quoted.into_owned(),
+                Err(_) => launch.exe_path.clone(),
+            },
+            current_dir,
+            env: None,
         }
     };
 
@@ -317,7 +311,7 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
         Err(e) => {
             launch.transaction.rollback();
             return Err(e);
-        }
+        },
     };
 
     let app_for_loop = launch.app.clone();
@@ -327,10 +321,10 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
     _ = GAME_LOOP_HANDLES.insert(game_id, handle);
 
     if let Err(e) = start_res.await? {
-        log::error!("start_res error: {}", e);
+        log::error!("start_res error: {e}");
     }
     if let Err(e) = exit_res.await? {
-        log::error!("exit_res error: {}", e);
+        log::error!("exit_res error: {e}");
     }
 
     GAME_LOOP_HANDLES.remove(&game_id);
@@ -338,7 +332,7 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
 }
 
 fn update_game_time(
-    app: &tauri::AppHandle,
+    app: &AppHandle,
     game_id: u32,
     dur: chrono::TimeDelta,
     force: bool,
@@ -355,6 +349,8 @@ fn update_game_time(
     // one SAVE_INTERVAL window for BOTH counters, instead of the whole daily
     // session (which used to be recorded only on graceful exit).
     if daily_stat {
+        // .max(0) guarantees non-negative; game sessions never approach u32 max.
+        #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         let secs = dur.num_seconds().max(0) as u32;
         if secs > 0 {
             // Bucket by the user's *local* calendar day, not UTC, so an
@@ -388,7 +384,7 @@ mod tests {
         // shlex::split returns None on unbalanced quotes, but for "" we get
         // an empty iter → InvalidCommand error.
         let err = StartCtx {
-            cmd: "".to_string(),
+            cmd: String::new(),
             ..Default::default()
         }
         .resolved_parts()
@@ -429,7 +425,11 @@ mod tests {
         } else {
             "/usr/bin/foo"
         };
-        let cwd = if cfg!(windows) { "C:/cwd" } else { "/cwd" };
+        let cwd = if cfg!(windows) {
+            "C:/cwd"
+        } else {
+            "/cwd"
+        };
         let ctx = StartCtx {
             cmd: abs.to_string(),
             current_dir: Some(cwd.to_string()),
@@ -501,7 +501,7 @@ mod tests {
     #[test]
     fn unbalanced_quote_in_cmd_errors() {
         let err = StartCtx {
-            cmd: r#"echo 'broken"#.to_string(),
+            cmd: r"echo 'broken".to_string(),
             ..Default::default()
         }
         .resolved_parts()

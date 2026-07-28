@@ -18,7 +18,7 @@ pub enum ToastVariant {
 }
 
 impl ToastVariant {
-    fn as_str(&self) -> &'static str {
+    fn as_str(self) -> &'static str {
         match self {
             Self::Default => "default",
             Self::Success => "success",

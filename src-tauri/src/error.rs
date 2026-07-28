@@ -146,7 +146,7 @@ impl fmt::Display for ReqwestDetailedError {
             } else {
                 "server"
             };
-            let url = e.url().map(|u| u.as_str()).unwrap_or("unknown");
+            let url = e.url().map_or("unknown", tauri::Url::as_str);
             return write!(
                 f,
                 "HTTP {} {} ({class} error) for <{url}>",
@@ -181,7 +181,11 @@ impl fmt::Display for ReqwestDetailedError {
             leaf = next;
         }
         let root = leaf.to_string();
-        let root = if root.is_empty() { e.to_string() } else { root };
+        let root = if root.is_empty() {
+            e.to_string()
+        } else {
+            root
+        };
 
         match e.url() {
             Some(url) => write!(f, "{kind} for <{url}>: {root}"),
