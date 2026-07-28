@@ -1,5 +1,5 @@
 {
-  description = "Development shell for GalgameManager (Tauri v2 + SolidJS + Bun)";
+  description = "Development shell for GalgameManager (Tauri v2 + SolidJS)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -80,8 +80,7 @@
               dbus
 
               # JavaScript runtimes & tools
-              bun
-              # nodejs
+              nodejs
               pnpm
               # cargo-tauri
             ];
@@ -136,9 +135,10 @@
             shellHook = ''
               echo "GalgameManager development environment"
               echo "   Rust: $(rustc --version)"
-              echo "   Bun: $(bun --version)"
+              echo "   Node: $(node --version)"
+              echo "   pnpm: $(pnpm --version)"
               echo ""
-              echo "Run 'bun install' then 'bun run tauri dev' to start developing"
+              echo "Run 'pnpm install' then 'pnpm tauri dev' to start developing"
             '';
           };
         };

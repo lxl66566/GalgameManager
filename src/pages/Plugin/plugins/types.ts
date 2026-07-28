@@ -55,7 +55,7 @@ export interface ConfigEditorProps<T> {
    * For text fields this fires on blur; for discrete controls (select, switch)
    * it fires immediately on change.
    *
-   * ⚠️ In the Plugin page context this writes to disk; in the Game edit modal
+   * In the Plugin page context this writes to disk; in the Game edit modal
    * it only updates a local in-memory store.
    */
   onCommit: (config: T) => void

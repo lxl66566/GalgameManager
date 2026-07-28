@@ -1,4 +1,4 @@
-name: Update Bun Dependencies
+name: Update Node Dependencies
 on:
   push:
     branches:
@@ -10,16 +10,22 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository 🛎️
-        uses: actions/checkout@v6
+      - name: Checkout repository
+        uses: actions/checkout@v7
 
-      - name: Setup Bun runtime
-        uses: oven-sh/setup-bun@v2
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
         with:
-          bun-version: latest
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: latest
+          cache: 'pnpm'
 
       - name: Install frontend dependencies
-        run: bun install
+        run: pnpm install
 
-      - name: Build frontend application 🔧
-        run: bun run build
+      - name: Build frontend application
+        run: pnpm run build

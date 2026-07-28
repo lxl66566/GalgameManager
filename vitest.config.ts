@@ -30,7 +30,7 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/__tests__/**/*.test.ts'],
     // Avoid picking up `.tsx` component tests by default until we add the
-    // solid-testing setup; keeps `bun run test` fast and dependency-free.
+    // solid-testing setup; keeps `pnpm run test` fast and dependency-free.
     coverage: {
       reporter: ['text']
     }

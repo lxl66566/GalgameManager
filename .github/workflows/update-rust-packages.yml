@@ -14,8 +14,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository 🛎️
-        uses: actions/checkout@v6
+      - name: Checkout repository
+        uses: actions/checkout@v7
 
       - name: Install Tauri system dependencies
         run: |
@@ -28,13 +28,19 @@ jobs:
       - name: Configure Rust dependency caching
         uses: Swatinem/rust-cache@v2
 
-      - name: Setup Bun runtime
-        uses: oven-sh/setup-bun@v2
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
         with:
-          bun-version: latest
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: latest
+          cache: 'pnpm'
 
       - name: Install frontend dependencies
-        run: bun install
+        run: pnpm install
 
-      - name: Build Tauri application 🔧
-        run: bun run tauri build
+      - name: Build Tauri application
+        run: pnpm run tauri build

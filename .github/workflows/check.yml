@@ -13,28 +13,34 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
         with:
-          bun-version: latest
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: latest
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Type check (tsc)
-        run: bun run check
+        run: pnpm run check
 
       - name: Unit tests (vitest)
-        run: bun run test
+        run: pnpm run test
 
       - name: Lint (eslint)
-        run: bun run lint
+        run: pnpm run lint
 
       - name: Format check (prettier)
-        run: bun run prettier
+        run: pnpm run prettier
 
       - name: Build frontend
-        run: bun run build
+        run: pnpm run build
 
       - name: Install Tauri system dependencies
         run: |

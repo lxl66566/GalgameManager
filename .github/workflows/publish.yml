@@ -17,8 +17,8 @@ jobs:
 
     runs-on: ${{ matrix.platform }}
     steps:
-      - name: Checkout repository 🛎️
-        uses: actions/checkout@v6
+      - name: Checkout repository
+        uses: actions/checkout@v7
 
       - name: Install Tauri system dependencies (Ubuntu only)
         if: matrix.platform == 'ubuntu-latest'
@@ -26,10 +26,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
 
-      - name: Setup Bun runtime
-        uses: oven-sh/setup-bun@v2
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
         with:
-          bun-version: latest
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: latest
+          cache: 'pnpm'
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -41,9 +47,9 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Install frontend dependencies
-        run: bun install
+        run: pnpm install
 
-      - name: Build and publish Tauri application 🚀
+      - name: Build and publish Tauri application
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -53,4 +59,4 @@ jobs:
           releaseName: 'v__VERSION__'
           releaseDraft: true
           prerelease: false
-          tauriScript: 'bun tauri'
+          tauriScript: 'pnpm tauri'
