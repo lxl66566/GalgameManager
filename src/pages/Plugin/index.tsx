@@ -71,7 +71,7 @@ export default function PluginPage() {
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2">
                           <span class="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                            {String(t(def.info.nameKey as keyof Dictionary))}
+                            {t(def.info.nameKey as keyof Dictionary) as string}
                           </span>
                           <span class="text-[10px] text-gray-400 dark:text-gray-500">
                             v{def.info.version}
@@ -83,7 +83,7 @@ export default function PluginPage() {
                           </Show>
                         </div>
                         <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
-                          {String(t(def.info.descriptionKey as keyof Dictionary))}
+                          {t(def.info.descriptionKey as keyof Dictionary) as string}
                         </div>
                       </div>
 
@@ -131,7 +131,7 @@ export default function PluginPage() {
                                     href={link.url}
                                     onClick={e => {
                                       e.preventDefault()
-                                      openUrl(link.url)
+                                      void openUrl(link.url)
                                     }}
                                     rel="noopener noreferrer"
                                     target="_blank"

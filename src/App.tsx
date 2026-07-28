@@ -33,14 +33,18 @@ const MainLayout: Component<{ children?: JSX.Element }> = props => {
     // 此时 SolidJS 的所有同步 effects（含 Toaster 的 mergeContainerOptions
     // 与 colorMode 的 dark class 同步）都已执行，首个 toast 位置/主题才正确。
     // 同时此处 config 已是真实值，避免基于 DEFAULT_CONFIG 误判 storage.provider。
-    checkAndPullRemote(t).finally(() => {
-      setServiceReady(true)
-    })
+    void (async () => {
+      try {
+        await checkAndPullRemote(t)
+      } finally {
+        setServiceReady(true)
+      }
+    })()
   })
 
   // Recover running-game state once at startup; listeners live for the app
   // lifetime in the global runtime store.
-  initGameRuntime(t)
+  void initGameRuntime(t)
 
   useAutoUploadService({
     enabled: isServiceReady,
@@ -56,7 +60,7 @@ const MainLayout: Component<{ children?: JSX.Element }> = props => {
   })
 
   createEffect(() => {
-    const lang = config.settings?.appearance?.language
+    const lang = config.settings.appearance.language
     if (lang) {
       setLocale(lang as Locale)
     }

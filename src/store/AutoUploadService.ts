@@ -1,4 +1,4 @@
-import { log } from '@utils/log'
+import { errToStr, log } from '@utils/log'
 import { createEffect, onCleanup, type Accessor } from 'solid-js'
 import { useConfig } from '.'
 
@@ -31,17 +31,21 @@ export function useAutoUploadService({ enabled, execUploadFunc }: AutoUploadOpti
     const intervalMs = intervalSecs * 1000
     log.info(`[AutoUploadService] Service started. Interval: ${intervalSecs}s`)
 
-    const timerId = setInterval(async () => {
+    // Extracted so the setInterval callback stays a plain `() => void`
+    // (its returned promise is intentionally ignored by the timer).
+    const tick = async () => {
       if (isUploading) return
       isUploading = true
       try {
         await execUploadFunc()
       } catch (error) {
-        log.error(`[AutoUploadService] Check failed: ${error}`)
+        log.error(`[AutoUploadService] Check failed: ${errToStr(error)}`)
       } finally {
         isUploading = false
       }
-    }, intervalMs)
+    }
+
+    const timerId = setInterval(() => void tick(), intervalMs)
 
     onCleanup(() => {
       log.info('[AutoUploadService] Timer cleared')

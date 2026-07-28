@@ -2,14 +2,34 @@ import { type LogLevel } from '@bindings/LogLevel'
 import { invoke } from '@tauri-apps/api/core'
 
 /**
+ * Best-effort stringification of a caught value (typically an `unknown`
+ * from a catch clause) for display in toasts/logs. Avoids the
+ * "[object Object]" fallback and satisfies the type-aware lint rules
+ * that forbid interpolating `unknown` directly.
+ */
+export function errToStr(value: unknown): string {
+  if (value instanceof Error) return value.message
+  if (typeof value === 'string') return value
+  if (value === null) return 'null'
+  if (value === undefined) return 'undefined'
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return '[unserializable]'
+  }
+}
+
+/**
  * 基础 log 函数，支持 log('info', 'msg', obj, 123) 调用方式
  */
 export function log(level: LogLevel, ...args: unknown[]) {
   // 将所有参数合并成一个字符串发送给 Rust
   const message = formatArgs(args)
 
-  invoke('log', { level, msg: message }).catch(error => {
-    console.error('Failed to log: ' + error)
+  // Fire-and-forget IPC from a sync function: there's no caller to await,
+  // so `.catch` is the appropriate way to surface backend failures.
+  void invoke('log', { level, msg: message }).catch((error: unknown) => {
+    console.error('Failed to log:', errToStr(error))
   })
 }
 
@@ -21,16 +41,22 @@ function formatArgs(args: unknown[]): string {
   return args
     .map(argument => {
       if (argument instanceof Error) {
-        return argument.stack || argument.message
+        return argument.stack ?? argument.message
       }
-      if (typeof argument === 'object') {
-        try {
-          return JSON.stringify(argument)
-        } catch {
-          return String(argument)
-        }
+      if (typeof argument === 'string') return argument
+      if (
+        typeof argument === 'number' ||
+        typeof argument === 'boolean' ||
+        typeof argument === 'bigint'
+      ) {
+        return argument.toString()
       }
-      return String(argument)
+      // object / null / symbol / function / undefined
+      try {
+        return JSON.stringify(argument)
+      } catch {
+        return '[unserializable]'
+      }
     })
     .join('')
 }

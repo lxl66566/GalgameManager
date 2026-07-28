@@ -3,7 +3,7 @@
  */
 
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { log } from '@utils/log'
+import { errToStr, log } from '@utils/log'
 
 const pending: (() => void)[] = []
 let isListenerInitialized = false
@@ -14,7 +14,7 @@ export function showOrDefer(function_: () => void): void {
     function_()
   } else {
     pending.push(function_)
-    ensureListener()
+    void ensureListener()
   }
 }
 
@@ -28,7 +28,7 @@ async function ensureListener(): Promise<void> {
     })
   } catch (error) {
     isListenerInitialized = false
-    log.error(`Focus listener failed: ${error}`)
+    log.error(`Focus listener failed: ${errToStr(error)}`)
   }
 }
 

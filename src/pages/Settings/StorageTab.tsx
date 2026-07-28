@@ -58,7 +58,7 @@ const WebDavForm: Component<{
             props.onChange('password', e.currentTarget.value)
           }}
           type="password"
-          value={props.config.password || ''}
+          value={props.config.password ?? ''}
         />
       </SettingRow>
       <SettingRow indent label={t('settings.storage.Root')}>
@@ -92,7 +92,7 @@ const S3Form: Component<{
             props.onChange('endpoint', e.currentTarget.value)
           }}
           placeholder=""
-          value={props.config.endpoint || ''}
+          value={props.config.endpoint ?? ''}
         />
       </SettingRow>
       <SettingRow indent label={t('settings.storage.s3Region')}>
@@ -197,7 +197,7 @@ const CompressionForm: Component<{
     // 2. 解析与边界限制 (Clamping)
     let value = parseInt(rawValue)
 
-    if (isNaN(value)) {
+    if (Number.isNaN(value)) {
       value = rule.min
     } else {
       if (value < rule.min) value = rule.min
@@ -262,14 +262,18 @@ export const StorageTab: Component = () => {
   const currentProvider = () => config.settings.storage.provider
 
   // Debounced operator cache invalidation: avoids an IPC call per keystroke
-  // while editing storage connection fields.
-  const cleanOperatorDebounced = debounce(() => invoke('clean_current_operator'), 500)
+  // while editing storage connection fields. The returned promise is
+  // intentionally ignored (fire-and-forget cleanup).
+  const cleanOperatorDebounced = debounce(
+    () => void invoke('clean_current_operator'),
+    500
+  )
 
   // 切换 Provider：只修改 provider 字段，不触碰具体配置
   const handleProviderChange = (e: Event) => {
     const newProvider = (e.target as HTMLSelectElement).value as StorageProvider
     actions.updateSettings({ storage: { provider: newProvider } })
-    invoke('clean_current_operator')
+    void invoke('clean_current_operator')
   }
 
   // 更新 WebDAV 配置（文本输入，debounce 磁盘写入）

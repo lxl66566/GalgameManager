@@ -54,7 +54,7 @@ export function DropArea(props: DropAreaProps) {
   }
 
   // 初始化监听
-  setupListeners()
+  void setupListeners()
 
   // 组件卸载时清理监听，保证 Robust
   onCleanup(() => {

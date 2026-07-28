@@ -154,18 +154,15 @@ export function diffGame(base: Game, current: Game): GamePatch {
  *
  * `base` may be a SolidJS store proxy — it is unwrapped and cloned before
  * merging, so the store itself is never mutated here. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function expandPatch<T extends Record<string, any>>(
+export function expandPatch<T extends Record<string, unknown>>(
   base: T,
   patch: DeepPartial<T>
 ): { [K in keyof T]?: T[K] } {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const out: Record<string, any> = {}
+  const out: Record<string, unknown> = {}
   for (const key in patch) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const v = (patch as Record<string, any>)[key]
+    const v = (patch as Record<string, unknown>)[key]
     if (v === undefined) continue
-    if (isPlainObject(v) && isPlainObject(base?.[key])) {
+    if (isPlainObject(v) && isPlainObject(base[key])) {
       const merged = structuredClone(unwrap(base[key]))
       applyPatch(merged, v)
       out[key] = merged

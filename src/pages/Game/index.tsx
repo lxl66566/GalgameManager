@@ -5,7 +5,7 @@ import FullScreenMask from '@components/ui/FullScreenMask'
 import { myToast } from '@components/ui/myToast'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-import { log } from '@utils/log'
+import { errToStr, log } from '@utils/log'
 import { fuckBackslash, getParentPath, isAbsolutePath } from '@utils/path'
 import {
   getDeviceVarMap,
@@ -59,7 +59,7 @@ const GamePage = (): JSX.Element => {
   const [sortType, setSortType] = createSignal<SortType>('id')
 
   onMount(() => {
-    getSortType().then(setSortType)
+    void (async () => setSortType(await getSortType()))()
 
     // Track the grid scroll container width to recompute the responsive column
     // count. clientWidth excludes the scrollbar but includes padding, which the
@@ -255,10 +255,11 @@ const GamePage = (): JSX.Element => {
     closeEditModal()
 
     // Validate that the resolved executable path is absolute
-    if (game.excutablePath) {
-      resolveVarForDevice(game.excutablePath, config.devices)
-        // eslint-disable-next-line promise/always-return
-        .then(resolved => {
+    const exePath = game.excutablePath
+    if (exePath) {
+      void (async () => {
+        try {
+          const resolved = await resolveVarForDevice(exePath, config.devices)
           if (resolved && !isAbsolutePath(resolved)) {
             myToast({
               message: t('hint.exePathNotAbsolute'),
@@ -266,8 +267,7 @@ const GamePage = (): JSX.Element => {
               variant: 'error'
             })
           }
-        })
-        .catch(() => {
+        } catch {
           // resolve_var failed (e.g. unresolved variable) — notify the user
           // instead of silently ignoring, so they know the path is broken.
           myToast({
@@ -275,7 +275,8 @@ const GamePage = (): JSX.Element => {
             title: t('game.edit.exePath'),
             variant: 'warning'
           })
-        })
+        }
+      })()
     }
   }
 
@@ -289,7 +290,7 @@ const GamePage = (): JSX.Element => {
     closeEditModal()
     try {
       if (game.savePaths.length > 0) {
-        invoke('delete_local_archive_all', { gameId: game.id })
+        void invoke('delete_local_archive_all', { gameId: game.id })
         if (config.settings.storage.provider === 'none') {
           actions.removeGame(index)
           toast.success(t('hint.deleteGameSuccess') + game.name)
@@ -300,7 +301,7 @@ const GamePage = (): JSX.Element => {
       actions.removeGame(index)
       toast.success(t('hint.deleteGameAndRemote') + game.name)
     } catch (error) {
-      toast.error(t('hint.deleteArchiveFailed') + error)
+      toast.error(t('hint.deleteArchiveFailed') + errToStr(error))
       myToast({
         actions: [
           {
@@ -325,7 +326,7 @@ const GamePage = (): JSX.Element => {
 
   const handleDropAdd = (paths: string[]) => {
     console.log('Dropped paths:', paths)
-    openGameAddModal(paths.at(0) ? fuckBackslash(paths[0]) : undefined)
+    void openGameAddModal(paths.at(0) ? fuckBackslash(paths[0]) : undefined)
   }
 
   /** Handle context menu actions dispatched from GameItem. */
@@ -335,7 +336,7 @@ const GamePage = (): JSX.Element => {
         try {
           await invoke('open_game_dir', { gameId })
         } catch (error) {
-          toast.error(t('hint.openDirFailed') + ': ' + error)
+          toast.error(t('hint.openDirFailed') + ': ' + errToStr(error))
         }
         break
       }
@@ -386,9 +387,8 @@ const GamePage = (): JSX.Element => {
         id: toastId
       })
     } catch (error) {
-      log.error(`Failed to backup game ${game.name}: ${error}`)
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      toast.error(t('hint.syncFailed') + errorMessage, { duration: 5000, id: toastId })
+      log.error(`Failed to backup game ${game.name}: ${errToStr(error)}`)
+      toast.error(t('hint.syncFailed') + errToStr(error), { duration: 5000, id: toastId })
     } finally {
       if (unlistenUploadError) {
         unlistenUploadError()

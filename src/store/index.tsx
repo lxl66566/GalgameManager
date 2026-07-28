@@ -10,7 +10,7 @@ import * as i18n from '@solid-primitives/i18n'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { resolveBackendI18n } from '@utils/backendI18n'
-import { log } from '@utils/log'
+import { errToStr, log } from '@utils/log'
 import {
   appendDeviceOp,
   appendGameOp,
@@ -40,9 +40,10 @@ type SettingsPatch = DeepPartial<RustSettingsPatch>
 // 它是 Rust 端 CONFIG 静态量序列化后的快照，作为前端 store 的初始值，
 // 让 SolidJS 首屏渲染时 config.games 已有真实数据，无需等 IPC 往返。
 declare global {
-  interface Window {
-    __INITIAL_CONFIG__: Config
-  }
+  // Ambient global declaration: `var` (required for `declare global`) makes
+  // the property visible on `globalThis` so `unicorn/prefer-global-this` and
+  // the typed access both work.
+  var __INITIAL_CONFIG__: Config
 }
 
 // ── Backend toast listener ──────────────────────────────────────────────────
@@ -134,11 +135,15 @@ export const useConfigInit = (t?: i18n.Translator<Dictionary>, onReady?: () => v
       // SolidJS 的所有同步 effects（colorMode 同步 dark class、Toaster 的
       // mergeContainerOptions 同步 position 等）都已执行完毕。这样由
       // onReady 触发的 toast 才会用正确的 position 与主题色渲染。
+      // isMounted is flipped to false by the onCleanup closure below; the
+      // type checker can't see that cross-callback mutation, so the guard
+      // is not unnecessary.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (!isMounted) return
       onReady?.()
     }
 
-    init()
+    void init()
 
     onCleanup(() => {
       isMounted = false
@@ -154,7 +159,7 @@ const refreshConfig = async () => {
     setConfig(reconcile(data))
   } catch (error) {
     console.error('Failed to load local config:', error)
-    toast.error(`Failed to load local config: ${error}`)
+    toast.error(`Failed to load local config: ${errToStr(error)}`)
   }
 }
 
@@ -191,12 +196,14 @@ export const checkAndPullRemote = async (
               // 恢复旧配置到磁盘。这里必须用 save_config（全量覆盖），
               // 不能用 patch_config——patch 只携带声明过的字段，
               // 而撤回的语义就是"强制恢复到这个快照"。
-              ;(async () => {
+              void (async () => {
                 try {
                   await invoke('save_config', { newConfig: oldConfig })
                   toast.success(t('hint.restorePreviousConfigSuccess'))
                 } catch (error) {
-                  toast.error(t('hint.restorePreviousConfigFailed') + ': ' + error)
+                  toast.error(
+                    t('hint.restorePreviousConfigFailed') + ': ' + errToStr(error)
+                  )
                   void refreshConfig()
                 }
               })()
@@ -215,7 +222,9 @@ export const checkAndPullRemote = async (
   } catch (error) {
     // 只在自动拉取且配置了存储后端时提示，提升首次启动的体验
     if (skipCheck || !(error as Error).toString().includes('Storage provider not set')) {
-      toast.error(t('hint.checkRemoteConfigFailed') + ': ' + error, { id: toastId })
+      toast.error(t('hint.checkRemoteConfigFailed') + ': ' + errToStr(error), {
+        id: toastId
+      })
     } else {
       toast.dismiss(toastId)
     }
@@ -232,7 +241,7 @@ export const performAutoUpload = async (t: i18n.Translator<Dictionary>) => {
       toast.error(t('hint.configUploadConflict'))
     }
   } catch (error) {
-    toast.error(t('hint.configAutoUploadFailed') + ': ' + error)
+    toast.error(t('hint.configAutoUploadFailed') + ': ' + errToStr(error))
   }
 }
 
@@ -246,7 +255,7 @@ export const performManualUpload = async (t: i18n.Translator<Dictionary>) => {
       toast.error(t('hint.configUploadConflict'))
     }
   } catch (error) {
-    toast.error(t('hint.configUploadFailed') + ': ' + error)
+    toast.error(t('hint.configUploadFailed') + ': ' + errToStr(error))
   }
 }
 
@@ -257,7 +266,7 @@ const sendPatch = async (patch: ConfigPatch) => {
   try {
     await invoke('patch_config', { patch })
   } catch (error) {
-    toast.error(`Failed to save config: ${error}`)
+    toast.error(`Failed to save config: ${errToStr(error)}`)
     void refreshConfig()
   }
 }
@@ -304,8 +313,8 @@ export const useConfig = () => {
       },
       getCurrentDeviceOrDefault: async (): Promise<Device> => {
         const uid = await currentDeviceId()
-        const device = config.devices.find(d => d.uid === uid) || {
-          name: 'Unnamed' + (config.devices.length + 1),
+        const device = config.devices.find(d => d.uid === uid) ?? {
+          name: `Unnamed${config.devices.length + 1}`,
           uid: uid,
           variables: {}
         }
@@ -322,14 +331,15 @@ export const useConfig = () => {
         void sendPatch(deleteGameOp(id))
       },
       replaceGame: (index: number, game: Game) => {
-        const id = config.games[index]?.id
-        if (id === undefined) return
+        const existing = config.games[index]
+        if (!existing) return
+        const id = existing.id
         // Edit dialog path: we don't know which fields the user touched, so
         // diff against the store's pre-image of this game (captured before
         // the produce below). Fields written only by the backend (use_time,
         // daily_playtime) are identical on both sides of the diff, so they
         // never land in the patch and can't be reverted by a stale snapshot.
-        const preImage = unwrap(config.games[index])
+        const preImage = unwrap(existing)
         const g = unwrap(game)
         setConfig(
           produce(state => {

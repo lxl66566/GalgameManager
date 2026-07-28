@@ -3,7 +3,7 @@ import type { Game } from '@bindings/Game'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { formatBytes } from '@utils/file'
-import { log } from '@utils/log'
+import { errToStr, log } from '@utils/log'
 import { useI18n } from '~/i18n'
 import {
   TbOutlineArrowBackUp,
@@ -58,16 +58,22 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const remotePromise =
-        props.gameInfo.savePaths.length === 0
-          ? Promise.resolve([])
-          : invoke<ArchiveInfo[]>('list_archive', {
-              gameId: props.gameId
-            }).catch(error => {
-              console.error('Remote fetch failed:', error)
-              toast.error(t('hint.failToGetSaveList') + `: ${error}`)
-              return [] as ArchiveInfo[] // 失败时视为远端列表为空
-            })
+      // Remote fetch is best-effort: a failure is treated as an empty remote
+      // list so the modal still shows local archives. Wrapped in an async
+      // IIFE (rather than `.catch`) so the rejected promise is handled and
+      // parallelism with the local fetch via Promise.all is preserved.
+      const remotePromise: Promise<ArchiveInfo[]> = (async () => {
+        if (props.gameInfo.savePaths.length === 0) return []
+        try {
+          return await invoke<ArchiveInfo[]>('list_archive', {
+            gameId: props.gameId
+          })
+        } catch (error) {
+          console.error('Remote fetch failed:', errToStr(error))
+          toast.error(`${t('hint.failToGetSaveList')}: ${errToStr(error)}`)
+          return []
+        }
+      })()
 
       // 本地请求失败则直接抛出到外层 catch
       const localPromise = invoke<ArchiveInfo[]>('list_local_archive', {
@@ -95,7 +101,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
 
         // 确定基础信息：优先使用本地的数据，如果本地没有则使用远端的数据
         // 因为 allNames 来源于两者之和，所以 baseInfo 一定存在
-        const baseInfo = (localItem || remoteItem)!
+        const baseInfo = (localItem ?? remoteItem)!
 
         let status: ArchiveStatus = 'Synced'
 
@@ -114,14 +120,14 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       setArchives(merged)
     } catch (error) {
       console.error('Archive fetch failed:', error)
-      toast.error(t('hint.failToGetSaveList') + error)
+      toast.error(t('hint.failToGetSaveList') + errToStr(error))
     } finally {
       setLoading(false)
     }
   }
 
   onMount(() => {
-    fetchData()
+    void fetchData()
   })
 
   // --- 操作处理 ---
@@ -151,7 +157,9 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
         )
       )
     } catch (error) {
-      toast.error(filename + ' ' + t('hint.uploadFailed') + error, { id: toastId })
+      toast.error(filename + ' ' + t('hint.uploadFailed') + errToStr(error), {
+        id: toastId
+      })
     } finally {
       if (unlistenUploadError) {
         unlistenUploadError()
@@ -172,7 +180,9 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
         )
       )
     } catch (error) {
-      toast.error(filename + ' ' + t('hint.downloadFailed') + error, { id: toastId })
+      toast.error(filename + ' ' + t('hint.downloadFailed') + errToStr(error), {
+        id: toastId
+      })
     }
   }
 
@@ -182,7 +192,9 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       await invoke('extract', { archiveFilename: filename, gameId: props.gameId })
       toast.success(t('hint.revertSuccess') + filename, { id: toastId })
     } catch (error) {
-      toast.error(filename + ' ' + t('hint.revertFailed') + error, { id: toastId })
+      toast.error(filename + ' ' + t('hint.revertFailed') + errToStr(error), {
+        id: toastId
+      })
     }
   }
 
@@ -205,7 +217,9 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
           .filter((item): item is ArchiveItem => item !== null)
       )
     } catch (error) {
-      toast.error(filename + ' ' + t('hint.deleteFailed') + error, { id: toastId })
+      toast.error(filename + ' ' + t('hint.deleteFailed') + errToStr(error), {
+        id: toastId
+      })
     }
   }
 
@@ -231,7 +245,9 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
           .filter((item): item is ArchiveItem => item !== null)
       )
     } catch (error) {
-      toast.error(filename + ' ' + t('hint.deleteFailed') + error, { id: toastId })
+      toast.error(filename + ' ' + t('hint.deleteFailed') + errToStr(error), {
+        id: toastId
+      })
     }
   }
   // --- 重命名逻辑 ---
@@ -297,7 +313,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
           })
         } catch (error) {
           // 3. 远程失败，回滚本地
-          log.error(`Remote rename failed, rolling back local...: ${error}`)
+          log.error(`Remote rename failed, rolling back local...: ${errToStr(error)}`)
           try {
             await invoke('rename_local_archive', {
               archiveFilename: newName, // 注意：这里要把新名字改回旧名字
@@ -305,13 +321,13 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
               newArchiveFilename: oldName
             })
             // 抛出特定错误信息给外层 catch
-            throw new Error(`云端同步失败，已恢复本地文件名。错误: ${error}`, {
+            throw new Error(`云端同步失败，已恢复本地文件名。错误: ${errToStr(error)}`, {
               cause: error
             })
           } catch (error_) {
             // 极端的灾难性错误：本地回滚也失败了（文件被占用等）
             throw new Error(
-              `严重错误：云端重命名失败且本地回滚失败。请手动检查文件。Remote: ${error}, Rollback: ${error_}`,
+              `严重错误：云端重命名失败且本地回滚失败。请手动检查文件。Remote: ${errToStr(error)}, Rollback: ${errToStr(error_)}`,
               { cause: error_ }
             )
           }
@@ -584,7 +600,7 @@ function ActionButton(props: ActionButtonProps) {
 
   return (
     <button
-      class={`${baseClass} ${variants[props.variant]} ${sizes[props.size || 'sm']}`}
+      class={`${baseClass} ${variants[props.variant]} ${sizes[props.size ?? 'sm']}`}
       onClick={e => {
         e.stopPropagation()
         props.onClick()

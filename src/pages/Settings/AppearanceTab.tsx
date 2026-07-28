@@ -88,6 +88,10 @@ export const AppearanceTab: Component = () => {
   )
 }
 
+// Sample timestamp (2 days ago) so the format preview shows a concrete
+// example (e.g. "2d ago" / "2 天前") instead of an empty string.
+const previewIso = () => new Date(Date.now() - 2 * 86_400_000).toISOString()
+
 const TimeDisplaySection: Component = () => {
   const { actions, config } = useConfig()
   const { locale, t } = useI18n()

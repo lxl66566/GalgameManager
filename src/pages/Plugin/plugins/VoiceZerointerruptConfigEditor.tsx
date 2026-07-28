@@ -17,7 +17,7 @@ function VoiceZerointerruptGameConfigEditor(
   const { t } = useI18n()
   const { config } = useConfig()
 
-  const showWineRequired = () => isLinux && !config.pluginMetadatas.wine?.enabled
+  const showWineRequired = () => isLinux && !config.pluginMetadatas.wine.enabled
 
   return (
     <div class="flex flex-col gap-2">

@@ -93,7 +93,7 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
     props.onCommit(updated)
   }
 
-  const hasHeader = () => !!(props.label || props.addLabel)
+  const hasHeader = () => Boolean(props.label ?? props.addLabel)
 
   return (
     <div class={cn('flex flex-col gap-2 w-full', props.class)}>
@@ -166,10 +166,13 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
                 setNewKey(e.currentTarget.value)
                 setError(null)
               }}
-              onKeyDown={e =>
-                (e.key === 'Enter' && handleConfirmAdd()) ||
-                (e.key === 'Escape' && handleCancelAdd())
-              }
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  handleConfirmAdd()
+                } else if (e.key === 'Escape') {
+                  handleCancelAdd()
+                }
+              }}
               placeholder={hasHeader() ? 'VAR_NAME' : 'KEY'}
               type="text"
               value={newKey()}
@@ -263,7 +266,11 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
                   onBlur={e => {
                     handleKeyBlur(key, e.currentTarget.value)
                   }}
-                  onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.currentTarget.blur()
+                    }
+                  }}
                   type="text"
                   value={key}
                 />

@@ -65,7 +65,9 @@ export const GameItem = (props: GameItemProps) => {
       <ContextMenu items={contextMenuItems()}>
         <div
           class="relative group cursor-pointer h-52 overflow-hidden"
-          onClick={() => !props.isPlaying && props.onStart()}
+          onClick={() => {
+            if (!props.isPlaying) props.onStart()
+          }}
         >
           <CachedImage
             alt={props.game.name}
@@ -129,7 +131,7 @@ export const GameItem = (props: GameItemProps) => {
             {/* 左侧：上次游玩时间（min-w-0 + truncate 防止过长时换行顶掉标题） */}
             <div
               class="flex items-center min-w-0 text-gray-400 dark:text-gray-500"
-              title={`${t('game.lastPlayedLabel')}${props.game.lastPlayedTime || t('time.never')}`}
+              title={`${t('game.lastPlayedLabel')}${props.game.lastPlayedTime ?? t('time.never')}`}
             >
               {/* <History class="w-3 h-3 mr-1 shrink-0" /> */}
               <span class="min-w-0 truncate">{timeAgo()}</span>

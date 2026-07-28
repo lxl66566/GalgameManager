@@ -131,7 +131,10 @@ export default function PluginSection(props: PluginSectionProps) {
 
   const getPluginName = (instance: PluginInstance): string => {
     const def = getDef(instance.pluginId)
-    return def ? String(t(def.info.nameKey as keyof Dictionary)) : instance.pluginId
+    // nameKey is contractually a leaf string key; `as keyof Dictionary`
+    // widens t()'s return to include intermediate object nodes, so narrow
+    // back to string (avoids "[object Object]" from a blind String() call).
+    return def ? (t(def.info.nameKey as keyof Dictionary) as string) : instance.pluginId
   }
 
   return (
@@ -170,7 +173,7 @@ export default function PluginSection(props: PluginSectionProps) {
                     }}
                     type="button"
                   >
-                    {String(t(def.info.nameKey as keyof Dictionary))}
+                    {t(def.info.nameKey as keyof Dictionary) as string}
                   </button>
                 )}
               </For>

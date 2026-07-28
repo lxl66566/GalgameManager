@@ -46,6 +46,18 @@ export default tseslint.config(
       },
     },
     rules: {
+      // SolidJS/React JSX event handlers (onClick, onBlur, onChange,
+      // onKeyDown, onInput, …) are typed as `() => void`, and passing async
+      // functions is an extremely common, safe idiom — the event system
+      // simply ignores the returned Promise. The type-aware rule fires on
+      // every async JSX handler, producing noise without catching real bugs.
+      // Only the JSX-attribute check is disabled; `arguments`, `properties`,
+      // `checksConditionals` and `checksSpreads` (which catch genuine
+      // mistakes like `if (someAsyncFn)` or `arr.sort(async …)`) stay on.
+      '@typescript-eslint/no-misused-promises': [
+        'error',
+        { checksVoidReturn: { attributes: false } },
+      ],
       '@typescript-eslint/restrict-template-expressions': [
         'error',
         { allowNumber: true },
@@ -106,6 +118,15 @@ export default tseslint.config(
       'no-unassigned-vars': 'off',
       'no-undef': 'off',
       'no-underscore-dangle': 'off',
+      // Import ordering is owned by `@ianvs/prettier-plugin-sort-imports`
+      // (run via `prettier --write`, which executes *after* `eslint --fix` in
+      // lint-staged). Perfectionist's sort-imports rules use a different
+      // grouping than the prettier plugin, so the two can never be satisfied
+      // at the same time — every file would flip-flop. Disable the redundant
+      // ESLint rules so `verify` (fmt:check && lint:full) is achievable; all
+      // other Perfectionist rules (sort-objects, sort-object-types, …) stay.
+      'perfectionist/sort-imports': 'off',
+      'perfectionist/sort-named-imports': 'off',
       // --- rules from plugins not loaded in ESLint ---
       'oxc/no-map-spread': 'off',
       'prefer-const': 'error',

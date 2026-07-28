@@ -15,7 +15,7 @@ import type { ConfigEditorProps, PluginDefinition } from './types'
 const parseSpeed = (raw: string): null | number => {
   // Allow intermediate states like "1.", ".5", "1.2"
   const value = Number.parseFloat(raw)
-  if (isNaN(value)) return null
+  if (Number.isNaN(value)) return null
   return Math.min(2, Math.max(1, value))
 }
 
@@ -24,7 +24,7 @@ function VoiceSpeedupGameConfigEditor(props: ConfigEditorProps<VoiceSpeedupGameC
   const { config } = useConfig()
 
   const showMmdevapiWarn = () => isLinux && props.config.provider === 'mmdevapi'
-  const showWineRequired = () => isLinux && !config.pluginMetadatas.wine?.enabled
+  const showWineRequired = () => isLinux && !config.pluginMetadatas.wine.enabled
 
   return (
     <div class="flex flex-col gap-2">

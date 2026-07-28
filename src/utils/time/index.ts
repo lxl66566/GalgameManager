@@ -149,6 +149,11 @@ const formatTimeAgo = (dateString: null | string, t: TFunc): string => {
  * selected a per-timestamp language override.
  */
 const formatTimeAgoLocale = (dateString: null | string, locale: Locale): string => {
+  // Defensive fallback: `locale` is typed as a finite union so TS thinks the
+  // lookup is always defined, but we deliberately tolerate invalid runtime
+  // values (e.g. a stale locale persisted in config) by falling back to
+  // en-US — covered by the "falls back to en-US" test.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   const dict = RELATIVE_TIME_DICT[locale] ?? RELATIVE_TIME_DICT['en-US']
   if (!dateString) return dict.never
 
@@ -176,7 +181,7 @@ const formatTimeAgoLocale = (dateString: null | string, locale: Locale): string 
  */
 const formatAbsoluteIso = (dateString: null | string, pattern: string): string => {
   if (!dateString) return RELATIVE_TIME_DICT['en-US'].never
-  const p = pattern?.trim()
+  const p = pattern.trim()
   if (!p) return dateString
   return dayjs(dateString).format(p)
 }

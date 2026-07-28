@@ -2,6 +2,7 @@ import { FieldHint } from '@components/ui/FieldHint'
 import { GameEditLabel } from '@components/ui/GameEditLabel'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
+import { errToStr } from '@utils/log'
 import { fuckBackslash } from '@utils/path'
 import { resolveVar } from '@utils/resolveVar'
 import { useVarMap } from '@utils/useVarMap'
@@ -112,7 +113,7 @@ export default function PathListEditor(props: PathListEditorProps) {
         }
       }
     } catch (error) {
-      console.error(`Failed to open dialog: ${error}`)
+      console.error(`Failed to open dialog: ${errToStr(error)}`)
     }
   }
 

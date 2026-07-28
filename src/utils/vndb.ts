@@ -52,9 +52,9 @@ export async function fetchVnCover(gameName: string): Promise<null | string> {
       return null
     }
 
-    const data: VndbResponse = await response.json()
+    const data = (await response.json()) as VndbResponse
 
-    if (data.results && data.results.length > 0) {
+    if (data.results.length > 0) {
       const topResult = data.results[0]
 
       // 可选：如果你想屏蔽 NSFW 封面，可以在这里做判断
@@ -62,7 +62,7 @@ export async function fetchVnCover(gameName: string): Promise<null | string> {
       //   return null; // 或者返回一张特定的 SFW 占位图
       // }
 
-      return topResult.image?.url || null
+      return topResult?.image?.url ?? null
     }
     return null
   } catch (error) {

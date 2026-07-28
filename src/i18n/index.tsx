@@ -64,9 +64,7 @@ async function fetchDictionary(locale: string): Promise<Dictionary> {
 }
 
 function getEnDict(): Dictionary {
-  if (!cachedEnDict) {
-    cachedEnDict = i18n.flatten(en.dict)
-  }
+  cachedEnDict ??= i18n.flatten(en.dict)
   return cachedEnDict
 }
 

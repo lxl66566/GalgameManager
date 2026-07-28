@@ -44,9 +44,10 @@ export async function getSortType(): Promise<SortType> {
  */
 export function setSortType(type: SortType): void {
   cached = type
-  writeTextFile(SORT_TYPE_FILENAME, type, {
+  // Fire-and-forget disk write from a sync setter (callers never await).
+  void writeTextFile(SORT_TYPE_FILENAME, type, {
     baseDir: BaseDirectory.Home
-  }).catch(error => {
+  }).catch((error: unknown) => {
     // The in-memory cache is still valid, but surface the failure for
     // diagnostics instead of swallowing it completely.
     log.warn('Failed to persist sort type:', error)

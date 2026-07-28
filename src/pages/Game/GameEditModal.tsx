@@ -6,6 +6,7 @@ import { FormField, FormPathInput } from '@components/ui/form'
 import { MODAL_LABEL } from '@components/ui/GameEditLabel'
 import { myToast } from '@components/ui/myToast'
 import { open } from '@tauri-apps/plugin-dialog'
+import { errToStr } from '@utils/log'
 import { fuckBackslash, getParentPath } from '@utils/path'
 import { getDeviceVarMap, replaceWithVarNames } from '@utils/resolveVar'
 import { dateToInput, durationToForm, inputToDate } from '@utils/time'
@@ -82,7 +83,7 @@ export default function GameEditModal(props: GameEditModalProps) {
   if (!isEditMode()) {
     const autoPlugins = PLUGIN_REGISTRY.filter(def => {
       const meta = config.pluginMetadatas[def.metaKey] as Record<string, unknown>
-      return meta?.autoAdd === true
+      return meta.autoAdd === true
     }).map(def => buildNewInstance(def, config.pluginMetadatas))
     baseGame.plugins = autoPlugins.length > 0 ? autoPlugins : []
   }
@@ -91,7 +92,7 @@ export default function GameEditModal(props: GameEditModalProps) {
 
   // 临时存储输入框的内容，避免每次按键都触发图片加载
   // eslint-disable-next-line solid/reactivity -- used once for initial signal value
-  const [temporaryImageUrl, setTemporaryImageUrl] = createSignal(localGame.imageUrl || '')
+  const [temporaryImageUrl, setTemporaryImageUrl] = createSignal(localGame.imageUrl ?? '')
 
   // VNDB 搜索相关状态与逻辑
   const [isSearching, setIsSearching] = createSignal(false)
@@ -103,18 +104,18 @@ export default function GameEditModal(props: GameEditModalProps) {
   // 自动触发逻辑：如果不是编辑模式，并且创建时带了游戏名称，则自动搜索 VNDB 封面
   onMount(() => {
     if (!isEditMode() && localGame.name) {
-      handleSearchVnCover()
+      void handleSearchVnCover()
     }
   })
 
   // 当 store 中的 imageUrl 发生变化时，同步到输入框
   createEffect(() => {
-    setTemporaryImageUrl(localGame.imageUrl || '')
+    setTemporaryImageUrl(localGame.imageUrl ?? '')
   })
 
   const updateDuration = (h: number, m: number) => {
     setPlayTime({ h, m })
-    const [origTotalSecs, origNanos] = localGame.useTime || [0, 0]
+    const [origTotalSecs, origNanos] = localGame.useTime
     const remainingSecs = origTotalSecs % 60
     const totalSecs = h * 3600 + m * 60 + remainingSecs
     setLocalGame('useTime', [totalSecs, origNanos])
@@ -123,7 +124,7 @@ export default function GameEditModal(props: GameEditModalProps) {
   // 提交图片更改的逻辑
   const commitImageChange = () => {
     const currentInput = temporaryImageUrl().trim()
-    if (currentInput !== (localGame.imageUrl || '')) {
+    if (currentInput !== (localGame.imageUrl ?? '')) {
       setLocalGame('imageUrl', currentInput || null)
       setLocalGame('imageSha256', null)
       // Invalidate the cached accent color so the new cover gets a fresh
@@ -151,7 +152,7 @@ export default function GameEditModal(props: GameEditModalProps) {
     } catch (error) {
       console.error(error)
       myToast({
-        message: t('hint.selectImageFailed') + ': ' + error,
+        message: t('hint.selectImageFailed') + ': ' + errToStr(error),
         variant: 'error'
       })
     }
@@ -291,7 +292,9 @@ export default function GameEditModal(props: GameEditModalProps) {
                   disabled={isSearching()}
                   onBlur={commitImageChange}
                   onInput={e => setTemporaryImageUrl(e.currentTarget.value)}
-                  onKeyDown={e => e.key === 'Enter' && commitImageChange()}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') commitImageChange()
+                  }}
                   placeholder={t('game.edit.imageUrlPlaceholder')}
                   value={temporaryImageUrl()}
                 />
@@ -327,7 +330,7 @@ export default function GameEditModal(props: GameEditModalProps) {
                 inputClass={MODAL_PATH_INPUT}
                 onBrowse={normalizedPath => {
                   if (!localGame.name) {
-                    setLocalGame('name', getParentPath(normalizedPath) || '')
+                    setLocalGame('name', getParentPath(normalizedPath) ?? '')
                   }
                 }}
                 onBulkInput={bulkPathTransform}
@@ -335,7 +338,7 @@ export default function GameEditModal(props: GameEditModalProps) {
                   setLocalGame('excutablePath', v || null)
                 }}
                 placeholder={t('game.edit.exePathPlaceholder')}
-                value={localGame.excutablePath || ''}
+                value={localGame.excutablePath ?? ''}
               />
             </FormField>
 
@@ -359,7 +362,7 @@ export default function GameEditModal(props: GameEditModalProps) {
                   onInput={e => {
                     setLocalGame(
                       'addedTime',
-                      inputToDate(e.currentTarget.value) || localGame.addedTime
+                      inputToDate(e.currentTarget.value) ?? localGame.addedTime
                     )
                   }}
                   type="datetime-local"

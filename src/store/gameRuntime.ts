@@ -11,7 +11,7 @@ import type { Game } from '@bindings/Game'
 import type { Translator } from '@solid-primitives/i18n'
 import { invoke } from '@tauri-apps/api/core'
 import { once } from '@tauri-apps/api/event'
-import { log } from '@utils/log'
+import { errToStr, log } from '@utils/log'
 import { formatSessionDuration } from '@utils/time'
 import { showOrDefer } from '@utils/toastFocus'
 import type { Dictionary } from '~/i18n'
@@ -54,13 +54,13 @@ export async function initGameRuntime(t: TFunction): Promise<void> {
   try {
     ids = await invoke<number[]>('running_game_ids')
   } catch (error) {
-    log.error(`Failed to query running games: ${error}`)
+    log.error(`Failed to query running games: ${errToStr(error)}`)
     return
   }
 
   setPlayingIds(ids)
   for (const id of ids) {
-    once<GameExitPayload>(`game://exit/${id}`, event => {
+    void once<GameExitPayload>(`game://exit/${id}`, event => {
       setPlayingIds(previous => previous.filter(pid => pid !== id))
       if (!event.payload.success) {
         const gameName = useConfig().config.games.find(g => g.id === id)?.name ?? ''
@@ -109,11 +109,12 @@ export async function launchGame(game: Game, t: TFunction): Promise<void> {
     // Distinguish plugin command failures from game launch failures
     const isPluginError = typeof error === 'string' && error.includes('Plugin ')
     if (isPluginError) {
+      // error is narrowed to string here
       log.error(`Plugin error for game ${game.name}: ${error}`)
       toast.error(error)
     } else {
-      log.error(`Failed to start game ${game.name}: ${error}`)
-      toast.error(game.name + t('hint.failToStart') + error)
+      log.error(`Failed to start game ${game.name}: ${errToStr(error)}`)
+      toast.error(game.name + t('hint.failToStart') + errToStr(error))
     }
     // If the launch instruction itself failed, clean up the listeners we just registered.
     unlistenSpawn()

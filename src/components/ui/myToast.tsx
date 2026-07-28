@@ -309,7 +309,7 @@ export const myToast = (props: CustomToastOptions) => {
                   <button
                     class={cn(
                       'text-sm font-medium transition-colors',
-                      ACTION_STYLES[action.variant || 'primary']
+                      ACTION_STYLES[action.variant ?? 'primary']
                     )}
                     onClick={() => {
                       action.onClick?.()

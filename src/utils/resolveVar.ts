@@ -156,7 +156,7 @@ export function resolveVar(
     const key = bytes.slice(openIndex + 1, closeIndex)
     // Look up the key; if not found, leave `{key}` as-is (lenient)
     result += Object.prototype.hasOwnProperty.call(variableMap, key)
-      ? variableMap[key]
+      ? (variableMap[key] ?? '')
       : `{${key}}`
     index = closeIndex + 1
   }

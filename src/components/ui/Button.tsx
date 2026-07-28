@@ -37,8 +37,8 @@ export function Button(props: ButtonProps) {
     <button
       class={cn(
         baseStyles,
-        variants[local.variant || 'secondary'],
-        sizes[local.size || 'md'],
+        variants[local.variant ?? 'secondary'],
+        sizes[local.size ?? 'md'],
         local.class
       )}
       {...rest}

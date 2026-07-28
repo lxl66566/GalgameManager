@@ -108,7 +108,7 @@ export const DeviceTab: Component = () => {
                     emptyText={t('settings.device.noVariablesDefined')}
                     label={t('settings.device.variables')}
                     onCommit={handleVariablesCommit}
-                    values={development().variables || {}}
+                    values={development().variables}
                   />
                 </div>
               </SettingSection>

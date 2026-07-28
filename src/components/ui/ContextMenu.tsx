@@ -92,5 +92,5 @@ export function ContextMenu(props: ContextMenuProps) {
 // ── Component ─────
 
 function isSeparator(entry: ContextMenuEntry): entry is ContextMenuSeparator {
-  return 'type' in entry && entry.type === 'separator'
+  return 'type' in entry
 }

@@ -108,9 +108,9 @@ const CachedImage: Component<ImageProps> = props => {
   })
 
   return (
-    <div class={`relative overflow-hidden bg-gray-800/50 ${props.class || ''}`}>
+    <div class={`relative overflow-hidden bg-gray-800/50 ${props.class ?? ''}`}>
       <ErrorBoundary
-        fallback={error => (
+        fallback={(error: Error) => (
           <div
             class="absolute inset-0 flex flex-col items-center justify-center bg-red-900/20 border border-red-500/30 text-red-400 p-2"
             title={error.toString()}

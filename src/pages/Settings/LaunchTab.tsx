@@ -2,6 +2,7 @@
 import { myToast } from '@components/ui/myToast'
 import { SettingRow, SettingSection, SwitchToggle } from '@components/ui/settings'
 import { invoke } from '@tauri-apps/api/core'
+import { errToStr } from '@utils/log'
 import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'
 import { type Component } from 'solid-js'
@@ -9,6 +10,20 @@ import { type Component } from 'solid-js'
 export const LaunchTab: Component = () => {
   const { actions, config } = useConfig()
   const { t } = useI18n()
+
+  // Performs the destructive clear; extracted async so the toast action's
+  // `onClick` stays a plain `() => void` (the returned promise is ignored).
+  const performClear = async () => {
+    try {
+      await invoke('clear_all_daily_playtime')
+      myToast({
+        message: t('settings.launch.dailyStatCleared'),
+        variant: 'success'
+      })
+    } catch (error) {
+      myToast({ message: errToStr(error), variant: 'error' })
+    }
+  }
 
   const handleClearDailyStat = () => {
     myToast({
@@ -20,17 +35,7 @@ export const LaunchTab: Component = () => {
         },
         {
           label: t('ui.confirm'),
-          onClick: async () => {
-            try {
-              await invoke('clear_all_daily_playtime')
-              myToast({
-                message: t('settings.launch.dailyStatCleared'),
-                variant: 'success'
-              })
-            } catch (error) {
-              myToast({ message: String(error), variant: 'error' })
-            }
-          },
+          onClick: () => void performClear(),
           variant: 'danger'
         }
       ],

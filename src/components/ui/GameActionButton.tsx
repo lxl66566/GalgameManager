@@ -21,7 +21,12 @@ export const GameActionButton = (props: GameActionButtonProps) => {
             : `${props.colorClass} hover:scale-110 active:scale-95 hover:bg-opacity-10 dark:hover:bg-opacity-20 hover:bg-gray-500 cursor-pointer`
         }
       `}
-      disabled={props.disabled || props.loading}
+      disabled={
+        // Intentional boolean OR: `??` would skip `loading` when `disabled`
+        // is explicitly `false`, leaving the button enabled while loading.
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+        props.disabled || props.loading
+      }
       onClick={e => {
         e.stopPropagation()
         if (!props.disabled && !props.loading) {
