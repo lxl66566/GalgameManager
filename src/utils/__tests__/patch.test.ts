@@ -100,8 +100,8 @@ describe('mergeConfigPatches', () => {
     const b = deleteGameOp(2)
     const merged = mergeConfigPatches(a, b)
     expect(merged.games).toHaveLength(2)
-    expect(merged.games![0].op).toBe('append')
-    expect(merged.games![1].op).toBe('delete')
+    expect(merged.games![0]!.op).toBe('append')
+    expect(merged.games![1]!.op).toBe('delete')
   })
 
   it('latest wins for the same nested key', () => {

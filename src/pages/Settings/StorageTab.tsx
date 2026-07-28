@@ -20,11 +20,17 @@ import { checkAndPullRemote, performManualUpload, useConfig } from '~/store'
 import { FiDownload, FiLoader, FiUpload } from 'solid-icons/fi'
 import { createMemo, createSignal, Match, Show, Switch, type Component } from 'solid-js'
 
-const COMPRESSION_RULES: Record<string, { disabled: boolean; max: number; min: number }> =
-  {
-    squashfsZstd: { disabled: false, max: 22, min: 1 }, // Zstd 通常 1-22
-    tar: { disabled: true, max: 0, min: 0 } // Tar 通常仅归档不压缩，禁用等级
-  }
+// Keyed by ArchiveAlgo (a finite union), not `string`: with
+// noUncheckedIndexedAccess a Record<string, T> lookup returns T | undefined
+// even on the `?? fallback` branch, polluting every downstream use. A finite
+// key union makes each access a concrete property lookup (always defined).
+const COMPRESSION_RULES: Record<
+  ArchiveAlgo,
+  { disabled: boolean; max: number; min: number }
+> = {
+  squashfsZstd: { disabled: false, max: 22, min: 1 }, // Zstd 通常 1-22
+  tar: { disabled: true, max: 0, min: 0 } // Tar 通常仅归档不压缩，禁用等级
+}
 
 // --- 子组件：WebDAV 表单 ---
 const WebDavForm: Component<{
@@ -171,9 +177,7 @@ const CompressionForm: Component<{
 }> = props => {
   const { t } = useI18n()
 
-  const currentRule = createMemo(
-    () => COMPRESSION_RULES[props.config.algorithm] ?? COMPRESSION_RULES.squashfsZstd
-  )
+  const currentRule = createMemo(() => COMPRESSION_RULES[props.config.algorithm])
 
   // 优化：接收 Event 对象以便直接操作 DOM
   const handleLevelChange = (

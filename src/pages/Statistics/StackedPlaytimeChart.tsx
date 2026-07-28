@@ -288,7 +288,7 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
     // ── x axis (custom band labels, ISO-style dates to match the header) ──
     const weekdayFmt = new Intl.DateTimeFormat(locale, { weekday: 'short' })
     const monthFmt = new Intl.DateTimeFormat(locale, { month: 'short' })
-    const isDense = data.length > 10 && data[0].unit === 'day'
+    const isDense = data.length > 10 && data[0]?.unit === 'day'
     const tickLabels: TickLabel[] = data
       .filter(
         b => !isDense || b.start.getDate() === 1 || (b.start.getDate() - 1) % 5 === 0

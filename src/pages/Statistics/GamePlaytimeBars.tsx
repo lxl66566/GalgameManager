@@ -48,7 +48,7 @@ const GamePlaytimeBars: Component<GamePlaytimeBarsProps> = props => {
     // querySelector rather than per-row refs: rows are re-created on each
     // scope change (new object literals), so a ref Map would need cleanup.
     const element = rootRef.querySelector<HTMLElement>(
-      `[data-game-id="${CSS.escape(id)}"]`
+      `[data-game-id="${CSS.escape(String(id))}"]`
     )
     if (element) element.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   })

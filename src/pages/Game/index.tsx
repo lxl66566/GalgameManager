@@ -218,7 +218,7 @@ const GamePage = (): JSX.Element => {
 
   const openEditModal = (index: number) => {
     setEditingIndex(index)
-    setEditingGameInfo(config.games[index])
+    setEditingGameInfo(config.games[index] ?? null)
     setEditMode(true)
     setEditModalOpen(true)
   }
@@ -288,6 +288,7 @@ const GamePage = (): JSX.Element => {
     }
     const game = config.games[index]
     closeEditModal()
+    if (!game) return
     try {
       if (game.savePaths.length > 0) {
         void invoke('delete_local_archive_all', { gameId: game.id })
@@ -326,7 +327,8 @@ const GamePage = (): JSX.Element => {
 
   const handleDropAdd = (paths: string[]) => {
     console.log('Dropped paths:', paths)
-    void openGameAddModal(paths.at(0) ? fuckBackslash(paths[0]) : undefined)
+    const first = paths[0]
+    void openGameAddModal(first ? fuckBackslash(first) : undefined)
   }
 
   /** Handle context menu actions dispatched from GameItem. */
@@ -400,6 +402,7 @@ const GamePage = (): JSX.Element => {
 
   const openSyncModal = (index: number) => {
     const game = config.games[index]
+    if (!game) return
     setEditingIndex(index)
     setEditingGameInfo(game)
     setSyncModalOpen(true)
@@ -539,9 +542,12 @@ const SortOptions = (props: {
   sortType: Accessor<SortType>
 }): JSX.Element => {
   const { t } = useI18n()
-  const sortOptions: Accessor<
+  // Element type is passed to createMemo's generic so the `type` string
+  // literals are contextually typed against SortType instead of widening to
+  // `string` inside the array.
+  const sortOptions = createMemo<
     { icon: Component<{ class?: string }>; label: string; type: SortType }[]
-  > = createMemo(() => [
+  >(() => [
     {
       icon: TbOutlineSortAscendingNumbers,
       label: t('game.sortType.id'),

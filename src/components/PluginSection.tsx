@@ -108,9 +108,13 @@ export default function PluginSection(props: PluginSectionProps) {
     const newIndex = index + direction
     if (newIndex < 0 || newIndex >= props.plugins.length) return
     const newPlugins = [...props.plugins]
-    const temporary = newPlugins[index]
-    newPlugins[index] = newPlugins[newIndex]
-    newPlugins[newIndex] = temporary
+    const a = newPlugins[index]
+    const b = newPlugins[newIndex]
+    // Both indices are validated above, but noUncheckedIndexedAccess keeps
+    // array access nullable — bail if the (impossible) null slipped through.
+    if (!a || !b) return
+    newPlugins[index] = b
+    newPlugins[newIndex] = a
     props.onChange(newPlugins)
     if (expandedIndex() === index) setExpandedIndex(newIndex)
     else if (expandedIndex() === newIndex) setExpandedIndex(index)
@@ -119,7 +123,9 @@ export default function PluginSection(props: PluginSectionProps) {
   const handleUpdateConfig = (index: number, newConfig: Record<string, unknown>) => {
     // Prefer fine-grained store update to avoid replacing the entire array,
     // which would cause <For> to re-create DOM elements and lose input focus.
-    const updated = withUpdatedConfig(props.plugins[index], newConfig)
+    const current = props.plugins[index]
+    if (!current) return
+    const updated = withUpdatedConfig(current, newConfig)
     if (props.onConfigChange) {
       props.onConfigChange(index, updated)
     } else {
