@@ -4,16 +4,20 @@ categories  = ["template-engine", "text-processing"]
 description = "A string formatting crate for maps and custom types"
 edition     = "2024"
 homepage    = "https://github.com/lxl66566/GalgameManager/src-tauri/easy_strfmt"
-keywords    = ["string", "format", "template", "strfmt"]
+keywords    = ["format", "strfmt", "string", "template"]
 license     = "MIT OR Apache-2.0"
 name        = "easy_strfmt"
 readme      = "README.md"
 repository  = "https://github.com/lxl66566/GalgameManager"
 version     = "0.1.0"
 
-[lints.rust]
-unsafe_code           = "allow"
-unused_qualifications = "warn"
+[dependencies]
+indexmap  = { version = "2", optional = true }
+thiserror = "2"
+
+[features]
+default  = []
+indexmap = ["dep:indexmap"]
 
 [lints.clippy]
 all                     = { level = "warn", priority = -1 }
@@ -24,10 +28,6 @@ missing_panics_doc      = "allow"
 multiple_crate_versions = "allow"
 pedantic                = { level = "warn", priority = -1 }
 
-[features]
-default  = []
-indexmap = ["dep:indexmap"]
-
-[dependencies]
-indexmap  = { version = "2", optional = true }
-thiserror = "2"
+[lints.rust]
+unsafe_code           = "allow"
+unused_qualifications = "warn"

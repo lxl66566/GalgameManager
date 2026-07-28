@@ -1,0 +1,14 @@
+toml-version = "v1.0.0"
+
+[files]
+include              = ["**/*.toml"]
+exclude              = ["target/*", "node_modules/*"]
+respect-ignore-files = true
+
+[format.rules]
+group-blank-lines-limit           = 1
+indent-width                      = 2
+key-value-equals-sign-alignment   = true
+key-value-equals-sign-space-width = 1
+line-ending                       = "lf"
+line-width                        = 120
