@@ -4,6 +4,12 @@ import { FiPlusCircle } from 'solid-icons/fi'
 import { createSignal, For, Show, type Component } from 'solid-js'
 import toast from 'solid-toast'
 
+// 核心：自动调整 Textarea 高度的辅助函数
+const autoResize = (el: HTMLTextAreaElement) => {
+  el.style.height = 'auto'
+  el.style.height = `${el.scrollHeight}px`
+}
+
 export interface FormTableEditorValueOption {
   label: string
   value: string
@@ -43,12 +49,6 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
   const [error, setError] = createSignal<string | null>(null)
 
   const sortedKeys = () => Object.keys(props.values).sort((a, b) => a.localeCompare(b))
-
-  // 核心：自动调整 Textarea 高度的辅助函数
-  const autoResize = (el: HTMLTextAreaElement) => {
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
-  }
 
   const defaultValue = () => props.valueOptions?.[0]?.value ?? ''
 

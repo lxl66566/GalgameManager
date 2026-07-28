@@ -9,12 +9,26 @@
     "build": "vite build",
     "tauri": "tauri",
     "preview": "vite preview",
-    "prettier": "prettier src -c",
+    "fix": "oxlint --fix . && eslint --fix .",
+    "fmt:check": "prettier src -c",
     "fmt": "prettier src -w",
-    "lint": "eslint src",
+    "lint": "oxlint .",
+    "lint:full": "oxlint . && eslint src",
     "check": "tsc --noEmit --strict --skipLibCheck",
+    "knip": "knip",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "verify": "pnpm run fmt:check && pnpm run lint:full && pnpm run check && pnpm run knip && pnpm run test && pnpm run build"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint-staged"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs}": [
+      "oxlint --fix",
+      "eslint --fix"
+    ],
+    "*.{ts,tsx,js,mjs,cjs,json,jsonc,css,html,md,yml,yaml}": "prettier --write"
   },
   "license": "MIT",
   "devDependencies": {
@@ -26,12 +40,22 @@
     "@types/d3": "^7.4.3",
     "@types/node": "^26.1.1",
     "@unocss/preset-wind4": "^66.7.5",
+    "@vitest/eslint-plugin": "^1.6.24",
     "eslint": "^10.7.0",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import-x": "^4.17.1",
+    "eslint-plugin-oxlint": "^1.76.0",
+    "eslint-plugin-perfectionist": "^5.10.0",
+    "eslint-plugin-regexp": "^3.1.1",
     "eslint-plugin-solid": "^0.14.5",
+    "eslint-plugin-unicorn": "^72.0.0",
+    "knip": "^6.29.0",
     "lightningcss": "1.28.2",
+    "lint-staged": "^17.2.0",
+    "oxlint": "^1.75.0",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
+    "simple-git-hooks": "^2.13.1",
     "solid-icons": "^1.2.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.65.0",

@@ -10,14 +10,14 @@ describe('debounce', () => {
   })
 
   it('does not call fn immediately', () => {
-    const fn = vi.fn()
+    const fn = vi.fn<() => void>()
     const debounced = debounce(fn, 100)
     debounced()
     expect(fn).not.toHaveBeenCalled()
   })
 
   it('calls fn once after the delay', () => {
-    const fn = vi.fn()
+    const fn = vi.fn<() => void>()
     const debounced = debounce(fn, 100)
     debounced()
     vi.advanceTimersByTime(100)
@@ -25,7 +25,7 @@ describe('debounce', () => {
   })
 
   it('coalesces multiple rapid calls into a single trailing call', () => {
-    const fn = vi.fn()
+    const fn = vi.fn<() => void>()
     const debounced = debounce(fn, 100)
     debounced()
     debounced()
@@ -35,7 +35,7 @@ describe('debounce', () => {
   })
 
   it('passes the args of the most recent call', () => {
-    const fn = vi.fn()
+    const fn = vi.fn<(...args: string[]) => void>()
     const debounced = debounce(fn, 100)
     debounced('a')
     debounced('b')
@@ -45,7 +45,7 @@ describe('debounce', () => {
   })
 
   it('resets the timer when called again within the window', () => {
-    const fn = vi.fn()
+    const fn = vi.fn<() => void>()
     const debounced = debounce(fn, 100)
     debounced()
     vi.advanceTimersByTime(90)
@@ -58,7 +58,7 @@ describe('debounce', () => {
   })
 
   it('cancel() prevents the pending invocation', () => {
-    const fn = vi.fn()
+    const fn = vi.fn<() => void>()
     const debounced = debounce(fn, 100)
     debounced()
     debounced.cancel()
@@ -67,7 +67,7 @@ describe('debounce', () => {
   })
 
   it('cancel() is a no-op when there is nothing pending', () => {
-    const fn = vi.fn()
+    const fn = vi.fn<() => void>()
     const debounced = debounce(fn, 100)
     expect(() => debounced.cancel()).not.toThrow()
     vi.advanceTimersByTime(1000)
@@ -75,7 +75,7 @@ describe('debounce', () => {
   })
 
   it('can be called again after a previous invocation fires', () => {
-    const fn = vi.fn()
+    const fn = vi.fn<() => void>()
     const debounced = debounce(fn, 50)
     debounced()
     vi.advanceTimersByTime(50)

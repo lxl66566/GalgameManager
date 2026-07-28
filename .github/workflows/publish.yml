@@ -50,13 +50,11 @@ jobs:
         run: pnpm install
 
       - name: Build and publish Tauri application
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
           # the action automatically replaces __VERSION__ with the app version
           tagName: v__VERSION__
           releaseName: 'v__VERSION__'
-          releaseDraft: true
-          prerelease: false
           tauriScript: 'pnpm tauri'

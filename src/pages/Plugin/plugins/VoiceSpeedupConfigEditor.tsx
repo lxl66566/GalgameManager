@@ -11,20 +11,20 @@ import { Show } from 'solid-js'
 import { AutoAddMetaEditor } from './AutoAddMetaEditor'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 
+/** Parse a speed value from user input, clamped to [1.0, 2.0]. */
+const parseSpeed = (raw: string): number | null => {
+  // Allow intermediate states like "1.", ".5", "1.2"
+  const val = parseFloat(raw)
+  if (isNaN(val)) return null
+  return Math.min(2.0, Math.max(1.0, val))
+}
+
 function VoiceSpeedupGameConfigEditor(props: ConfigEditorProps<VoiceSpeedupGameConfig>) {
   const { t } = useI18n()
   const { config } = useConfig()
 
   const showMmdevapiWarn = () => isLinux && props.config.provider === 'mmdevapi'
   const showWineRequired = () => isLinux && config.pluginMetadatas.wine?.enabled === false
-
-  /** Parse a speed value from user input, clamped to [1.0, 2.0]. */
-  const parseSpeed = (raw: string): number | null => {
-    // Allow intermediate states like "1.", ".5", "1.2"
-    const val = parseFloat(raw)
-    if (isNaN(val)) return null
-    return Math.min(2.0, Math.max(1.0, val))
-  }
 
   return (
     <div class="flex flex-col gap-2">

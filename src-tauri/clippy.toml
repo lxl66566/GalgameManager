@@ -1,0 +1,9 @@
+allow-expect-in-tests          = true
+allow-unwrap-in-tests          = true
+check-private-items            = true
+cognitive-complexity-threshold = 30
+max-fn-params-bools            = 2
+msrv                           = "1.85"
+too-many-arguments-threshold   = 8
+too-many-lines-threshold       = 260
+warn-on-all-wildcard-imports   = true

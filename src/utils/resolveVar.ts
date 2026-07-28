@@ -90,7 +90,7 @@ export function replaceWithVarNames(
 
   const entries = Object.entries(varMap)
     .filter(([, v]) => v.length > 0)
-    .sort((a, b) => b[1].length - a[1].length)
+    .toSorted((a, b) => b[1].length - a[1].length)
 
   for (const [key, value] of entries) {
     const idx = path.indexOf(value)

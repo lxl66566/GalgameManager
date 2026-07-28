@@ -65,15 +65,27 @@ const scrollIntoViewLocal = (el: HTMLElement) => {
   }
 }
 
+const getDef = (pluginId: string): AnyPluginDef | undefined =>
+  PLUGIN_REGISTRY.find(d => d.info.id === pluginId)
+
+/**
+ * Reconstruct a PluginInstance with updated config.
+ *
+ * This is the only place that bridges the untyped `Record<string, unknown>`
+ * from Dynamic editors back to the typed PluginInstance union. The spread
+ * preserves the `pluginId` discriminant, so the assertion is safe.
+ */
+const withUpdatedConfig = (
+  instance: PluginInstance,
+  newConfig: Record<string, unknown>
+): PluginInstance => ({ ...instance, config: newConfig }) as PluginInstance
+
 export default function PluginSection(props: PluginSectionProps) {
   const { t } = useI18n()
   const { config } = useConfig()
   const [expandedIndex, setExpandedIndex] = createSignal<number | null>(null)
   const [showAddMenu, setShowAddMenu] = createSignal(false)
   let sectionRef: HTMLDivElement | undefined
-
-  const getDef = (pluginId: string): AnyPluginDef | undefined =>
-    PLUGIN_REGISTRY.find(d => d.info.id === pluginId)
 
   const handleAddPlugin = (def: AnyPluginDef) => {
     const newInstance = buildNewInstance(def, config.pluginMetadatas)
@@ -103,18 +115,6 @@ export default function PluginSection(props: PluginSectionProps) {
     if (expandedIndex() === index) setExpandedIndex(newIndex)
     else if (expandedIndex() === newIndex) setExpandedIndex(index)
   }
-
-  /**
-   * Reconstruct a PluginInstance with updated config.
-   *
-   * This is the only place that bridges the untyped `Record<string, unknown>`
-   * from Dynamic editors back to the typed PluginInstance union. The spread
-   * preserves the `pluginId` discriminant, so the assertion is safe.
-   */
-  const withUpdatedConfig = (
-    instance: PluginInstance,
-    newConfig: Record<string, unknown>
-  ): PluginInstance => ({ ...instance, config: newConfig }) as PluginInstance
 
   const handleUpdateConfig = (index: number, newConfig: Record<string, unknown>) => {
     // Prefer fine-grained store update to avoid replacing the entire array,
@@ -275,12 +275,12 @@ export default function PluginSection(props: PluginSectionProps) {
                         const Editor = d.GameEditor as Component<
                           ConfigEditorProps<AnyGameConfig>
                         >
-                        const config = (instance as { config: AnyGameConfig }).config
+                        const gameConfig = (instance as { config: AnyGameConfig }).config
                         return (
                           <div class="border-t border-gray-200 dark:border-gray-600/50 px-3 py-2 bg-gray-50/50 dark:bg-gray-900/20">
                             <Dynamic
                               component={Editor}
-                              config={config}
+                              config={gameConfig}
                               onCommit={(values: Record<string, unknown>) =>
                                 handleUpdateConfig(index(), values)
                               }

@@ -11,14 +11,14 @@ import { log } from '@utils/log'
 
 const SORT_TYPE_FILENAME = '.config/GalgameManager/sort_type'
 const DEFAULT_SORT_TYPE: SortType = 'id'
-const VALID_SORT_TYPES: readonly SortType[] = ['id', 'name', 'lastPlayed', 'playTime']
+const VALID_SORT_TYPES: ReadonlySet<SortType> = new Set(['id', 'name', 'lastPlayed', 'playTime'])
 
 /** In-memory cache; `null` means not yet loaded from disk. */
 let cached: SortType | null = null
 
 function parse(raw: string): SortType {
   const trimmed = raw.trim() as SortType
-  return VALID_SORT_TYPES.includes(trimmed) ? trimmed : DEFAULT_SORT_TYPE
+  return VALID_SORT_TYPES.has(trimmed) ? trimmed : DEFAULT_SORT_TYPE
 }
 
 /** Load sort type from disk (first call) or return cached value. */

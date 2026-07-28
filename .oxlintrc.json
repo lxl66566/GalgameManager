@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["eslint", "import", "oxc", "promise", "typescript", "unicorn", "vitest"],
+  "categories": {
+    "correctness": "error",
+    "perf": "error",
+    "suspicious": "warn",
+    "style": "off"
+  },
+  "rules": {
+    "eslint/no-unassigned-vars": "off",
+    "eslint/no-underscore-dangle": "off",
+    "import/no-named-as-default": "off",
+    "import/no-unassigned-import": "off",
+    "vitest/require-hook": "off"
+  },
+  "env": {
+    "browser": true,
+    "es2024": true
+  },
+  "ignorePatterns": ["dist/**", "src-tauri/**", "node_modules/**", "coverage/**"]
+}

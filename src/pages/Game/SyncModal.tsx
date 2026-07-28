@@ -78,6 +78,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       const allNames = new Set([...localMap.keys(), ...remoteMap.keys()])
 
       // 3. 遍历所有 name，生成最终的 merged 数组
+      // eslint-disable-next-line oxc/no-map-spread
       const merged: ArchiveItem[] = Array.from(allNames).map(name => {
         const localItem = localMap.get(name)
         const remoteItem = remoteMap.get(name)
@@ -311,7 +312,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
         const updatedList = prev.map(item =>
           item.name === oldName ? { ...item, name: newName } : item
         )
-        return updatedList.sort((a, b) => b.name.localeCompare(a.name))
+        return updatedList.toSorted((a, b) => b.name.localeCompare(a.name))
       })
 
       // 只有成功时才关闭编辑框

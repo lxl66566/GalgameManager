@@ -11,6 +11,7 @@
 import * as KobalteSwitch from '@kobalte/core/switch'
 import { cn } from '~/lib/utils'
 import { For, splitProps, type Component, type JSX } from 'solid-js'
+import type { SwitchRootProps } from '@kobalte/core/switch'
 
 // ─── Size type ────
 
@@ -144,7 +145,7 @@ export const Select: Component<SelectProps> = props => {
 
 // ─── Switch ───────
 
-export interface SwitchProps extends KobalteSwitch.SwitchRootProps {
+export interface SwitchProps extends SwitchRootProps {
   size?: ControlSize
   class?: string
 }

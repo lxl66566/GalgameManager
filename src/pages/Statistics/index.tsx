@@ -71,7 +71,7 @@ const StatisticsPage: Component = () => {
     const tot = totals()
     return config.games
       .filter(g => (tot.get(g.id) ?? 0) > 0)
-      .sort((a, b) => (tot.get(b.id) ?? 0) - (tot.get(a.id) ?? 0))
+      .toSorted((a, b) => (tot.get(b.id) ?? 0) - (tot.get(a.id) ?? 0))
   })
 
   // Colors: the cover-derived accent color is computed once on the Rust side
@@ -141,7 +141,7 @@ const StatisticsPage: Component = () => {
         : (bucketData().find(b => b.key === scope)?.perGame ?? new Map<number, number>())
     return [...source.entries()]
       .filter(([, secs]) => secs > 0)
-      .sort((a, b) => b[1] - a[1])
+      .toSorted((a, b) => b[1] - a[1])
       .map(([id, secs]) => {
         const g = byId.get(id)
         return {

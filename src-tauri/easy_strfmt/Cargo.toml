@@ -11,6 +11,19 @@ readme      = "README.md"
 repository  = "https://github.com/lxl66566/GalgameManager"
 version     = "0.1.0"
 
+[lints.rust]
+unsafe_code           = "allow"
+unused_qualifications = "warn"
+
+[lints.clippy]
+all                     = { level = "warn", priority = -1 }
+cargo                   = { level = "warn", priority = -1 }
+doc_markdown            = "allow"
+missing_errors_doc      = "allow"
+missing_panics_doc      = "allow"
+multiple_crate_versions = "allow"
+pedantic                = { level = "warn", priority = -1 }
+
 [features]
 default  = []
 indexmap = ["dep:indexmap"]

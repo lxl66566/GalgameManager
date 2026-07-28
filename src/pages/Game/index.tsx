@@ -79,7 +79,7 @@ const GamePage = (): JSX.Element => {
     const games = [...config.games]
     const type = sortType()
 
-    return games.sort((a, b) => {
+    return games.toSorted((a, b) => {
       switch (type) {
         case 'name':
           return a.name.localeCompare(
@@ -248,6 +248,7 @@ const GamePage = (): JSX.Element => {
     // Validate that the resolved executable path is absolute
     if (game.excutablePath) {
       resolveVarForDevice(game.excutablePath, config.devices)
+        // eslint-disable-next-line promise/always-return
         .then(resolved => {
           if (resolved && !isAbsolutePath(resolved)) {
             myToast({

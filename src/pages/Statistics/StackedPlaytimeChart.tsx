@@ -454,7 +454,7 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
     const rows = props.series
       .map(s => ({ ...s, secs: bucket.perGame.get(s.id) ?? 0 }))
       .filter(r => r.secs > 0)
-      .sort((a, b) => b.secs - a.secs)
+      .toSorted((a, b) => b.secs - a.secs)
     return { ...t, bucket, rows }
   })
 

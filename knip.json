@@ -1,0 +1,4 @@
+{
+  "entry": ["index.html", "src/index.tsx", "vite.config.ts", "vitest.config.ts", "uno.config.ts"],
+  "project": ["src/**/*.{ts,tsx}"]
+}

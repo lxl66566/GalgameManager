@@ -95,13 +95,6 @@ const TimeDisplaySection: Component = () => {
   const cfg = () => config.settings.appearance.timeDisplay
   const timeLocale = createMemo(() => resolveTimeLanguage(cfg().language, locale()))
 
-  // Live preview using a recent fixed date so the user can see how
-  // both styles look without having to mouse over a game card.
-  const previewIso = () => {
-    const d = new Date()
-    d.setHours(d.getHours() - 50)
-    return d.toISOString()
-  }
   const previewRelative = createMemo(() =>
     formatTimeAgoLocale(previewIso(), timeLocale())
   )

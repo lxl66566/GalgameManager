@@ -1,6 +1,7 @@
 name: check
 
 on:
+  workflow_dispatch:
   pull_request:
 
 env:
@@ -30,6 +31,9 @@ jobs:
       - name: Type check (tsc)
         run: pnpm run check
 
+      - name: Unused code & deps (knip)
+        run: pnpm run knip
+
       - name: Unit tests (vitest)
         run: pnpm run test
 
@@ -37,7 +41,7 @@ jobs:
         run: pnpm run lint
 
       - name: Format check (prettier)
-        run: pnpm run prettier
+        run: pnpm run fmt:check
 
       - name: Build frontend
         run: pnpm run build
