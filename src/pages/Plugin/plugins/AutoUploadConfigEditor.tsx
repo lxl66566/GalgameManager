@@ -17,47 +17,47 @@ function AutoUploadGameConfigEditor(
   /** Parse a non-negative integer; falls back to the current value on invalid
    *  input. 0 means unlimited retention. */
   const parseMaxKept = (raw: string): number => {
-    const val = Math.floor(Number(raw))
-    return Number.isFinite(val) && val >= 0 ? val : props.config.maxKept
+    const value = Math.floor(Number(raw))
+    return Number.isFinite(value) && value >= 0 ? value : props.config.maxKept
   }
 
   return (
     <div class="flex flex-wrap gap-5 items-start">
       <FormField
-        label={t('plugin.autoUpload.maxKept')}
-        description={t('plugin.autoUpload.maxKeptDesc')}
         class="w-28"
+        description={t('plugin.autoUpload.maxKeptDesc')}
+        label={t('plugin.autoUpload.maxKept')}
       >
         <FormInput
           class="w-full"
-          type="text"
           inputmode="numeric"
-          value={String(props.config.maxKept)}
           onBlur={(e: FocusEvent) => {
-            const el = e.target as HTMLInputElement
-            const parsed = parseMaxKept(el.value)
-            el.value = String(parsed)
+            const element = e.target as HTMLInputElement
+            const parsed = parseMaxKept(element.value)
+            element.value = String(parsed)
             if (parsed !== props.config.maxKept) {
               props.onCommit({ ...props.config, maxKept: parsed })
             }
           }}
+          type="text"
+          value={String(props.config.maxKept)}
         />
       </FormField>
-      <FormField label={t('plugin.autoUpload.retentionScope')} class="w-40">
+      <FormField class="w-40" label={t('plugin.autoUpload.retentionScope')}>
         <FormSelect
           class="w-full"
+          onChange={(e: Event) => {
+            props.onCommit({
+              ...props.config,
+              retentionScope: (e.target as HTMLSelectElement).value as RetentionScope
+            })
+          }}
           options={[
             { label: t('plugin.autoUpload.scopeBoth'), value: 'both' },
             { label: t('plugin.autoUpload.scopeLocal'), value: 'local' },
             { label: t('plugin.autoUpload.scopeRemote'), value: 'remote' }
           ]}
           value={props.config.retentionScope}
-          onChange={(e: Event) =>
-            props.onCommit({
-              ...props.config,
-              retentionScope: (e.target as HTMLSelectElement).value as RetentionScope
-            })
-          }
         />
       </FormField>
     </div>
@@ -65,16 +65,16 @@ function AutoUploadGameConfigEditor(
 }
 
 export const AUTO_UPLOAD_PLUGIN: PluginDefinition<'autoUpload'> = {
-  info: {
-    id: 'autoUpload',
-    nameKey: 'plugin.autoUpload.name',
-    descriptionKey: 'plugin.autoUpload.description',
-    version: '1.3.1',
-    author: 'BUILTIN',
-    links: []
-  },
-  metaKey: 'autoUpload',
   configDefaults: { maxKept: 20, retentionScope: 'both' },
+  GameEditor: AutoUploadGameConfigEditor,
+  info: {
+    author: 'BUILTIN',
+    descriptionKey: 'plugin.autoUpload.description',
+    id: 'autoUpload',
+    links: [],
+    nameKey: 'plugin.autoUpload.name',
+    version: '1.3.1'
+  },
   MetaEditor: AutoAddMetaEditor,
-  GameEditor: AutoUploadGameConfigEditor
+  metaKey: 'autoUpload'
 }

@@ -2,37 +2,37 @@ import { type LogLevel } from '@bindings/LogLevel'
 import { invoke } from '@tauri-apps/api/core'
 
 /**
+ * 基础 log 函数，支持 log('info', 'msg', obj, 123) 调用方式
+ */
+export function log(level: LogLevel, ...args: unknown[]) {
+  // 将所有参数合并成一个字符串发送给 Rust
+  const message = formatArgs(args)
+
+  invoke('log', { level, msg: message }).catch(error => {
+    console.error('Failed to log: ' + error)
+  })
+}
+
+/**
  * 内部辅助函数：将参数数组格式化为字符串
  * 类似于 console.log 的行为，将对象转为 JSON 字符串，以空格连接
  */
 function formatArgs(args: unknown[]): string {
   return args
-    .map(arg => {
-      if (arg instanceof Error) {
-        return arg.stack || arg.message
+    .map(argument => {
+      if (argument instanceof Error) {
+        return argument.stack || argument.message
       }
-      if (typeof arg === 'object') {
+      if (typeof argument === 'object') {
         try {
-          return JSON.stringify(arg)
+          return JSON.stringify(argument)
         } catch {
-          return String(arg)
+          return String(argument)
         }
       }
-      return String(arg)
+      return String(argument)
     })
     .join('')
-}
-
-/**
- * 基础 log 函数，支持 log('info', 'msg', obj, 123) 调用方式
- */
-export function log(level: LogLevel, ...args: unknown[]) {
-  // 将所有参数合并成一个字符串发送给 Rust
-  const msg = formatArgs(args)
-
-  invoke('log', { level, msg }).catch(e => {
-    console.error('Failed to log: ' + e)
-  })
 }
 
 // Namespace-free equivalents of the old `namespace log` API. Attaching the

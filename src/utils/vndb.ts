@@ -1,15 +1,15 @@
 // 定义 VNDB API 返回的数据结构
 interface VndbResponse {
-  results: Array<{
-    id: string
-    title: string
-    image?: {
-      url: string
-      sexual?: number
-      violence?: number
-    } | null
-  }>
   more: boolean
+  results: {
+    id: string
+    image?: null | {
+      sexual?: number
+      url: string
+      violence?: number
+    }
+    title: string
+  }[]
 }
 
 /**
@@ -17,21 +17,21 @@ interface VndbResponse {
  * @param gameName 游戏名称
  * @returns 封面图片的 URL，如果未找到则返回 null
  */
-export async function fetchVnCover(gameName: string): Promise<string | null> {
+export async function fetchVnCover(gameName: string): Promise<null | string> {
   if (!gameName.trim()) return null
 
   const endpoint = 'https://api.vndb.org/kana/vn'
 
   // VNDB Kana API 的请求体格式
   const body = {
-    // 过滤条件：按照关键词搜索
-    filters: ['search', '=', gameName],
     // 需要返回的字段：游戏标题，和图片的 URL
     fields: 'title, image.url, image.sexual, image.violence',
-    // 排序：按照搜索相关度排序，确保最匹配的在第一个
-    sort: 'searchrank',
+    // 过滤条件：按照关键词搜索
+    filters: ['search', '=', gameName],
     // 我们只需要最匹配的第一个结果
-    results: 1
+    results: 1,
+    // 排序：按照搜索相关度排序，确保最匹配的在第一个
+    sort: 'searchrank'
   }
 
   try {
@@ -40,11 +40,11 @@ export async function fetchVnCover(gameName: string): Promise<string | null> {
     // 'User-Agent' as a forbidden header and silently drops it, so setting
     // it here would be a no-op.
     const response = await fetch(endpoint, {
-      method: 'POST',
+      body: JSON.stringify(body),
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(body)
+      method: 'POST'
     })
 
     if (!response.ok) {

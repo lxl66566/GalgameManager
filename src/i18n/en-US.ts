@@ -1,89 +1,54 @@
 export const dict = {
-  sidebar: {
-    game: 'Game',
-    statistics: 'Statistics',
-    plugin: 'Plugin',
-    settings: 'Settings'
-  },
-  unit: {
-    second: 'second',
-    minute: 'minute',
-    hour: 'hour',
-    secondShort: 's',
-    minuteShort: 'm',
-    hourShort: 'h'
-  },
-  time: {
-    never: 'Never',
-    justNow: 'Just now',
-    minutesAgo: '{{n}}m ago',
-    hoursAgo: '{{n}}h ago',
-    daysAgo: '{{n}}d ago',
-    monthsAgo: '{{n}}mo ago',
-    yearsAgo: '{{n}}y ago'
-  },
-  ui: {
-    browse: 'Browse',
-    select: 'Select',
-    clear: 'Clear',
-    delete: 'Delete',
-    cancel: 'Cancel',
-    addFile: 'Add File',
-    addFolder: 'Add Folder',
-    rename: 'Rename',
-    confirm: 'Confirm',
-    save: 'Save',
-    pull: 'Pull',
-    push: 'Push',
-    withdraw: 'Withdraw',
-    WIP: 'Wait in progress...',
-    loading: 'Loading...',
-    interface: 'Interface',
-    none: 'None'
-  },
   game: {
-    self: 'Games',
-    playing: 'playing',
-    lastPlayedLabel: 'Last played: ',
-    totalPlayTime: 'Total play time',
-    sortType: {
-      id: 'Default',
-      name: 'Name',
-      lastPlayed: 'Last Played',
-      playTime: 'Play Time'
+    backupButtonHint: 'Backup saves and push to remote',
+    clickToAdd: 'Click to add',
+    context: {
+      openDir: 'Open Game Directory'
     },
     edit: {
-      editTitle: 'Edit Game',
-      addTitle: 'Add Game',
-      gameName: 'Game Name',
-      exePath: 'Executable Path',
-      savePath: 'Save Path',
-      imageUrl: 'Image Url',
       addedTime: 'Added Time',
-      useTime: 'Use Time',
-      lastPlayedTime: 'Last Played Time',
-      deleteGame: 'Delete Game',
+      addTitle: 'Add Game',
       cancel: 'Cancel',
+      clickToSelectImage: 'Click to select image',
       confirmSave: 'Save',
-      searchNotFound: 'Cover Not Found',
-      searchNotFoundMsg: 'No related game cover found on VNDB',
+      deleteGame: 'Delete Game',
+      editTitle: 'Edit Game',
+      exePath: 'Executable Path',
+      exePathPlaceholder: 'Select executable file',
+      gameName: 'Game Name',
+      imageUrl: 'Image Url',
+      imageUrlPlaceholder: 'https://... or C:/...',
+      lastPlayedTime: 'Last Played Time',
+      savePath: 'Save Path',
       searchFailed: 'Search Failed',
       searchFailedMsg: 'Error fetching VNDB cover',
-      clickToSelectImage: 'Click to select image',
-      imageUrlPlaceholder: 'https://... or C:/...',
-      exePathPlaceholder: 'Select executable file'
+      searchNotFound: 'Cover Not Found',
+      searchNotFoundMsg: 'No related game cover found on VNDB',
+      useTime: 'Use Time'
+    },
+    editGame: 'Edit Game Settings',
+    lastPlayedLabel: 'Last played: ',
+    openSyncModal: 'Open Sync Panel',
+    orDrag: 'or drag executable file here',
+    playing: 'playing',
+    self: 'Games',
+    sessionDuration: 'Played for {{duration}}',
+    sortType: {
+      id: 'Default',
+      lastPlayed: 'Last Played',
+      name: 'Name',
+      playTime: 'Play Time'
     },
     sync: {
-      self: 'Manage Archives',
       archiveNum: 'Archives',
-      noArchive: 'No archive',
-      recoverArchive: 'Recover Archive',
-      upload: 'Upload to remote',
-      download: 'Download to local',
       deleteLocalArchive: 'Delete Local Archive',
       deleteRemoteArchive: 'Delete Remote Archive',
+      download: 'Download to local',
       local: 'Lo',
+      noArchive: 'No archive',
+      recoverArchive: 'Recover Archive',
       remote: 'Re',
+      self: 'Manage Archives',
       status: {
         LocalOnly: 'Local Only',
         RemoteOnly: 'Remote Only',
@@ -93,247 +58,12 @@ export const dict = {
         LocalOnly: 'Local Only',
         RemoteOnly: 'Remote Only',
         Synced: 'Synced'
-      }
-    },
-    editGame: 'Edit Game Settings',
-    sessionDuration: 'Played for {{duration}}',
-    backupButtonHint: 'Backup saves and push to remote',
-    openSyncModal: 'Open Sync Panel',
-    clickToAdd: 'Click to add',
-    orDrag: 'or drag executable file here',
-    context: {
-      openDir: 'Open Game Directory'
-    }
-  },
-  plugin: {
-    title: 'Plugins',
-    noPlugins: 'No plugins registered',
-    enabled: 'Enabled',
-    disabled: 'Disabled',
-    metaConfig: 'Meta Config',
-    defaultConfig: 'Default Config',
-    defaultConfigDesc: 'Default configuration values for new plugin instances on games',
-    version: 'Version',
-    author: 'Author',
-    links: 'Links',
-    expand: 'Expand',
-    collapse: 'Collapse',
-    autoAdd: 'Auto add to new games',
-    pluginSection: 'Plugins',
-    addPlugin: 'Add Plugin',
-    removePlugin: 'Remove',
-    moveUp: 'Move Up',
-    moveDown: 'Move Down',
-    noPluginsAdded: 'No plugins added to this game',
-    pluginConfig: 'Plugin Config',
-    configEmpty: 'No configuration needed',
-    arch: 'Architecture',
-    archAuto: 'Auto Detect',
-    currentDir: 'Working Directory',
-    currentDirDesc:
-      'Working directory for the program. If the command contains a relative path, it will be resolved from this directory',
-    currentDirPlaceholder: 'Defaults to game dir if empty',
-    needBraces: 'Command must contain {} placeholder',
-    execute: {
-      name: 'Execute Command',
-      description: 'Execute external CLI commands',
-      on: 'Execute On',
-      cmd: 'Command',
-      cmdPlaceholder: 'e.g. echo "Hello World"',
-      env: 'Environment Variables',
-      addEnv: 'Add Variable',
-      beforeGameStart: 'Before Game Start',
-      afterGameStart: 'After Game Start',
-      gameExit: 'On Game Exit',
-      passExePath: 'Insert Executable Path',
-      passExePathDesc: 'Insert game executable into {} in cmd',
-      exitSignal: 'Exit Signal',
-      exitSignalDesc:
-        'Sends a signal to the spawned process by the plugin when the game exits',
-      exitSignalDescWin: 'Whether to terminate the spawned process when the game exits',
-      exitSignalNone: 'None',
-      exitSignalTerminate: 'TerminateProcess'
-    },
-    autoUpload: {
-      name: 'Auto Upload Saves',
-      description: 'Automatically archive and upload game saves when the game exits',
-      maxKept: 'Max Kept',
-      maxKeptDesc:
-        'Max number of saves to keep per game; oldest are evicted when exceeded (0 = unlimited)',
-      retentionScope: 'Retention Scope',
-      scopeLocal: 'Local Only',
-      scopeRemote: 'Remote Only',
-      scopeBoth: 'Both'
-    },
-    gameWrapper: {
-      name: 'Game Wrapper',
-      description: 'Replace the game launch command with a custom one',
-      cmd: 'Command',
-      cmdPlaceholder: 'e.g. wrapper.exe "{}"',
-      env: 'Environment Variables',
-      addEnv: 'Add Variable'
-    },
-    localeEmulator: {
-      name: 'Locale Emulator',
-      description: 'Run the game through Locale Emulator',
-      cmd: 'Command',
-      cmdPlaceholder: 'e.g. your_path/LEProc.exe "{}"'
-    },
-    translator: {
-      name: 'Translator',
-      description: 'Run translation tool on game start',
-      cmd: 'Command',
-      cmdPlaceholder: 'e.g. your_translator.exe',
-      onGameExit: 'On Game Exit',
-      onGameExitDesc: 'Whether to close the translator when the game exits',
-      exitNone: "Don't close",
-      exitGraceful: 'Close',
-      exitForce: 'Force Close'
-    },
-    voiceSpeedup: {
-      name: 'SPEED UP!',
-      description: 'Accelerate game audio playback',
-      speed: 'Speed Multiplier',
-      provider: 'Provider',
-      mmdevapiWarn:
-        "MMDevAPI provider is unsupported on Linux/Wine. Use 'dsound' instead."
-    },
-    voiceZerointerrupt: {
-      name: 'ZeroInterrupt',
-      description: 'Prevent voice interruption in games (dsound games only)'
-    },
-    wineRequired: 'This plugin requires the Wine plugin to be enabled on Linux.',
-    wine: {
-      name: 'Wine',
-      description: 'Run Windows games through Wine on Linux',
-      prefix: 'WINEPREFIX',
-      prefixDesc:
-        'Sets the WINEPREFIX env var. Leave empty to skip it (Wine then uses its default ~/.wine). Supports ~ and {variables}',
-      prefixPlaceholder: '~/.wine',
-      arch: 'WINEARCH',
-      archDesc:
-        'Architecture of the Wine prefix (mainly used when creating a new prefix)',
-      esync: 'WINEESYNC',
-      esyncDesc:
-        'Enables esync (sets WINEESYNC=1). Requires a compatible kernel and ulimit setup.',
-      fsync: 'WINEFSYNC',
-      fsyncDesc:
-        'Enables fsync (sets WINEFSYNC=1). Requires a compatible kernel with futex2.',
-      locale: 'LC_ALL',
-      localeDesc:
-        'Sets the LC_ALL env var. Leave empty to skip it (uses the system locale). Example: ja_JP.UTF-8',
-      localePlaceholder: 'ja_JP.UTF-8',
-      dllOverrides: 'WINEDLLOVERRIDES',
-      dllOverridesDesc:
-        'Override which implementation Wine loads for each DLL (native, builtin, disabled, ...)',
-      addDllOverride: 'Add Override',
-      killWineserver: 'wineserver -k on Exit',
-      killWineserverDesc:
-        'Run `wineserver -k` after the game exits to tear down the prefix',
-      extraEnv: 'Extra Environment Variables',
-      addEnv: 'Add Variable'
-    },
-    unavailableOnPlatform: 'Platform inactive'
-  },
-  settings: {
-    self: 'Settings',
-    tabs: {
-      general: 'General',
-      launch: 'Launch',
-      device: 'Device',
-      appearance: 'Appearance'
-    },
-    storage: {
-      self: 'Storage backend',
-      none: '(Not set)',
-      provider: 'Provider',
-      Endpoint: 'Endpoint',
-      Username: 'Username',
-      Password: 'Password',
-      Root: 'Root',
-      localPath: 'Local Dir Path',
-      localStorage: 'Local Storage',
-      ioTimeout: 'Transfer Timeout',
-      ioTimeoutDesc:
-        'Timeout for data transfer operations (upload / download), in seconds',
-      nonIoTimeout: 'Operation Timeout',
-      nonIoTimeoutDesc: 'Timeout for remote operations (list / delete), in seconds',
-      s3EndpointDesc: 'Leave empty for AWS',
-      s3Region: 'Region',
-      s3Bucket: 'Bucket Name',
-      s3AccessKey: 'Access Key',
-      s3SecretKey: 'Secret Key'
-    },
-    compression: {
-      self: 'Archive',
-      algorithm: 'Archive Format',
-      level: 'Compression Level'
-    },
-    config: {
-      self: 'Config',
-      autoSyncInterval: 'Config Auto Sync Interval',
-      autoSyncIntervalDesc: 'Upload config only, not saves',
-      autoSyncIntervalPlaceholder: 'seconds, 0 to disable',
-      inSecs: 'In seconds',
-      manualSync: 'Manual Syncing',
-      forceOp: 'Forced Operation'
-    },
-    appearance: {
-      theme: 'Theme',
-      themeSystem: 'System Default',
-      themeLight: 'Light',
-      themeDark: 'Dark',
-      extractCoverColor: 'Extract Cover Color',
-      extractCoverColorDesc:
-        "Use each game's cover dominant color for statistics charts. Falls back to a deterministic palette when off.",
-      statistics: {
-        self: 'Statistics'
       },
-      timeDisplay: {
-        self: 'Time Display',
-        language: 'Timestamp Language',
-        languageDesc: 'Override the language used for "last played" timestamps',
-        languageAuto: 'Follow UI language',
-        format: 'Timestamp Format',
-        formatRelative: 'Relative',
-        formatAbsolute: 'Absolute',
-        absoluteFormat: 'Absolute Pattern',
-        absoluteFormatDesc: 'dayjs format string, e.g. "YYYY-MM-DD HH:mm"',
-        absoluteFormatPlaceholder: 'YYYY-MM-DD HH:mm',
-        preview: 'Preview'
-      }
+      upload: 'Upload to remote'
     },
-    launch: {
-      timestat: 'Time Stat',
-      precisionMode: 'Precision Mode',
-      precisionModeDesc: 'Only count time spent in foreground when window is focused.',
-      dailyStat: 'Daily Playtime Statistics',
-      dailyStatDesc: 'Track daily playtime and show the chart in the statistics page.',
-      clearDailyStat: 'Clear Daily Playtime Data',
-      clearDailyStatDesc: 'Delete all game daily playtime records.',
-      dailyStatCleared: 'Cleared all game daily playtime records.'
-    },
-    device: {
-      deviceIdentity: 'Device Identity',
-      deviceName: 'Device Name',
-      deviceNameAlias: 'Friendly name for this machine',
-      uuid: 'UUID',
-      uuidDesc: 'Unique ID for sync identification',
-      variables: 'Variables',
-      variablesDesc:
-        'Define variables for current device. This will be inserted into template paths.',
-      addVariable: 'Add Variable',
-      removeVariable: 'Remove Variable',
-      editVariableName: 'Edit Variable Name',
-      editVariableValue: 'Edit Variable Value',
-      noVariablesDefined: 'No variables defined.',
-      variableAlreadyExists: 'Variable already exists: ',
-      loadingInfo: 'Loading device info...',
-      notFound: 'Device not found.'
-    }
+    totalPlayTime: 'Total play time'
   },
   hint: {
-    dragFileHere: 'Drag executable file here to add game',
     appliedNewConfig: 'Applied remote configuration',
     archiveExists: 'Archive already exists',
     archiveFailed: 'Archive failed: ',
@@ -359,6 +89,10 @@ export const dict = {
     downloadFailed: 'Download Failed: ',
     downloading: 'Downloading: ',
     downloadSuccess: 'Download Success: ',
+    dragFileHere: 'Drag executable file here to add game',
+    duplicateGameId: 'CRITICAL: Duplicate game id detected!',
+    exePathNotAbsolute:
+      'Resolved executable path is not absolute, which may cause launch failure',
     exitAbnormally: ' exited abnormally',
     failToGetSaveList: 'Failed to get save list: ',
     failToLoadLocalConfig: 'Failed to load local configuration',
@@ -369,63 +103,329 @@ export const dict = {
     localIsTheNewest: 'Local config is the newest!',
     noPathPleaseAdd: 'No path, please add one by clicking the button above',
     noSavePaths: 'No save paths defined',
+    openDirFailed: 'Failed to open game directory',
+    partialPathNotExist: 'Partial path does not exist on this device',
+    pathNotExist: 'Path does not exist on this device',
     remoteConfigNotFound: 'Remote config not found',
     remoteNotConfigured: 'Remote provider is not configured',
     renameFailed: 'Rename Failed: ',
     renameSuccess: 'Rename Success',
     renaming: 'Rename: ',
-    restorePreviousConfigSuccess: 'Restored previous configuration',
+    resolveExeFailed: 'Failed to resolve game path (possibly an undefined variable)',
     restorePreviousConfigFailed: 'Failed to restore previous configuration',
+    restorePreviousConfigSuccess: 'Restored previous configuration',
+    retryError: 'An error occurred, retrying',
     revertFailed: 'Revert Failed: ',
     reverting: 'Reverting: ',
     revertSuccess: 'Revert Success: ',
     saveConfigFailed: 'Failed to save config',
+    selectImageFailed: 'Failed to select image',
     selectSaveArchive: 'Select save archive file/folder',
     supportVar: 'support template like {var_name}',
     syncFailed: 'Sync Failed: ',
     syncSuccess: 'Sync Success',
+    unknownVar: 'Unknown variable(s): ',
     uploadFailed: 'Upload Failed: ',
     uploading: 'Uploading: ',
-    uploadSuccess: 'Upload Success: ',
-    duplicateGameId: 'CRITICAL: Duplicate game id detected!',
-    retryError: 'An error occurred, retrying',
-    openDirFailed: 'Failed to open game directory',
-    exePathNotAbsolute:
-      'Resolved executable path is not absolute, which may cause launch failure',
-    pathNotExist: 'Path does not exist on this device',
-    partialPathNotExist: 'Partial path does not exist on this device',
-    resolveExeFailed: 'Failed to resolve game path (possibly an undefined variable)',
-    selectImageFailed: 'Failed to select image',
-    unknownVar: 'Unknown variable(s): '
+    uploadSuccess: 'Upload Success: '
+  },
+  plugin: {
+    addPlugin: 'Add Plugin',
+    arch: 'Architecture',
+    archAuto: 'Auto Detect',
+    author: 'Author',
+    autoAdd: 'Auto add to new games',
+    autoUpload: {
+      description: 'Automatically archive and upload game saves when the game exits',
+      maxKept: 'Max Kept',
+      maxKeptDesc:
+        'Max number of saves to keep per game; oldest are evicted when exceeded (0 = unlimited)',
+      name: 'Auto Upload Saves',
+      retentionScope: 'Retention Scope',
+      scopeBoth: 'Both',
+      scopeLocal: 'Local Only',
+      scopeRemote: 'Remote Only'
+    },
+    collapse: 'Collapse',
+    configEmpty: 'No configuration needed',
+    currentDir: 'Working Directory',
+    currentDirDesc:
+      'Working directory for the program. If the command contains a relative path, it will be resolved from this directory',
+    currentDirPlaceholder: 'Defaults to game dir if empty',
+    defaultConfig: 'Default Config',
+    defaultConfigDesc: 'Default configuration values for new plugin instances on games',
+    disabled: 'Disabled',
+    enabled: 'Enabled',
+    execute: {
+      addEnv: 'Add Variable',
+      afterGameStart: 'After Game Start',
+      beforeGameStart: 'Before Game Start',
+      cmd: 'Command',
+      cmdPlaceholder: 'e.g. echo "Hello World"',
+      description: 'Execute external CLI commands',
+      env: 'Environment Variables',
+      exitSignal: 'Exit Signal',
+      exitSignalDesc:
+        'Sends a signal to the spawned process by the plugin when the game exits',
+      exitSignalDescWin: 'Whether to terminate the spawned process when the game exits',
+      exitSignalNone: 'None',
+      exitSignalTerminate: 'TerminateProcess',
+      gameExit: 'On Game Exit',
+      name: 'Execute Command',
+      on: 'Execute On',
+      passExePath: 'Insert Executable Path',
+      passExePathDesc: 'Insert game executable into {} in cmd'
+    },
+    expand: 'Expand',
+    gameWrapper: {
+      addEnv: 'Add Variable',
+      cmd: 'Command',
+      cmdPlaceholder: 'e.g. wrapper.exe "{}"',
+      description: 'Replace the game launch command with a custom one',
+      env: 'Environment Variables',
+      name: 'Game Wrapper'
+    },
+    links: 'Links',
+    localeEmulator: {
+      cmd: 'Command',
+      cmdPlaceholder: 'e.g. your_path/LEProc.exe "{}"',
+      description: 'Run the game through Locale Emulator',
+      name: 'Locale Emulator'
+    },
+    metaConfig: 'Meta Config',
+    moveDown: 'Move Down',
+    moveUp: 'Move Up',
+    needBraces: 'Command must contain {} placeholder',
+    noPlugins: 'No plugins registered',
+    noPluginsAdded: 'No plugins added to this game',
+    pluginConfig: 'Plugin Config',
+    pluginSection: 'Plugins',
+    removePlugin: 'Remove',
+    title: 'Plugins',
+    translator: {
+      cmd: 'Command',
+      cmdPlaceholder: 'e.g. your_translator.exe',
+      description: 'Run translation tool on game start',
+      exitForce: 'Force Close',
+      exitGraceful: 'Close',
+      exitNone: "Don't close",
+      name: 'Translator',
+      onGameExit: 'On Game Exit',
+      onGameExitDesc: 'Whether to close the translator when the game exits'
+    },
+    unavailableOnPlatform: 'Platform inactive',
+    version: 'Version',
+    voiceSpeedup: {
+      description: 'Accelerate game audio playback',
+      mmdevapiWarn:
+        "MMDevAPI provider is unsupported on Linux/Wine. Use 'dsound' instead.",
+      name: 'SPEED UP!',
+      provider: 'Provider',
+      speed: 'Speed Multiplier'
+    },
+    voiceZerointerrupt: {
+      description: 'Prevent voice interruption in games (dsound games only)',
+      name: 'ZeroInterrupt'
+    },
+    wine: {
+      addDllOverride: 'Add Override',
+      addEnv: 'Add Variable',
+      arch: 'WINEARCH',
+      archDesc:
+        'Architecture of the Wine prefix (mainly used when creating a new prefix)',
+      description: 'Run Windows games through Wine on Linux',
+      dllOverrides: 'WINEDLLOVERRIDES',
+      dllOverridesDesc:
+        'Override which implementation Wine loads for each DLL (native, builtin, disabled, ...)',
+      esync: 'WINEESYNC',
+      esyncDesc:
+        'Enables esync (sets WINEESYNC=1). Requires a compatible kernel and ulimit setup.',
+      extraEnv: 'Extra Environment Variables',
+      fsync: 'WINEFSYNC',
+      fsyncDesc:
+        'Enables fsync (sets WINEFSYNC=1). Requires a compatible kernel with futex2.',
+      killWineserver: 'wineserver -k on Exit',
+      killWineserverDesc:
+        'Run `wineserver -k` after the game exits to tear down the prefix',
+      locale: 'LC_ALL',
+      localeDesc:
+        'Sets the LC_ALL env var. Leave empty to skip it (uses the system locale). Example: ja_JP.UTF-8',
+      localePlaceholder: 'ja_JP.UTF-8',
+      name: 'Wine',
+      prefix: 'WINEPREFIX',
+      prefixDesc:
+        'Sets the WINEPREFIX env var. Leave empty to skip it (Wine then uses its default ~/.wine). Supports ~ and {variables}',
+      prefixPlaceholder: '~/.wine'
+    },
+    wineRequired: 'This plugin requires the Wine plugin to be enabled on Linux.'
+  },
+  settings: {
+    appearance: {
+      extractCoverColor: 'Extract Cover Color',
+      extractCoverColorDesc:
+        "Use each game's cover dominant color for statistics charts. Falls back to a deterministic palette when off.",
+      statistics: {
+        self: 'Statistics'
+      },
+      theme: 'Theme',
+      themeDark: 'Dark',
+      themeLight: 'Light',
+      themeSystem: 'System Default',
+      timeDisplay: {
+        absoluteFormat: 'Absolute Pattern',
+        absoluteFormatDesc: 'dayjs format string, e.g. "YYYY-MM-DD HH:mm"',
+        absoluteFormatPlaceholder: 'YYYY-MM-DD HH:mm',
+        format: 'Timestamp Format',
+        formatAbsolute: 'Absolute',
+        formatRelative: 'Relative',
+        language: 'Timestamp Language',
+        languageAuto: 'Follow UI language',
+        languageDesc: 'Override the language used for "last played" timestamps',
+        preview: 'Preview',
+        self: 'Time Display'
+      }
+    },
+    compression: {
+      algorithm: 'Archive Format',
+      level: 'Compression Level',
+      self: 'Archive'
+    },
+    config: {
+      autoSyncInterval: 'Config Auto Sync Interval',
+      autoSyncIntervalDesc: 'Upload config only, not saves',
+      autoSyncIntervalPlaceholder: 'seconds, 0 to disable',
+      forceOp: 'Forced Operation',
+      inSecs: 'In seconds',
+      manualSync: 'Manual Syncing',
+      self: 'Config'
+    },
+    device: {
+      addVariable: 'Add Variable',
+      deviceIdentity: 'Device Identity',
+      deviceName: 'Device Name',
+      deviceNameAlias: 'Friendly name for this machine',
+      editVariableName: 'Edit Variable Name',
+      editVariableValue: 'Edit Variable Value',
+      loadingInfo: 'Loading device info...',
+      notFound: 'Device not found.',
+      noVariablesDefined: 'No variables defined.',
+      removeVariable: 'Remove Variable',
+      uuid: 'UUID',
+      uuidDesc: 'Unique ID for sync identification',
+      variableAlreadyExists: 'Variable already exists: ',
+      variables: 'Variables',
+      variablesDesc:
+        'Define variables for current device. This will be inserted into template paths.'
+    },
+    launch: {
+      clearDailyStat: 'Clear Daily Playtime Data',
+      clearDailyStatDesc: 'Delete all game daily playtime records.',
+      dailyStat: 'Daily Playtime Statistics',
+      dailyStatCleared: 'Cleared all game daily playtime records.',
+      dailyStatDesc: 'Track daily playtime and show the chart in the statistics page.',
+      precisionMode: 'Precision Mode',
+      precisionModeDesc: 'Only count time spent in foreground when window is focused.',
+      timestat: 'Time Stat'
+    },
+    self: 'Settings',
+    storage: {
+      Endpoint: 'Endpoint',
+      ioTimeout: 'Transfer Timeout',
+      ioTimeoutDesc:
+        'Timeout for data transfer operations (upload / download), in seconds',
+      localPath: 'Local Dir Path',
+      localStorage: 'Local Storage',
+      none: '(Not set)',
+      nonIoTimeout: 'Operation Timeout',
+      nonIoTimeoutDesc: 'Timeout for remote operations (list / delete), in seconds',
+      Password: 'Password',
+      provider: 'Provider',
+      Root: 'Root',
+      s3AccessKey: 'Access Key',
+      s3Bucket: 'Bucket Name',
+      s3EndpointDesc: 'Leave empty for AWS',
+      s3Region: 'Region',
+      s3SecretKey: 'Secret Key',
+      self: 'Storage backend',
+      Username: 'Username'
+    },
+    tabs: {
+      appearance: 'Appearance',
+      device: 'Device',
+      general: 'General',
+      launch: 'Launch'
+    }
+  },
+  sidebar: {
+    game: 'Game',
+    plugin: 'Plugin',
+    settings: 'Settings',
+    statistics: 'Statistics'
   },
   stats: {
-    self: 'Statistics',
+    backToCurrent: 'Now',
+    granularity: {
+      month: 'Month',
+      week: 'Week',
+      year: 'Year'
+    },
+    jumpToDate: 'Pick a date to jump to its period',
+    nextPeriod: 'Next period',
     noDataCurrent: () =>
       'No playtime data in this period. Start playing a game to see your statistics!',
+    noDataInScope: 'No playtime in this period',
     noDataPast: 'No play records',
+    perGameTitle: 'Per-game playtime',
     periodPlaytime: {
       current: {
-        week: "This week's playtime",
         month: "This month's playtime",
+        week: "This week's playtime",
         year: "This year's playtime"
       },
       other: {
-        week: "That week's playtime",
         month: "That month's playtime",
+        week: "That week's playtime",
         year: "That year's playtime"
       }
     },
-    perGameTitle: 'Per-game playtime',
-    noDataInScope: 'No playtime in this period',
-    backToCurrent: 'Now',
-    jumpToDate: 'Pick a date to jump to its period',
     prevPeriod: 'Previous period',
-    nextPeriod: 'Next period',
-    granularity: {
-      week: 'Week',
-      month: 'Month',
-      year: 'Year'
-    }
+    self: 'Statistics'
+  },
+  time: {
+    daysAgo: '{{n}}d ago',
+    hoursAgo: '{{n}}h ago',
+    justNow: 'Just now',
+    minutesAgo: '{{n}}m ago',
+    monthsAgo: '{{n}}mo ago',
+    never: 'Never',
+    yearsAgo: '{{n}}y ago'
+  },
+  ui: {
+    addFile: 'Add File',
+    addFolder: 'Add Folder',
+    browse: 'Browse',
+    cancel: 'Cancel',
+    clear: 'Clear',
+    confirm: 'Confirm',
+    delete: 'Delete',
+    interface: 'Interface',
+    loading: 'Loading...',
+    none: 'None',
+    pull: 'Pull',
+    push: 'Push',
+    rename: 'Rename',
+    save: 'Save',
+    select: 'Select',
+    WIP: 'Wait in progress...',
+    withdraw: 'Withdraw'
+  },
+  unit: {
+    hour: 'hour',
+    hourShort: 'h',
+    minute: 'minute',
+    minuteShort: 'm',
+    second: 'second',
+    secondShort: 's'
   }
 }
 

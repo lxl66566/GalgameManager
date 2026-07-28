@@ -19,37 +19,31 @@ import { For, Show, type JSX } from 'solid-js'
 
 // ── Types ─────────
 
+export type ContextMenuEntry = ContextMenuItem | ContextMenuSeparator
+
 export interface ContextMenuItem {
-  /** Display label (supports i18n keys resolved by caller) */
-  label: string
-  /** Optional icon component */
-  icon?: JSX.Element
   /** Mark as danger style (red) */
   danger?: boolean
   /** Whether the item is disabled */
   disabled?: boolean
+  /** Optional icon component */
+  icon?: JSX.Element
+  /** Display label (supports i18n keys resolved by caller) */
+  label: string
   /** Callback when selected */
   onSelect: () => void
+}
+
+export interface ContextMenuProps {
+  /** The trigger content */
+  children: JSX.Element
+  /** Menu entries — render in order; separators between groups */
+  items: readonly ContextMenuEntry[]
 }
 
 export interface ContextMenuSeparator {
   type: 'separator'
 }
-
-export type ContextMenuEntry = ContextMenuItem | ContextMenuSeparator
-
-export interface ContextMenuProps {
-  /** Menu entries — render in order; separators between groups */
-  items: readonly ContextMenuEntry[]
-  /** The trigger content */
-  children: JSX.Element
-}
-
-function isSeparator(entry: ContextMenuEntry): entry is ContextMenuSeparator {
-  return 'type' in entry && entry.type === 'separator'
-}
-
-// ── Component ─────
 
 export function ContextMenu(props: ContextMenuProps) {
   return (
@@ -62,7 +56,6 @@ export function ContextMenu(props: ContextMenuProps) {
           <For each={props.items as ContextMenuEntry[]}>
             {item => (
               <Show
-                when={isSeparator(item)}
                 fallback={
                   <KobalteContextMenu.Item
                     class={cn(
@@ -71,8 +64,10 @@ export function ContextMenu(props: ContextMenuProps) {
                         ? 'text-red-600 dark:text-red-400 data-[highlighted]:bg-red-50 dark:data-[highlighted]:bg-red-900/30'
                         : 'text-gray-700 dark:text-gray-200 data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-gray-700'
                     )}
-                    onSelect={() => (item as ContextMenuItem).onSelect()}
                     disabled={(item as ContextMenuItem).disabled}
+                    onSelect={() => {
+                      ;(item as ContextMenuItem).onSelect()
+                    }}
                   >
                     <Show when={(item as ContextMenuItem).icon}>
                       <span class="w-4 h-4 shrink-0 flex items-center justify-center">
@@ -82,6 +77,7 @@ export function ContextMenu(props: ContextMenuProps) {
                     <span>{(item as ContextMenuItem).label}</span>
                   </KobalteContextMenu.Item>
                 }
+                when={isSeparator(item)}
               >
                 <KobalteContextMenu.Separator class="my-1 h-px bg-gray-200 dark:bg-gray-600" />
               </Show>
@@ -91,4 +87,10 @@ export function ContextMenu(props: ContextMenuProps) {
       </KobalteContextMenu.Portal>
     </KobalteContextMenu>
   )
+}
+
+// ── Component ─────
+
+function isSeparator(entry: ContextMenuEntry): entry is ContextMenuSeparator {
+  return 'type' in entry && entry.type === 'separator'
 }

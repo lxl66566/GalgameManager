@@ -7,19 +7,24 @@
  */
 import { cn } from '~/lib/utils'
 import { Show, type Component, type JSX } from 'solid-js'
-import { Button, Input, LinkButton, Select, Textarea } from './controls'
 
 // ─── Re-exports (standard density) ──────────────────────────────────────────
 
-export { Input, Select, Button, Textarea, LinkButton }
-export { Switch as SwitchToggle } from './controls'
+export {
+  Button,
+  Input,
+  LinkButton,
+  Select,
+  Switch as SwitchToggle,
+  Textarea
+} from './controls'
 
 // ─── SettingSection ─────────────────────────────────────────────────────────
 
 export const SettingSection: Component<{
-  title: string
   children: JSX.Element
   class?: string
+  title: string
 }> = props => (
   <div class={cn('mb-6', props.class)}>
     <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 px-1 uppercase tracking-wider">
@@ -42,11 +47,11 @@ export const SettingSubGroup: Component<{ children: JSX.Element }> = props => (
 // ─── SettingRow ──
 
 interface SettingRowProps {
-  label: string | JSX.Element
-  description?: string
   children: JSX.Element
   class?: string
+  description?: string
   indent?: boolean
+  label: JSX.Element | string
 }
 
 export const SettingRow: Component<SettingRowProps> = props => (

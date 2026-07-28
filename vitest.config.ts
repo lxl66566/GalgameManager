@@ -13,26 +13,26 @@ export default defineConfig({
   plugins: [],
   resolve: {
     alias: {
-      '~': path.resolve(__dirname, './src'),
-      '@components': path.resolve(__dirname, './src/components'),
-      '@utils': path.resolve(__dirname, './src/utils'),
       '@bindings': path.resolve(__dirname, './src-tauri/bindings'),
+      '@components': path.resolve(__dirname, './src/components'),
       // Stub out Tauri IPC + plugin entry points. Any test that actually
       // needs to assert on `invoke()` calls should override these locally
       // via `vi.mock`.
       '@tauri-apps/api/core': path.resolve(__dirname, './src/test/stubs/tauri-core.ts'),
       '@tauri-apps/api/event': path.resolve(__dirname, './src/test/stubs/tauri-event.ts'),
       '@tauri-apps/plugin-dialog': path.resolve(__dirname, './src/test/stubs/tauri-dialog.ts'),
-      '@tauri-apps/plugin-fs': path.resolve(__dirname, './src/test/stubs/tauri-fs.ts')
+      '@tauri-apps/plugin-fs': path.resolve(__dirname, './src/test/stubs/tauri-fs.ts'),
+      '@utils': path.resolve(__dirname, './src/utils'),
+      '~': path.resolve(__dirname, './src')
     }
   },
   test: {
-    environment: 'node',
-    include: ['src/**/__tests__/**/*.test.ts'],
     // Avoid picking up `.tsx` component tests by default until we add the
     // solid-testing setup; keeps `pnpm run test` fast and dependency-free.
     coverage: {
       reporter: ['text']
-    }
+    },
+    environment: 'node',
+    include: ['src/**/__tests__/**/*.test.ts']
   }
 })

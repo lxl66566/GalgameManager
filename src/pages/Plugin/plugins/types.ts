@@ -28,24 +28,21 @@ import type { Component } from 'solid-js'
 
 // ── Plugin info (presentation metadata, frontend-only) ────────────────────────
 
-/** Platforms on which a plugin's handler has a real (non no-op) effect. */
-export type PluginPlatform = 'windows' | 'linux' | 'macos'
+/** Union of every plugin's per-game config. Used at the dynamic `Dynamic`
+ *  dispatch boundary where a specific editor cannot be statically correlated
+ *  with its config. */
+export type AnyGameConfig = NonNullable<PluginGameConfigOf<PluginId>>
 
-export interface PluginInfo {
-  id: string
-  nameKey: string
-  descriptionKey: string
-  version: string
-  author: string
-  links: ReadonlyArray<{ label: string; url: string }>
-  /**
-   * Platforms where the plugin has a real effect. When omitted the plugin
-   * works everywhere. Used to show an "unavailable on this platform" hint.
-   */
-  platforms?: ReadonlyArray<PluginPlatform>
-}
+/** Union of every plugin's metadata. Used at the dynamic `Dynamic` dispatch
+ *  boundary where a specific meta editor cannot be statically correlated with
+ *  its metadata type. */
+export type AnyMeta = PluginMetaOf<PluginId>
 
 // ── Config editor component props ────────────────────────────────────────────
+
+export type AnyPluginDef = { [K in PluginId]: PluginDefinition<K> }[PluginId]
+
+// ── Type-level plugin mapping ────────────────────────────────────────────────
 
 export interface ConfigEditorProps<T> {
   config: T
@@ -61,68 +58,56 @@ export interface ConfigEditorProps<T> {
   onCommit: (config: T) => void
 }
 
-// ── Type-level plugin mapping ────────────────────────────────────────────────
+export interface PluginDefinition<K extends PluginId> {
+  configDefaults?: PluginGameConfigOf<K>
+  GameEditor?: Component<ConfigEditorProps<NonNullable<PluginGameConfigOf<K>>>>
+  info: PluginInfo
+  MetaEditor?: Component<ConfigEditorProps<PluginMetaOf<K>>>
+  metaKey: K
+}
+export type PluginGameConfigOf<K extends PluginId> = PluginTypeMap[K]['gameConfig']
+export type PluginId = keyof PluginTypeMap
+
+export interface PluginInfo {
+  author: string
+  descriptionKey: string
+  id: string
+  links: readonly { label: string; url: string }[]
+  nameKey: string
+  /**
+   * Platforms where the plugin has a real effect. When omitted the plugin
+   * works everywhere. Used to show an "unavailable on this platform" hint.
+   */
+  platforms?: readonly PluginPlatform[]
+  version: string
+}
+
+export type PluginMetaOf<K extends PluginId> = PluginTypeMap[K]['meta']
+
+// ── Plugin definition ────────────────────────────────────────────────────────
+
+/** Platforms on which a plugin's handler has a real (non no-op) effect. */
+export type PluginPlatform = 'linux' | 'macos' | 'windows'
 
 /**
  * Maps each metaKey (= field name in PluginMetadatas) to its types.
  * When adding a new plugin, add an entry here.
  */
 export interface PluginTypeMap {
-  execute: { meta: ExecutePluginMeta; gameConfig: ExecuteGameConfig }
-  autoUpload: { meta: AutoUploadPluginMeta; gameConfig: AutoUploadGameConfig }
-  voiceSpeedup: { meta: VoiceSpeedupPluginMeta; gameConfig: VoiceSpeedupGameConfig }
+  autoUpload: { gameConfig: AutoUploadGameConfig; meta: AutoUploadPluginMeta }
+  execute: { gameConfig: ExecuteGameConfig; meta: ExecutePluginMeta }
+  gameWrapper: { gameConfig: GameWrapperGameConfig; meta: GameWrapperPluginMeta }
+  localeEmulator: { gameConfig: LocaleEmulatorGameConfig; meta: LocaleEmulatorPluginMeta }
+  translator: { gameConfig: TranslatorGameConfig; meta: TranslatorPluginMeta }
+  voiceSpeedup: { gameConfig: VoiceSpeedupGameConfig; meta: VoiceSpeedupPluginMeta }
   voiceZerointerrupt: {
-    meta: VoiceZerointerruptPluginMeta
     gameConfig: VoiceZerointerruptGameConfig
+    meta: VoiceZerointerruptPluginMeta
   }
-  gameWrapper: { meta: GameWrapperPluginMeta; gameConfig: GameWrapperGameConfig }
-  localeEmulator: { meta: LocaleEmulatorPluginMeta; gameConfig: LocaleEmulatorGameConfig }
-  translator: { meta: TranslatorPluginMeta; gameConfig: TranslatorGameConfig }
-  wine: { meta: WinePluginMeta; gameConfig: WineGameConfig }
+  wine: { gameConfig: WineGameConfig; meta: WinePluginMeta }
 }
-
-export type PluginId = keyof PluginTypeMap
-export type PluginMetaOf<K extends PluginId> = PluginTypeMap[K]['meta']
-export type PluginGameConfigOf<K extends PluginId> = PluginTypeMap[K]['gameConfig']
-
-/** Union of every plugin's metadata. Used at the dynamic `Dynamic` dispatch
- *  boundary where a specific meta editor cannot be statically correlated with
- *  its metadata type. */
-export type AnyMeta = PluginMetaOf<PluginId>
-
-/** Union of every plugin's per-game config. Used at the dynamic `Dynamic`
- *  dispatch boundary where a specific editor cannot be statically correlated
- *  with its config. */
-export type AnyGameConfig = NonNullable<PluginGameConfigOf<PluginId>>
-
-// ── Plugin definition ────────────────────────────────────────────────────────
-
-export interface PluginDefinition<K extends PluginId> {
-  info: PluginInfo
-  metaKey: K
-  configDefaults?: PluginGameConfigOf<K>
-  MetaEditor?: Component<ConfigEditorProps<PluginMetaOf<K>>>
-  GameEditor?: Component<ConfigEditorProps<NonNullable<PluginGameConfigOf<K>>>>
-}
-
-export type AnyPluginDef = { [K in PluginId]: PluginDefinition<K> }[PluginId]
 
 // ── Typed helpers ─
-
-export function getPluginMeta<K extends PluginId>(
-  key: K,
-  metas: PluginMetadatas
-): PluginMetaOf<K> {
-  return metas[key] as PluginMetaOf<K>
-}
-
-export function patchPluginMeta<K extends PluginId>(
-  key: K,
-  metas: PluginMetadatas,
-  patch: Partial<PluginMetaOf<K>>
-): PluginMetadatas {
-  return { ...metas, [key]: { ...metas[key], ...patch } } as PluginMetadatas
-}
 
 export function buildNewInstance(
   def: AnyPluginDef,
@@ -130,18 +115,16 @@ export function buildNewInstance(
 ): PluginInstance {
   const gameConfig = resolveGameConfig(def, metas)
   if (gameConfig !== undefined) {
-    return { pluginId: def.metaKey, config: gameConfig } as PluginInstance
+    return { config: gameConfig, pluginId: def.metaKey } as PluginInstance
   }
   return { pluginId: def.metaKey } as PluginInstance
 }
 
-export function resolveGameConfig(def: AnyPluginDef, metas: PluginMetadatas): unknown {
-  const meta = metas[def.metaKey] as Record<string, unknown>
-  const userDefaults = meta['configDefaults'] as Record<string, unknown> | undefined
-  if (userDefaults && Object.keys(userDefaults).length > 0) {
-    return { ...userDefaults }
-  }
-  return def.configDefaults ? { ...(def.configDefaults as object) } : undefined
+export function getPluginMeta<K extends PluginId>(
+  key: K,
+  metas: PluginMetadatas
+): PluginMetaOf<K> {
+  return metas[key]
 }
 
 /** Whether a plugin has a real (non no-op) effect on the current platform. */
@@ -153,4 +136,21 @@ export function isPluginAvailable(info: PluginInfo): boolean {
       (p === 'linux' && isLinux) ||
       (p === 'macos' && isMac)
   )
+}
+
+export function patchPluginMeta<K extends PluginId>(
+  key: K,
+  metas: PluginMetadatas,
+  patch: Partial<PluginMetaOf<K>>
+): PluginMetadatas {
+  return { ...metas, [key]: { ...metas[key], ...patch } }
+}
+
+export function resolveGameConfig(def: AnyPluginDef, metas: PluginMetadatas): unknown {
+  const meta = metas[def.metaKey] as Record<string, unknown>
+  const userDefaults = meta.configDefaults as Record<string, unknown> | undefined
+  if (userDefaults && Object.keys(userDefaults).length > 0) {
+    return { ...userDefaults }
+  }
+  return def.configDefaults ? { ...(def.configDefaults as object) } : undefined
 }

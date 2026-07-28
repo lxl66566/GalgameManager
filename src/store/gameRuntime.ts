@@ -19,7 +19,7 @@ import { useConfig } from '~/store'
 import { createSignal } from 'solid-js'
 import toast from 'solid-toast'
 
-type TFunc = Translator<Dictionary>
+type TFunction = Translator<Dictionary>
 
 const [playingIds, setPlayingIds] = createSignal<number[]>([])
 const [backingUpIds, setBackingUpIds] = createSignal<number[]>([])
@@ -28,40 +28,40 @@ const [backingUpIds, setBackingUpIds] = createSignal<number[]>([])
 // navigating the sidebar no longer zeroes out in-progress timing.
 const sessionStartTimes = new Map<number, number>()
 
-let runtimeInitialized = false
+let isRuntimeInitialized = false
 
 const isPlaying = (id: number) => playingIds().includes(id)
 const isBackingUp = (id: number) => backingUpIds().includes(id)
 
-const markBackingUp = (id: number) => setBackingUpIds(prev => [...prev, id])
+const markBackingUp = (id: number) => setBackingUpIds(previous => [...previous, id])
 const unmarkBackingUp = (id: number) =>
-  setBackingUpIds(prev => prev.filter(bid => bid !== id))
+  setBackingUpIds(previous => previous.filter(bid => bid !== id))
 
 interface GameExitPayload {
-  success: boolean
   session_secs: number
+  success: boolean
 }
 
 /**
  * Recover the set of running games on startup and register exit watchers.
  * Safe to call multiple times — only the first call does the work.
  */
-export async function initGameRuntime(t: TFunc): Promise<void> {
-  if (runtimeInitialized) return
-  runtimeInitialized = true
+export async function initGameRuntime(t: TFunction): Promise<void> {
+  if (isRuntimeInitialized) return
+  isRuntimeInitialized = true
 
   let ids: number[]
   try {
     ids = await invoke<number[]>('running_game_ids')
-  } catch (e) {
-    log.error(`Failed to query running games: ${e}`)
+  } catch (error) {
+    log.error(`Failed to query running games: ${error}`)
     return
   }
 
   setPlayingIds(ids)
   for (const id of ids) {
     once<GameExitPayload>(`game://exit/${id}`, event => {
-      setPlayingIds(prev => prev.filter(pid => pid !== id))
+      setPlayingIds(previous => previous.filter(pid => pid !== id))
       if (!event.payload.success) {
         const gameName = useConfig().config.games.find(g => g.id === id)?.name ?? ''
         showOrDefer(() => toast.error(gameName + t('hint.exitAbnormally')))
@@ -74,17 +74,17 @@ export async function initGameRuntime(t: TFunc): Promise<void> {
  * Launch a game: register spawn/exit listeners, record session timing, and
  * invoke the backend `exec`. On launch failure the listeners are torn down.
  */
-export async function launchGame(game: Game, t: TFunc): Promise<void> {
+export async function launchGame(game: Game, t: TFunction): Promise<void> {
   if (isPlaying(game.id)) return
 
   const [unlistenSpawn, unlistenExit] = await Promise.all([
     once(`game://spawn/${game.id}`, () => {
       sessionStartTimes.set(game.id, Date.now())
-      setPlayingIds(prev => [...prev, game.id])
+      setPlayingIds(previous => [...previous, game.id])
       toast.success(game.name + t('hint.isRunning'))
     }),
     once<GameExitPayload>(`game://exit/${game.id}`, event => {
-      setPlayingIds(prev => prev.filter(id => id !== game.id))
+      setPlayingIds(previous => previous.filter(id => id !== game.id))
 
       const secs = event.payload.session_secs
       const duration = formatSessionDuration(secs * 1000)
@@ -123,12 +123,12 @@ export async function launchGame(game: Game, t: TFunc): Promise<void> {
 
 export function useGameRuntime() {
   return {
-    playingIds,
     backingUpIds,
-    isPlaying,
     isBackingUp,
+    isPlaying,
     launch: launchGame,
     markBackingUp,
+    playingIds,
     unmarkBackingUp
   }
 }

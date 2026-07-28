@@ -6,15 +6,15 @@ import FullScreenMask from './ui/FullScreenMask'
 
 interface DropAreaProps {
   /**
-   * Normal (non-hovering) content rendered inside the container div.
-   * The drag-hover hint is shown on top of the overlay regardless.
-   */
-  children?: JSX.Element
-  /**
    * Handles the drop event.
    * @param paths The paths of the files dropped.
    */
   callback?: (paths: string[]) => void
+  /**
+   * Normal (non-hovering) content rendered inside the container div.
+   * The drag-hover hint is shown on top of the overlay regardless.
+   */
+  children?: JSX.Element
   /**
    * Extra class names for the container div.
    */
@@ -29,7 +29,7 @@ export function DropArea(props: DropAreaProps) {
   let unlisteners: UnlistenFn[] = []
   // Tracks whether the component has been disposed. If listeners finish
   // registering after unmount, we must tear them down immediately.
-  let disposed = false
+  let isDisposed = false
 
   const setupListeners = async () => {
     const listeners = await Promise.all([
@@ -45,9 +45,9 @@ export function DropArea(props: DropAreaProps) {
         props.callback?.(event.payload.paths)
       })
     ])
-    if (disposed) {
+    if (isDisposed) {
       // Component unmounted while we were still registering listeners.
-      listeners.forEach(fn => fn())
+      for (const function_ of listeners) function_()
     } else {
       unlisteners = listeners
     }
@@ -58,8 +58,8 @@ export function DropArea(props: DropAreaProps) {
 
   // 组件卸载时清理监听，保证 Robust
   onCleanup(() => {
-    disposed = true
-    unlisteners.forEach(fn => fn())
+    isDisposed = true
+    for (const function_ of unlisteners) function_()
   })
 
   return (

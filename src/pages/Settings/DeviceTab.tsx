@@ -47,9 +47,9 @@ export const DeviceTab: Component = () => {
   }
 
   // 变量表是表单提交（非频繁回调），立即写入
-  const handleVariablesCommit = (newVars: Record<string, string>) => {
+  const handleVariablesCommit = (newVariables: Record<string, string>) => {
     void modifyDevice(
-      d => (d.variables = newVars),
+      d => (d.variables = newVariables),
       d => actions.updateCurrentDevice(d)
     )
     log.info('Variables updated')
@@ -65,34 +65,36 @@ export const DeviceTab: Component = () => {
         }
       >
         <Show
-          when={device()}
           fallback={
             <div class="p-8 text-center text-red-500">
               {t('settings.device.notFound')}
             </div>
           }
+          when={device()}
         >
-          {dev => (
+          {development => (
             <>
               <SettingSection title={t('settings.device.deviceIdentity')}>
                 <SettingRow
-                  label={t('settings.device.deviceName')}
                   description={t('settings.device.deviceNameAlias')}
+                  label={t('settings.device.deviceName')}
                 >
                   <Input
-                    value={dev().name}
-                    onChange={e => handleNameChange(e.currentTarget.value)}
                     class="max-w-xs"
+                    onChange={e => {
+                      handleNameChange(e.currentTarget.value)
+                    }}
+                    value={development().name}
                   />
                 </SettingRow>
 
                 <SettingRow
-                  label={t('settings.device.uuid')}
                   description={t('settings.device.uuidDesc')}
+                  label={t('settings.device.uuid')}
                 >
                   <div class="flex items-center gap-2">
                     <code class="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-gray-600 dark:text-gray-400 select-all">
-                      {dev().uid}
+                      {development().uid}
                     </code>
                   </div>
                 </SettingRow>
@@ -101,12 +103,12 @@ export const DeviceTab: Component = () => {
               <SettingSection title={t('settings.device.variables')}>
                 <div class="p-4">
                   <FormTableEditor
-                    values={dev().variables || {}}
-                    onCommit={handleVariablesCommit}
-                    label={t('settings.device.variables')}
-                    description={t('settings.device.variablesDesc')}
                     addLabel={t('settings.device.addVariable')}
+                    description={t('settings.device.variablesDesc')}
                     emptyText={t('settings.device.noVariablesDefined')}
+                    label={t('settings.device.variables')}
+                    onCommit={handleVariablesCommit}
+                    values={development().variables || {}}
                   />
                 </div>
               </SettingSection>

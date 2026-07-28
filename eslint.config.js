@@ -17,9 +17,9 @@ import js from '@eslint/js'
 import vitest from '@vitest/eslint-plugin'
 import prettier from 'eslint-config-prettier'
 import { importX } from 'eslint-plugin-import-x'
+import oxlint from 'eslint-plugin-oxlint'
 import { configs as perfectionist } from 'eslint-plugin-perfectionist'
 import { configs as regexpConfigs } from 'eslint-plugin-regexp'
-import oxlint from 'eslint-plugin-oxlint'
 import solidPlugin from 'eslint-plugin-solid'
 import unicorn from 'eslint-plugin-unicorn'
 import tseslint from 'typescript-eslint'
@@ -45,6 +45,12 @@ export default tseslint.config(
         tsconfigRootDir: import.meta.dirname,
       },
     },
+    rules: {
+      '@typescript-eslint/restrict-template-expressions': [
+        'error',
+        { allowNumber: true },
+      ],
+    },
   },
   {
     files: ['src/**/*.{ts,tsx}'],
@@ -67,7 +73,13 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.{js,mjs,cjs}'],
+    files: ['**/*.{js,mjs,cjs}', '*.{js,mjs,cjs}'],
+    ...tseslint.configs.disableTypeChecked,
+  },
+  // Config files at root are not included in the TS project service,
+  // so disable type-aware rules for them.
+  {
+    files: ['vite.config.ts', 'vitest.config.ts', 'uno.config.ts', 'eslint.config.js'],
     ...tseslint.configs.disableTypeChecked,
   },
   // Disable ESLint rules that oxlint already handles (avoids duplicate work).
@@ -76,33 +88,61 @@ export default tseslint.config(
   ...oxlint.buildFromOxlintConfigFile('./.oxlintrc.json'),
   {
     rules: {
+      // --- low-value typescript-eslint rules ---
+      '@typescript-eslint/no-dynamic-delete': 'off',
+      '@typescript-eslint/no-empty-function': 'off',
       '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-for-in-array': 'off',
+      '@typescript-eslint/no-invalid-void-type': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
+      '@typescript-eslint/prefer-optional-chain': 'off',
+      '@typescript-eslint/require-await': 'off',
       'import-x/no-named-as-default': 'off',
       'import-x/no-unresolved': 'off',
-      'no-undef': 'off',
       'no-unassigned-vars': 'off',
+      'no-undef': 'off',
       'no-underscore-dangle': 'off',
+      // --- rules from plugins not loaded in ESLint ---
+      'oxc/no-map-spread': 'off',
       'prefer-const': 'error',
+      'promise/always-return': 'off',
+      'unicorn/consistent-boolean-name': 'off',
       'unicorn/filename-case': [
         'error',
-        { cases: { kebabCase: true, pascalCase: true } },
+        { cases: { camelCase: true, kebabCase: true, pascalCase: true } },
       ],
-      'unicorn/name-replacements': [
-        'error',
-        {
-          allowList: {
-            args: true, Args: true,
-            env: true, Env: true,
-            props: true, Props: true,
-            ref: true, Ref: true,
-          },
-        },
-      ],
+      'unicorn/max-nested-calls': 'off',
+      'unicorn/name-replacements': 'off',
+      // --- opinionated unicorn rules that generate noise ---
+      'unicorn/no-anonymous-default-export': 'off',
+      'unicorn/no-array-callback-reference': 'off',
+      'unicorn/no-array-reduce': 'off',
+      'unicorn/no-break-in-nested-loop': 'off',
+      'unicorn/no-computed-property-existence-check': 'off',
+      'unicorn/no-declarations-before-early-exit': 'off',
+      'unicorn/no-null': 'off',
+      'unicorn/no-top-level-assignment-in-function': 'off',
+      'unicorn/no-unreadable-for-of-expression': 'off',
+      'unicorn/no-unsafe-string-replacement': 'off',
+      'unicorn/no-unused-array-method-return': 'off',
+      'unicorn/no-useless-switch-case': 'off',
+      'unicorn/prefer-minimal-ternary': 'off',
+      'unicorn/prefer-number-coercion': 'off',
+      'unicorn/prefer-simple-condition-first': 'off',
     },
+  },
+  // Standard test directory naming and locale hyphenated codes.
+  {
+    files: ['**/__tests__/**'],
+    rules: { 'unicorn/filename-case': 'off' },
+  },
+  {
+    files: ['**/en-US.*', '**/zh-CN.*'],
+    rules: { 'unicorn/filename-case': 'off' },
   },
   prettier,
 )

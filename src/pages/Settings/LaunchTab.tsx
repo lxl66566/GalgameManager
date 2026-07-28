@@ -7,36 +7,36 @@ import { useConfig } from '~/store'
 import { type Component } from 'solid-js'
 
 export const LaunchTab: Component = () => {
-  const { config, actions } = useConfig()
+  const { actions, config } = useConfig()
   const { t } = useI18n()
 
   const handleClearDailyStat = () => {
     myToast({
-      variant: 'warning',
-      title: t('settings.launch.clearDailyStat'),
-      message: t('settings.launch.clearDailyStatDesc'),
       actions: [
         {
           label: t('ui.cancel'),
-          variant: 'secondary',
-          onClick: () => {}
+          onClick: () => {},
+          variant: 'secondary'
         },
         {
           label: t('ui.confirm'),
-          variant: 'danger',
           onClick: async () => {
             try {
               await invoke('clear_all_daily_playtime')
               myToast({
-                variant: 'success',
-                message: t('settings.launch.dailyStatCleared')
+                message: t('settings.launch.dailyStatCleared'),
+                variant: 'success'
               })
-            } catch (e) {
-              myToast({ variant: 'error', message: String(e) })
+            } catch (error) {
+              myToast({ message: String(error), variant: 'error' })
             }
-          }
+          },
+          variant: 'danger'
         }
-      ]
+      ],
+      message: t('settings.launch.clearDailyStatDesc'),
+      title: t('settings.launch.clearDailyStat'),
+      variant: 'warning'
     })
   }
 
@@ -44,28 +44,32 @@ export const LaunchTab: Component = () => {
     <div class="max-w-4xl">
       <SettingSection title={t('settings.launch.timestat')}>
         <SettingRow
-          label={t('settings.launch.precisionMode')}
           description={t('settings.launch.precisionModeDesc')}
+          label={t('settings.launch.precisionMode')}
         >
           <SwitchToggle
             checked={config.settings.launch.precisionMode}
-            onChange={e => actions.updateSettings({ launch: { precisionMode: e } })}
+            onChange={e => {
+              actions.updateSettings({ launch: { precisionMode: e } })
+            }}
           />
         </SettingRow>
 
         <SettingRow
-          label={t('settings.launch.dailyStat')}
           description={t('settings.launch.dailyStatDesc')}
+          label={t('settings.launch.dailyStat')}
         >
           <SwitchToggle
             checked={config.settings.launch.dailyStat}
-            onChange={e => actions.updateSettings({ launch: { dailyStat: e } })}
+            onChange={e => {
+              actions.updateSettings({ launch: { dailyStat: e } })
+            }}
           />
         </SettingRow>
 
         <SettingRow
-          label={t('settings.launch.clearDailyStat')}
           description={t('settings.launch.clearDailyStatDesc')}
+          label={t('settings.launch.clearDailyStat')}
         >
           <button
             class="px-4 py-1.5 text-sm font-medium rounded-md border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"

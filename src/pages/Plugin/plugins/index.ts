@@ -26,17 +26,17 @@ export const PLUGIN_REGISTRY: readonly AnyPluginDef[] = [
   WINE_PLUGIN
 ]
 
-export {
-  type PluginInfo,
-  type PluginDefinition,
-  type ConfigEditorProps,
-  type AnyPluginDef
-} from './types'
-export { EXECUTE_PLUGIN } from './ExecuteConfigEditor'
 export { AUTO_UPLOAD_PLUGIN } from './AutoUploadConfigEditor'
+export { EXECUTE_PLUGIN } from './ExecuteConfigEditor'
 export { GAME_WRAPPER_PLUGIN } from './GameWrapperConfigEditor'
 export { LOCALE_EMULATOR_PLUGIN } from './LocaleEmulatorConfigEditor'
 export { TRANSLATOR_PLUGIN } from './TranslatorConfigEditor'
+export {
+  type AnyPluginDef,
+  type ConfigEditorProps,
+  type PluginDefinition,
+  type PluginInfo
+} from './types'
 export { VOICE_SPEEDUP_PLUGIN } from './VoiceSpeedupConfigEditor'
 export { VOICE_ZEROINTERRUPT_PLUGIN } from './VoiceZerointerruptConfigEditor'
 export { WINE_PLUGIN } from './WineConfigEditor'

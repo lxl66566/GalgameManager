@@ -24,7 +24,6 @@ import { createSignal, For, Show, type Component } from 'solid-js'
 import { Dynamic } from 'solid-js/web'
 
 interface PluginSectionProps {
-  plugins: PluginInstance[]
   onChange: (plugins: PluginInstance[]) => void
   /**
    * Fine-grained store update that avoids replacing the array (keeps focus).
@@ -32,18 +31,19 @@ interface PluginSectionProps {
    * simple `setStore('plugins', index, updated)` without any casting.
    */
   onConfigChange?: (index: number, updated: PluginInstance) => void
+  plugins: PluginInstance[]
 }
 
 /** Check whether a plugin type is enabled via its meta config. */
 const isPluginEnabled = (metas: PluginMetadatas, pluginId: string): boolean => {
   const meta = metas[pluginId as keyof PluginMetadatas] as
-    { enabled?: boolean } | undefined
+    undefined | { enabled?: boolean }
   return meta?.enabled !== false
 }
 
 /** Walk up the DOM to find the nearest scrollable ancestor. */
-const findScrollParent = (el: HTMLElement): HTMLElement | null => {
-  let parent = el.parentElement
+const findScrollParent = (element: HTMLElement): HTMLElement | null => {
+  let parent = element.parentElement
   while (parent) {
     const { overflowY } = getComputedStyle(parent)
     if (overflowY === 'auto' || overflowY === 'scroll') return parent
@@ -53,13 +53,13 @@ const findScrollParent = (el: HTMLElement): HTMLElement | null => {
 }
 
 /** Scroll the nearest scrollable ancestor so that `el` (plus extra for the dropdown) is visible. */
-const scrollIntoViewLocal = (el: HTMLElement) => {
-  const scrollParent = findScrollParent(el)
+const scrollIntoViewLocal = (element: HTMLElement) => {
+  const scrollParent = findScrollParent(element)
   if (!scrollParent) return
   const parentRect = scrollParent.getBoundingClientRect()
-  const elRect = el.getBoundingClientRect()
+  const elementRect = element.getBoundingClientRect()
   // Reserve ~300px below the section for the dropdown menu
-  const neededBottom = elRect.top + 300
+  const neededBottom = elementRect.top + 300
   if (neededBottom > parentRect.bottom) {
     scrollParent.scrollTop += neededBottom - parentRect.bottom + 8
   }
@@ -83,7 +83,7 @@ const withUpdatedConfig = (
 export default function PluginSection(props: PluginSectionProps) {
   const { t } = useI18n()
   const { config } = useConfig()
-  const [expandedIndex, setExpandedIndex] = createSignal<number | null>(null)
+  const [expandedIndex, setExpandedIndex] = createSignal<null | number>(null)
   const [showAddMenu, setShowAddMenu] = createSignal(false)
   let sectionRef: HTMLDivElement | undefined
 
@@ -108,9 +108,9 @@ export default function PluginSection(props: PluginSectionProps) {
     const newIndex = index + direction
     if (newIndex < 0 || newIndex >= props.plugins.length) return
     const newPlugins = [...props.plugins]
-    const temp = newPlugins[index]
+    const temporary = newPlugins[index]
     newPlugins[index] = newPlugins[newIndex]
-    newPlugins[newIndex] = temp
+    newPlugins[newIndex] = temporary
     props.onChange(newPlugins)
     if (expandedIndex() === index) setExpandedIndex(newIndex)
     else if (expandedIndex() === newIndex) setExpandedIndex(index)
@@ -135,20 +135,20 @@ export default function PluginSection(props: PluginSectionProps) {
   }
 
   return (
-    <div ref={sectionRef} class="flex flex-col gap-2 w-full">
+    <div class="flex flex-col gap-2 w-full" ref={sectionRef}>
       <div class="flex justify-between items-center">
         <span class="text-sm font-bold text-gray-700 dark:text-gray-300">
           {t('plugin.pluginSection')}
         </span>
         <div class="relative">
           <button
-            onClick={() => {
-              const opening = !showAddMenu()
-              setShowAddMenu(opening)
-              if (opening && sectionRef) scrollIntoViewLocal(sectionRef)
-            }}
             class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors cursor-pointer 
          flex items-center gap-1"
+            onClick={() => {
+              const isOpening = !showAddMenu()
+              setShowAddMenu(isOpening)
+              if (isOpening && sectionRef) scrollIntoViewLocal(sectionRef)
+            }}
             title={t('plugin.addPlugin')}
             type="button"
           >
@@ -165,7 +165,9 @@ export default function PluginSection(props: PluginSectionProps) {
                 {def => (
                   <button
                     class="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200"
-                    onClick={() => handleAddPlugin(def)}
+                    onClick={() => {
+                      handleAddPlugin(def)
+                    }}
                     type="button"
                   >
                     {String(t(def.info.nameKey as keyof Dictionary))}
@@ -179,12 +181,12 @@ export default function PluginSection(props: PluginSectionProps) {
 
       <div class="bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600 p-2 min-h-[60px] max-h-[400px] overflow-y-auto flex flex-col gap-1.5">
         <Show
-          when={props.plugins.length > 0}
           fallback={
             <div class="text-gray-400 dark:text-gray-500 text-xs select-none py-3 text-center">
               {t('plugin.noPluginsAdded')}
             </div>
           }
+          when={props.plugins.length > 0}
         >
           <For each={props.plugins}>
             {(instance, index) => {
@@ -200,8 +202,10 @@ export default function PluginSection(props: PluginSectionProps) {
                   <div class="flex items-center gap-2 px-2 py-1.5">
                     <button
                       class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                      onClick={() => handleMovePlugin(index(), -1)}
                       disabled={isFirst()}
+                      onClick={() => {
+                        handleMovePlugin(index(), -1)
+                      }}
                       title={t('plugin.moveUp')}
                       type="button"
                     >
@@ -209,8 +213,10 @@ export default function PluginSection(props: PluginSectionProps) {
                     </button>
                     <button
                       class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                      onClick={() => handleMovePlugin(index(), 1)}
                       disabled={isLast()}
+                      onClick={() => {
+                        handleMovePlugin(index(), 1)
+                      }}
                       title={t('plugin.moveDown')}
                       type="button"
                     >
@@ -235,8 +241,8 @@ export default function PluginSection(props: PluginSectionProps) {
                       type="button"
                     >
                       <Show
-                        when={isExpanded()}
                         fallback={<FiChevronDown class="w-3 h-3" />}
+                        when={isExpanded()}
                       >
                         <FiChevronUp class="w-3 h-3" />
                       </Show>
@@ -244,7 +250,9 @@ export default function PluginSection(props: PluginSectionProps) {
 
                     <button
                       class="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                      onClick={() => handleRemovePlugin(index())}
+                      onClick={() => {
+                        handleRemovePlugin(index())
+                      }}
                       title={t('plugin.removePlugin')}
                       type="button"
                     >
@@ -254,7 +262,6 @@ export default function PluginSection(props: PluginSectionProps) {
 
                   <Show when={isExpanded()}>
                     <Show
-                      when={def()?.GameEditor && 'config' in instance}
                       fallback={
                         // No editor for this plugin type (e.g. AutoUpload).
                         // Without this branch the chevron flips but nothing
@@ -263,6 +270,7 @@ export default function PluginSection(props: PluginSectionProps) {
                           {t('plugin.configEmpty')}
                         </div>
                       }
+                      when={def()?.GameEditor && 'config' in instance}
                     >
                       {(() => {
                         // Plugin has a per-game editor → render it.
@@ -281,9 +289,9 @@ export default function PluginSection(props: PluginSectionProps) {
                             <Dynamic
                               component={Editor}
                               config={gameConfig}
-                              onCommit={(values: Record<string, unknown>) =>
+                              onCommit={(values: Record<string, unknown>) => {
                                 handleUpdateConfig(index(), values)
-                              }
+                              }}
                             />
                           </div>
                         )

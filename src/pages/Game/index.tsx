@@ -44,7 +44,7 @@ import { GameItem, GameItemWrapper } from './GameItem'
 import { ArchiveSyncModal } from './SyncModal'
 
 const GamePage = (): JSX.Element => {
-  const { config, actions } = useConfig()
+  const { actions, config } = useConfig()
   const { t } = useI18n()
   // Running/backing-up state lives in the global runtime store so it survives
   // sidebar navigation (the page component is unmounted on route change).
@@ -54,7 +54,7 @@ const GamePage = (): JSX.Element => {
   const [isSyncModalOpen, setSyncModalOpen] = createSignal(false)
   const [isEditMode, setEditMode] = createSignal(false)
   const [editingGameInfo, setEditingGameInfo] = createSignal<Game | null>(null)
-  const [editingIndex, setEditingIndex] = createSignal<number | null>(null)
+  const [editingIndex, setEditingIndex] = createSignal<null | number>(null)
 
   const [sortType, setSortType] = createSignal<SortType>('id')
 
@@ -64,13 +64,15 @@ const GamePage = (): JSX.Element => {
     // Track the grid scroll container width to recompute the responsive column
     // count. clientWidth excludes the scrollbar but includes padding, which the
     // column formula accounts for.
-    const el = gridScrollRef
-    if (el) {
-      const update = () => setScrollWidth(el.clientWidth)
+    const element = gridScrollRef
+    if (element) {
+      const update = () => setScrollWidth(element.clientWidth)
       update()
       const ro = new ResizeObserver(update)
-      ro.observe(el)
-      onCleanup(() => ro.disconnect())
+      ro.observe(element)
+      onCleanup(() => {
+        ro.disconnect()
+      })
     }
   })
 
@@ -81,22 +83,25 @@ const GamePage = (): JSX.Element => {
 
     return games.toSorted((a, b) => {
       switch (type) {
-        case 'name':
-          return a.name.localeCompare(
-            b.name,
-            config.settings.appearance.language || 'zh-CN'
-          )
         case 'lastPlayed': {
           // 处理 null 情况，未游玩的排在后面
           const timeA = a.lastPlayedTime ? new Date(a.lastPlayedTime).getTime() : 0
           const timeB = b.lastPlayedTime ? new Date(b.lastPlayedTime).getTime() : 0
           return timeB - timeA
         }
-        case 'playTime':
+        case 'name': {
+          return a.name.localeCompare(
+            b.name,
+            config.settings.appearance.language || 'zh-CN'
+          )
+        }
+        case 'playTime': {
           return durationToSecs(b.useTime) - durationToSecs(a.useTime)
+        }
         case 'id':
-        default:
+        default: {
           return a.id - b.id
+        }
       }
     })
   })
@@ -105,7 +110,7 @@ const GamePage = (): JSX.Element => {
   // games list changes. Avoids a findIndex linear scan per card per render.
   const gameIndexById = createMemo(() => {
     const map = new Map<number, number>()
-    config.games.forEach((g, i) => map.set(g.id, i))
+    for (const [index, g] of config.games.entries()) map.set(g.id, index)
     return map
   })
 
@@ -146,13 +151,13 @@ const GamePage = (): JSX.Element => {
 
   // Holds the previous chunk array so identical rows can keep a stable
   // reference across recomputes (see `rows` memo below).
-  let prevRows: Game[][] = []
+  let previousRows: Game[][] = []
   const rows = createMemo<Game[][]>(() => {
     const cols = columns()
     const games = sortedGames()
     const out: Game[][] = []
-    for (let i = 0, r = 0; i < games.length; i += cols, r++) {
-      const chunk = games.slice(i, i + cols)
+    for (let index = 0, r = 0; index < games.length; index += cols, r++) {
+      const chunk = games.slice(index, index + cols)
       // Reuse the previous chunk reference when its game references are
       // unchanged. virtua's <For> keys data items by reference, so a brand-new
       // chunk array on every recompute forces it to unmount+remount every
@@ -161,16 +166,20 @@ const GamePage = (): JSX.Element => {
       // underlying games didn't move — e.g. a config://updated reconcile or an
       // image-hash patch that changes the games array identity but not its
       // contents.
-      const prev = prevRows[r]
-      if (prev && prev.length === chunk.length && chunk.every((g, k) => g === prev[k])) {
-        out.push(prev)
+      const previous = previousRows[r]
+      if (
+        previous &&
+        previous.length === chunk.length &&
+        chunk.every((g, k) => g === previous[k])
+      ) {
+        out.push(previous)
       } else {
         out.push(chunk)
       }
     }
     // Always keep at least one (possibly empty) row to host the "add" card.
     if (out.length === 0) out.push([])
-    prevRows = out
+    previousRows = out
     return out
   })
 
@@ -185,20 +194,20 @@ const GamePage = (): JSX.Element => {
     // Apply reverse variable replacement so the path uses {varName} templates
     let resolvedPath = path
     if (path) {
-      const vars = await getDeviceVarMap(config.devices)
-      resolvedPath = replaceWithVarNames(path, vars)
+      const variables = await getDeviceVarMap(config.devices)
+      resolvedPath = replaceWithVarNames(path, variables)
     }
     const newGame: Game = {
-      id: findNextGameId(),
-      name: resolvedPath ? (getParentPath(resolvedPath) ?? '') : '',
-      excutablePath: resolvedPath ?? null,
-      savePaths: [],
-      imageUrl: null,
-      imageSha256: null,
       addedTime: new Date().toISOString(),
-      useTime: [0, 0],
+      excutablePath: resolvedPath ?? null,
+      id: findNextGameId(),
+      imageSha256: null,
+      imageUrl: null,
       lastPlayedTime: null,
-      lastUploadTime: null
+      lastUploadTime: null,
+      name: resolvedPath ? (getParentPath(resolvedPath) ?? '') : '',
+      savePaths: [],
+      useTime: [0, 0]
     }
     log.info(`add newGame: ${JSON.stringify(newGame)}`)
     setEditingIndex(null)
@@ -252,9 +261,9 @@ const GamePage = (): JSX.Element => {
         .then(resolved => {
           if (resolved && !isAbsolutePath(resolved)) {
             myToast({
-              variant: 'error',
+              message: t('hint.exePathNotAbsolute'),
               title: t('game.edit.exePath'),
-              message: t('hint.exePathNotAbsolute')
+              variant: 'error'
             })
           }
         })
@@ -262,9 +271,9 @@ const GamePage = (): JSX.Element => {
           // resolve_var failed (e.g. unresolved variable) — notify the user
           // instead of silently ignoring, so they know the path is broken.
           myToast({
-            variant: 'warning',
+            message: t('hint.resolveExeFailed'),
             title: t('game.edit.exePath'),
-            message: t('hint.resolveExeFailed')
+            variant: 'warning'
           })
         })
     }
@@ -279,7 +288,7 @@ const GamePage = (): JSX.Element => {
     const game = config.games[index]
     closeEditModal()
     try {
-      if (game.savePaths.length !== 0) {
+      if (game.savePaths.length > 0) {
         invoke('delete_local_archive_all', { gameId: game.id })
         if (config.settings.storage.provider === 'none') {
           actions.removeGame(index)
@@ -290,26 +299,26 @@ const GamePage = (): JSX.Element => {
       }
       actions.removeGame(index)
       toast.success(t('hint.deleteGameAndRemote') + game.name)
-    } catch (e) {
-      toast.error(t('hint.deleteArchiveFailed') + e)
+    } catch (error) {
+      toast.error(t('hint.deleteArchiveFailed') + error)
       myToast({
-        variant: 'error',
-        title: t('hint.deleteGameFailed'),
-        message: t('hint.deleteGameFailedConfirm'),
         actions: [
           {
             label: t('ui.cancel'),
-            variant: 'secondary',
-            onClick: () => {}
+            onClick: () => {},
+            variant: 'secondary'
           },
           {
             label: t('ui.delete'),
-            variant: 'danger',
             onClick: () => {
               actions.removeGame(index)
-            }
+            },
+            variant: 'danger'
           }
-        ]
+        ],
+        message: t('hint.deleteGameFailedConfirm'),
+        title: t('hint.deleteGameFailed'),
+        variant: 'error'
       })
     }
   }
@@ -322,13 +331,14 @@ const GamePage = (): JSX.Element => {
   /** Handle context menu actions dispatched from GameItem. */
   const handleContextMenuAction = async (gameId: number, action: string) => {
     switch (action) {
-      case 'openDir':
+      case 'openDir': {
         try {
           await invoke('open_game_dir', { gameId })
-        } catch (e) {
-          toast.error(t('hint.openDirFailed') + ': ' + e)
+        } catch (error) {
+          toast.error(t('hint.openDirFailed') + ': ' + error)
         }
         break
+      }
     }
   }
 
@@ -351,7 +361,7 @@ const GamePage = (): JSX.Element => {
     runtime.markBackingUp(game.id)
 
     const toastId = toast.loading(t('hint.archiving') + game.name + '...')
-    let unlistenUploadError: UnlistenFn | undefined
+    let unlistenUploadError: undefined | UnlistenFn
 
     try {
       const archived_filename = await invoke<string>('archive', { gameId: game.id })
@@ -367,18 +377,18 @@ const GamePage = (): JSX.Element => {
       })
 
       await invoke<void>('upload_archive', {
-        gameId: game.id,
-        archiveFilename: archived_filename
+        archiveFilename: archived_filename,
+        gameId: game.id
       })
 
       toast.success(t('hint.syncSuccess') + game.name, {
-        id: toastId,
-        duration: 3000
+        duration: 3000,
+        id: toastId
       })
     } catch (error) {
       log.error(`Failed to backup game ${game.name}: ${error}`)
-      const errMsg = error instanceof Error ? error.message : String(error)
-      toast.error(t('hint.syncFailed') + errMsg, { id: toastId, duration: 5000 })
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      toast.error(t('hint.syncFailed') + errorMessage, { duration: 5000, id: toastId })
     } finally {
       if (unlistenUploadError) {
         unlistenUploadError()
@@ -411,24 +421,24 @@ const GamePage = (): JSX.Element => {
       */}
       <DropArea
         callback={handleDropAdd}
-        class="flex flex-col py-4 pl-4 pr-0 w-full h-full"
+        class="flex h-full w-full flex-col py-4 pr-0 pl-4"
       >
         {/* 头部区域：标题 + 排序控件 */}
-        <div class="flex flex-row justify-between items-center mb-4">
+        <div class="mb-4 flex flex-row items-center justify-between">
           <h1 class="text-2xl font-bold dark:text-white">{t('game.self')}</h1>
 
           <SortOptions
             class="mr-4 p-0.5"
-            sortType={sortType}
             onChange={s => {
               setSortType(s)
               setSortTypeCached(s)
             }}
+            sortType={sortType}
           />
         </div>
         <div
+          class="custom-scrollbar flex-1 overflow-y-auto pr-4 pb-5"
           ref={gridScrollRef}
-          class="flex-1 overflow-y-auto custom-scrollbar pr-4 pb-5"
           style={{ 'overflow-anchor': 'none' }}
         >
           <Virtualizer data={rows()}>
@@ -449,22 +459,26 @@ const GamePage = (): JSX.Element => {
                       return (
                         <GameItem
                           game={game}
-                          // 所有的操作回调都使用 realIndex()
-                          onStart={() => handleStart(realIndex())}
-                          onEdit={() => openEditModal(realIndex())}
+                          isBackingUp={runtime.isBackingUp(game.id)}
+                          isPlaying={runtime.isPlaying(game.id)}
                           onBackup={() => handleBackup(realIndex())}
-                          onSync={() => openSyncModal(realIndex())}
-                          onImageHashUpdate={newhash =>
-                            handleImageHashUpdate(realIndex(), newhash)
-                          }
-                          onCoverColorUpdate={color =>
-                            handleCoverColorUpdate(realIndex(), color)
-                          }
                           onContextMenuAction={action =>
                             handleContextMenuAction(game.id, action)
                           }
-                          isBackingUp={runtime.isBackingUp(game.id)}
-                          isPlaying={runtime.isPlaying(game.id)}
+                          onCoverColorUpdate={color => {
+                            handleCoverColorUpdate(realIndex(), color)
+                          }}
+                          onEdit={() => {
+                            openEditModal(realIndex())
+                          }}
+                          onImageHashUpdate={newhash => {
+                            handleImageHashUpdate(realIndex(), newhash)
+                          }}
+                          // 所有的操作回调都使用 realIndex()
+                          onStart={() => handleStart(realIndex())}
+                          onSync={() => {
+                            openSyncModal(realIndex())
+                          }}
                         />
                       )
                     }}
@@ -474,11 +488,11 @@ const GamePage = (): JSX.Element => {
                   <Show when={isLastRow()}>
                     <GameItemWrapper extra_class="border-2 border-dashed border-gray-300 dark:border-gray-600 bg-transparent shadow-none hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                       <div
-                        class="flex flex-col flex-1 items-center justify-center text-center cursor-pointer w-full h-full group"
+                        class="group flex h-full w-full flex-1 cursor-pointer flex-col items-center justify-center text-center"
                         onClick={() => openGameAddModal()}
                       >
-                        <AiTwotonePlusCircle class="w-16 h-16 text-gray-400 group-hover:text-blue-500 transition-colors duration-300" />
-                        <p class="text-gray-500 dark:text-gray-400 text-sm mt-2 px-4 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
+                        <AiTwotonePlusCircle class="h-16 w-16 text-gray-400 transition-colors duration-300 group-hover:text-blue-500" />
+                        <p class="mt-2 px-4 text-sm text-gray-500 transition-colors group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-200">
                           {t('game.clickToAdd')}
                           <br />
                           {t('game.orDrag')}
@@ -496,10 +510,10 @@ const GamePage = (): JSX.Element => {
       <Show when={isEditModalOpen()}>
         <FullScreenMask onClose={closeEditModal}>
           <GameEditModal
-            gameInfo={editingGameInfo()}
-            editMode={isEditMode()}
             cancel={closeEditModal}
             confirm={handleSave}
+            editMode={isEditMode()}
+            gameInfo={editingGameInfo()}
             onDelete={() => handleDelete()}
           />
         </FullScreenMask>
@@ -520,53 +534,52 @@ const GamePage = (): JSX.Element => {
 export default GamePage
 
 const SortOptions = (props: {
-  sortType: Accessor<SortType>
-  onChange: (type: SortType) => void
   class?: string
+  onChange: (type: SortType) => void
+  sortType: Accessor<SortType>
 }): JSX.Element => {
   const { t } = useI18n()
   const sortOptions: Accessor<
-    { type: SortType; icon: Component<{ class?: string }>; label: string }[]
+    { icon: Component<{ class?: string }>; label: string; type: SortType }[]
   > = createMemo(() => [
     {
-      type: 'id' as SortType,
       icon: TbOutlineSortAscendingNumbers,
-      label: t('game.sortType.id')
+      label: t('game.sortType.id'),
+      type: 'id'
     },
     {
-      type: 'name' as SortType,
       icon: TbOutlineSortAscendingLetters,
-      label: t('game.sortType.name')
+      label: t('game.sortType.name'),
+      type: 'name'
     },
     {
-      type: 'lastPlayed' as SortType,
       icon: TbOutlineClockPlay,
-      label: t('game.sortType.lastPlayed')
+      label: t('game.sortType.lastPlayed'),
+      type: 'lastPlayed'
     },
     {
-      type: 'playTime' as SortType,
       icon: TbOutlineHourglassHigh,
-      label: t('game.sortType.playTime')
+      label: t('game.sortType.playTime'),
+      type: 'playTime'
     }
   ])
 
   return (
-    <div class={cn('flex bg-gray-200 dark:bg-gray-900 rounded-md', props.class)}>
+    <div class={cn('flex rounded-md bg-gray-200 dark:bg-gray-900', props.class)}>
       <For each={sortOptions()}>
         {option => (
           <button
-            onClick={() => props.onChange(option.type)}
-            class={`
-                flex items-center justify-center px-2 py-1 rounded text-xs font-medium transition-all duration-200
-                ${
-                  props.sortType() === option.type
-                    ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-300 shadow-sm'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-300/50 dark:hover:bg-gray-700/50'
-                }
-              `}
+            class={`flex items-center justify-center rounded px-2 py-1 text-xs font-medium transition-all duration-200 ${
+              props.sortType() === option.type
+                ? 'bg-white text-blue-600 shadow-sm dark:bg-gray-600 dark:text-blue-300'
+                : 'text-gray-500 hover:bg-gray-300/50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-gray-200'
+            } `}
+            onClick={() => {
+              props.onChange(option.type)
+            }}
             title={option.label}
           >
-            <option.icon class="w-3.5 h-3.5" />
+            <option.icon class="h-3.5 w-3.5" />
             <span class="ml-1 hidden md:inline">{option.label}</span>
           </button>
         )}

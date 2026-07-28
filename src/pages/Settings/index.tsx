@@ -7,7 +7,7 @@ import { DeviceTab } from './DeviceTab'
 import { LaunchTab } from './LaunchTab'
 import { StorageTab } from './StorageTab'
 
-type TabKey = 'general' | 'launch' | 'device' | 'appearance'
+type TabKey = 'appearance' | 'device' | 'general' | 'launch'
 
 // Module-level signal: survives SettingsPage mount/unmount cycles caused by
 // route changes, so switching away and back keeps the active sub-page.
@@ -33,8 +33,8 @@ export const SettingsPage: Component = () => {
             { key: 'device', label: t('settings.tabs.device') },
             { key: 'appearance', label: t('settings.tabs.appearance') }
           ]}
-          value={activeTab()}
           onChange={setActiveTab}
+          value={activeTab()}
         />
       </div>
 

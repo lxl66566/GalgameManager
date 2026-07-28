@@ -16,20 +16,20 @@ import { createEffect, For, Show, type Component } from 'solid-js'
 import { formatDuration, type DurationUnits } from './timeRange'
 
 export interface GameBarRow {
-  id: number
-  name: string
-  imageUrl: string | null
-  imageHash: string | null
-  secs: number
   color: string
+  id: number
+  imageHash: null | string
+  imageUrl: null | string
+  name: string
+  secs: number
 }
 
 interface GamePlaytimeBarsProps {
-  rows: GameBarRow[]
-  highlightGameId: number | null
-  onHoverGame: (id: number | null) => void
-  units: DurationUnits
   class?: string
+  highlightGameId: null | number
+  onHoverGame: (id: null | number) => void
+  rows: GameBarRow[]
+  units: DurationUnits
 }
 
 const GamePlaytimeBars: Component<GamePlaytimeBarsProps> = props => {
@@ -44,40 +44,46 @@ const GamePlaytimeBars: Component<GamePlaytimeBarsProps> = props => {
   let rootRef: HTMLDivElement | undefined
   createEffect(() => {
     const id = props.highlightGameId
-    if (id == null || !rootRef) return
+    if (id == undefined || !rootRef) return
     // querySelector rather than per-row refs: rows are re-created on each
     // scope change (new object literals), so a ref Map would need cleanup.
-    const el = rootRef.querySelector<HTMLElement>(`[data-game-id="${id}"]`)
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    const element = rootRef.querySelector<HTMLElement>(
+      `[data-game-id="${CSS.escape(id)}"]`
+    )
+    if (element) element.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   })
 
   return (
-    <div ref={rootRef} class={`flex flex-col gap-1 ${props.class ?? ''}`}>
+    <div class={`flex flex-col gap-1 ${props.class ?? ''}`} ref={rootRef}>
       <Show
-        when={props.rows.length > 0}
         fallback={
           <div class="py-6 text-center text-sm text-gray-400 dark:text-gray-500">
             {t('stats.noDataInScope')}
           </div>
         }
+        when={props.rows.length > 0}
       >
         <For each={props.rows}>
           {row => {
             const dimmed = () =>
-              props.highlightGameId != null && props.highlightGameId !== row.id
+              props.highlightGameId != undefined && props.highlightGameId !== row.id
             return (
               <div
-                data-game-id={row.id}
                 class="flex cursor-default items-center gap-3 rounded-md px-2 py-1.5 transition-opacity duration-200 hover:bg-gray-100 dark:hover:bg-gray-800/60"
                 classList={{ 'opacity-40': dimmed() }}
-                onMouseEnter={() => props.onHoverGame(row.id)}
-                onMouseLeave={() => props.onHoverGame(null)}
+                data-game-id={row.id}
+                onMouseEnter={() => {
+                  props.onHoverGame(row.id)
+                }}
+                onMouseLeave={() => {
+                  props.onHoverGame(null)
+                }}
               >
                 <CachedImage
-                  url={row.imageUrl}
-                  hash={row.imageHash}
                   alt={row.name}
                   class="h-10 w-10 shrink-0 rounded"
+                  hash={row.imageHash}
+                  url={row.imageUrl}
                 />
                 <div class="flex min-w-0 flex-1 flex-col gap-1">
                   <span
@@ -91,8 +97,8 @@ const GamePlaytimeBars: Component<GamePlaytimeBarsProps> = props => {
                     <div
                       class="h-1.5 min-w-3 rounded-full transition-[width] duration-300 ease-out"
                       style={{
-                        width: `${(row.secs / maxSecs()) * 100}%`,
-                        'background-color': row.color
+                        'background-color': row.color,
+                        width: `${(row.secs / maxSecs()) * 100}%`
                       }}
                     />
                     <span class="shrink-0 text-xs tabular-nums text-gray-500 dark:text-gray-400">

@@ -3,12 +3,6 @@ import { defineConfig, type UserConfig } from 'unocss'
 import { presetScrollbarHide } from 'unocss-preset-scrollbar-hide'
 
 export default defineConfig({
-  presets: [
-    presetWind4({
-      dark: 'class'
-    }),
-    presetScrollbarHide()
-  ],
   preflights: [
     {
       getCSS: () => `
@@ -39,5 +33,11 @@ export default defineConfig({
         }
       `
     }
+  ],
+  presets: [
+    presetWind4({
+      dark: 'class'
+    }),
+    presetScrollbarHide()
   ]
 }) satisfies UserConfig<Theme> as UserConfig<Theme>

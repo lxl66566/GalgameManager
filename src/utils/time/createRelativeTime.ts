@@ -7,25 +7,30 @@
 import type { TimeDisplayConfig } from '@bindings/TimeDisplayConfig'
 import type { Locale } from '~/i18n'
 import { createMemo, createSignal, onCleanup, type Accessor } from 'solid-js'
-import { formatAbsoluteIso, formatTimeAgo, formatTimeAgoLocale, type TFunc } from '.'
+import {
+  formatAbsoluteIso,
+  formatTimeAgo,
+  formatTimeAgoLocale,
+  type TFunc as TFunction
+} from '.'
 
 export interface TimeDisplayOptions {
-  /** Effective locale after resolving `timeDisplay.language`. */
-  locale: Accessor<Locale>
   /** Time display config from settings. */
   config: Accessor<TimeDisplayConfig>
+  /** Effective locale after resolving `timeDisplay.language`. */
+  locale: Accessor<Locale>
 }
 
 const DEFAULT_OPTIONS: TimeDisplayOptions = {
-  locale: () => 'en-US',
   config: () => ({
-    language: 'auto',
+    absoluteFormat: 'YYYY-MM-DD HH:mm',
     format: 'relative',
-    absoluteFormat: 'YYYY-MM-DD HH:mm'
-  })
+    language: 'auto'
+  }),
+  locale: () => 'en-US'
 }
 
-const DEFAULT_INTERVAL = 60000
+const DEFAULT_INTERVAL = 60_000
 
 // A single app-lifetime heartbeat. Every "relative time" memo subscribes to
 // this one tick instead of each game card spinning its own setInterval —
@@ -51,8 +56,8 @@ const sharedTick: Accessor<number> = (() => {
  * that haven't migrated yet working unchanged.
  */
 export function createRelativeTime(
-  timeTarget: Accessor<string | null>,
-  t: TFunc,
+  timeTarget: Accessor<null | string>,
+  t: TFunction,
   intervalMs = DEFAULT_INTERVAL,
   options: TimeDisplayOptions = DEFAULT_OPTIONS
 ) {
@@ -62,7 +67,9 @@ export function createRelativeTime(
   } else {
     const [localTick, setLocalTick] = createSignal(Date.now())
     const timer = setInterval(() => setLocalTick(Date.now()), intervalMs)
-    onCleanup(() => clearInterval(timer))
+    onCleanup(() => {
+      clearInterval(timer)
+    })
     tick = localTick
   }
 
@@ -70,17 +77,17 @@ export function createRelativeTime(
     // Subscribe to tick so the memo refreshes on the heartbeat.
     tick()
     const time = timeTarget()
-    const cfg = options.config()
+    const config = options.config()
 
-    if (cfg.format === 'absolute') {
-      return formatAbsoluteIso(time, cfg.absoluteFormat)
+    if (config.format === 'absolute') {
+      return formatAbsoluteIso(time, config.absoluteFormat)
     }
 
     // Relative format. `language: 'auto'` defers to the caller's
     // translator so we keep reusing the global i18n dict (and any
     // future dict updates); an explicit override goes through the
     // locale-keyed table.
-    if (cfg.language === 'auto') {
+    if (config.language === 'auto') {
       return formatTimeAgo(time, t)
     }
     return formatTimeAgoLocale(time, options.locale())

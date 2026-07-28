@@ -38,8 +38,8 @@ describe('resolveSelection', () => {
   })
 
   it('week offset: shifts by whole weeks', () => {
-    const prev = resolveSelection({ granularity: 'week', offset: -1 }, 1, NOW)
-    expect(prev.buckets[0].key).toBe('2026-07-06')
+    const previous = resolveSelection({ granularity: 'week', offset: -1 }, 1, NOW)
+    expect(previous.buckets[0].key).toBe('2026-07-06')
     const next = resolveSelection({ granularity: 'week', offset: 2 }, 1, NOW)
     expect(next.buckets[0].key).toBe('2026-07-27')
   })
@@ -77,9 +77,9 @@ describe('resolveSelection', () => {
 
 describe('aggregate', () => {
   const games: DailyPlaytimeLike[] = [
-    { id: 1, dailyPlaytime: { '2026-07-13': 600, '2026-07-14': 900, '2026-06-30': 120 } },
-    { id: 2, dailyPlaytime: { '2026-07-13': 300 } },
-    { id: 3, dailyPlaytime: {} },
+    { dailyPlaytime: { '2026-06-30': 120, '2026-07-13': 600, '2026-07-14': 900 }, id: 1 },
+    { dailyPlaytime: { '2026-07-13': 300 }, id: 2 },
+    { dailyPlaytime: {}, id: 3 },
     { id: 4 } // no dailyPlaytime at all
   ]
 
@@ -113,8 +113,8 @@ describe('perGameTotals', () => {
     const r = resolveSelection({ granularity: 'week', offset: 0 }, 1, NOW)
     const data = aggregate(
       [
-        { id: 1, dailyPlaytime: { '2026-07-13': 600, '2026-07-14': 900 } },
-        { id: 2, dailyPlaytime: { '2026-07-13': 300 } }
+        { dailyPlaytime: { '2026-07-13': 600, '2026-07-14': 900 }, id: 1 },
+        { dailyPlaytime: { '2026-07-13': 300 }, id: 2 }
       ],
       r.buckets
     )
@@ -148,7 +148,7 @@ describe('parseDateKey / offsetForDate', () => {
 })
 
 describe('formatDuration', () => {
-  const u = { second: 's', minute: 'm', hour: 'h' }
+  const u = { hour: 'h', minute: 'm', second: 's' }
 
   it('formats seconds / minutes / hours with a space before the unit', () => {
     expect(formatDuration(45, u)).toBe('45 s')

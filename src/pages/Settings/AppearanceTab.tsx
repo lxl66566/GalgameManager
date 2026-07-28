@@ -23,7 +23,7 @@ import { IoLanguage } from 'solid-icons/io'
 import { createMemo, type Component } from 'solid-js'
 
 export const AppearanceTab: Component = () => {
-  const { config, actions } = useConfig()
+  const { actions, config } = useConfig()
   const { setColorMode } = useColorMode()
   const { t } = useI18n()
 
@@ -32,7 +32,6 @@ export const AppearanceTab: Component = () => {
       <SettingSection title={t('ui.interface')}>
         <SettingRow label={t('settings.appearance.theme')}>
           <Select
-            value={config.settings.appearance.theme}
             onChange={e => {
               const newValue = e.currentTarget.value as ThemeMode
               setColorMode(newValue)
@@ -43,12 +42,12 @@ export const AppearanceTab: Component = () => {
               { label: t('settings.appearance.themeLight'), value: 'light' },
               { label: t('settings.appearance.themeDark'), value: 'dark' }
             ]}
+            value={config.settings.appearance.theme}
           />
         </SettingRow>
 
         <SettingRow label={<IoLanguage class="w-6 h-6" />}>
           <Select
-            value={config.settings.appearance.language}
             onChange={e => {
               actions.updateSettings({
                 appearance: { language: e.currentTarget.value }
@@ -58,14 +57,15 @@ export const AppearanceTab: Component = () => {
               { label: 'English', value: 'en-US' },
               { label: '简体中文', value: 'zh-CN' }
             ]}
+            value={config.settings.appearance.language}
           />
         </SettingRow>
       </SettingSection>
 
       <SettingSection title={t('settings.appearance.statistics.self')}>
         <SettingRow
-          label={t('settings.appearance.extractCoverColor')}
           description={t('settings.appearance.extractCoverColorDesc')}
+          label={t('settings.appearance.extractCoverColor')}
         >
           <SwitchToggle
             checked={config.settings.appearance.extractCoverColor}
@@ -89,31 +89,30 @@ export const AppearanceTab: Component = () => {
 }
 
 const TimeDisplaySection: Component = () => {
-  const { config, actions } = useConfig()
-  const { t, locale } = useI18n()
+  const { actions, config } = useConfig()
+  const { locale, t } = useI18n()
 
-  const cfg = () => config.settings.appearance.timeDisplay
-  const timeLocale = createMemo(() => resolveTimeLanguage(cfg().language, locale()))
+  const config_ = () => config.settings.appearance.timeDisplay
+  const timeLocale = createMemo(() => resolveTimeLanguage(config_().language, locale()))
 
   const previewRelative = createMemo(() =>
     formatTimeAgoLocale(previewIso(), timeLocale())
   )
   const previewAbsolute = createMemo(() =>
-    formatAbsoluteIso(previewIso(), cfg().absoluteFormat)
+    formatAbsoluteIso(previewIso(), config_().absoluteFormat)
   )
 
   return (
     <SettingSection title={t('settings.appearance.timeDisplay.self')}>
       <SettingRow label={t('settings.appearance.timeDisplay.format')}>
         <Select
-          value={cfg().format}
-          onChange={e =>
+          onChange={e => {
             actions.updateSettings({
               appearance: {
                 timeDisplay: { format: e.currentTarget.value as TimeFormat }
               }
             })
-          }
+          }}
           options={[
             {
               label: t('settings.appearance.timeDisplay.formatRelative'),
@@ -124,19 +123,19 @@ const TimeDisplaySection: Component = () => {
               value: 'absolute'
             }
           ]}
+          value={config_().format}
         />
       </SettingRow>
 
-      {cfg().format === 'relative' && (
+      {config_().format === 'relative' && (
         <SettingSubGroup>
           <SettingRow
-            label={t('settings.appearance.timeDisplay.language')}
             description={t('settings.appearance.timeDisplay.languageDesc')}
             indent
+            label={t('settings.appearance.timeDisplay.language')}
           >
             <Select
-              value={cfg().language}
-              onChange={e =>
+              onChange={e => {
                 actions.updateSettings({
                   appearance: {
                     timeDisplay: {
@@ -144,7 +143,7 @@ const TimeDisplaySection: Component = () => {
                     }
                   }
                 })
-              }
+              }}
               options={[
                 {
                   label: t('settings.appearance.timeDisplay.languageAuto'),
@@ -153,41 +152,44 @@ const TimeDisplaySection: Component = () => {
                 { label: 'English', value: 'en' },
                 { label: '简体中文', value: 'zh' }
               ]}
+              value={config_().language}
             />
           </SettingRow>
         </SettingSubGroup>
       )}
 
-      {cfg().format === 'absolute' && (
+      {config_().format === 'absolute' && (
         <SettingSubGroup>
           <SettingRow
-            label={t('settings.appearance.timeDisplay.absoluteFormat')}
             description={t('settings.appearance.timeDisplay.absoluteFormatDesc')}
             indent
+            label={t('settings.appearance.timeDisplay.absoluteFormat')}
           >
             <input
-              type="text"
               class="w-48 px-2 py-1 text-sm rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400"
-              value={cfg().absoluteFormat}
               onInput={e =>
                 // Avoid disk write per keystroke: use the debounced
                 // setter, the value still updates in-memory instantly.
-                actions.updateSettingsDebounced({
-                  appearance: {
-                    timeDisplay: { absoluteFormat: e.currentTarget.value }
-                  }
-                })
+                {
+                  actions.updateSettingsDebounced({
+                    appearance: {
+                      timeDisplay: { absoluteFormat: e.currentTarget.value }
+                    }
+                  })
+                }
               }
               placeholder={t('settings.appearance.timeDisplay.absoluteFormatPlaceholder')}
+              type="text"
+              value={config_().absoluteFormat}
             />
           </SettingRow>
         </SettingSubGroup>
       )}
 
       <SettingSubGroup>
-        <SettingRow label={t('settings.appearance.timeDisplay.preview')} indent>
+        <SettingRow indent label={t('settings.appearance.timeDisplay.preview')}>
           <span class="text-sm font-mono text-gray-700 dark:text-gray-200">
-            {cfg().format === 'absolute' ? previewAbsolute() : previewRelative()}
+            {config_().format === 'absolute' ? previewAbsolute() : previewRelative()}
           </span>
         </SettingRow>
       </SettingSubGroup>

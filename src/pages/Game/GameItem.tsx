@@ -15,21 +15,21 @@ import { createMemo, Show, type JSX } from 'solid-js'
 // --- 组件：游戏卡片 ---
 interface GameItemProps {
   game: Game
-  onStart: () => void
-  onEdit: () => void
-  onBackup: () => void
-  onSync: () => void
-  onImageHashUpdate: (newHash: string) => void
-  /** Receives a freshly extracted cover color (see CachedImage.extractColor). */
-  onCoverColorUpdate: (color: string) => void
-  onContextMenuAction?: (action: string) => void
   // 接收状态
   isBackingUp?: boolean
   isPlaying?: boolean
+  onBackup: () => void
+  onContextMenuAction?: (action: string) => void
+  /** Receives a freshly extracted cover color (see CachedImage.extractColor). */
+  onCoverColorUpdate: (color: string) => void
+  onEdit: () => void
+  onImageHashUpdate: (newHash: string) => void
+  onStart: () => void
+  onSync: () => void
 }
 
 export const GameItem = (props: GameItemProps) => {
-  const { t, locale } = useI18n()
+  const { locale, t } = useI18n()
   const { config } = useConfig()
   // Resolve the timestamp locale on demand so changes in either the
   // global UI language or the per-timestamp override take effect.
@@ -37,13 +37,13 @@ export const GameItem = (props: GameItemProps) => {
     resolveTimeLanguage(config.settings.appearance.timeDisplay.language, locale())
   )
   const timeAgo = createRelativeTime(() => props.game.lastPlayedTime, t, 60_000, {
-    locale: timeLocale,
-    config: () => config.settings.appearance.timeDisplay
+    config: () => config.settings.appearance.timeDisplay,
+    locale: timeLocale
   })
 
   const titleSizeClass = () => {
-    const len = props.game.name.length
-    if (len > 12) return 'text-sm' // 字数很多，用小号
+    const length = props.game.name.length
+    if (length > 12) return 'text-sm' // 字数很多，用小号
     return 'text-base'
   }
 
@@ -51,8 +51,8 @@ export const GameItem = (props: GameItemProps) => {
   const contextMenuItems = (): ContextMenuEntry[] => {
     const items: ContextMenuEntry[] = [
       {
-        label: t('game.context.openDir'),
         icon: <FiFolder class="w-3.5 h-3.5" />,
+        label: t('game.context.openDir'),
         onSelect: () => props.onContextMenuAction?.('openDir')
       }
     ]
@@ -68,24 +68,24 @@ export const GameItem = (props: GameItemProps) => {
           onClick={() => !props.isPlaying && props.onStart()}
         >
           <CachedImage
-            url={props.game.imageUrl}
-            hash={props.game.imageSha256}
             alt={props.game.name}
             class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             extractColor={!props.game.coverColor}
-            onHashUpdate={props.onImageHashUpdate}
+            hash={props.game.imageSha256}
             onColorExtracted={props.onCoverColorUpdate}
+            onHashUpdate={props.onImageHashUpdate}
+            url={props.game.imageUrl}
           />
 
           {/* 状态层：使用 Show 进行互斥显示 */}
           <Show
-            when={props.isPlaying}
             fallback={
               /* 默认状态：悬浮显示开始游戏 */
               <div class="absolute inset-0 bg-black/30 dark:bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[2px]">
                 <FaRegularCirclePlay class="w-16 h-16 text-white drop-shadow-lg hover:scale-110 transition-transform duration-200" />
               </div>
             }
+            when={props.isPlaying}
           >
             {/* 游玩中状态：常驻显示，带有呼吸效果 */}
             <div class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[2px] cursor-default border-b-4 border-emerald-500">
@@ -149,27 +149,27 @@ export const GameItem = (props: GameItemProps) => {
         <div class="absolute inset-0 flex items-center justify-around px-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md translate-y-full group-hover/info:translate-y-0 transition-transform duration-300 ease-out border-t dark:border-slate-600 border-gray-100">
           {/* 按钮 1: 编辑 */}
           <GameActionButton
-            title={t('game.editGame')}
-            icon={<AiOutlineEdit class="w-6 h-6" />}
             colorClass="text-blue-600 dark:text-blue-400"
+            icon={<AiOutlineEdit class="w-6 h-6" />}
             onClick={props.onEdit}
+            title={t('game.editGame')}
           />
 
           {/* 按钮 2: 备份 (上传) */}
           <GameActionButton
-            title={t('game.backupButtonHint')}
-            icon={<AiOutlineCloudUpload class="w-6 h-6" />}
             colorClass="text-emerald-600 dark:text-emerald-400"
-            onClick={props.onBackup}
+            icon={<AiOutlineCloudUpload class="w-6 h-6" />}
             loading={props.isBackingUp} // 传递 loading 状态
+            onClick={props.onBackup}
+            title={t('game.backupButtonHint')}
           />
 
           {/* 按钮 3: 同步状态 */}
           <GameActionButton
-            title={t('game.openSyncModal')}
-            icon={<AiOutlineSync class="w-6 h-6" />}
             colorClass="text-amber-600 dark:text-amber-400"
+            icon={<AiOutlineSync class="w-6 h-6" />}
             onClick={props.onSync}
+            title={t('game.openSyncModal')}
           />
         </div>
       </div>

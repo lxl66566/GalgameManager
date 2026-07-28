@@ -2,6 +2,8 @@
 
 export type UnlistenFn = () => void
 
+export async function emit(_event: string, _payload?: unknown): Promise<void> {}
+
 export async function listen<T = unknown>(
   _event: string,
   _handler: (event: { payload: T }) => void
@@ -15,5 +17,3 @@ export async function once<T = unknown>(
 ): Promise<UnlistenFn> {
   return () => {}
 }
-
-export async function emit(_event: string, _payload?: unknown): Promise<void> {}

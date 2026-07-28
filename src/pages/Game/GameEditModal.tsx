@@ -38,25 +38,25 @@ const MODAL_PATH_INPUT = `flex-1 min-w-0 h-auto ${MODAL_INPUT_BASE} truncate`
 // ─── Component ─────
 
 interface GameEditModalProps {
-  gameInfo?: Game | null
-  editMode?: boolean
-  confirm: (game: Game) => void
   cancel: () => void
+  confirm: (game: Game) => void
+  editMode?: boolean
+  gameInfo?: Game | null
   onDelete: () => void
 }
 
 const DEFAULT_GAME: Game = {
-  id: 0,
-  name: '',
-  excutablePath: null,
-  savePaths: [],
-  imageUrl: null,
-  imageSha256: null,
   addedTime: new Date().toISOString(),
+  excutablePath: null,
+  id: 0,
+  imageSha256: null,
+  imageUrl: null,
   lastPlayedTime: null,
-  useTime: [0, 0],
   lastUploadTime: null,
-  plugins: []
+  name: '',
+  plugins: [],
+  savePaths: [],
+  useTime: [0, 0]
 }
 
 export default function GameEditModal(props: GameEditModalProps) {
@@ -66,13 +66,13 @@ export default function GameEditModal(props: GameEditModalProps) {
   const isEditMode = () => props.editMode ?? !!props.gameInfo
 
   // Resolve the current device variable map (cached after first fetch)
-  const [currentVars] = createResource(() => config.devices, getDeviceVarMap)
+  const [currentVariables] = createResource(() => config.devices, getDeviceVarMap)
 
   // onBulkInput for path fields: replace variable values with {varName}
   // (backslashes are already normalised by FormPathInput before this runs)
   const bulkPathTransform = (v: string): string => {
-    const vars = currentVars()
-    return vars ? replaceWithVarNames(v, vars) : v
+    const variables = currentVariables()
+    return variables ? replaceWithVarNames(v, variables) : v
   }
 
   // Auto-populate plugins for new games based on autoAdd meta config
@@ -82,7 +82,7 @@ export default function GameEditModal(props: GameEditModalProps) {
   if (!isEditMode()) {
     const autoPlugins = PLUGIN_REGISTRY.filter(def => {
       const meta = config.pluginMetadatas[def.metaKey] as Record<string, unknown>
-      return meta?.['autoAdd'] === true
+      return meta?.autoAdd === true
     }).map(def => buildNewInstance(def, config.pluginMetadatas))
     baseGame.plugins = autoPlugins.length > 0 ? autoPlugins : []
   }
@@ -91,7 +91,7 @@ export default function GameEditModal(props: GameEditModalProps) {
 
   // 临时存储输入框的内容，避免每次按键都触发图片加载
   // eslint-disable-next-line solid/reactivity -- used once for initial signal value
-  const [tempImageUrl, setTempImageUrl] = createSignal(localGame.imageUrl || '')
+  const [temporaryImageUrl, setTemporaryImageUrl] = createSignal(localGame.imageUrl || '')
 
   // VNDB 搜索相关状态与逻辑
   const [isSearching, setIsSearching] = createSignal(false)
@@ -109,12 +109,12 @@ export default function GameEditModal(props: GameEditModalProps) {
 
   // 当 store 中的 imageUrl 发生变化时，同步到输入框
   createEffect(() => {
-    setTempImageUrl(localGame.imageUrl || '')
+    setTemporaryImageUrl(localGame.imageUrl || '')
   })
 
   const updateDuration = (h: number, m: number) => {
     setPlayTime({ h, m })
-    const [origTotalSecs = 0, origNanos = 0] = localGame.useTime || [0, 0]
+    const [origTotalSecs, origNanos] = localGame.useTime || [0, 0]
     const remainingSecs = origTotalSecs % 60
     const totalSecs = h * 3600 + m * 60 + remainingSecs
     setLocalGame('useTime', [totalSecs, origNanos])
@@ -122,7 +122,7 @@ export default function GameEditModal(props: GameEditModalProps) {
 
   // 提交图片更改的逻辑
   const commitImageChange = () => {
-    const currentInput = tempImageUrl().trim()
+    const currentInput = temporaryImageUrl().trim()
     if (currentInput !== (localGame.imageUrl || '')) {
       setLocalGame('imageUrl', currentInput || null)
       setLocalGame('imageSha256', null)
@@ -135,47 +135,47 @@ export default function GameEditModal(props: GameEditModalProps) {
   const handleSelectImage = async () => {
     try {
       const selected = await open({
-        multiple: false,
         directory: false,
         filters: [
           {
-            name: 'Images',
-            extensions: ['png', 'jpg', 'jpeg', 'webp', 'ico', 'bmp', 'svg']
+            extensions: ['png', 'jpg', 'jpeg', 'webp', 'ico', 'bmp', 'svg'],
+            name: 'Images'
           }
-        ]
+        ],
+        multiple: false
       })
       if (selected && typeof selected === 'string') {
         setLocalGame('imageUrl', fuckBackslash(selected))
         setLocalGame('imageSha256', null)
       }
-    } catch (e) {
-      console.error(e)
+    } catch (error) {
+      console.error(error)
       myToast({
-        variant: 'error',
-        message: t('hint.selectImageFailed') + ': ' + e
+        message: t('hint.selectImageFailed') + ': ' + error,
+        variant: 'error'
       })
     }
   }
 
   const handleDelete = () => {
     myToast({
-      variant: 'warning',
-      title: t('game.edit.deleteGame'),
-      message: t('ui.confirm') + ' ' + t('game.edit.deleteGame') + '?',
       actions: [
         {
           label: t('ui.cancel'),
-          variant: 'secondary',
-          onClick: () => {}
+          onClick: () => {},
+          variant: 'secondary'
         },
         {
           label: t('ui.confirm'),
-          variant: 'danger',
           onClick: () => {
             props.onDelete()
-          }
+          },
+          variant: 'danger'
         }
-      ]
+      ],
+      message: t('ui.confirm') + ' ' + t('game.edit.deleteGame') + '?',
+      title: t('game.edit.deleteGame'),
+      variant: 'warning'
     })
   }
 
@@ -196,23 +196,23 @@ export default function GameEditModal(props: GameEditModalProps) {
       const url = await fetchVnCover(localGame.name)
       if (isSearching() && searchId() === currentSearchId) {
         if (url) {
-          setTempImageUrl(url)
+          setTemporaryImageUrl(url)
           setLocalGame('imageUrl', url)
           setLocalGame('imageSha256', null)
         } else {
           myToast({
-            variant: 'warning',
+            message: t('game.edit.searchNotFoundMsg'),
             title: t('game.edit.searchNotFound'),
-            message: t('game.edit.searchNotFoundMsg')
+            variant: 'warning'
           })
         }
       }
     } catch {
       if (isSearching() && searchId() === currentSearchId) {
         myToast({
-          variant: 'error',
+          message: t('game.edit.searchFailedMsg'),
           title: t('game.edit.searchFailed'),
-          message: t('game.edit.searchFailedMsg')
+          variant: 'error'
         })
       }
     } finally {
@@ -246,16 +246,16 @@ export default function GameEditModal(props: GameEditModalProps) {
                 }
               >
                 <CachedImage
-                  url={localGame.imageUrl}
-                  hash={localGame.imageSha256}
                   class="object-cover w-full h-full"
                   extractColor={!localGame.coverColor}
-                  onHashUpdate={(newHash: string) => {
-                    setLocalGame('imageSha256', newHash)
-                  }}
+                  hash={localGame.imageSha256}
                   onColorExtracted={(color: string) => {
                     setLocalGame('coverColor', color)
                   }}
+                  onHashUpdate={(newHash: string) => {
+                    setLocalGame('imageSha256', newHash)
+                  }}
+                  url={localGame.imageUrl}
                 />
               </Suspense>
               <Show when={!localGame.imageUrl}>
@@ -276,8 +276,10 @@ export default function GameEditModal(props: GameEditModalProps) {
             {/* Name */}
             <FormField label={t('game.edit.gameName')} labelClass={MODAL_LABEL}>
               <Input
+                onInput={e => {
+                  setLocalGame('name', e.currentTarget.value)
+                }}
                 value={localGame.name}
-                onInput={e => setLocalGame('name', e.currentTarget.value)}
               />
             </FormField>
 
@@ -286,18 +288,18 @@ export default function GameEditModal(props: GameEditModalProps) {
               <div class="flex gap-2 w-full">
                 <Input
                   class="min-w-0"
-                  value={tempImageUrl()}
-                  onInput={e => setTempImageUrl(e.currentTarget.value)}
+                  disabled={isSearching()}
                   onBlur={commitImageChange}
+                  onInput={e => setTemporaryImageUrl(e.currentTarget.value)}
                   onKeyDown={e => e.key === 'Enter' && commitImageChange()}
                   placeholder={t('game.edit.imageUrlPlaceholder')}
-                  disabled={isSearching()}
+                  value={temporaryImageUrl()}
                 />
                 <Button
-                  variant={isSearching() ? 'danger' : 'primary'}
-                  size="sm"
-                  onClick={handleSearchVnCover}
                   disabled={!localGame.name && !isSearching()}
+                  onClick={handleSearchVnCover}
+                  size="sm"
+                  variant={isSearching() ? 'danger' : 'primary'}
                 >
                   {isSearching() ? (
                     <>
@@ -317,31 +319,35 @@ export default function GameEditModal(props: GameEditModalProps) {
             {/* Executable Path */}
             <FormField label={t('game.edit.exePath')} labelClass={MODAL_LABEL}>
               <FormPathInput
+                checkPathExist
                 class="w-full"
-                value={localGame.excutablePath || ''}
-                onCommit={v => setLocalGame('excutablePath', v || null)}
-                onBulkInput={bulkPathTransform}
+                filters={[
+                  { extensions: ['exe', 'lnk', 'bat', 'cmd'], name: 'Executables' }
+                ]}
+                inputClass={MODAL_PATH_INPUT}
                 onBrowse={normalizedPath => {
                   if (!localGame.name) {
                     setLocalGame('name', getParentPath(normalizedPath) || '')
                   }
                 }}
-                filters={[
-                  { name: 'Executables', extensions: ['exe', 'lnk', 'bat', 'cmd'] }
-                ]}
+                onBulkInput={bulkPathTransform}
+                onCommit={v => {
+                  setLocalGame('excutablePath', v || null)
+                }}
                 placeholder={t('game.edit.exePathPlaceholder')}
-                inputClass={MODAL_PATH_INPUT}
-                checkPathExist
+                value={localGame.excutablePath || ''}
               />
             </FormField>
 
             <PathListEditor
-              label={t('game.edit.savePath')}
-              paths={localGame.savePaths}
-              onChange={newPaths => setLocalGame('savePaths', newPaths)}
-              onBulkInput={bulkPathTransform}
-              checkVars
               checkPathExist
+              checkVars
+              label={t('game.edit.savePath')}
+              onBulkInput={bulkPathTransform}
+              onChange={newPaths => {
+                setLocalGame('savePaths', newPaths)
+              }}
+              paths={localGame.savePaths}
             />
 
             <hr class="border-gray-300 dark:border-gray-700 my-1" />
@@ -350,51 +356,51 @@ export default function GameEditModal(props: GameEditModalProps) {
             <div class="grid grid-cols-2 gap-4">
               <FormField label={t('game.edit.addedTime')} labelClass={MODAL_LABEL}>
                 <Input
-                  type="datetime-local"
-                  value={dateToInput(localGame.addedTime)}
-                  onInput={e =>
+                  onInput={e => {
                     setLocalGame(
                       'addedTime',
                       inputToDate(e.currentTarget.value) || localGame.addedTime
                     )
-                  }
+                  }}
+                  type="datetime-local"
+                  value={dateToInput(localGame.addedTime)}
                 />
               </FormField>
 
               <FormField label={t('game.edit.lastPlayedTime')} labelClass={MODAL_LABEL}>
                 <Input
+                  onInput={e => {
+                    setLocalGame('lastPlayedTime', inputToDate(e.currentTarget.value))
+                  }}
                   type="datetime-local"
                   value={dateToInput(localGame.lastPlayedTime)}
-                  onInput={e =>
-                    setLocalGame('lastPlayedTime', inputToDate(e.currentTarget.value))
-                  }
                 />
               </FormField>
 
               <FormField
+                class="col-span-2"
                 label={t('game.edit.useTime')}
                 labelClass={MODAL_LABEL}
-                class="col-span-2"
               >
                 <div class="flex items-center gap-4 w-full">
                   <InputWithSuffix
-                    type="number"
                     min="0"
-                    value={playTime().h}
-                    suffix={t('unit.hour')}
-                    onInput={e =>
+                    onInput={e => {
                       updateDuration(parseInt(e.currentTarget.value) || 0, playTime().m)
-                    }
+                    }}
+                    suffix={t('unit.hour')}
+                    type="number"
+                    value={playTime().h}
                   />
                   <InputWithSuffix
-                    type="number"
-                    min="0"
                     max="59"
-                    value={playTime().m}
-                    suffix={t('unit.minute')}
-                    onInput={e =>
+                    min="0"
+                    onInput={e => {
                       updateDuration(playTime().h, parseInt(e.currentTarget.value) || 0)
-                    }
+                    }}
+                    suffix={t('unit.minute')}
+                    type="number"
+                    value={playTime().m}
                   />
                 </div>
               </FormField>
@@ -404,9 +410,13 @@ export default function GameEditModal(props: GameEditModalProps) {
 
             {/* Plugin Section */}
             <PluginSection
+              onChange={plugins => {
+                setLocalGame('plugins', plugins)
+              }}
+              onConfigChange={(index, updated) => {
+                setLocalGame('plugins', index, updated)
+              }}
               plugins={localGame.plugins ?? []}
-              onChange={plugins => setLocalGame('plugins', plugins)}
-              onConfigChange={(index, updated) => setLocalGame('plugins', index, updated)}
             />
           </div>
         </div>
@@ -415,17 +425,22 @@ export default function GameEditModal(props: GameEditModalProps) {
         <div class="flex flex-row items-center justify-between w-full mt-2 py-2 border-t border-gray-300 dark:border-gray-700 flex-shrink-0">
           <div>
             <Show when={isEditMode()}>
-              <Button variant="ghost-danger" onClick={handleDelete}>
+              <Button onClick={handleDelete} variant="ghost-danger">
                 {t('game.edit.deleteGame')}
               </Button>
             </Show>
           </div>
 
           <div class="flex gap-3">
-            <Button variant="secondary" onClick={props.cancel}>
+            <Button onClick={props.cancel} variant="secondary">
               {t('game.edit.cancel')}
             </Button>
-            <Button variant="primary" onClick={() => props.confirm(localGame)}>
+            <Button
+              onClick={() => {
+                props.confirm(localGame)
+              }}
+              variant="primary"
+            >
               {t('game.edit.confirmSave')}
             </Button>
           </div>

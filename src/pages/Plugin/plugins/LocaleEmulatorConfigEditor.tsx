@@ -19,20 +19,20 @@ function LocaleEmulatorGameConfigEditor(
 
   return (
     <div class="flex flex-wrap gap-4 items-start items-stretch">
-      <FormField label={t('plugin.localeEmulator.cmd')} class="flex-1 min-w-48">
+      <FormField class="flex-1 min-w-48" label={t('plugin.localeEmulator.cmd')}>
         <FormInput
-          class="w-full"
-          type="text"
-          value={props.config.cmd}
-          placeholder={t('plugin.localeEmulator.cmdPlaceholder')}
           checkVars
-          warning={needsPlaceholder() ? t('plugin.needBraces') : undefined}
+          class="w-full"
           onBlur={(e: FocusEvent) => {
-            const val = (e.target as HTMLInputElement).value
-            if (val !== props.config.cmd) {
-              props.onCommit({ ...props.config, cmd: val })
+            const value = (e.target as HTMLInputElement).value
+            if (value !== props.config.cmd) {
+              props.onCommit({ ...props.config, cmd: value })
             }
           }}
+          placeholder={t('plugin.localeEmulator.cmdPlaceholder')}
+          type="text"
+          value={props.config.cmd}
+          warning={needsPlaceholder() ? t('plugin.needBraces') : undefined}
         />
       </FormField>
     </div>
@@ -40,24 +40,24 @@ function LocaleEmulatorGameConfigEditor(
 }
 
 export const LOCALE_EMULATOR_PLUGIN: PluginDefinition<'localeEmulator'> = {
+  configDefaults: {
+    cmd: 'your_path/LEProc.exe "{}"'
+  },
+  GameEditor: LocaleEmulatorGameConfigEditor,
   info: {
-    id: 'localeEmulator',
-    nameKey: 'plugin.localeEmulator.name',
-    descriptionKey: 'plugin.localeEmulator.description',
-    version: '2.5.0.1',
     author: 'BUILTIN_WRAPPER',
+    descriptionKey: 'plugin.localeEmulator.description',
+    id: 'localeEmulator',
     links: [
       {
         label: 'GitHub',
         url: 'https://github.com/xupefei/Locale-Emulator'
       }
     ],
-    platforms: ['windows']
-  },
-  metaKey: 'localeEmulator',
-  configDefaults: {
-    cmd: 'your_path/LEProc.exe "{}"'
+    nameKey: 'plugin.localeEmulator.name',
+    platforms: ['windows'],
+    version: '2.5.0.1'
   },
   MetaEditor: AutoAddMetaEditor,
-  GameEditor: LocaleEmulatorGameConfigEditor
+  metaKey: 'localeEmulator'
 }

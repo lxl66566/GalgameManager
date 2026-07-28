@@ -24,7 +24,7 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
     props.config.passExePath && !props.config.cmd.includes('{}')
 
   /** Build platform-appropriate exit-signal options. */
-  const exitSignalOptions = createMemo((): Array<{ label: string; value: string }> => {
+  const exitSignalOptions = createMemo((): { label: string; value: string }[] => {
     if (isWindows) {
       return [
         { label: t('plugin.execute.exitSignalNone'), value: 'none' },
@@ -47,121 +47,125 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
 
   return (
     <div class="flex flex-wrap gap-4 items-start items-stretch">
-      <FormField label={t('plugin.execute.on')} class="w-40">
+      <FormField class="w-40" label={t('plugin.execute.on')}>
         <FormSelect
           class="w-full"
+          onChange={(e: Event) => {
+            props.onCommit({
+              ...props.config,
+              on: (e.target as HTMLSelectElement).value as
+                'afterGameStart' | 'beforeGameStart' | 'gameExit'
+            })
+          }}
           options={[
             { label: t('plugin.execute.beforeGameStart'), value: 'beforeGameStart' },
             { label: t('plugin.execute.afterGameStart'), value: 'afterGameStart' },
             { label: t('plugin.execute.gameExit'), value: 'gameExit' }
           ]}
           value={props.config.on}
-          onChange={(e: Event) =>
-            props.onCommit({
-              ...props.config,
-              on: (e.target as HTMLSelectElement).value as
-                'beforeGameStart' | 'afterGameStart' | 'gameExit'
-            })
-          }
         />
       </FormField>
 
       <FormField
-        label={t('plugin.currentDir')}
-        description={t('plugin.currentDirDesc')}
         class="flex-1 min-w-48"
+        description={t('plugin.currentDirDesc')}
+        label={t('plugin.currentDir')}
       >
         <FormPathInput
           class="w-full"
-          value={props.config.currentDir}
-          onCommit={v => props.onCommit({ ...props.config, currentDir: v })}
-          placeholder={t('plugin.currentDirPlaceholder')}
           isDir
+          onCommit={v => {
+            props.onCommit({ ...props.config, currentDir: v })
+          }}
+          placeholder={t('plugin.currentDirPlaceholder')}
+          value={props.config.currentDir}
         />
       </FormField>
 
-      <FormField label={t('plugin.execute.cmd')} class="flex-1 min-w-48">
+      <FormField class="flex-1 min-w-48" label={t('plugin.execute.cmd')}>
         <FormInput
+          checkVars
           class="w-full"
+          onBlur={(e: FocusEvent) => {
+            const value = (e.target as HTMLInputElement).value
+            if (value !== props.config.cmd) {
+              props.onCommit({ ...props.config, cmd: value })
+            }
+          }}
+          placeholder={t('plugin.execute.cmdPlaceholder')}
           type="text"
           value={props.config.cmd}
-          placeholder={t('plugin.execute.cmdPlaceholder')}
-          checkVars
           warning={needsPlaceholder() ? t('plugin.needBraces') : undefined}
-          onBlur={(e: FocusEvent) => {
-            const val = (e.target as HTMLInputElement).value
-            if (val !== props.config.cmd) {
-              props.onCommit({ ...props.config, cmd: val })
-            }
+        />
+      </FormField>
+
+      <FormField
+        class="w-auto"
+        description={t('plugin.execute.passExePathDesc')}
+        label={t('plugin.execute.passExePath')}
+      >
+        <FormSwitch
+          checked={props.config.passExePath}
+          onChange={(checked: boolean) => {
+            props.onCommit({ ...props.config, passExePath: checked })
           }}
         />
       </FormField>
 
       <FormField
-        label={t('plugin.execute.passExePath')}
-        description={t('plugin.execute.passExePathDesc')}
-        class="w-auto"
-      >
-        <FormSwitch
-          checked={props.config.passExePath}
-          onChange={(checked: boolean) =>
-            props.onCommit({ ...props.config, passExePath: checked })
-          }
-        />
-      </FormField>
-
-      <FormField
-        label={t('plugin.execute.exitSignal')}
         class="w-40"
         description={
           isWindows
             ? t('plugin.execute.exitSignalDescWin')
             : t('plugin.execute.exitSignalDesc')
         }
+        label={t('plugin.execute.exitSignal')}
       >
         <FormSelect
           class="w-full"
-          options={exitSignalOptions()}
-          value={effectiveExitSignal()}
-          onChange={(e: Event) =>
+          onChange={(e: Event) => {
             props.onCommit({
               ...props.config,
               exitSignal: (e.target as HTMLSelectElement).value as
-                'none' | 'sigterm' | 'sigkill'
+                'none' | 'sigkill' | 'sigterm'
             })
-          }
+          }}
+          options={exitSignalOptions()}
+          value={effectiveExitSignal()}
         />
       </FormField>
 
       <FormTableEditor
+        addLabel={t('plugin.execute.addEnv')}
         label={t('plugin.execute.env')}
         labelClass="text-xs"
+        onCommit={v => {
+          props.onCommit({ ...props.config, env: v })
+        }}
         values={props.config.env}
-        onCommit={v => props.onCommit({ ...props.config, env: v })}
-        addLabel={t('plugin.execute.addEnv')}
       />
     </div>
   )
 }
 
 export const EXECUTE_PLUGIN: PluginDefinition<'execute'> = {
-  info: {
-    id: 'execute',
-    nameKey: 'plugin.execute.name',
-    descriptionKey: 'plugin.execute.description',
-    version: '1.3.1',
-    author: 'BUILTIN',
-    links: []
-  },
-  metaKey: 'execute',
   configDefaults: {
-    on: 'beforeGameStart',
     cmd: '',
-    passExePath: false,
     currentDir: '',
     env: {},
-    exitSignal: 'none'
+    exitSignal: 'none',
+    on: 'beforeGameStart',
+    passExePath: false
+  },
+  GameEditor: ExecuteGameConfigEditor,
+  info: {
+    author: 'BUILTIN',
+    descriptionKey: 'plugin.execute.description',
+    id: 'execute',
+    links: [],
+    nameKey: 'plugin.execute.name',
+    version: '1.3.1'
   },
   MetaEditor: AutoAddMetaEditor,
-  GameEditor: ExecuteGameConfigEditor
+  metaKey: 'execute'
 }

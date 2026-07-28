@@ -3,9 +3,9 @@ import { cn } from '~/lib/utils'
 import { createMemo, splitProps, type JSX } from 'solid-js'
 
 interface SidebarItemProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElement> {
-  label: string
-  icon: JSX.Element
   href: string
+  icon: JSX.Element
+  label: string
 }
 
 const SidebarItem = (props: SidebarItemProps) => {
@@ -18,8 +18,6 @@ const SidebarItem = (props: SidebarItemProps) => {
 
   return (
     <A
-      href={local.href}
-      end
       class={cn(
         // 基础布局与过渡
         'group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ease-in-out outline-none',
@@ -33,6 +31,8 @@ const SidebarItem = (props: SidebarItemProps) => {
         'focus-visible:ring-2 focus-visible:ring-slate-400 dark:focus-visible:ring-slate-600',
         local.class
       )}
+      end
+      href={local.href}
       {...others}
     >
       {/* 图标容器：固定宽度防止文字显隐时抖动，并处理图标颜色 */}
@@ -79,4 +79,4 @@ const Sidebar = (props: { children: JSX.Element; class?: string }) => {
   )
 }
 
-export { SidebarItem, Sidebar }
+export { Sidebar, SidebarItem }

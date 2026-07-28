@@ -23,6 +23,14 @@ import type { GamePatch as RustGamePatch } from '@bindings/GamePatch'
 import type { ListPatchOp } from '@bindings/ListPatchOp'
 import { unwrap } from 'solid-js/store'
 
+// `games`/`devices` are overridden with the DeepPartial-value op aliases
+// above (the generated `ConfigPatch` references the non-DeepPartial
+// `GamePatch`/`DevicePatch`).
+export type ConfigPatch = Omit<DeepPartial<RustConfigPatch>, 'devices' | 'games'> & {
+  devices?: DeviceListOp[]
+  games?: GameListOp[]
+}
+
 /** Recursive `Partial` — like `Partial` but applied at every level of nesting.
  *
  * Why we need it: `#[patch(nesting)]` on the Rust side produces patch fields
@@ -34,19 +42,14 @@ import { unwrap } from 'solid-js/store'
  * Arrays are treated as leaves (we never want to partialize array elements —
  * a `GameListOp` is always sent whole, same for `plugins`, `savePaths`,
  * `variables`, …). */
-export type DeepPartial<T> =
-  T extends Array<unknown>
-    ? T
-    : T extends object
-      ? { [P in keyof T]?: DeepPartial<T[P]> }
-      : T
+export type DeepPartial<T> = T extends unknown[]
+  ? T
+  : T extends object
+    ? { [P in keyof T]?: DeepPartial<T[P]> }
+    : T
+/** Same as `GameListOp` but for `Config.devices`, keyed by `Device.uid`. */
+export type DeviceListOp = ListPatchOp<Device, DevicePatch, string>
 
-// Shadow the ts-rs-generated patch types with `DeepPartial<...>` versions.
-// The Rust originals have several REQUIRED nested fields (a side-effect of
-// `#[patch(nesting)]` and the list-patch `Vec` fields), but the wire format
-// is genuinely partial — Rust's `#[serde(default)]` fills absent fields
-// with empty sub-patches (all-None), which `apply` treats as a no-op.
-export type GamePatch = DeepPartial<RustGamePatch>
 export type DevicePatch = DeepPartial<RustDevicePatch>
 
 /** Fine-grained operation on `Config.games`, addressed by `Game.id`.
@@ -54,16 +57,12 @@ export type DevicePatch = DeepPartial<RustDevicePatch>
  * so stale ops are safe. */
 export type GameListOp = ListPatchOp<Game, GamePatch, number>
 
-/** Same as `GameListOp` but for `Config.devices`, keyed by `Device.uid`. */
-export type DeviceListOp = ListPatchOp<Device, DevicePatch, string>
-
-// `games`/`devices` are overridden with the DeepPartial-value op aliases
-// above (the generated `ConfigPatch` references the non-DeepPartial
-// `GamePatch`/`DevicePatch`).
-export type ConfigPatch = Omit<DeepPartial<RustConfigPatch>, 'games' | 'devices'> & {
-  games?: GameListOp[]
-  devices?: DeviceListOp[]
-}
+// Shadow the ts-rs-generated patch types with `DeepPartial<...>` versions.
+// The Rust originals have several REQUIRED nested fields (a side-effect of
+// `#[patch(nesting)]` and the list-patch `Vec` fields), but the wire format
+// is genuinely partial — Rust's `#[serde(default)]` fills absent fields
+// with empty sub-patches (all-None), which `apply` treats as a no-op.
+export type GamePatch = DeepPartial<RustGamePatch>
 
 // ── Single-op builders ────────────────────────────────────────────────────
 //
@@ -71,83 +70,14 @@ export type ConfigPatch = Omit<DeepPartial<RustConfigPatch>, 'games' | 'devices'
 // build a `ConfigPatch` directly without diffing. This is the cheap path
 // used by most store actions (addGame, removeGame, setImageHash, …).
 
-/** Build a patch that appends a new game. */
-export function appendGameOp(game: Game): ConfigPatch {
-  return { games: [{ op: 'append', value: game }] }
-}
-
-/** Build a patch that deletes a game by id. */
-export function deleteGameOp(id: number): ConfigPatch {
-  return { games: [{ op: 'delete', id }] }
-}
-
-/** Build a patch that deletes a device by uid. */
-export function deleteDeviceOp(id: string): ConfigPatch {
-  return { devices: [{ op: 'delete', id }] }
-}
-
-/** Build a patch that applies a sub-patch to one game by id. */
-export function modifyGameOp(id: number, patch: GamePatch): ConfigPatch {
-  return { games: [{ op: 'modify', id, value: patch }] }
-}
-
-/** Build a patch that upserts a device (modify by uid). */
-export function modifyDeviceOp(id: string, patch: DevicePatch): ConfigPatch {
-  return { devices: [{ op: 'modify', id, value: patch }] }
-}
-
 /** Build a patch that appends a new device. */
 export function appendDeviceOp(device: Device): ConfigPatch {
   return { devices: [{ op: 'append', value: device }] }
 }
 
-/** Merge two patches into one. `games`/`devices` ops are concatenated (the
- * backend applies them in order, so coalescing same-id modifies is
- * unnecessary); `settings`/`pluginMetadatas` are **deep**-merged (a shallow
- * `{...a, ...b}` would silently drop sibling edits made within the same
- * debounce window — e.g. webdav `endpoint` then `username`, both nested
- * under `settings.storage.webdav` — diverging the store, which applied
- * both, from the backend, which would receive only the latest). Every
- * other field takes the right-hand (latest) value. Used by the debounced
- * patch path to coalesce rapid mutations into one IPC. */
-export function mergeConfigPatches(a: ConfigPatch, b: ConfigPatch): ConfigPatch {
-  const merged: ConfigPatch = { ...a, ...b }
-  if (a.games || b.games) {
-    merged.games = [...(a.games ?? []), ...(b.games ?? [])]
-  }
-  if (a.devices || b.devices) {
-    merged.devices = [...(a.devices ?? []), ...(b.devices ?? [])]
-  }
-  if (isPlainObject(a.settings) && isPlainObject(b.settings)) {
-    const s = structuredClone(a.settings)
-    applyPatch(s, b.settings)
-    merged.settings = s as ConfigPatch['settings']
-  }
-  if (isPlainObject(a.pluginMetadatas) && isPlainObject(b.pluginMetadatas)) {
-    const p = structuredClone(a.pluginMetadatas)
-    applyPatch(p, b.pluginMetadatas)
-    merged.pluginMetadatas = p as ConfigPatch['pluginMetadatas']
-  }
-  return merged
-}
-
-// ── applyPatch: deep-merge a patch into a draft ─────────────────────────────
-//
-// Used by declarative store actions (e.g. `updateSettings(patch)`) to mirror
-// the Rust-side `apply` on the local SolidJS store, so the UI updates before
-// the IPC roundtrip completes. Recurses through plain objects only — arrays
-// and primitive fields are replaced whole, matching struct-patch's semantics
-// for the leaf patch fields (Option<T>) and the whole-replacement fields
-// (`save_paths`, `variables`, etc.).
-
-/** True for plain JS objects (not arrays, not null, not class instances). */
-function isPlainObject(v: unknown): v is Record<string, unknown> {
-  return (
-    typeof v === 'object' &&
-    v !== null &&
-    !Array.isArray(v) &&
-    (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null)
-  )
+/** Build a patch that appends a new game. */
+export function appendGameOp(game: Game): ConfigPatch {
+  return { games: [{ op: 'append', value: game }] }
 }
 
 /** Recursively merge a patch into a target (the SolidJS produce draft).
@@ -165,14 +95,51 @@ export function applyPatch(
 ): void {
   if (!isPlainObject(target) || !isPlainObject(patch)) return
   for (const key in patch) {
-    const val = patch[key]
-    if (val === undefined) continue
-    if (isPlainObject(val) && isPlainObject(target[key])) {
-      applyPatch(target[key], val)
+    const value = patch[key]
+    if (value === undefined) continue
+    if (isPlainObject(value) && isPlainObject(target[key])) {
+      applyPatch(target[key], value)
     } else {
-      target[key] = val
+      target[key] = value
     }
   }
+}
+
+/** Build a patch that deletes a device by uid. */
+export function deleteDeviceOp(id: string): ConfigPatch {
+  return { devices: [{ id, op: 'delete' }] }
+}
+
+/** Build a patch that deletes a game by id. */
+export function deleteGameOp(id: number): ConfigPatch {
+  return { games: [{ id, op: 'delete' }] }
+}
+
+/** Compute a field-wise diff of two `Game` objects (same id). Only changed
+ * fields land in the returned patch; an unchanged game yields `{}`.
+ *
+ * Exported so callers that "replace" a whole game (e.g. the game edit
+ * dialog) can still send an incremental patch — `replaceGame` knows which
+ * id it's editing, just not which fields changed. */
+export function diffGame(base: Game, current: Game): GamePatch {
+  const p: Record<string, unknown> = {}
+  if (base.name !== current.name) p.name = current.name
+  if (!jsonEq(base.excutablePath, current.excutablePath))
+    p.excutablePath = current.excutablePath
+  if (!jsonEq(base.savePaths, current.savePaths)) p.savePaths = current.savePaths
+  if (!jsonEq(base.imageUrl, current.imageUrl)) p.imageUrl = current.imageUrl
+  if (!jsonEq(base.imageSha256, current.imageSha256)) p.imageSha256 = current.imageSha256
+  if (base.addedTime !== current.addedTime) p.addedTime = current.addedTime
+  if (!jsonEq(base.useTime, current.useTime)) p.useTime = current.useTime
+  if (!jsonEq(base.lastPlayedTime, current.lastPlayedTime))
+    p.lastPlayedTime = current.lastPlayedTime
+  if (!jsonEq(base.lastUploadTime, current.lastUploadTime))
+    p.lastUploadTime = current.lastUploadTime
+  if (!jsonEq(base.dailyPlaytime, current.dailyPlaytime))
+    p.dailyPlaytime = current.dailyPlaytime
+  if (!jsonEq(base.coverColor, current.coverColor)) p.coverColor = current.coverColor
+  if (!jsonEq(base.plugins, current.plugins)) p.plugins = current.plugins
+  return p
 }
 
 /** Expand a declarative deep-partial patch (e.g. `{ storage: { webdav:
@@ -209,36 +176,70 @@ export function expandPatch<T extends Record<string, any>>(
   return out as { [K in keyof T]?: T[K] }
 }
 
+// ── applyPatch: deep-merge a patch into a draft ─────────────────────────────
+//
+// Used by declarative store actions (e.g. `updateSettings(patch)`) to mirror
+// the Rust-side `apply` on the local SolidJS store, so the UI updates before
+// the IPC roundtrip completes. Recurses through plain objects only — arrays
+// and primitive fields are replaced whole, matching struct-patch's semantics
+// for the leaf patch fields (Option<T>) and the whole-replacement fields
+// (`save_paths`, `variables`, etc.).
+
+/** Merge two patches into one. `games`/`devices` ops are concatenated (the
+ * backend applies them in order, so coalescing same-id modifies is
+ * unnecessary); `settings`/`pluginMetadatas` are **deep**-merged (a shallow
+ * `{...a, ...b}` would silently drop sibling edits made within the same
+ * debounce window — e.g. webdav `endpoint` then `username`, both nested
+ * under `settings.storage.webdav` — diverging the store, which applied
+ * both, from the backend, which would receive only the latest). Every
+ * other field takes the right-hand (latest) value. Used by the debounced
+ * patch path to coalesce rapid mutations into one IPC. */
+export function mergeConfigPatches(a: ConfigPatch, b: ConfigPatch): ConfigPatch {
+  const merged: ConfigPatch = { ...a, ...b }
+  if (a.games || b.games) {
+    merged.games = [...(a.games ?? []), ...(b.games ?? [])]
+  }
+  if (a.devices || b.devices) {
+    merged.devices = [...(a.devices ?? []), ...(b.devices ?? [])]
+  }
+  if (isPlainObject(a.settings) && isPlainObject(b.settings)) {
+    const s = structuredClone(a.settings)
+    applyPatch(s, b.settings)
+    merged.settings = s
+  }
+  if (isPlainObject(a.pluginMetadatas) && isPlainObject(b.pluginMetadatas)) {
+    const p = structuredClone(a.pluginMetadatas)
+    applyPatch(p, b.pluginMetadatas)
+    merged.pluginMetadatas = p
+  }
+  return merged
+}
+
+/** Build a patch that upserts a device (modify by uid). */
+export function modifyDeviceOp(id: string, patch: DevicePatch): ConfigPatch {
+  return { devices: [{ id, op: 'modify', value: patch }] }
+}
+
+/** Build a patch that applies a sub-patch to one game by id. */
+export function modifyGameOp(id: number, patch: GamePatch): ConfigPatch {
+  return { games: [{ id, op: 'modify', value: patch }] }
+}
+
 // ── Diff helpers ───────────────────────────────────────────────────────────
+
+/** True for plain JS objects (not arrays, not null, not class instances). */
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return (
+    typeof v === 'object' &&
+    v !== null &&
+    !Array.isArray(v) &&
+    (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null)
+  )
+}
 
 /** Cheap structural equality via JSON. Adequate for our config shapes
  * (everything is JSON-serializable) and avoids pulling in a deep-equal
  * dependency. Called on already-changed subtrees, so the cost is bounded. */
 function jsonEq<T>(a: T, b: T): boolean {
   return JSON.stringify(a) === JSON.stringify(b)
-}
-
-/** Compute a field-wise diff of two `Game` objects (same id). Only changed
- * fields land in the returned patch; an unchanged game yields `{}`.
- *
- * Exported so callers that "replace" a whole game (e.g. the game edit
- * dialog) can still send an incremental patch — `replaceGame` knows which
- * id it's editing, just not which fields changed. */
-export function diffGame(base: Game, cur: Game): GamePatch {
-  const p: Record<string, unknown> = {}
-  if (base.name !== cur.name) p.name = cur.name
-  if (!jsonEq(base.excutablePath, cur.excutablePath)) p.excutablePath = cur.excutablePath
-  if (!jsonEq(base.savePaths, cur.savePaths)) p.savePaths = cur.savePaths
-  if (!jsonEq(base.imageUrl, cur.imageUrl)) p.imageUrl = cur.imageUrl
-  if (!jsonEq(base.imageSha256, cur.imageSha256)) p.imageSha256 = cur.imageSha256
-  if (base.addedTime !== cur.addedTime) p.addedTime = cur.addedTime
-  if (!jsonEq(base.useTime, cur.useTime)) p.useTime = cur.useTime
-  if (!jsonEq(base.lastPlayedTime, cur.lastPlayedTime))
-    p.lastPlayedTime = cur.lastPlayedTime
-  if (!jsonEq(base.lastUploadTime, cur.lastUploadTime))
-    p.lastUploadTime = cur.lastUploadTime
-  if (!jsonEq(base.dailyPlaytime, cur.dailyPlaytime)) p.dailyPlaytime = cur.dailyPlaytime
-  if (!jsonEq(base.coverColor, cur.coverColor)) p.coverColor = cur.coverColor
-  if (!jsonEq(base.plugins, cur.plugins)) p.plugins = cur.plugins
-  return p as GamePatch
 }

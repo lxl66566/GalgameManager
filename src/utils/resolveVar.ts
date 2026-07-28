@@ -17,59 +17,62 @@ import { currentDeviceId } from '~/store/Singleton'
 // ─── resolveVar ───
 
 /**
- * Replace `{key}` placeholders in `template` with the corresponding values
- * from `varMap`.
+ * Extract `{key}` placeholders from a template string and return the keys
+ * that are NOT present in the provided varMap.
  *
- * Unlike the Rust side (which errors on missing keys), this implementation is
- * **lenient**: unknown keys are left as-is so the UI doesn't break when the
- * device has no matching variable.
- *
- * Escaped braces (`{{` / `}}`) are handled the same way as Rust's
- * `easy_strfmt` — they produce literal `{` / `}`.
+ * - Escaped braces (`{{` / `}}`) are skipped.
+ * - Empty braces `{}` are skipped (commonly used as positional args in
+ *   plugin commands like `LEProc.exe "{}"`).
+ * - Returns a deduplicated list of unknown variable names.
  */
-export function resolveVar(template: string, varMap: Record<string, string>): string {
-  // Fast path — no braces at all
-  if (!template.includes('{')) return template
+export function extractUnknownVars(
+  template: string,
+  variableMap: Record<string, string>
+): string[] {
+  if (!template.includes('{')) return []
 
-  const bytes = template
-  let result = ''
-  let i = 0
+  const unknown = new Set<string>()
+  let index = 0
 
-  while (i < bytes.length) {
-    const openIdx = bytes.indexOf('{', i)
-    if (openIdx === -1) {
-      result += bytes.slice(i)
-      break
-    }
+  while (index < template.length) {
+    const openIndex = template.indexOf('{', index)
+    if (openIndex === -1) break
 
-    // Push everything before the `{`
-    result += bytes.slice(i, openIdx)
-
-    // Escaped `{{` → literal `{`
-    if (bytes[openIdx + 1] === '{') {
-      result += '{'
-      i = openIdx + 2
+    // Skip escaped {{
+    if (template[openIndex + 1] === '{') {
+      index = openIndex + 2
       continue
     }
 
-    // Find closing `}`
-    const closeIdx = bytes.indexOf('}', openIdx + 1)
-    if (closeIdx === -1) {
-      // Unmatched `{` — treat the rest as literal
-      result += bytes.slice(openIdx)
-      break
-    }
+    const closeIndex = template.indexOf('}', openIndex + 1)
+    if (closeIndex === -1) break
 
-    const key = bytes.slice(openIdx + 1, closeIdx)
-    // Look up the key; if not found, leave `{key}` as-is (lenient)
-    result += Object.prototype.hasOwnProperty.call(varMap, key) ? varMap[key] : `{${key}}`
-    i = closeIdx + 1
+    const key = template.slice(openIndex + 1, closeIndex)
+    // Skip empty braces {} (positional args in commands)
+    if (key.length > 0 && !Object.prototype.hasOwnProperty.call(variableMap, key)) {
+      unknown.add(key)
+    }
+    index = closeIndex + 1
   }
 
-  return result
+  return [...unknown]
 }
 
 // ─── replaceWithVarNames ─────────────────────────────────────────────────────
+
+/**
+ * Get the variable map for the current device from the devices list.
+ *
+ * Returns an empty object when the device is not found.
+ */
+export async function getDeviceVarMap(
+  devices: Device[]
+): Promise<Record<string, string>> {
+  const uid = await currentDeviceId()
+  return devices.find(d => d.uid === uid)?.variables ?? {}
+}
+
+// ─── Async helpers (require device UID) ──────────────────────────────────────
 
 /**
  * Given an absolute path that may contain one or more variable *values*,
@@ -84,26 +87,84 @@ export function resolveVar(template: string, varMap: Record<string, string>): st
  */
 export function replaceWithVarNames(
   path: string,
-  varMap: Record<string, string>
+  variableMap: Record<string, string>
 ): string {
   if (!path) return path
 
-  const entries = Object.entries(varMap)
+  const entries = Object.entries(variableMap)
     .filter(([, v]) => v.length > 0)
     .toSorted((a, b) => b[1].length - a[1].length)
 
   for (const [key, value] of entries) {
-    const idx = path.indexOf(value)
-    if (idx !== -1) {
+    const index = path.indexOf(value)
+    if (index !== -1) {
       // Only replace the first occurrence
-      return path.slice(0, idx) + `{${key}}` + path.slice(idx + value.length)
+      return path.slice(0, index) + `{${key}}` + path.slice(index + value.length)
     }
   }
 
   return path
 }
 
-// ─── Async helpers (require device UID) ──────────────────────────────────────
+/**
+ * Replace `{key}` placeholders in `template` with the corresponding values
+ * from `varMap`.
+ *
+ * Unlike the Rust side (which errors on missing keys), this implementation is
+ * **lenient**: unknown keys are left as-is so the UI doesn't break when the
+ * device has no matching variable.
+ *
+ * Escaped braces (`{{` / `}}`) are handled the same way as Rust's
+ * `easy_strfmt` — they produce literal `{` / `}`.
+ */
+export function resolveVar(
+  template: string,
+  variableMap: Record<string, string>
+): string {
+  // Fast path — no braces at all
+  if (!template.includes('{')) return template
+
+  const bytes = template
+  let result = ''
+  let index = 0
+
+  while (index < bytes.length) {
+    const openIndex = bytes.indexOf('{', index)
+    if (openIndex === -1) {
+      result += bytes.slice(index)
+      break
+    }
+
+    // Push everything before the `{`
+    result += bytes.slice(index, openIndex)
+
+    // Escaped `{{` → literal `{`
+    if (bytes[openIndex + 1] === '{') {
+      result += '{'
+      index = openIndex + 2
+      continue
+    }
+
+    // Find closing `}`
+    const closeIndex = bytes.indexOf('}', openIndex + 1)
+    if (closeIndex === -1) {
+      // Unmatched `{` — treat the rest as literal
+      result += bytes.slice(openIndex)
+      break
+    }
+
+    const key = bytes.slice(openIndex + 1, closeIndex)
+    // Look up the key; if not found, leave `{key}` as-is (lenient)
+    result += Object.prototype.hasOwnProperty.call(variableMap, key)
+      ? variableMap[key]
+      : `{${key}}`
+    index = closeIndex + 1
+  }
+
+  return result
+}
+
+// ─── Var validation ──────────────────────────────────────────────────────────
 
 /**
  * Resolve a template string using the current device's variables.
@@ -115,62 +176,6 @@ export async function resolveVarForDevice(
   devices: Device[]
 ): Promise<string> {
   const uid = await currentDeviceId()
-  const varMap = devices.find(d => d.uid === uid)?.variables ?? {}
-  return resolveVar(template, varMap)
-}
-
-/**
- * Get the variable map for the current device from the devices list.
- *
- * Returns an empty object when the device is not found.
- */
-export async function getDeviceVarMap(
-  devices: Device[]
-): Promise<Record<string, string>> {
-  const uid = await currentDeviceId()
-  return devices.find(d => d.uid === uid)?.variables ?? {}
-}
-
-// ─── Var validation ──────────────────────────────────────────────────────────
-
-/**
- * Extract `{key}` placeholders from a template string and return the keys
- * that are NOT present in the provided varMap.
- *
- * - Escaped braces (`{{` / `}}`) are skipped.
- * - Empty braces `{}` are skipped (commonly used as positional args in
- *   plugin commands like `LEProc.exe "{}"`).
- * - Returns a deduplicated list of unknown variable names.
- */
-export function extractUnknownVars(
-  template: string,
-  varMap: Record<string, string>
-): string[] {
-  if (!template.includes('{')) return []
-
-  const unknown = new Set<string>()
-  let i = 0
-
-  while (i < template.length) {
-    const openIdx = template.indexOf('{', i)
-    if (openIdx === -1) break
-
-    // Skip escaped {{
-    if (template[openIdx + 1] === '{') {
-      i = openIdx + 2
-      continue
-    }
-
-    const closeIdx = template.indexOf('}', openIdx + 1)
-    if (closeIdx === -1) break
-
-    const key = template.slice(openIdx + 1, closeIdx)
-    // Skip empty braces {} (positional args in commands)
-    if (key.length > 0 && !Object.prototype.hasOwnProperty.call(varMap, key)) {
-      unknown.add(key)
-    }
-    i = closeIdx + 1
-  }
-
-  return [...unknown]
+  const variableMap = devices.find(d => d.uid === uid)?.variables ?? {}
+  return resolveVar(template, variableMap)
 }

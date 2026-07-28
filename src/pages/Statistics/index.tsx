@@ -46,7 +46,7 @@ import {
 const GRANULARITIES: Granularity[] = ['week', 'month', 'year']
 
 const StatisticsPage: Component = () => {
-  const { t, locale } = useI18n()
+  const { locale, t } = useI18n()
   const { config } = useConfig()
 
   const [granularity, setGranularity] = createSignal<Granularity>('week')
@@ -54,7 +54,7 @@ const StatisticsPage: Component = () => {
   /** Hovered column of the stacked chart (+ the segment under the cursor). */
   const [hover, setHover] = createSignal<ChartHover | null>(null)
   /** Game hovered in the per-game list → drives the chart's focus mode. */
-  const [focusGameId, setFocusGameId] = createSignal<number | null>(null)
+  const [focusGameId, setFocusGameId] = createSignal<null | number>(null)
 
   const weekFirstDay = createMemo(() => localeFirstWeekday(locale()))
   const range = createMemo(() =>
@@ -83,9 +83,9 @@ const StatisticsPage: Component = () => {
   const useCoverColor = () => config.settings.appearance.extractCoverColor
   const series = createMemo<ChartSeriesItem[]>(() =>
     activeGames().map(g => ({
+      color: (useCoverColor() ? g.coverColor : null) ?? goldenColor(g.id),
       id: g.id,
-      name: g.name,
-      color: (useCoverColor() ? g.coverColor : null) ?? goldenColor(g.id)
+      name: g.name
     }))
   )
   const colorOf = createMemo(() => new Map(series().map(s => [s.id, s.color] as const)))
@@ -97,9 +97,9 @@ const StatisticsPage: Component = () => {
   })
 
   const units = createMemo(() => ({
-    second: t('unit.secondShort'),
+    hour: t('unit.hourShort'),
     minute: t('unit.minuteShort'),
-    hour: t('unit.hourShort')
+    second: t('unit.secondShort')
   }))
 
   const rangeLabel = createMemo(() => {
@@ -139,18 +139,18 @@ const StatisticsPage: Component = () => {
       scope === 'all'
         ? totals()
         : (bucketData().find(b => b.key === scope)?.perGame ?? new Map<number, number>())
-    return [...source.entries()]
+    return [...source]
       .filter(([, secs]) => secs > 0)
       .toSorted((a, b) => b[1] - a[1])
       .map(([id, secs]) => {
         const g = byId.get(id)
         return {
+          color: colors.get(id) ?? '#9ca3af',
           id,
-          name: g?.name ?? `#${id}`,
-          imageUrl: g?.imageUrl ?? null,
           imageHash: g?.imageSha256 ?? null,
-          secs,
-          color: colors.get(id) ?? '#9ca3af'
+          imageUrl: g?.imageUrl ?? null,
+          name: g?.name ?? `#${id}`,
+          secs
         }
       })
   })
@@ -219,10 +219,10 @@ const StatisticsPage: Component = () => {
 
               <Show when={offset() !== 0}>
                 <Button
-                  size="icon"
-                  onClick={() => setOffset(0)}
-                  title={t('stats.backToCurrent')}
                   aria-label={t('stats.backToCurrent')}
+                  onClick={() => setOffset(0)}
+                  size="icon"
+                  title={t('stats.backToCurrent')}
                 >
                   <span class="inline-flex ggm-rewind">
                     <FiRotateCcw />
@@ -234,19 +234,19 @@ const StatisticsPage: Component = () => {
             {/* [←] [range label → date jump] [→], strictly centered */}
             <div class="flex items-center gap-1 justify-self-center">
               <Button
-                size="icon"
-                onClick={() => setOffset(o => o - 1)}
-                title={t('stats.prevPeriod')}
                 aria-label={t('stats.prevPeriod')}
+                onClick={() => setOffset(o => o - 1)}
+                size="icon"
+                title={t('stats.prevPeriod')}
               >
                 <FiChevronLeft />
               </Button>
 
-              <Popover.Root open={pickerOpen()} onOpenChange={setPickerOpen}>
+              <Popover.Root onOpenChange={setPickerOpen} open={pickerOpen()}>
                 <Popover.Trigger
+                  aria-label={t('stats.jumpToDate')}
                   class="rounded-md px-2 py-1 text-sm font-medium tabular-nums text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                   title={t('stats.jumpToDate')}
-                  aria-label={t('stats.jumpToDate')}
                 >
                   {rangeLabel()}
                 </Popover.Trigger>
@@ -257,11 +257,13 @@ const StatisticsPage: Component = () => {
                         {t('stats.jumpToDate')}
                       </span>
                       <input
-                        type="date"
                         class="rounded-md border border-gray-300 bg-transparent px-2 py-1 text-sm tabular-nums dark:border-gray-600 dark:[color-scheme:dark]"
-                        value={dateKey(range().start)}
                         max={dateKey(new Date())}
-                        onChange={e => jumpToDate(e.currentTarget.value)}
+                        onChange={e => {
+                          jumpToDate(e.currentTarget.value)
+                        }}
+                        type="date"
+                        value={dateKey(range().start)}
                       />
                     </div>
                   </Popover.Content>
@@ -269,11 +271,11 @@ const StatisticsPage: Component = () => {
               </Popover.Root>
 
               <Button
-                size="icon"
-                onClick={() => setOffset(o => Math.min(0, o + 1))}
-                disabled={offset() === 0}
-                title={t('stats.nextPeriod')}
                 aria-label={t('stats.nextPeriod')}
+                disabled={offset() === 0}
+                onClick={() => setOffset(o => Math.min(0, o + 1))}
+                size="icon"
+                title={t('stats.nextPeriod')}
               >
                 <FiChevronRight />
               </Button>
@@ -291,12 +293,12 @@ const StatisticsPage: Component = () => {
           </div>
 
           <Show
-            when={rangeTotalSecs() > 0}
             fallback={
               <div class="flex h-40 items-center justify-center rounded-lg border border-gray-200 text-sm text-gray-400 dark:border-gray-700 dark:text-gray-500">
                 {t(offset() === 0 ? 'stats.noDataCurrent' : 'stats.noDataPast')}
               </div>
             }
+            when={rangeTotalSecs() > 0}
           >
             {/* ── stacked bar chart ──
                  The chart and the per-game list split the viewport
@@ -309,11 +311,11 @@ const StatisticsPage: Component = () => {
             <div class="flex min-h-[200px] max-h-[420px] flex-[3] flex-col rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
               <StackedPlaytimeChart
                 data={bucketData()}
-                series={series()}
                 focusGameId={focusGameId()}
-                onHover={setHover}
-                units={units()}
                 locale={locale()}
+                onHover={setHover}
+                series={series()}
+                units={units()}
               />
             </div>
 
@@ -325,11 +327,11 @@ const StatisticsPage: Component = () => {
               <h2 class="mb-2 shrink-0 text-sm font-semibold text-gray-700 dark:text-gray-300">
                 {t('stats.perGameTitle')}
               </h2>
-              <div ref={listRef} class="custom-scrollbar min-h-0 flex-1 overflow-y-auto">
+              <div class="custom-scrollbar min-h-0 flex-1 overflow-y-auto" ref={listRef}>
                 <GamePlaytimeBars
-                  rows={rows()}
                   highlightGameId={hover()?.gameId ?? null}
                   onHoverGame={setFocusGameId}
+                  rows={rows()}
                   units={units()}
                 />
               </div>

@@ -1,7 +1,6 @@
 ﻿/**
  * Plugin management page — data-driven rendering via typed helpers.
  */
-import type { PluginMetadatasPatch } from '@bindings/PluginMetadatasPatch'
 import { SwitchToggle } from '@components/ui/settings'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { useI18n, type Dictionary } from '~/i18n'
@@ -21,15 +20,15 @@ import { PLUGINS } from './registry'
 
 export default function PluginPage() {
   const { t } = useI18n()
-  const { config, actions } = useConfig()
-  const [expandedId, setExpandedId] = createSignal<string | null>(null)
+  const { actions, config } = useConfig()
+  const [expandedId, setExpandedId] = createSignal<null | string>(null)
 
   const toggleExpand = (id: string) => {
-    setExpandedId(prev => (prev === id ? null : id))
+    setExpandedId(previous => (previous === id ? null : id))
   }
 
   const isEnabled = (def: AnyPluginDef): boolean => {
-    return getPluginMeta(def.metaKey, config.pluginMetadatas)['enabled']
+    return getPluginMeta(def.metaKey, config.pluginMetadatas).enabled
   }
 
   const setEnabled = (def: AnyPluginDef, enabled: boolean) => {
@@ -37,7 +36,7 @@ export default function PluginPage() {
     // single leaf flip rather than the whole `PluginMetadatas` snapshot.
     actions.updatePluginMetadatas({
       [def.metaKey]: { enabled }
-    } as Partial<PluginMetadatasPatch>)
+    })
   }
 
   return (
@@ -48,12 +47,12 @@ export default function PluginPage() {
 
       <div class="flex-1 overflow-y-auto custom-scrollbar pr-4 pb-5">
         <Show
-          when={PLUGINS.length > 0}
           fallback={
             <div class="text-gray-400 dark:text-gray-500 text-center py-12">
               {t('plugin.noPlugins')}
             </div>
           }
+          when={PLUGINS.length > 0}
         >
           <div class="space-y-3">
             <For each={PLUGIN_REGISTRY}>
@@ -65,7 +64,9 @@ export default function PluginPage() {
                   <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm transition-all">
                     <div
                       class="flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
-                      onClick={() => toggleExpand(def.info.id)}
+                      onClick={() => {
+                        toggleExpand(def.info.id)
+                      }}
                     >
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2">
@@ -88,21 +89,25 @@ export default function PluginPage() {
 
                       <div
                         class="flex items-center gap-2"
-                        onClick={e => e.stopPropagation()}
+                        onClick={e => {
+                          e.stopPropagation()
+                        }}
                       >
                         <span class="text-[10px] text-gray-400 dark:text-gray-500 select-none">
                           {isEnabled(def) ? t('plugin.enabled') : t('plugin.disabled')}
                         </span>
                         <SwitchToggle
                           checked={isEnabled(def)}
-                          onChange={(checked: boolean) => setEnabled(def, checked)}
+                          onChange={(checked: boolean) => {
+                            setEnabled(def, checked)
+                          }}
                         />
                       </div>
 
                       <div class="text-gray-400 dark:text-gray-500">
                         <Show
-                          when={isExpanded()}
                           fallback={<FiChevronDown class="w-4 h-4" />}
+                          when={isExpanded()}
                         >
                           <FiChevronUp class="w-4 h-4" />
                         </Show>
@@ -122,14 +127,14 @@ export default function PluginPage() {
                               <For each={def.info.links}>
                                 {link => (
                                   <a
-                                    href={link.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
                                     class="inline-flex items-center gap-1 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+                                    href={link.url}
                                     onClick={e => {
                                       e.preventDefault()
                                       openUrl(link.url)
                                     }}
+                                    rel="noopener noreferrer"
+                                    target="_blank"
                                   >
                                     {link.label}
                                     <FiExternalLink class="w-3 h-3" />
@@ -157,7 +162,7 @@ export default function PluginPage() {
                                   // metadata touches the wire.
                                   actions.updatePluginMetadatas({
                                     [def.metaKey]: m
-                                  } as Partial<PluginMetadatasPatch>)
+                                  })
                                 }}
                               />
                             </div>
@@ -182,9 +187,8 @@ export default function PluginPage() {
                                   >
                                 }
                                 config={
-                                  (meta() as Record<string, unknown>)[
-                                    'configDefaults'
-                                  ] as AnyGameConfig
+                                  (meta() as Record<string, unknown>)
+                                    .configDefaults as AnyGameConfig
                                 }
                                 onCommit={(newDefaults: Record<string, unknown>) => {
                                   // Persists to disk via a fine-grained patch
@@ -192,7 +196,7 @@ export default function PluginPage() {
                                   // field is sent.
                                   actions.updatePluginMetadatas({
                                     [def.metaKey]: { configDefaults: newDefaults }
-                                  } as Partial<PluginMetadatasPatch>)
+                                  })
                                 }}
                               />
                             </div>

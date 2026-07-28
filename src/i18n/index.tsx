@@ -10,13 +10,13 @@ import {
 import * as en from './en-US'
 import * as zh from './zh-CN'
 
-export type Locale = 'en-US' | 'zh-CN'
-export type RawDictionary = typeof en.dict
-// Flatten 将嵌套对象转换为 "button.toggle" 这种键值对
-export type Dictionary = i18n.Flatten<RawDictionary>
 export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P]
 }
+// Flatten 将嵌套对象转换为 "button.toggle" 这种键值对
+export type Dictionary = i18n.Flatten<RawDictionary>
+export type Locale = 'en-US' | 'zh-CN'
+export type RawDictionary = typeof en.dict
 
 /**
  * Resolve a `TimeLanguage` setting into a concrete locale, falling back
@@ -40,11 +40,12 @@ const dictmap = {
 
 let cachedEnDict: Dictionary | null = null
 
-function getEnDict(): Dictionary {
-  if (!cachedEnDict) {
-    cachedEnDict = i18n.flatten(en.dict)
-  }
-  return cachedEnDict
+// --- 2. 创建 Context ---
+interface I18nContextType {
+  loading: boolean
+  locale: () => Locale
+  setLocale: (l: Locale) => void
+  t: i18n.Translator<Dictionary>
 }
 
 async function fetchDictionary(locale: string): Promise<Dictionary> {
@@ -62,12 +63,11 @@ async function fetchDictionary(locale: string): Promise<Dictionary> {
   return { ...enDict, ...targetDict }
 }
 
-// --- 2. 创建 Context ---
-type I18nContextType = {
-  t: i18n.Translator<Dictionary>
-  locale: () => Locale
-  setLocale: (l: Locale) => void
-  loading: boolean
+function getEnDict(): Dictionary {
+  if (!cachedEnDict) {
+    cachedEnDict = i18n.flatten(en.dict)
+  }
+  return cachedEnDict
 }
 
 const I18nContext = createContext<I18nContextType>()
@@ -89,12 +89,12 @@ export const I18nProvider: FlowComponent = props => {
     const currentLang = locale()
     // 修改 html 标签属性，供 CSS 使用
     document.documentElement.lang = currentLang
-    document.documentElement.setAttribute('data-theme-lang', currentLang)
+    document.documentElement.dataset.themeLang = currentLang
   })
 
   return (
     // eslint-disable-next-line solid/reactivity -- dict.loading is a Resource accessor; consumers track it via t
-    <I18nContext.Provider value={{ t, locale, setLocale, loading: dict.loading }}>
+    <I18nContext.Provider value={{ loading: dict.loading, locale, setLocale, t }}>
       {props.children}
     </I18nContext.Provider>
   )

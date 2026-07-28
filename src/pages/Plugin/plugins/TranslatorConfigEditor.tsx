@@ -15,50 +15,52 @@ function TranslatorGameConfigEditor(props: ConfigEditorProps<TranslatorGameConfi
 
   return (
     <div class="flex flex-wrap gap-4 items-start items-stretch">
-      <FormField label={t('plugin.translator.cmd')} class="flex-1 min-w-48">
+      <FormField class="flex-1 min-w-48" label={t('plugin.translator.cmd')}>
         <FormInput
-          class="w-full"
-          type="text"
-          value={props.config.cmd}
-          placeholder={t('plugin.translator.cmdPlaceholder')}
           checkVars
+          class="w-full"
           onBlur={(e: FocusEvent) => {
-            const val = (e.target as HTMLInputElement).value
-            if (val !== props.config.cmd) {
-              props.onCommit({ ...props.config, cmd: val })
+            const value = (e.target as HTMLInputElement).value
+            if (value !== props.config.cmd) {
+              props.onCommit({ ...props.config, cmd: value })
             }
           }}
+          placeholder={t('plugin.translator.cmdPlaceholder')}
+          type="text"
+          value={props.config.cmd}
         />
       </FormField>
 
-      <FormField label={t('plugin.currentDir')} class="flex-1 min-w-48">
+      <FormField class="flex-1 min-w-48" label={t('plugin.currentDir')}>
         <FormPathInput
           class="w-full"
-          value={props.config.currentDir}
-          onCommit={v => props.onCommit({ ...props.config, currentDir: v })}
-          placeholder={t('plugin.currentDirPlaceholder')}
           isDir
+          onCommit={v => {
+            props.onCommit({ ...props.config, currentDir: v })
+          }}
+          placeholder={t('plugin.currentDirPlaceholder')}
+          value={props.config.currentDir}
         />
       </FormField>
 
       <FormField
-        label={t('plugin.translator.onGameExit')}
         class="w-40"
         description={t('plugin.translator.onGameExitDesc')}
+        label={t('plugin.translator.onGameExit')}
       >
         <FormSelect
           class="w-full"
+          onChange={(e: Event) => {
+            props.onCommit({
+              ...props.config,
+              exitSignal: (e.target as HTMLSelectElement).value as 'none' | 'sigterm'
+            })
+          }}
           options={[
             { label: t('plugin.translator.exitNone'), value: 'none' },
             { label: t('plugin.translator.exitGraceful'), value: 'sigterm' }
           ]}
           value={props.config.exitSignal}
-          onChange={(e: Event) =>
-            props.onCommit({
-              ...props.config,
-              exitSignal: (e.target as HTMLSelectElement).value as 'none' | 'sigterm'
-            })
-          }
         />
       </FormField>
     </div>
@@ -66,25 +68,25 @@ function TranslatorGameConfigEditor(props: ConfigEditorProps<TranslatorGameConfi
 }
 
 export const TRANSLATOR_PLUGIN: PluginDefinition<'translator'> = {
-  info: {
-    id: 'translator',
-    nameKey: 'plugin.translator.name',
-    descriptionKey: 'plugin.translator.description',
-    version: '1.3.1',
-    author: 'BUILTIN_WRAPPER',
-    links: [
-      {
-        label: 'LunaTranslator',
-        url: 'https://github.com/HIllya51/LunaTranslator'
-      }
-    ]
-  },
-  metaKey: 'translator',
   configDefaults: {
     cmd: '',
     currentDir: '',
     exitSignal: 'sigterm'
   },
+  GameEditor: TranslatorGameConfigEditor,
+  info: {
+    author: 'BUILTIN_WRAPPER',
+    descriptionKey: 'plugin.translator.description',
+    id: 'translator',
+    links: [
+      {
+        label: 'LunaTranslator',
+        url: 'https://github.com/HIllya51/LunaTranslator'
+      }
+    ],
+    nameKey: 'plugin.translator.name',
+    version: '1.3.1'
+  },
   MetaEditor: AutoAddMetaEditor,
-  GameEditor: TranslatorGameConfigEditor
+  metaKey: 'translator'
 }

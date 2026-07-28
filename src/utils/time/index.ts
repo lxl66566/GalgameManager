@@ -9,27 +9,24 @@ import type { Locale } from '~/i18n'
 import type { RawDictionary } from '~/i18n/en-US'
 import dayjs from 'dayjs'
 
-export type TFunc = Translator<
-  import('@solid-primitives/i18n').Flatten<RawDictionary>,
-  string
->
+export type TFunc = Translator<import('@solid-primitives/i18n').Flatten<RawDictionary>>
 
 // ── duration helpers ────────────────────────────────────────────────────────
 
-const dateToInput = (isoStr: string | null) => {
-  if (!isoStr) return ''
+const dateToInput = (isoString: null | string) => {
+  if (!isoString) return ''
   // 假设后端给的是 ISO 格式 (UTC)，我们需要转为本地时间给 input 显示
   // 这里的逻辑是将 UTC 时间转换为本地时间的 ISO 字符串片段
-  const date = new Date(isoStr)
-  const offset = date.getTimezoneOffset() * 60000
+  const date = new Date(isoString)
+  const offset = date.getTimezoneOffset() * 60_000
   const localDate = new Date(date.getTime() - offset)
   return localDate.toISOString().slice(0, 16) // YYYY-MM-DDTHH:mm
 }
 
-const inputToDate = (val: string) => {
-  if (!val) return null
+const inputToDate = (value: string) => {
+  if (!value) return null
   // input 产生的是本地时间，转回 ISO (UTC) 存库
-  return new Date(val).toISOString()
+  return new Date(value).toISOString()
 }
 
 // 时长转换工具 [secs, nanos] <-> {h, m}
@@ -83,31 +80,31 @@ export const formatSessionDuration = (durationMs: number): string => {
 const RELATIVE_TIME_DICT: Record<
   Locale,
   {
-    never: string
+    daysAgo: (n: number) => string
+    hoursAgo: (n: number) => string
     justNow: string
     minutesAgo: (n: number) => string
-    hoursAgo: (n: number) => string
-    daysAgo: (n: number) => string
     monthsAgo: (n: number) => string
+    never: string
     yearsAgo: (n: number) => string
   }
 > = {
   'en-US': {
-    never: 'Never',
+    daysAgo: n => `${n}d ago`,
+    hoursAgo: n => `${n}h ago`,
     justNow: 'Just now',
     minutesAgo: n => `${n}m ago`,
-    hoursAgo: n => `${n}h ago`,
-    daysAgo: n => `${n}d ago`,
     monthsAgo: n => `${n}mo ago`,
+    never: 'Never',
     yearsAgo: n => `${n}y ago`
   },
   'zh-CN': {
-    never: '永不',
+    daysAgo: n => `${n} 天前`,
+    hoursAgo: n => `${n} 小时前`,
     justNow: '刚刚',
     minutesAgo: n => `${n} 分钟前`,
-    hoursAgo: n => `${n} 小时前`,
-    daysAgo: n => `${n} 天前`,
     monthsAgo: n => `${n} 个月前`,
+    never: '永不',
     yearsAgo: n => `${n} 年前`
   }
 }
@@ -120,10 +117,10 @@ const RELATIVE_TIME_DICT: Record<
  * Passing the global `t` keeps backward compatibility for callers that
  * haven't migrated yet — they get the same strings they used to.
  */
-const formatTimeAgo = (dateStr: string | null, t: TFunc): string => {
-  if (!dateStr) return t('time.never')
+const formatTimeAgo = (dateString: null | string, t: TFunc): string => {
+  if (!dateString) return t('time.never')
 
-  const date = new Date(dateStr)
+  const date = new Date(dateString)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffSecs = Math.floor(diffMs / 1000)
@@ -151,11 +148,11 @@ const formatTimeAgo = (dateStr: string | null, t: TFunc): string => {
  * instead of a translator. Used by the home page when the user has
  * selected a per-timestamp language override.
  */
-const formatTimeAgoLocale = (dateStr: string | null, locale: Locale): string => {
+const formatTimeAgoLocale = (dateString: null | string, locale: Locale): string => {
   const dict = RELATIVE_TIME_DICT[locale] ?? RELATIVE_TIME_DICT['en-US']
-  if (!dateStr) return dict.never
+  if (!dateString) return dict.never
 
-  const date = new Date(dateStr)
+  const date = new Date(dateString)
   const now = new Date()
   const diffSecs = Math.floor((now.getTime() - date.getTime()) / 1000)
 
@@ -177,20 +174,20 @@ const formatTimeAgoLocale = (dateStr: string | null, locale: Locale): string => 
  * Format an ISO timestamp using a dayjs pattern. Falls back to the
  * raw ISO string when the pattern is empty/invalid.
  */
-const formatAbsoluteIso = (dateStr: string | null, pattern: string): string => {
-  if (!dateStr) return RELATIVE_TIME_DICT['en-US'].never
+const formatAbsoluteIso = (dateString: null | string, pattern: string): string => {
+  if (!dateString) return RELATIVE_TIME_DICT['en-US'].never
   const p = pattern?.trim()
-  if (!p) return dateStr
-  return dayjs(dateStr).format(p)
+  if (!p) return dateString
+  return dayjs(dateString).format(p)
 }
 
 export {
   dateToInput,
-  inputToDate,
+  displayDuration,
   durationToForm,
   durationToSecs,
-  displayDuration,
+  formatAbsoluteIso,
   formatTimeAgo,
   formatTimeAgoLocale,
-  formatAbsoluteIso
+  inputToDate
 }

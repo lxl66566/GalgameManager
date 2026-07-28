@@ -20,13 +20,13 @@ export function useVarWarning(
   enabled: Accessor<boolean> | boolean = true
 ): Accessor<string | undefined> {
   const { t } = useI18n()
-  const varMap = useVarMap()
+  const variableMap = useVarMap()
 
   const memo = createMemo(() => {
     const isEnabled = typeof enabled === 'function' ? enabled() : enabled
-    if (!isEnabled) return undefined
-    const vm = varMap()
-    if (!vm) return undefined
+    if (!isEnabled) return
+    const vm = variableMap()
+    if (!vm) return
 
     const values = paths()
     const list = Array.isArray(values) ? values : [values]

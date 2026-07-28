@@ -1,5 +1,5 @@
+import path from 'node:path'
 import process from 'node:process'
-import path from 'path'
 import UnoCSS from 'unocss/vite'
 import { defineConfig } from 'vite'
 import solid from 'vite-plugin-solid'
@@ -9,26 +9,17 @@ const host = process.env.TAURI_DEV_HOST
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [UnoCSS(), solid(), tsconfigPaths()],
+  build: {
+    cssMinify: process.env.TAURI_DEBUG ? false : 'lightningcss',
+    // don't minify for debug builds
+    minify: process.env.TAURI_DEBUG ? false : 'esbuild',
+    // produce sourcemaps for debug builds
+    sourcemap: !!process.env.TAURI_DEBUG,
+    // Tauri uses Chromium on Windows and WebKit on macOS and Linux
+    target: process.env.TAURI_PLATFORM == 'windows' ? 'chrome105' : 'safari13'
+  },
   // prevent vite from obscuring rust errors
   clearScreen: false,
-  // Tauri expects a fixed port, fail if that port is not available
-  server: {
-    port: 1420,
-    strictPort: true,
-    host: host || false,
-    hmr: host
-      ? {
-          protocol: 'ws',
-          host,
-          port: 1421
-        }
-      : undefined,
-    watch: {
-      // Ignore watching `src-tauri`
-      ignored: ['**/src-tauri/**']
-    }
-  },
   // to access the Tauri environment variables set by the CLI with information about the current target
   envPrefix: [
     'VITE_',
@@ -39,25 +30,15 @@ export default defineConfig({
     'TAURI_PLATFORM_TYPE',
     'TAURI_DEBUG'
   ],
-  build: {
-    // Tauri uses Chromium on Windows and WebKit on macOS and Linux
-    target: process.env.TAURI_PLATFORM == 'windows' ? 'chrome105' : 'safari13',
-    // don't minify for debug builds
-    minify: !process.env.TAURI_DEBUG ? 'esbuild' : false,
-    cssMinify: !process.env.TAURI_DEBUG ? 'lightningcss' : false,
-    // produce sourcemaps for debug builds
-    sourcemap: !!process.env.TAURI_DEBUG
-  },
-  resolve: {
-    alias: {
-      '~': path.resolve(__dirname, './src')
-    }
-  },
   esbuild: {
     jsx: 'automatic',
     jsxImportSource: 'solid-js'
   },
   optimizeDeps: {
+    // virtua 的 solid 入口 ships .jsx with @jsxImportSource solid-js pragma；
+    // esbuild 的 automatic runtime 转换与 babel-preset-solid 输出不完全一致，
+    // 故交由 vite-plugin-solid 在请求管线中处理，不参与 dep optimizer。
+    exclude: ['virtua'],
     // 预构建常用依赖：Vite 默认是"首次请求才 esbuild 预构建"，导致 dev
     // 冷启动时这些库的第一次 import 要等数百 ms。显式 include 让 Vite 在
     // dev server 启动阶段一次性预构建，避免首屏渲染被懒预构建阻塞。
@@ -75,10 +56,29 @@ export default defineConfig({
       'clsx',
       'tailwind-merge',
       'dayjs'
-    ],
-    // virtua 的 solid 入口 ships .jsx with @jsxImportSource solid-js pragma；
-    // esbuild 的 automatic runtime 转换与 babel-preset-solid 输出不完全一致，
-    // 故交由 vite-plugin-solid 在请求管线中处理，不参与 dep optimizer。
-    exclude: ['virtua']
+    ]
+  },
+  plugins: [UnoCSS(), solid(), tsconfigPaths()],
+  resolve: {
+    alias: {
+      '~': path.resolve(__dirname, './src')
+    }
+  },
+  // Tauri expects a fixed port, fail if that port is not available
+  server: {
+    hmr: host
+      ? {
+          host,
+          port: 1421,
+          protocol: 'ws'
+        }
+      : undefined,
+    host: host || false,
+    port: 1420,
+    strictPort: true,
+    watch: {
+      // Ignore watching `src-tauri`
+      ignored: ['**/src-tauri/**']
+    }
   }
 })

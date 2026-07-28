@@ -24,7 +24,7 @@ import { initGameRuntime } from './store/gameRuntime'
 // root), so the sidebar and all startup side effects run once.
 const MainLayout: Component<{ children?: JSX.Element }> = props => {
   const { config } = useConfig()
-  const { t, setLocale } = useI18n()
+  const { setLocale, t } = useI18n()
   const { colorMode } = useColorMode()
   const [isServiceReady, setServiceReady] = createSignal(false)
 
@@ -52,11 +52,7 @@ const MainLayout: Component<{ children?: JSX.Element }> = props => {
   // 同步 Kobalte 状态到 HTML class
   createEffect(() => {
     const root = document.documentElement
-    if (colorMode() === 'dark') {
-      root.classList.add('dark')
-    } else {
-      root.classList.remove('dark')
-    }
+    root.classList.toggle('dark', colorMode() === 'dark')
   })
 
   createEffect(() => {
@@ -70,26 +66,26 @@ const MainLayout: Component<{ children?: JSX.Element }> = props => {
     <>
       <Sidebar>
         <SidebarItem
-          label={t('sidebar.game')}
-          icon={<CgGames class="w-6 h-6" />}
           href="/Game"
+          icon={<CgGames class="w-6 h-6" />}
+          label={t('sidebar.game')}
         />
         <SidebarItem
-          label={t('sidebar.plugin')}
-          icon={<BiRegularExtension class="w-6 h-6" />}
           href="/Plugin"
+          icon={<BiRegularExtension class="w-6 h-6" />}
+          label={t('sidebar.plugin')}
         />
         <Show when={config.settings.launch.dailyStat}>
           <SidebarItem
-            label={t('sidebar.statistics')}
-            icon={<BiRegularBarChartSquare class="w-6 h-6" />}
             href="/Statistics"
+            icon={<BiRegularBarChartSquare class="w-6 h-6" />}
+            label={t('sidebar.statistics')}
           />
         </Show>
         <SidebarItem
-          label={t('sidebar.settings')}
-          icon={<IoSettingsOutline class="w-6 h-6" />}
           href="/Settings"
+          icon={<IoSettingsOutline class="w-6 h-6" />}
+          label={t('sidebar.settings')}
         />
       </Sidebar>
 
@@ -110,11 +106,11 @@ const App: Component = () => {
       <ColorModeProvider storageManager={storageManager}>
         <I18nProvider>
           <Router root={MainLayout}>
-            <Route path="/Game" component={Game} />
-            <Route path="/" component={() => <Navigate href="/Game" />} />
-            <Route path="/Statistics" component={Statistics} />
-            <Route path="/Plugin" component={Plugin} />
-            <Route path="/Settings" component={Settings} />
+            <Route component={Game} path="/Game" />
+            <Route component={() => <Navigate href="/Game" />} path="/" />
+            <Route component={Statistics} path="/Statistics" />
+            <Route component={Plugin} path="/Plugin" />
+            <Route component={Settings} path="/Settings" />
           </Router>
           <Toaster
             position="bottom-left"

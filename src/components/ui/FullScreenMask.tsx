@@ -11,8 +11,8 @@
 import type { JSX } from 'solid-js'
 
 interface FullScreenMaskProps {
-  onClose?: () => void
   children?: JSX.Element
+  onClose?: () => void
 }
 
 export default (props: FullScreenMaskProps) => {
@@ -21,7 +21,13 @@ export default (props: FullScreenMaskProps) => {
       class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-20 p-4"
       onClick={() => props.onClose?.()}
     >
-      <div onClick={e => e.stopPropagation()}>{props.children}</div>
+      <div
+        onClick={e => {
+          e.stopPropagation()
+        }}
+      >
+        {props.children}
+      </div>
     </div>
   )
 }

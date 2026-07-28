@@ -7,7 +7,7 @@
  * invocation.
  */
 export function debounce<Args extends unknown[]>(
-  fn: (...args: Args) => void,
+  function_: (...args: Args) => void,
   delay: number
 ): ((...args: Args) => void) & { cancel: () => void } {
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -15,14 +15,16 @@ export function debounce<Args extends unknown[]>(
     if (timer) clearTimeout(timer)
     timer = setTimeout(() => {
       timer = undefined
-      fn(...args)
+      function_(...args)
     }, delay)
   }
   debounced.cancel = () => {
-    if (timer) {
-      clearTimeout(timer)
-      timer = undefined
+    if (!timer) {
+      return
     }
+
+    clearTimeout(timer)
+    timer = undefined
   }
   return debounced
 }

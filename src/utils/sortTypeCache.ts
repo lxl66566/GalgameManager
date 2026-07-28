@@ -11,15 +11,15 @@ import { log } from '@utils/log'
 
 const SORT_TYPE_FILENAME = '.config/GalgameManager/sort_type'
 const DEFAULT_SORT_TYPE: SortType = 'id'
-const VALID_SORT_TYPES: ReadonlySet<SortType> = new Set(['id', 'name', 'lastPlayed', 'playTime'])
+const VALID_SORT_TYPES: ReadonlySet<SortType> = new Set([
+  'id',
+  'lastPlayed',
+  'name',
+  'playTime'
+])
 
 /** In-memory cache; `null` means not yet loaded from disk. */
-let cached: SortType | null = null
-
-function parse(raw: string): SortType {
-  const trimmed = raw.trim() as SortType
-  return VALID_SORT_TYPES.has(trimmed) ? trimmed : DEFAULT_SORT_TYPE
-}
+let cached: null | SortType = null
 
 /** Load sort type from disk (first call) or return cached value. */
 export async function getSortType(): Promise<SortType> {
@@ -33,7 +33,7 @@ export async function getSortType(): Promise<SortType> {
   } catch {
     cached = DEFAULT_SORT_TYPE
   }
-  return cached!
+  return cached
 }
 
 /**
@@ -46,9 +46,14 @@ export function setSortType(type: SortType): void {
   cached = type
   writeTextFile(SORT_TYPE_FILENAME, type, {
     baseDir: BaseDirectory.Home
-  }).catch(e => {
+  }).catch(error => {
     // The in-memory cache is still valid, but surface the failure for
     // diagnostics instead of swallowing it completely.
-    log.warn('Failed to persist sort type:', e)
+    log.warn('Failed to persist sort type:', error)
   })
+}
+
+function parse(raw: string): SortType {
+  const trimmed = raw.trim() as SortType
+  return VALID_SORT_TYPES.has(trimmed) ? trimmed : DEFAULT_SORT_TYPE
 }

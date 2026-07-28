@@ -1,3 +1,4 @@
+import type { SwitchRootProps } from '@kobalte/core/switch'
 /**
  * controls.tsx — Unified primitive form controls with size variants.
  *
@@ -11,57 +12,56 @@
 import * as KobalteSwitch from '@kobalte/core/switch'
 import { cn } from '~/lib/utils'
 import { For, splitProps, type Component, type JSX } from 'solid-js'
-import type { SwitchRootProps } from '@kobalte/core/switch'
 
 // ─── Size type ────
 
-export type ControlSize = 'sm' | 'md'
+export type ControlSize = 'md' | 'sm'
 
 // ─── Shared token maps ──────────────────────────────────────────────────────
 
 const INPUT_SIZES: Record<ControlSize, string> = {
-  sm: 'h-7 w-full px-2 py-0',
-  md: 'h-8 w-full sm:w-64 flex-none px-2.5 py-0'
+  md: 'h-8 w-full sm:w-64 flex-none px-2.5 py-0',
+  sm: 'h-7 w-full px-2 py-0'
 }
 
 const SELECT_WRAPPER_SIZES: Record<ControlSize, string> = {
-  sm: 'relative',
-  md: 'relative w-full sm:w-64 flex-none'
+  md: 'relative w-full sm:w-64 flex-none',
+  sm: 'relative'
 }
 
 const SELECT_SIZES: Record<ControlSize, string> = {
-  sm: 'h-7 w-full pl-2 pr-7 py-0',
-  md: 'h-8 w-full pl-2.5 pr-8 py-0'
+  md: 'h-8 w-full pl-2.5 pr-8 py-0',
+  sm: 'h-7 w-full pl-2 pr-7 py-0'
 }
 
 const SWITCH_TRACK: Record<ControlSize, string> = {
-  sm: 'w-8 h-3',
-  md: 'w-9 h-3'
+  md: 'w-9 h-3',
+  sm: 'w-8 h-3'
 }
 
 const SWITCH_THUMB: Record<ControlSize, string> = {
-  sm: 'size-3.5',
-  md: 'size-4'
+  md: 'size-4',
+  sm: 'size-3.5'
 }
 
 const SWITCH_TRANSLATE: Record<ControlSize, string> = {
-  sm: 'group-data-[checked]:translate-x-[18px]',
-  md: 'group-data-[checked]:translate-x-5'
+  md: 'group-data-[checked]:translate-x-5',
+  sm: 'group-data-[checked]:translate-x-[18px]'
 }
 
 const BUTTON_SIZES: Record<ControlSize, string> = {
-  sm: 'h-7 px-2.5',
-  md: 'h-8 px-3'
+  md: 'h-8 px-3',
+  sm: 'h-7 px-2.5'
 }
 
 const TEXTAREA_SIZES: Record<ControlSize, string> = {
-  sm: 'min-h-16 px-2 py-1.5',
-  md: 'min-h-20 px-2.5 py-2'
+  md: 'min-h-20 px-2.5 py-2',
+  sm: 'min-h-16 px-2 py-1.5'
 }
 
 const LINK_BTN_SIZES: Record<ControlSize, string> = {
-  sm: 'h-7 px-1',
-  md: 'h-8 px-1'
+  md: 'h-8 px-1',
+  sm: 'h-7 px-1'
 }
 
 // ─── Input ────────
@@ -94,7 +94,7 @@ export interface SelectProps extends Omit<
   JSX.SelectHTMLAttributes<HTMLSelectElement>,
   'options'
 > {
-  options: { label: string; value: string | number }[]
+  options: { label: string; value: number | string }[]
   size?: ControlSize
 }
 
@@ -117,7 +117,7 @@ export const Select: Component<SelectProps> = props => {
       >
         <For each={local.options}>
           {opt => (
-            <option value={opt.value} selected={opt.value === local.value}>
+            <option selected={opt.value === local.value} value={opt.value}>
               {opt.label}
             </option>
           )}
@@ -132,10 +132,10 @@ export const Select: Component<SelectProps> = props => {
           viewBox="0 0 24 24"
         >
           <path
+            d="M19 9l-7 7-7-7"
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
-            d="M19 9l-7 7-7-7"
           />
         </svg>
       </div>
@@ -146,8 +146,8 @@ export const Select: Component<SelectProps> = props => {
 // ─── Switch ───────
 
 export interface SwitchProps extends SwitchRootProps {
-  size?: ControlSize
   class?: string
+  size?: ControlSize
 }
 
 export const Switch: Component<SwitchProps> = props => {
@@ -155,9 +155,9 @@ export const Switch: Component<SwitchProps> = props => {
   const s = () => local.size ?? 'md'
   return (
     <KobalteSwitch.Root
+      checked={local.checked}
       class={cn('group inline-flex items-center', local.class)}
       onChange={local.onChange}
-      checked={local.checked}
       {...others}
     >
       <KobalteSwitch.Input />
@@ -195,7 +195,6 @@ export const Button: Component<ButtonProps> = props => {
   const [local, others] = splitProps(props, ['class', 'children', 'type', 'size'])
   return (
     <button
-      type={local.type ?? 'button'}
       class={cn(
         'inline-flex items-center justify-center rounded border shadow-sm transition-all',
         BUTTON_SIZES[local.size ?? 'md'],
@@ -206,6 +205,7 @@ export const Button: Component<ButtonProps> = props => {
         'disabled:opacity-50 disabled:cursor-not-allowed',
         local.class
       )}
+      type={local.type ?? 'button'}
       {...others}
     >
       {local.children}
@@ -247,7 +247,6 @@ export const LinkButton: Component<LinkButtonProps> = props => {
   const [local, others] = splitProps(props, ['class', 'children', 'size'])
   return (
     <button
-      type="button"
       class={cn(
         'inline-flex items-center justify-center transition-colors',
         LINK_BTN_SIZES[local.size ?? 'md'],
@@ -257,6 +256,7 @@ export const LinkButton: Component<LinkButtonProps> = props => {
         'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:no-underline',
         local.class
       )}
+      type="button"
       {...others}
     >
       {local.children}

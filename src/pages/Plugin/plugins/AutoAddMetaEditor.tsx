@@ -17,12 +17,12 @@ export function AutoAddMetaEditor<T extends { autoAdd: boolean }>(
   const { t } = useI18n()
   return (
     <div class="flex flex-wrap gap-3 items-start">
-      <FormField label={t('plugin.autoAdd')} class="w-auto">
+      <FormField class="w-auto" label={t('plugin.autoAdd')}>
         <FormSwitch
           checked={props.config.autoAdd}
-          onChange={(checked: boolean) =>
+          onChange={(checked: boolean) => {
             props.onCommit({ ...props.config, autoAdd: checked })
-          }
+          }}
         />
       </FormField>
     </div>

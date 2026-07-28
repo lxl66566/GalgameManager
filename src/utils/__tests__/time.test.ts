@@ -15,17 +15,17 @@ import { describe, expect, it } from 'vitest'
 // Build a minimal translator so we don't need the full i18n dictionary.
 // The `time.*` keys are the only ones exercised by formatTimeAgo.
 const enTimeDict: Record<string, string> = {
-  'time.never': 'Never',
+  'time.daysAgo': '{{n}}d ago',
+  'time.hoursAgo': '{{n}}h ago',
   'time.justNow': 'Just now',
   'time.minutesAgo': '{{n}}m ago',
-  'time.hoursAgo': '{{n}}h ago',
-  'time.daysAgo': '{{n}}d ago',
   'time.monthsAgo': '{{n}}mo ago',
+  'time.never': 'Never',
   'time.yearsAgo': '{{n}}y ago'
 }
-const t: TFunc = ((key: string, params?: { n?: string }) => {
+const t: TFunc = ((key: string, parameters?: { n?: string }) => {
   const tmpl = enTimeDict[key] ?? key
-  if (params?.n !== undefined) return tmpl.replace('{{n}}', params.n)
+  if (parameters?.n !== undefined) return tmpl.replace('{{n}}', parameters.n)
   return tmpl
 }) as TFunc
 
@@ -42,7 +42,7 @@ describe('durationToSecs', () => {
   it('adds the nanos as a fraction', () => {
     expect(durationToSecs([10, 0])).toBe(10)
     expect(durationToSecs([10, 500_000_000])).toBeCloseTo(10.5)
-    expect(durationToSecs([0, 1_000_000_000])).toBeCloseTo(1.0)
+    expect(durationToSecs([0, 1_000_000_000])).toBeCloseTo(1)
   })
 })
 
@@ -66,7 +66,7 @@ describe('formatSessionDuration', () => {
     expect(formatSessionDuration(3 * 3_600_000 + 2 * 60_000)).toBe('3h2m')
   })
   it('clamps negative input to 0s', () => {
-    expect(formatSessionDuration(-5_000)).toBe('0s')
+    expect(formatSessionDuration(-5000)).toBe('0s')
   })
   it('floors fractional seconds', () => {
     expect(formatSessionDuration(59_999)).toBe('59s')
@@ -96,7 +96,7 @@ describe('formatTimeAgo', () => {
     expect(formatTimeAgo(null, t)).toBe('Never')
   })
   it('returns Just now for < 60s ago', () => {
-    const recent = new Date(Date.now() - 5_000).toISOString()
+    const recent = new Date(Date.now() - 5000).toISOString()
     expect(formatTimeAgo(recent, t)).toBe('Just now')
   })
   it('formats minutes ago', () => {
@@ -123,18 +123,18 @@ describe('formatTimeAgo', () => {
 
 describe('formatTimeAgoLocale', () => {
   it('falls back to en-US when given an unknown locale', () => {
-    const d = new Date(Date.now() - 5_000).toISOString()
+    const d = new Date(Date.now() - 5000).toISOString()
     // @ts-expect-error: intentionally invalid locale key
     expect(formatTimeAgoLocale(d, 'fr-FR')).toBe('Just now')
   })
   it('renders zh-CN strings', () => {
-    const recent = new Date(Date.now() - 5_000).toISOString()
+    const recent = new Date(Date.now() - 5000).toISOString()
     expect(formatTimeAgoLocale(recent, 'zh-CN')).toBe('刚刚')
     const mins = new Date(Date.now() - 10 * 60_000).toISOString()
     expect(formatTimeAgoLocale(mins, 'zh-CN')).toBe('10 分钟前')
   })
   it('renders en-US strings', () => {
-    const recent = new Date(Date.now() - 5_000).toISOString()
+    const recent = new Date(Date.now() - 5000).toISOString()
     expect(formatTimeAgoLocale(recent, 'en-US')).toBe('Just now')
   })
   it('returns Never for null', () => {
@@ -151,7 +151,7 @@ describe('formatAbsoluteIso', () => {
   it('returns the raw ISO string when pattern is empty', () => {
     const iso = '2024-05-01T12:34:56Z'
     expect(formatAbsoluteIso(iso, '')).toBe(iso)
-    expect(formatAbsoluteIso(iso, '   ')).toBe(iso)
+    expect(formatAbsoluteIso(iso, ' '.repeat(3))).toBe(iso)
   })
   it('formats using the dayjs pattern', () => {
     const iso = '2024-05-01T12:34:56Z'

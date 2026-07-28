@@ -12,18 +12,18 @@ import {
 } from 'solid-js'
 
 interface ImageProps {
-  url?: string | null | undefined
-  hash?: string | null | undefined
   alt?: string
   class?: string
-  onHashUpdate?: (newHash: string) => void
   /** When true, ask the backend to also derive an accent color from this
    *  image. Callers set this to "color not yet cached" (e.g.
    *  `!game.coverColor`) so each image is decoded at most once. */
   extractColor?: boolean
+  hash?: null | string | undefined
   /** Fires with a freshly extracted "#RRGGBB" color. Only called when
    *  `extractColor` is true and the backend actually computed one. */
   onColorExtracted?: (color: string) => void
+  onHashUpdate?: (newHash: string) => void
+  url?: null | string | undefined
 }
 
 /**
@@ -42,7 +42,7 @@ interface ImageProps {
 //   Windows/Android → http://{scheme}.localhost/{path}
 //   Linux/macOS/iOS → {scheme}://localhost/{path}
 export function galimgUrl(hash: string): string {
-  return isWindows ? `http://galimg.localhost/${hash}` : `galimg://localhost/${hash}`
+  return isWindows ? `https://galimg.localhost/${hash}` : `galimg://localhost/${hash}`
 }
 
 const CachedImage: Component<ImageProps> = props => {
@@ -65,7 +65,7 @@ const CachedImage: Component<ImageProps> = props => {
       const [rawUrl, currentHash, extractColor] = key.split('\0') as [
         string,
         string,
-        'true' | 'false'
+        'false' | 'true'
       ]
       if (!rawUrl) return null
 
@@ -79,10 +79,10 @@ const CachedImage: Component<ImageProps> = props => {
       // `PathBuf::join("")` resolve to the cache directory itself and return
       // a bogus empty hash. The backend now validates, but the right
       // semantic on the TS side is still `null`.
-      const [hash, color] = await invoke<[string, string | null]>('prepare_image', {
-        url: resolvedUrl,
+      const [hash, color] = await invoke<[string, null | string]>('prepare_image', {
+        needColor: extractColor === 'true',
         sha256: currentHash || null,
-        needColor: extractColor === 'true'
+        url: resolvedUrl
       })
 
       // Notify parent of the resolved hash (may differ from currentHash
@@ -110,13 +110,13 @@ const CachedImage: Component<ImageProps> = props => {
   return (
     <div class={`relative overflow-hidden bg-gray-800/50 ${props.class || ''}`}>
       <ErrorBoundary
-        fallback={err => (
+        fallback={error => (
           <div
             class="absolute inset-0 flex flex-col items-center justify-center bg-red-900/20 border border-red-500/30 text-red-400 p-2"
-            title={err.toString()}
+            title={error.toString()}
           >
             <span class="text-[10px] font-mono opacity-80">
-              Load Failed: {err.toString()}
+              Load Failed: {error.toString()}
             </span>
           </div>
         )}
@@ -130,9 +130,9 @@ const CachedImage: Component<ImageProps> = props => {
         >
           {imageHash() ? (
             <img
-              src={galimgUrl(imageHash()!)}
               alt={props.alt}
               class="w-full h-full object-cover animate-in fade-in duration-300"
+              src={galimgUrl(imageHash()!)}
             />
           ) : (
             <div class="w-full h-full bg-transparent" />

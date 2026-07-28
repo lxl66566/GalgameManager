@@ -8,7 +8,7 @@ describe('resolveVar', () => {
   })
 
   it('replaces {key} with the corresponding value', () => {
-    expect(resolveVar('{name}/{dir}', { name: 'Alice', dir: 'home' })).toBe('Alice/home')
+    expect(resolveVar('{name}/{dir}', { dir: 'home', name: 'Alice' })).toBe('Alice/home')
   })
 
   it('handles the empty-brace placeholder {} (used in plugin commands)', () => {
@@ -63,11 +63,11 @@ describe('replaceWithVarNames', () => {
 
   it('replaces the first occurrence of the longest matching value', () => {
     // Longest-value-first: `D:/Games/Gal` beats `D:/Games`.
-    const vars = {
-      short: 'D:/Games',
-      long: 'D:/Games/Gal'
+    const variables = {
+      long: 'D:/Games/Gal',
+      short: 'D:/Games'
     }
-    expect(replaceWithVarNames('D:/Games/Gal/save', vars)).toBe('{long}/save')
+    expect(replaceWithVarNames('D:/Games/Gal/save', variables)).toBe('{long}/save')
   })
 
   it('only replaces the first occurrence', () => {

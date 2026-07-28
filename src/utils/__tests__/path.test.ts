@@ -3,10 +3,10 @@ import { describe, expect, it } from 'vitest'
 
 describe('fuckBackslash', () => {
   it('replaces backslashes with forward slashes', () => {
-    expect(fuckBackslash('C:\\Users\\foo')).toBe('C:/Users/foo')
+    expect(fuckBackslash(String.raw`C:\Users\foo`)).toBe('C:/Users/foo')
   })
   it('handles mixed separators', () => {
-    expect(fuckBackslash('a\\b/c\\d')).toBe('a/b/c/d')
+    expect(fuckBackslash(String.raw`a\b/c\d`)).toBe('a/b/c/d')
   })
   it('handles empty string', () => {
     expect(fuckBackslash('')).toBe('')
@@ -21,11 +21,11 @@ describe('isAbsolutePath', () => {
     expect(isAbsolutePath('/usr/bin')).toBe(true)
   })
   it('detects windows drive-letter paths', () => {
-    expect(isAbsolutePath('C:\\foo')).toBe(true)
+    expect(isAbsolutePath(String.raw`C:\foo`)).toBe(true)
     expect(isAbsolutePath('D:/bar')).toBe(true)
   })
   it('detects UNC paths', () => {
-    expect(isAbsolutePath('\\\\server\\share')).toBe(true)
+    expect(isAbsolutePath(String.raw`\\server\share`)).toBe(true)
   })
   it('rejects relative paths', () => {
     expect(isAbsolutePath('foo/bar')).toBe(false)
@@ -74,7 +74,7 @@ describe('getParentPath', () => {
   })
 
   it('normalises backslashes before processing', () => {
-    expect(getParentPath('C:\\games\\foo\\bar')).toBe('foo')
+    expect(getParentPath(String.raw`C:\games\foo\bar`)).toBe('foo')
   })
 
   it('strips trailing slashes', () => {

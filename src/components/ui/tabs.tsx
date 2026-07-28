@@ -8,10 +8,10 @@ export interface TabItem<T extends string> {
 }
 
 interface TabsProps<T extends string> {
-  items: TabItem<T>[]
-  value: T
-  onChange: (key: T) => void
   class?: string
+  items: TabItem<T>[]
+  onChange: (key: T) => void
+  value: T
 }
 
 export function Tabs<T extends string>(props: TabsProps<T>): JSX.Element {
@@ -24,22 +24,24 @@ export function Tabs<T extends string>(props: TabsProps<T>): JSX.Element {
         -mb-px: 让 active border 盖住底部分割线
       */}
       <nav
-        class="-mb-px flex justify-center space-x-8 overflow-x-auto no-scrollbar"
         aria-label="Tabs"
+        class="-mb-px flex justify-center space-x-8 overflow-x-auto no-scrollbar"
       >
         <For each={props.items}>
           {item => {
             const isActive = () => props.value === item.key
             return (
               <button
-                onClick={() => props.onChange(item.key)}
+                aria-current={isActive() ? 'page' : undefined}
                 class={cn(
                   'whitespace-nowrap border-b-2 pb-2 pt-3 px-1 text-sm font-medium transition-colors duration-200 ease-in-out outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 rounded-t-sm cursor-pointer',
                   isActive()
                     ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400'
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-gray-700 dark:hover:text-gray-200'
                 )}
-                aria-current={isActive() ? 'page' : undefined}
+                onClick={() => {
+                  props.onChange(item.key)
+                }}
               >
                 {item.label}
               </button>

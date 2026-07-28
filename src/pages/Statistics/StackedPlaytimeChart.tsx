@@ -30,40 +30,40 @@ import {
   type DurationUnits
 } from './timeRange'
 
-export interface ChartSeriesItem {
-  id: number
-  name: string
-  color: string
-}
-
 export interface ChartHover {
   bucketKey: string
   /** Game under the cursor within the bucket; null over empty column space. */
-  gameId: number | null
+  gameId: null | number
+}
+
+export interface ChartSeriesItem {
+  color: string
+  id: number
+  name: string
 }
 
 interface StackedPlaytimeChartProps {
+  class?: string
   data: BucketDatum[]
-  series: ChartSeriesItem[]
-  focusGameId: number | null
+  focusGameId: null | number
+  locale: string
   onHover: (info: ChartHover | null) => void
+  series: ChartSeriesItem[]
   /** Short unit strings (e.g. 'h' / 'm' / 's') for axis + tooltip. */
   units: DurationUnits
-  locale: string
-  class?: string
 }
 
-const MARGIN = { top: 22, right: 8, bottom: 32, left: 40 }
+const MARGIN = { bottom: 32, left: 40, right: 8, top: 22 }
 const TRANSITION_MS = 280
 
 /** One rendered bar segment. y0/y1 are cumulative seconds from the baseline. */
 interface Seg {
-  key: string
   gameId: number
+  isTop: boolean
+  key: string
   v: number
   y0: number
   y1: number
-  isTop: boolean
 }
 
 interface TickLabel {
@@ -81,19 +81,19 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
   // a hardcoded constant — the chart now fills whatever vertical slice it
   // is given.
   const [height, setHeight] = createSignal(0)
-  const [tip, setTip] = createSignal<{
+  const [tip, setTip] = createSignal<null | {
+    bucketKey: string
+    flip: boolean
+    gameId: null | number
     x: number
     y: number
-    flip: boolean
-    bucketKey: string
-    gameId: number | null
-  } | null>(null)
+  }>(null)
 
   // First render must be instant; only later updates animate.
-  let renderedOnce = false
+  let isRenderedOnce = false
   // Dedupe onHover callbacks so moving the cursor inside one segment does not
   // re-render the whole page on every mousemove.
-  let lastHoverKey: string | null = null
+  let lastHoverKey: null | string = null
 
   onMount(() => {
     const ro = new ResizeObserver(entries => {
@@ -103,7 +103,9 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
       setHeight(Math.max(0, Math.floor(rect.height)))
     })
     if (wrapRef) ro.observe(wrapRef)
-    onCleanup(() => ro.disconnect())
+    onCleanup(() => {
+      ro.disconnect()
+    })
   })
 
   createEffect(() => {
@@ -122,7 +124,7 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
   function render(
     data: BucketDatum[],
     series: ChartSeriesItem[],
-    focus: number | null,
+    focus: null | number,
     w: number,
     h: number,
     dark: boolean,
@@ -134,9 +136,9 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
     const innerH = h - MARGIN.top - MARGIN.bottom
 
     const maxTotal = Math.max(1, d3.max(data, d => d.total) ?? 1)
-    const useHours = maxTotal >= 3600
-    const factor = useHours ? 3600 : 60
-    const unitLabel = useHours ? units.hour : units.minute
+    const isUseHours = maxTotal >= 3600
+    const factor = isUseHours ? 3600 : 60
+    const unitLabel = isUseHours ? units.hour : units.minute
 
     const x = d3
       .scaleBand()
@@ -151,8 +153,8 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
 
     const theme = {
       axis: dark ? '#9ca3af' : '#6b7280',
-      grid: dark ? 'rgba(75,85,99,0.35)' : 'rgba(209,213,219,0.6)',
-      dim: dark ? '#4b5563' : '#d1d5db'
+      dim: dark ? '#4b5563' : '#d1d5db',
+      grid: dark ? 'rgba(75,85,99,0.35)' : 'rgba(209,213,219,0.6)'
     }
     const colorOf = new Map(series.map(s => [s.id, s.color] as const))
 
@@ -169,34 +171,34 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
     }
     root.attr('transform', `translate(${MARGIN.left},${MARGIN.top})`)
 
-    const dur = renderedOnce ? TRANSITION_MS : 0
+    const dur = isRenderedOnce ? TRANSITION_MS : 0
 
     // ── stacked segments ────────────────────────────────────────────────
     // Stacking order: in focus mode the focused game goes first (re-based
     // onto the x axis) and the rest pile on top in their original order, so
     // the column keeps its total height with no gaps.
     const order =
-      focus == null
+      focus == undefined
         ? series
         : [...series.filter(s => s.id === focus), ...series.filter(s => s.id !== focus)]
     const segs: Seg[] = []
     for (const b of data) {
-      let acc = 0
-      let last: Seg | null = null
+      let accumulator = 0
+      let last: null | Seg = null
       for (const s of order) {
         const v = b.perGame.get(s.id) ?? 0
         if (v <= 0) continue
         const seg: Seg = {
-          key: b.key,
           gameId: s.id,
+          isTop: false,
+          key: b.key,
           v,
-          y0: acc,
-          y1: acc + v,
-          isTop: false
+          y0: accumulator,
+          y1: accumulator + v
         }
         segs.push(seg)
         last = seg
-        acc += v
+        accumulator += v
       }
       if (last) last.isTop = true
     }
@@ -206,12 +208,13 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
     const segY = (d: Seg): number => y(d.y1 / factor)
     const segH = (d: Seg): number => Math.max(0, innerH - y(d.v / factor))
     const segFill = (d: Seg): string =>
-      focus != null && d.gameId !== focus
+      focus != undefined && d.gameId !== focus
         ? theme.dim
         : (colorOf.get(d.gameId) ?? theme.dim)
-    const segOpacity = (d: Seg): number => (focus != null && d.gameId !== focus ? 0.4 : 1)
+    const segOpacity = (d: Seg): number =>
+      focus != undefined && d.gameId !== focus ? 0.4 : 1
     const segRx = (d: Seg): number =>
-      focus != null ? (d.gameId === focus ? 2.5 : 1) : d.isTop ? 2.5 : 0
+      focus == undefined ? (d.isTop ? 2.5 : 0) : d.gameId === focus ? 2.5 : 1
 
     root
       .select<SVGGElement>('g.bars')
@@ -265,7 +268,7 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
     // ── y axis + horizontal gridlines ───────────────────────────────────
     const yAxis = d3.axisLeft(y).ticks(4).tickSize(-innerW).tickPadding(6)
     const gy = root.select<SVGGElement>('g.y-axis')
-    if (renderedOnce) {
+    if (isRenderedOnce) {
       gy.transition().duration(dur).ease(d3.easeCubicOut).call(yAxis)
     } else {
       gy.call(yAxis)
@@ -285,9 +288,11 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
     // ── x axis (custom band labels, ISO-style dates to match the header) ──
     const weekdayFmt = new Intl.DateTimeFormat(locale, { weekday: 'short' })
     const monthFmt = new Intl.DateTimeFormat(locale, { month: 'short' })
-    const dense = data.length > 10 && data[0].unit === 'day'
+    const isDense = data.length > 10 && data[0].unit === 'day'
     const tickLabels: TickLabel[] = data
-      .filter(b => !dense || b.start.getDate() === 1 || (b.start.getDate() - 1) % 5 === 0)
+      .filter(
+        b => !isDense || b.start.getDate() === 1 || (b.start.getDate() - 1) % 5 === 0
+      )
       .map(b => {
         if (b.unit === 'month') return { key: b.key, label: monthFmt.format(b.start) }
         if (data.length <= 10) {
@@ -408,31 +413,31 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
       // cursor in the side padding reports an unfocused hover (gameId = null)
       // even when below the column's top. Same stacking order as rendering.
       const barX = x(d.key) ?? 0
-      const overBar = mx >= barX && mx <= barX + x.bandwidth()
+      const isOverBar = mx >= barX && mx <= barX + x.bandwidth()
 
-      let gameId: number | null = null
-      let acc = 0
-      if (overBar) {
+      let gameId: null | number = null
+      let accumulator = 0
+      if (isOverBar) {
         for (const s of order) {
           const v = d.perGame.get(s.id) ?? 0
           if (v <= 0) continue
-          const yTop = y((acc + v) / factor)
-          const yBot = y(acc / factor)
+          const yTop = y((accumulator + v) / factor)
+          const yBot = y(accumulator / factor)
           if (my >= yTop && my <= yBot) {
             gameId = s.id
             break
           }
-          acc += v
+          accumulator += v
         }
       }
 
       const bandCenter = MARGIN.left + (x(d.key) ?? 0) + x.bandwidth() / 2
       setTip({
-        x: bandCenter,
-        y: MARGIN.top + Math.min(Math.max(my, 0), innerH),
-        flip: bandCenter > innerW / 2,
         bucketKey: d.key,
-        gameId
+        flip: bandCenter > innerW / 2,
+        gameId,
+        x: bandCenter,
+        y: MARGIN.top + Math.min(Math.max(my, 0), innerH)
       })
       const hoverKey = `${d.key}|${gameId ?? ''}`
       if (hoverKey !== lastHoverKey) {
@@ -442,7 +447,7 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
     })
     /* eslint-enable solid/reactivity */
 
-    renderedOnce = true
+    isRenderedOnce = true
   }
 
   // ── tooltip (Solid-owned HTML, follows the cursor) ──────────────────────
@@ -464,8 +469,8 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
       : bucket.key
 
   return (
-    <div ref={wrapRef} class={`relative h-full w-full ${props.class ?? ''}`}>
-      <svg ref={svgRef} class="block" role="img" />
+    <div class={`relative h-full w-full ${props.class ?? ''}`} ref={wrapRef}>
+      <svg class="block" ref={svgRef} role="img" />
       <Show when={tipData()}>
         {td => (
           <div
@@ -485,7 +490,7 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
             <div class="mt-1 space-y-0.5">
               <For each={td().rows}>
                 {r => {
-                  const dimmed = () => td().gameId != null && td().gameId !== r.id
+                  const dimmed = () => td().gameId != undefined && td().gameId !== r.id
                   return (
                     <div class="flex items-center gap-1.5 text-xs leading-4">
                       <span

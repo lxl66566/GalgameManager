@@ -1,18 +1,22 @@
-export function getParentPath(pathStr: string): string | undefined {
+export function fuckBackslash(path: string): string {
+  return path.replaceAll('\\', '/')
+}
+
+export function getParentPath(pathString: string): string | undefined {
   // 处理空字符串或只有分隔符的情况
-  if (!pathStr || /^[\\/]*$/.test(pathStr)) {
+  if (!pathString || /^[\\/]*$/.test(pathString)) {
     return undefined
   }
 
   // 标准化路径：将 Windows 反斜杠转换为正斜杠，移除末尾分隔符
-  const normalized = pathStr.replace(/\\/g, '/').replace(/\/+$/, '')
+  const normalized = pathString.replaceAll('\\', '/').replace(/\/+$/, '')
 
   if (!normalized) {
     return undefined
   }
 
   // 处理 Windows 根路径（如 C:/）
-  if (/^[A-Za-z]:\/$/.test(normalized)) {
+  if (/^[A-Z]:\/$/i.test(normalized)) {
     return undefined
   }
 
@@ -35,7 +39,7 @@ export function getParentPath(pathStr: string): string | undefined {
   }
 
   // 提取父路径部分
-  const parentPath = normalized.substring(0, lastSlashIndex)
+  const parentPath = normalized.slice(0, Math.max(0, lastSlashIndex))
 
   // 如果父路径为空，返回 undefined（如 "file.txt" -> ""）
   if (!parentPath) {
@@ -51,11 +55,7 @@ export function getParentPath(pathStr: string): string | undefined {
   }
 
   // 返回最后一个斜杠之后的部分
-  return parentPath.substring(lastSlashBeforeParent + 1)
-}
-
-export function fuckBackslash(path: string): string {
-  return path.replace(/\\/g, '/')
+  return parentPath.slice(Math.max(0, lastSlashBeforeParent + 1))
 }
 
 /// Check whether a filesystem path is absolute (Windows or Unix).
@@ -63,7 +63,7 @@ export function isAbsolutePath(p: string): boolean {
   // Unix: starts with /
   if (p.startsWith('/')) return true
   // Windows: drive letter (C:\, D:\, …)
-  if (/^[A-Za-z]:/.test(p)) return true
+  if (/^[A-Z]:/i.test(p)) return true
   // UNC: \\server\share
   if (p.startsWith('\\\\')) return true
   return false

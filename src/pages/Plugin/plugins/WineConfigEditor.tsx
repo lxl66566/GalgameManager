@@ -43,18 +43,18 @@ const DllOverridesEditor: Component<ConfigEditorProps<WineGameConfig>> = props =
   const { t } = useI18n()
   return (
     <FormTableEditor
+      addLabel={t('plugin.wine.addDllOverride')}
+      description={t('plugin.wine.dllOverridesDesc')}
       label={t('plugin.wine.dllOverrides')}
       labelClass="text-xs"
-      description={t('plugin.wine.dllOverridesDesc')}
-      addLabel={t('plugin.wine.addDllOverride')}
-      values={props.config.dllOverrides as Record<string, string>}
-      valueOptions={DLL_OVERRIDE_OPTIONS}
-      onCommit={v =>
+      onCommit={v => {
         props.onCommit({
           ...props.config,
           dllOverrides: v as Record<string, DllOverride>
         })
-      }
+      }}
+      valueOptions={DLL_OVERRIDE_OPTIONS}
+      values={props.config.dllOverrides}
     />
   )
 }
@@ -65,132 +65,136 @@ function WineGameConfigEditor(props: ConfigEditorProps<WineGameConfig>) {
   return (
     <div class="flex flex-wrap gap-4 items-start items-stretch">
       <FormField
-        label={t('plugin.wine.prefix')}
-        description={t('plugin.wine.prefixDesc')}
         class="flex-1 min-w-48"
+        description={t('plugin.wine.prefixDesc')}
+        label={t('plugin.wine.prefix')}
       >
         <FormPathInput
           class="w-full"
-          value={props.config.prefix}
-          onCommit={v => props.onCommit({ ...props.config, prefix: v })}
-          placeholder={t('plugin.wine.prefixPlaceholder')}
           isDir
+          onCommit={v => {
+            props.onCommit({ ...props.config, prefix: v })
+          }}
+          placeholder={t('plugin.wine.prefixPlaceholder')}
+          value={props.config.prefix}
         />
       </FormField>
 
       <FormField
-        label={t('plugin.wine.arch')}
-        description={t('plugin.wine.archDesc')}
         class="w-28"
+        description={t('plugin.wine.archDesc')}
+        label={t('plugin.wine.arch')}
       >
         <FormSelect
           class="w-full"
+          onChange={(e: Event) => {
+            props.onCommit({
+              ...props.config,
+              arch: (e.target as HTMLSelectElement).value as WineArch
+            })
+          }}
           options={[
             { label: 'win64', value: 'win64' },
             { label: 'win32', value: 'win32' }
           ]}
           value={props.config.arch}
-          onChange={(e: Event) =>
-            props.onCommit({
-              ...props.config,
-              arch: (e.target as HTMLSelectElement).value as WineArch
-            })
-          }
         />
       </FormField>
 
       <FormField
-        label={t('plugin.wine.locale')}
-        description={t('plugin.wine.localeDesc')}
         class="flex-1 min-w-32"
+        description={t('plugin.wine.localeDesc')}
+        label={t('plugin.wine.locale')}
       >
         <FormInput
           class="w-full"
+          onBlur={(e: FocusEvent) => {
+            const value = (e.target as HTMLInputElement).value
+            if (value !== props.config.locale) {
+              props.onCommit({ ...props.config, locale: value })
+            }
+          }}
+          placeholder={t('plugin.wine.localePlaceholder')}
           type="text"
           value={props.config.locale}
-          placeholder={t('plugin.wine.localePlaceholder')}
-          onBlur={(e: FocusEvent) => {
-            const val = (e.target as HTMLInputElement).value
-            if (val !== props.config.locale) {
-              props.onCommit({ ...props.config, locale: val })
-            }
+        />
+      </FormField>
+
+      <FormField
+        class="w-auto"
+        description={t('plugin.wine.esyncDesc')}
+        label={t('plugin.wine.esync')}
+      >
+        <FormSwitch
+          checked={props.config.esync}
+          onChange={(checked: boolean) => {
+            props.onCommit({ ...props.config, esync: checked })
           }}
         />
       </FormField>
 
       <FormField
-        label={t('plugin.wine.esync')}
-        description={t('plugin.wine.esyncDesc')}
         class="w-auto"
-      >
-        <FormSwitch
-          checked={props.config.esync}
-          onChange={(checked: boolean) =>
-            props.onCommit({ ...props.config, esync: checked })
-          }
-        />
-      </FormField>
-
-      <FormField
-        label={t('plugin.wine.fsync')}
         description={t('plugin.wine.fsyncDesc')}
-        class="w-auto"
+        label={t('plugin.wine.fsync')}
       >
         <FormSwitch
           checked={props.config.fsync}
-          onChange={(checked: boolean) =>
+          onChange={(checked: boolean) => {
             props.onCommit({ ...props.config, fsync: checked })
-          }
+          }}
         />
       </FormField>
 
       <FormField
-        label={t('plugin.wine.killWineserver')}
-        description={t('plugin.wine.killWineserverDesc')}
         class="w-auto"
+        description={t('plugin.wine.killWineserverDesc')}
+        label={t('plugin.wine.killWineserver')}
       >
         <FormSwitch
           checked={props.config.killWineserverOnExit}
-          onChange={(checked: boolean) =>
+          onChange={(checked: boolean) => {
             props.onCommit({ ...props.config, killWineserverOnExit: checked })
-          }
+          }}
         />
       </FormField>
 
       <DllOverridesEditor config={props.config} onCommit={props.onCommit} />
 
       <FormTableEditor
+        addLabel={t('plugin.wine.addEnv')}
         label={t('plugin.wine.extraEnv')}
         labelClass="text-xs"
+        onCommit={v => {
+          props.onCommit({ ...props.config, extraEnv: v })
+        }}
         values={props.config.extraEnv}
-        onCommit={v => props.onCommit({ ...props.config, extraEnv: v })}
-        addLabel={t('plugin.wine.addEnv')}
       />
     </div>
   )
 }
 
 export const WINE_PLUGIN: PluginDefinition<'wine'> = {
-  info: {
-    id: 'wine',
-    nameKey: 'plugin.wine.name',
-    descriptionKey: 'plugin.wine.description',
-    version: '1.3.1',
-    author: 'BUILTIN',
-    links: [{ label: 'WineHQ', url: 'https://www.winehq.org/' }],
-    platforms: ['linux']
-  },
-  metaKey: 'wine',
   configDefaults: {
-    prefix: '',
     arch: 'win64',
-    esync: false,
-    fsync: false,
     dllOverrides: {},
-    locale: '',
+    esync: false,
+    extraEnv: {},
+    fsync: false,
     killWineserverOnExit: false,
-    extraEnv: {}
+    locale: '',
+    prefix: ''
+  },
+  GameEditor: WineGameConfigEditor,
+  info: {
+    author: 'BUILTIN',
+    descriptionKey: 'plugin.wine.description',
+    id: 'wine',
+    links: [{ label: 'WineHQ', url: 'https://www.winehq.org/' }],
+    nameKey: 'plugin.wine.name',
+    platforms: ['linux'],
+    version: '1.3.1'
   },
   MetaEditor: AutoAddMetaEditor,
-  GameEditor: WineGameConfigEditor
+  metaKey: 'wine'
 }

@@ -4,9 +4,9 @@ import { describe, expect, it } from 'vitest'
 // Minimal translator: returns the looked-up value, or the raw key when the
 // dictionary has no entry (mirrors how the real translator falls back).
 const dict: Record<string, string> = {
-  'hint.syncFailed': '同步失败',
+  'a.b': 'AB',
   'hint.ok': 'OK',
-  'a.b': 'AB'
+  'hint.syncFailed': '同步失败'
 }
 const t = (key: string): string => dict[key] ?? key
 

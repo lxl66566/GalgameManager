@@ -17,42 +17,46 @@ function GameWrapperGameConfigEditor(props: ConfigEditorProps<GameWrapperGameCon
 
   return (
     <div class="flex flex-wrap gap-4 items-start items-stretch">
-      <FormField label={t('plugin.gameWrapper.cmd')} class="flex-1 min-w-48">
+      <FormField class="flex-1 min-w-48" label={t('plugin.gameWrapper.cmd')}>
         <FormInput
-          class="w-full"
-          type="text"
-          value={props.config.cmd}
-          placeholder={t('plugin.gameWrapper.cmdPlaceholder')}
           checkVars
-          warning={needsPlaceholder() ? t('plugin.needBraces') : undefined}
+          class="w-full"
           onBlur={(e: FocusEvent) => {
-            const val = (e.target as HTMLInputElement).value
-            if (val !== props.config.cmd) {
-              props.onCommit({ ...props.config, cmd: val })
+            const value = (e.target as HTMLInputElement).value
+            if (value !== props.config.cmd) {
+              props.onCommit({ ...props.config, cmd: value })
             }
           }}
+          placeholder={t('plugin.gameWrapper.cmdPlaceholder')}
+          type="text"
+          value={props.config.cmd}
+          warning={needsPlaceholder() ? t('plugin.needBraces') : undefined}
         />
       </FormField>
 
       <FormField
-        label={t('plugin.currentDir')}
-        description={t('plugin.currentDirDesc')}
         class="flex-1 min-w-48"
+        description={t('plugin.currentDirDesc')}
+        label={t('plugin.currentDir')}
       >
         <FormPathInput
           class="w-full"
-          value={props.config.currentDir}
-          onCommit={v => props.onCommit({ ...props.config, currentDir: v })}
-          placeholder={t('plugin.currentDirPlaceholder')}
           isDir
+          onCommit={v => {
+            props.onCommit({ ...props.config, currentDir: v })
+          }}
+          placeholder={t('plugin.currentDirPlaceholder')}
+          value={props.config.currentDir}
         />
       </FormField>
 
-      <FormField label={t('plugin.gameWrapper.env')} class="w-full">
+      <FormField class="w-full" label={t('plugin.gameWrapper.env')}>
         <FormTableEditor
-          values={props.config.env}
-          onCommit={v => props.onCommit({ ...props.config, env: v })}
           addLabel={t('plugin.gameWrapper.addEnv')}
+          onCommit={v => {
+            props.onCommit({ ...props.config, env: v })
+          }}
+          values={props.config.env}
         />
       </FormField>
     </div>
@@ -60,20 +64,20 @@ function GameWrapperGameConfigEditor(props: ConfigEditorProps<GameWrapperGameCon
 }
 
 export const GAME_WRAPPER_PLUGIN: PluginDefinition<'gameWrapper'> = {
-  info: {
-    id: 'gameWrapper',
-    nameKey: 'plugin.gameWrapper.name',
-    descriptionKey: 'plugin.gameWrapper.description',
-    version: '1.3.1',
-    author: 'BUILTIN',
-    links: []
-  },
-  metaKey: 'gameWrapper',
   configDefaults: {
     cmd: '',
     currentDir: '',
     env: {}
   },
+  GameEditor: GameWrapperGameConfigEditor,
+  info: {
+    author: 'BUILTIN',
+    descriptionKey: 'plugin.gameWrapper.description',
+    id: 'gameWrapper',
+    links: [],
+    nameKey: 'plugin.gameWrapper.name',
+    version: '1.3.1'
+  },
   MetaEditor: AutoAddMetaEditor,
-  GameEditor: GameWrapperGameConfigEditor
+  metaKey: 'gameWrapper'
 }

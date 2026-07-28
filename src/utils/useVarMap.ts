@@ -12,6 +12,6 @@ import { createResource } from 'solid-js'
 
 export function useVarMap() {
   const { config } = useConfig()
-  const [varMap] = createResource(() => config.devices, getDeviceVarMap)
-  return varMap
+  const [variableMap] = createResource(() => config.devices, getDeviceVarMap)
+  return variableMap
 }

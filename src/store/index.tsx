@@ -30,10 +30,10 @@ import { createStore, produce, reconcile, unwrap } from 'solid-js/store'
 import toast from 'solid-toast'
 import { currentDeviceId } from './Singleton'
 
+type PluginMetadatasPatch = DeepPartial<RustPluginMetadatasPatch>
 // Re-alias the ts-rs output through DeepPartial so callers can omit any
 // nested field (matches the wire-level `#[serde(default)]` behavior).
 type SettingsPatch = DeepPartial<RustSettingsPatch>
-type PluginMetadatasPatch = DeepPartial<RustPluginMetadatasPatch>
 
 // 由 Rust 端的 initialization_script 在页面任何脚本之前注入
 // （见 src-tauri/src/lib.rs 的 WebviewWindowBuilder::initialization_script）。
@@ -48,10 +48,10 @@ declare global {
 // ── Backend toast listener ──────────────────────────────────────────────────
 
 interface ToastEventPayload {
-  variant: string
   message: string
   /** Optional stable ID used to identify a loading toast for later dismissal. */
   toast_id?: string
+  variant: string
 }
 
 /**
@@ -59,17 +59,17 @@ interface ToastEventPayload {
  * the Rust backend.  Returns an unlisten function for each listener.
  */
 const startToastListener = async (t: i18n.Translator<Dictionary>) => {
-  const validVariants = new Set(['success', 'error', 'warning', 'default', 'loading'])
+  const validVariants = new Set(['default', 'error', 'loading', 'success', 'warning'])
 
   const unlistenShow = await listen<ToastEventPayload>('toast://show', event => {
-    const { variant, message, toast_id } = event.payload
+    const { message, toast_id, variant } = event.payload
     const v = (validVariants.has(variant) ? variant : 'default') as ToastVariant
     const resolved = resolveBackendI18n(
       message,
       key => t(key as keyof Dictionary) as string
     )
     const toastId = toast_id ?? undefined
-    myToast({ variant: v, message: resolved, toastId })
+    myToast({ message: resolved, toastId, variant: v })
   })
 
   const unlistenDismiss = await listen<string>('toast://dismiss', event => {
@@ -88,13 +88,13 @@ const startToastListener = async (t: i18n.Translator<Dictionary>) => {
 // 前端不再维护 DEFAULT_CONFIG：初始值由 Rust 端通过
 // initialization_script 注入（window.__INITIAL_CONFIG__），与 Config::default()
 // /磁盘 config 完全一致。TS 端只消费，不复制默认值，避免漂移。
-const [config, setConfig] = createStore<Config>(window.__INITIAL_CONFIG__)
+const [config, setConfig] = createStore<Config>(globalThis.__INITIAL_CONFIG__)
 
 export const useConfigInit = (t?: i18n.Translator<Dictionary>, onReady?: () => void) => {
   onMount(() => {
     let unlisten: (() => void) | undefined
     let unlistenToast: (() => void) | undefined
-    let mounted = true
+    let isMounted = true
 
     const init = async () => {
       // Config 的初始值已经由 initialization_script 注入（见 lib.rs），
@@ -114,17 +114,17 @@ export const useConfigInit = (t?: i18n.Translator<Dictionary>, onReady?: () => v
         setConfig(reconcile(event.payload))
       })
 
-      const [toastFn, fn] = await Promise.all([toastTask, listenTask])
+      const [toastFunction, function_] = await Promise.all([toastTask, listenTask])
 
       // 如果 await 期间组件已卸载，立即注销监听，防止内存泄漏
-      if (!mounted) {
-        toastFn?.()
-        fn()
+      if (!isMounted) {
+        toastFunction?.()
+        function_()
         return
       }
 
-      unlistenToast = toastFn
-      unlisten = fn
+      unlistenToast = toastFunction
+      unlisten = function_
 
       // 2. 等待 refreshConfig 完成。initialization_script 已注入初始值，
       //    这里是防御性的：确保 listener 注册期间若发生外部修改能被纠正。
@@ -134,14 +134,14 @@ export const useConfigInit = (t?: i18n.Translator<Dictionary>, onReady?: () => v
       // SolidJS 的所有同步 effects（colorMode 同步 dark class、Toaster 的
       // mergeContainerOptions 同步 position 等）都已执行完毕。这样由
       // onReady 触发的 toast 才会用正确的 position 与主题色渲染。
-      if (!mounted) return
+      if (!isMounted) return
       onReady?.()
     }
 
     init()
 
     onCleanup(() => {
-      mounted = false
+      isMounted = false
       unlisten?.()
       unlistenToast?.()
     })
@@ -152,9 +152,9 @@ const refreshConfig = async () => {
   try {
     const data = await invoke<Config>('get_config')
     setConfig(reconcile(data))
-  } catch (e) {
-    console.error('Failed to load local config:', e)
-    toast.error(`Failed to load local config: ${e}`)
+  } catch (error) {
+    console.error('Failed to load local config:', error)
+    toast.error(`Failed to load local config: ${error}`)
   }
 }
 
@@ -183,14 +183,9 @@ export const checkAndPullRemote = async (
     if (oldConfig) {
       // 弹出带撤回按钮的 Toast
       myToast({
-        variant: 'success',
-        title: t('hint.syncSuccess'),
-        message: skipCheck ? t('hint.forceUpdatedConfig') : t('hint.appliedNewConfig'),
-        toastId,
         actions: [
           {
             label: t('ui.withdraw'),
-            variant: 'secondary',
             onClick: () => {
               setConfig(reconcile(oldConfig))
               // 恢复旧配置到磁盘。这里必须用 save_config（全量覆盖），
@@ -200,22 +195,27 @@ export const checkAndPullRemote = async (
                 try {
                   await invoke('save_config', { newConfig: oldConfig })
                   toast.success(t('hint.restorePreviousConfigSuccess'))
-                } catch (e) {
-                  toast.error(t('hint.restorePreviousConfigFailed') + ': ' + e)
+                } catch (error) {
+                  toast.error(t('hint.restorePreviousConfigFailed') + ': ' + error)
                   void refreshConfig()
                 }
               })()
-            }
+            },
+            variant: 'secondary'
           }
-        ]
+        ],
+        message: skipCheck ? t('hint.forceUpdatedConfig') : t('hint.appliedNewConfig'),
+        title: t('hint.syncSuccess'),
+        toastId,
+        variant: 'success'
       })
     } else {
       toast.success(t('hint.localIsTheNewest'), { id: toastId })
     }
-  } catch (e) {
+  } catch (error) {
     // 只在自动拉取且配置了存储后端时提示，提升首次启动的体验
-    if (skipCheck || !(e as Error).toString().includes('Storage provider not set')) {
-      toast.error(t('hint.checkRemoteConfigFailed') + ': ' + e, { id: toastId })
+    if (skipCheck || !(error as Error).toString().includes('Storage provider not set')) {
+      toast.error(t('hint.checkRemoteConfigFailed') + ': ' + error, { id: toastId })
     } else {
       toast.dismiss(toastId)
     }
@@ -231,8 +231,8 @@ export const performAutoUpload = async (t: i18n.Translator<Dictionary>) => {
     } else if (res === 'conflict') {
       toast.error(t('hint.configUploadConflict'))
     }
-  } catch (e) {
-    toast.error(t('hint.configAutoUploadFailed') + ': ' + e)
+  } catch (error) {
+    toast.error(t('hint.configAutoUploadFailed') + ': ' + error)
   }
 }
 
@@ -245,8 +245,8 @@ export const performManualUpload = async (t: i18n.Translator<Dictionary>) => {
     } else if (res === 'conflict') {
       toast.error(t('hint.configUploadConflict'))
     }
-  } catch (e) {
-    toast.error(t('hint.configUploadFailed') + ': ' + e)
+  } catch (error) {
+    toast.error(t('hint.configUploadFailed') + ': ' + error)
   }
 }
 
@@ -256,8 +256,8 @@ export const performManualUpload = async (t: i18n.Translator<Dictionary>) => {
 const sendPatch = async (patch: ConfigPatch) => {
   try {
     await invoke('patch_config', { patch })
-  } catch (e) {
-    toast.error(`Failed to save config: ${e}`)
+  } catch (error) {
+    toast.error(`Failed to save config: ${error}`)
     void refreshConfig()
   }
 }
@@ -287,8 +287,6 @@ const schedulePatch = (patch: ConfigPatch) => {
 
 export const useConfig = () => {
   return {
-    config,
-    refresh: refreshConfig,
     actions: {
       addGame: (game: Game) => {
         game.addedTime = new Date().toISOString()
@@ -299,6 +297,19 @@ export const useConfig = () => {
           })
         )
         void sendPatch(appendGameOp(g))
+      },
+      getCurrentDevice: async (): Promise<Device | undefined> => {
+        const uid = await currentDeviceId()
+        return config.devices.find(d => d.uid === uid)
+      },
+      getCurrentDeviceOrDefault: async (): Promise<Device> => {
+        const uid = await currentDeviceId()
+        const device = config.devices.find(d => d.uid === uid) || {
+          name: 'Unnamed' + (config.devices.length + 1),
+          uid: uid,
+          variables: {}
+        }
+        return device
       },
       removeGame: (index: number) => {
         const id = config.games[index]?.id
@@ -332,6 +343,22 @@ export const useConfig = () => {
           void sendPatch(modifyGameOp(id, gp))
         }
       },
+      /** Patch a single game's `coverColor` in place (reference-preserving)
+       *  and persist with a debounced write. Paired with `setImageHash`:
+       *  clearing happens there (on image change), setting happens here (once
+       *  the backend has extracted the color for the current cover). */
+      setCoverColor: (index: number, color: string) => {
+        const id = config.games[index]?.id
+        if (id === undefined) return
+        setConfig(
+          produce(state => {
+            if (state.games[index]) {
+              state.games[index].coverColor = color
+            }
+          })
+        )
+        schedulePatch(modifyGameOp(id, { coverColor: color }))
+      },
       /** Patch a single game's `imageSha256` in place (reference-preserving)
        *  and persist with a debounced write. Keeping the game object identity
        *  stable avoids re-mounting its card in the virtualized grid and avoids
@@ -357,23 +384,68 @@ export const useConfig = () => {
             }
           })
         )
-        schedulePatch(modifyGameOp(id, { imageSha256: hash, coverColor: null }))
+        schedulePatch(modifyGameOp(id, { coverColor: null, imageSha256: hash }))
       },
-      /** Patch a single game's `coverColor` in place (reference-preserving)
-       *  and persist with a debounced write. Paired with `setImageHash`:
-       *  clearing happens there (on image change), setting happens here (once
-       *  the backend has extracted the color for the current cover). */
-      setCoverColor: (index: number, color: string) => {
-        const id = config.games[index]?.id
-        if (id === undefined) return
+      updateCurrentDevice: async (device: Device) => {
+        const uid = await currentDeviceId()
+        const deviceUnwrap = unwrap(device)
+        const isExisted = config.devices.some(d => d.uid === uid)
         setConfig(
           produce(state => {
-            if (state.games[index]) {
-              state.games[index].coverColor = color
+            const index = state.devices.findIndex(d => d.uid === uid)
+            if (index === -1) {
+              state.devices.push(deviceUnwrap)
+            }
+            // 如果没有找到，则添加
+            else {
+              state.devices[index] = deviceUnwrap
             }
           })
         )
-        schedulePatch(modifyGameOp(id, { coverColor: color }))
+        // Match the local decision: modify if the device already existed,
+        // otherwise append. Either way only this one device touches the wire.
+        // NOTE: the modify op enumerates every patchable `Device` field
+        // (i.e. all of `DevicePatch` — `uid` is `#[patch(skip)]`). If
+        // `Device` gains a field, add it here too or it will be silently
+        // dropped from the patch.
+        if (isExisted) {
+          void sendPatch(
+            modifyDeviceOp(uid, {
+              name: deviceUnwrap.name,
+              variables: deviceUnwrap.variables
+            })
+          )
+        } else {
+          void sendPatch(appendDeviceOp(deviceUnwrap))
+        }
+      },
+      /** Like {@link updateCurrentDevice} but debounces the IPC. */
+      updateCurrentDeviceDebounced: async (device: Device) => {
+        const uid = await currentDeviceId()
+        const deviceUnwrap = unwrap(device)
+        const isExisted = config.devices.some(d => d.uid === uid)
+        setConfig(
+          produce(state => {
+            const index = state.devices.findIndex(d => d.uid === uid)
+            if (index === -1) {
+              state.devices.push(deviceUnwrap)
+            }
+            // 如果没有找到，则添加
+            else {
+              state.devices[index] = deviceUnwrap
+            }
+          })
+        )
+        if (isExisted) {
+          schedulePatch(
+            modifyDeviceOp(uid, {
+              name: deviceUnwrap.name,
+              variables: deviceUnwrap.variables
+            })
+          )
+        } else {
+          schedulePatch(appendDeviceOp(deviceUnwrap))
+        }
       },
       updateDeviceVar: (deviceUid: string, key: string, value: string) => {
         setConfig(
@@ -393,6 +465,16 @@ export const useConfig = () => {
             modifyDeviceOp(deviceUid, { variables: { ...device.variables } })
           )
         }
+      },
+      /** Declarative plugin-metadata patch (e.g. enabling/disabling a plugin,
+       *  editing its defaults). Same pattern as `updateSettings`. */
+      updatePluginMetadatas: (patch: PluginMetadatasPatch) => {
+        setConfig(
+          produce(state => {
+            applyPatch(state.pluginMetadatas, patch)
+          })
+        )
+        void sendPatch({ pluginMetadatas: expandPatch(config.pluginMetadatas, patch) })
       },
       /** Declarative settings patch. Caller passes a deep-partial
        *  `SettingsPatch` describing exactly what changed; we merge it into
@@ -415,92 +497,10 @@ export const useConfig = () => {
           })
         )
         schedulePatch({ settings: expandPatch(config.settings, patch) })
-      },
-      /** Declarative plugin-metadata patch (e.g. enabling/disabling a plugin,
-       *  editing its defaults). Same pattern as `updateSettings`. */
-      updatePluginMetadatas: (patch: PluginMetadatasPatch) => {
-        setConfig(
-          produce(state => {
-            applyPatch(state.pluginMetadatas, patch)
-          })
-        )
-        void sendPatch({ pluginMetadatas: expandPatch(config.pluginMetadatas, patch) })
-      },
-      getCurrentDevice: async (): Promise<Device | undefined> => {
-        const uid = await currentDeviceId()
-        return config.devices.find(d => d.uid === uid)
-      },
-      getCurrentDeviceOrDefault: async (): Promise<Device> => {
-        const uid = await currentDeviceId()
-        const device = config.devices.find(d => d.uid === uid) || {
-          name: 'Unnamed' + (config.devices.length + 1),
-          uid: uid,
-          variables: {}
-        }
-        return device
-      },
-      updateCurrentDevice: async (device: Device) => {
-        const uid = await currentDeviceId()
-        const deviceUnwrap = unwrap(device)
-        const existed = config.devices.some(d => d.uid === uid)
-        setConfig(
-          produce(state => {
-            const index = state.devices.findIndex(d => d.uid === uid)
-            if (index !== -1) {
-              state.devices[index] = deviceUnwrap
-            }
-            // 如果没有找到，则添加
-            else {
-              state.devices.push(deviceUnwrap)
-            }
-          })
-        )
-        // Match the local decision: modify if the device already existed,
-        // otherwise append. Either way only this one device touches the wire.
-        // NOTE: the modify op enumerates every patchable `Device` field
-        // (i.e. all of `DevicePatch` — `uid` is `#[patch(skip)]`). If
-        // `Device` gains a field, add it here too or it will be silently
-        // dropped from the patch.
-        if (existed) {
-          void sendPatch(
-            modifyDeviceOp(uid, {
-              name: deviceUnwrap.name,
-              variables: deviceUnwrap.variables
-            })
-          )
-        } else {
-          void sendPatch(appendDeviceOp(deviceUnwrap))
-        }
-      },
-      /** Like {@link updateCurrentDevice} but debounces the IPC. */
-      updateCurrentDeviceDebounced: async (device: Device) => {
-        const uid = await currentDeviceId()
-        const deviceUnwrap = unwrap(device)
-        const existed = config.devices.some(d => d.uid === uid)
-        setConfig(
-          produce(state => {
-            const index = state.devices.findIndex(d => d.uid === uid)
-            if (index !== -1) {
-              state.devices[index] = deviceUnwrap
-            }
-            // 如果没有找到，则添加
-            else {
-              state.devices.push(deviceUnwrap)
-            }
-          })
-        )
-        if (existed) {
-          schedulePatch(
-            modifyDeviceOp(uid, {
-              name: deviceUnwrap.name,
-              variables: deviceUnwrap.variables
-            })
-          )
-        } else {
-          schedulePatch(appendDeviceOp(deviceUnwrap))
-        }
       }
-    }
+    },
+    config,
+    refresh: refreshConfig
   }
 }
 

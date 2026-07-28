@@ -41,11 +41,6 @@ import { FieldHint } from './FieldHint'
 
 export interface FormInputProps extends InputProps {
   /**
-   * Transform function applied when the value is pasted into the input.
-   * Receives the raw pasted text and must return the transformed string.
-   */
-  onBulkInput?: (value: string) => string
-  /**
    * Enable validation of `{var}` placeholders against the current device's
    * variable map. When enabled, unknown variable names trigger a warning
    * hint below the input.
@@ -53,6 +48,11 @@ export interface FormInputProps extends InputProps {
    * @default false
    */
   checkVars?: boolean
+  /**
+   * Transform function applied when the value is pasted into the input.
+   * Receives the raw pasted text and must return the transformed string.
+   */
+  onBulkInput?: (value: string) => string
   /**
    * External warning text rendered below the input (amber, icon + text).
    */
@@ -69,7 +69,7 @@ export const FormInput: Component<FormInputProps> = props => {
     'value'
   ])
 
-  const varWarning = useVarWarning(
+  const variableWarning = useVarWarning(
     () => (typeof local.value === 'string' ? local.value : ''),
     () => !!local.checkVars
   )
@@ -94,11 +94,11 @@ export const FormInput: Component<FormInputProps> = props => {
         }}
       />
       <div class="flex flex-col gap-1 mt-1">
-        <Show when={varWarning()}>
-          <FieldHint variant="warning" text={varWarning()} />
+        <Show when={variableWarning()}>
+          <FieldHint text={variableWarning()} variant="warning" />
         </Show>
         <Show when={local.warning}>
-          <FieldHint variant="warning" text={local.warning} />
+          <FieldHint text={local.warning} variant="warning" />
         </Show>
       </div>
     </div>
@@ -128,18 +128,18 @@ export const FormTextarea: Component<TextareaProps> = props => {
 // ─── FormField ───
 
 export interface FormFieldProps {
-  label?: string
-  /** Override the label element class. */
-  labelClass?: string
-  description?: string
-  /** Warning hint rendered below the children area (amber, icon + text). */
-  warning?: string
-  /** Error hint rendered below the children area (red, icon + text). */
-  error?: string
+  children: JSX.Element
   /** Override the children wrapper div class (default: `flex items-center min-h-7`). */
   childrenClass?: string
   class?: string
-  children: JSX.Element
+  description?: string
+  /** Error hint rendered below the children area (red, icon + text). */
+  error?: string
+  label?: string
+  /** Override the label element class. */
+  labelClass?: string
+  /** Warning hint rendered below the children area (amber, icon + text). */
+  warning?: string
 }
 
 /** Vertical field wrapper: label (with optional hint tooltip) → children → warning/error. */
@@ -154,7 +154,7 @@ export const FormField: Component<FormFieldProps> = props => (
       >
         <span class="truncate min-w-0">{props.label}</span>
         <Show when={props.description}>
-          <Tooltip openDelay={0} closeDelay={0}>
+          <Tooltip closeDelay={0} openDelay={0}>
             <Tooltip.Trigger class="inline-flex items-center shrink-0 cursor-help text-gray-400 dark:text-gray-500">
               <FiInfo class="w-3 h-3" />
             </Tooltip.Trigger>
@@ -170,10 +170,10 @@ export const FormField: Component<FormFieldProps> = props => (
     </Show>
     <div class={props.childrenClass ?? 'flex items-center min-h-7'}>{props.children}</div>
     <Show when={props.warning}>
-      <FieldHint variant="warning" text={props.warning} />
+      <FieldHint text={props.warning} variant="warning" />
     </Show>
     <Show when={props.error}>
-      <FieldHint variant="error" text={props.error} />
+      <FieldHint text={props.error} variant="error" />
     </Show>
   </div>
 )
@@ -184,44 +184,10 @@ const DEFAULT_PATH_INPUT =
   'flex-1 min-w-0 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-xs text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:outline-none placeholder-gray-400 dark:placeholder-gray-500 transition-all outline-none h-7 px-2 '
 
 export interface FormPathInputProps {
-  value: string
-  /** Commit callback — fires on blur (text) or after file dialog selection. */
-  onCommit: (value: string) => void
-  /**
-   * Transform function applied when the value comes from a "bulk" source
-   * (file-dialog selection or clipboard paste).
-   *
-   * The function receives the normalised value (backslashes already replaced)
-   * and must return the transformed string.
-   */
-  onBulkInput?: (value: string) => string
-  /**
-   * Callback fired when a file/folder is selected via the browse dialog.
-   * Receives the normalised path *before* `onBulkInput` is applied.
-   * Useful for side-effects like auto-filling related fields.
-   */
-  onBrowse?: (selectedPath: string) => void
-  isDir?: boolean
-  placeholder?: string
-  class?: string
-  /** File dialog filters passed directly to `@tauri-apps/plugin-dialog`. */
-  filters?: { name: string; extensions: string[] }[]
-  /**
-   * Extra class for the `<input>` element — merged via `cn()`
-   */
-  inputClass?: string
   /**
    * Extra class for the browse `<button>` — merged via `cn()`
    */
   buttonClass?: string
-  /**
-   * Enable validation of `{var}` placeholders against the current device's
-   * variable map. When enabled, unknown variable names trigger a warning
-   * hint below the input.
-   *
-   * @default true
-   */
-  checkVars?: boolean
   /**
    * Enable asynchronous path-existence validation. When enabled, the
    * resolved path (after variable substitution) is checked against the
@@ -232,6 +198,40 @@ export interface FormPathInputProps {
    */
   checkPathExist?: boolean
   /**
+   * Enable validation of `{var}` placeholders against the current device's
+   * variable map. When enabled, unknown variable names trigger a warning
+   * hint below the input.
+   *
+   * @default true
+   */
+  checkVars?: boolean
+  class?: string
+  /** File dialog filters passed directly to `@tauri-apps/plugin-dialog`. */
+  filters?: { extensions: string[]; name: string }[]
+  /**
+   * Extra class for the `<input>` element — merged via `cn()`
+   */
+  inputClass?: string
+  isDir?: boolean
+  /**
+   * Callback fired when a file/folder is selected via the browse dialog.
+   * Receives the normalised path *before* `onBulkInput` is applied.
+   * Useful for side-effects like auto-filling related fields.
+   */
+  onBrowse?: (selectedPath: string) => void
+  /**
+   * Transform function applied when the value comes from a "bulk" source
+   * (file-dialog selection or clipboard paste).
+   *
+   * The function receives the normalised value (backslashes already replaced)
+   * and must return the transformed string.
+   */
+  onBulkInput?: (value: string) => string
+  /** Commit callback — fires on blur (text) or after file dialog selection. */
+  onCommit: (value: string) => void
+  placeholder?: string
+  value: string
+  /**
    * External warning text rendered below the input (amber, icon + text),
    * e.g., a path-existence check result.
    */
@@ -241,10 +241,10 @@ export interface FormPathInputProps {
 /** Text input + file/folder browse button with var validation and warning hints. */
 export const FormPathInput: Component<FormPathInputProps> = props => {
   const { t } = useI18n()
-  const varMap = useVarMap()
+  const variableMap = useVarMap()
 
   // Var validation — checks for unknown {key} references
-  const varWarning = useVarWarning(
+  const variableWarning = useVarWarning(
     () => props.value,
     () => props.checkVars !== false
   )
@@ -252,18 +252,18 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
   // Path existence validation — async check via `paths_exist`
   const [pathExistWarning] = createResource(
     () => ({
+      enabled: props.checkPathExist === true,
       path: props.value,
-      vars: varMap(),
-      enabled: props.checkPathExist === true
+      vars: variableMap()
     }),
-    async ({ path, vars, enabled }) => {
-      if (!enabled || !path || !vars) return undefined
+    async ({ enabled, path, vars }) => {
+      if (!enabled || !path || !vars) return
       try {
         const resolved = resolveVar(path, vars)
         const results = await invoke<boolean[]>('paths_exist', { paths: [resolved] })
         return results[0] ? undefined : t('hint.pathNotExist')
       } catch {
-        return undefined
+        return
       }
     }
   )
@@ -284,16 +284,18 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
     )
 
   const handlePasteDetect = (e: InputEvent) => {
-    if (e.inputType === 'insertFromPaste') {
-      const input = e.currentTarget as HTMLInputElement
-      let val = fuckBackslash(input.value)
-      if (props.onBulkInput) {
-        val = props.onBulkInput(val)
-      }
-      input.value = val
-      if (val !== props.value) {
-        props.onCommit(val)
-      }
+    if (e.inputType !== 'insertFromPaste') {
+      return
+    }
+
+    const input = e.currentTarget as HTMLInputElement
+    let value = fuckBackslash(input.value)
+    if (props.onBulkInput) {
+      value = props.onBulkInput(value)
+    }
+    input.value = value
+    if (value !== props.value) {
+      props.onCommit(value)
     }
   }
 
@@ -301,20 +303,20 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
     try {
       const selected = await open({
         directory: props.isDir ?? false,
-        multiple: false,
-        filters: props.filters
+        filters: props.filters,
+        multiple: false
       })
       if (selected && typeof selected === 'string') {
         const normalized = fuckBackslash(selected)
         props.onBrowse?.(normalized)
-        let val = normalized
+        let value = normalized
         if (props.onBulkInput) {
-          val = props.onBulkInput(val)
+          value = props.onBulkInput(value)
         }
-        props.onCommit(val)
+        props.onCommit(value)
       }
-    } catch (e) {
-      console.error(e)
+    } catch (error) {
+      console.error(error)
     }
   }
 
@@ -323,24 +325,24 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
       {/* Input row: text input + browse button */}
       <div class="relative flex items-center w-full">
         <input
-          type="text"
-          value={props.value}
           class={inputClass()}
-          onInput={handlePasteDetect}
           onBlur={(e: FocusEvent) => {
-            const newVal = (e.target as HTMLInputElement).value
-            if (newVal !== props.value) {
-              props.onCommit(newVal)
+            const newValue = (e.target as HTMLInputElement).value
+            if (newValue !== props.value) {
+              props.onCommit(newValue)
             }
           }}
+          onInput={handlePasteDetect}
           placeholder={props.placeholder}
+          type="text"
+          value={props.value}
         />
 
         <button
-          type="button"
           class={buttonClass()}
           onClick={handleBrowse}
           title={t('ui.browse')}
+          type="button"
         >
           <FiFolder class="w-4 h-4" />
         </button>
@@ -348,14 +350,14 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
 
       {/* Warning hints — stacked below the input */}
       <div class="flex flex-col gap-2 mt-2">
-        <Show when={varWarning()}>
-          <FieldHint variant="warning" text={varWarning()} />
+        <Show when={variableWarning()}>
+          <FieldHint text={variableWarning()} variant="warning" />
         </Show>
         <Show when={pathExistWarning()}>
-          <FieldHint variant="warning" text={pathExistWarning()} />
+          <FieldHint text={pathExistWarning()} variant="warning" />
         </Show>
         <Show when={props.warning}>
-          <FieldHint variant="warning" text={props.warning} />
+          <FieldHint text={props.warning} variant="warning" />
         </Show>
       </div>
     </div>
@@ -364,26 +366,19 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
 
 // ─── FormTableEditor ────────────────────────────────────────────────────────
 
-export interface FormTableEditorValueOption {
-  label: string
-  value: string
-}
-
 export interface FormTableEditorProps {
-  /** Current key-value pairs */
-  values: Record<string, string>
-  /** Commit callback — fires when a value editing is committed (blur, delete, add). */
-  onCommit: (values: Record<string, string>) => void
+  /** Text for the add button (e.g. "Add Variable") */
+  addLabel?: string
+  class?: string
+  /** Secondary text below the label */
+  description?: string
+  /** Empty-state placeholder text */
+  emptyText?: string
   /** When provided, renders a header with label + description + add button */
   label?: string
   labelClass?: string
-  /** Secondary text below the label */
-  description?: string
-  /** Text for the add button (e.g. "Add Variable") */
-  addLabel?: string
-  /** Empty-state placeholder text */
-  emptyText?: string
-  class?: string
+  /** Commit callback — fires when a value editing is committed (blur, delete, add). */
+  onCommit: (values: Record<string, string>) => void
   /**
    * Fixed set of allowed values. When provided, the value cell renders as
    * a `<select>` rather than a free-form `<textarea>`, useful for enum
@@ -392,4 +387,11 @@ export interface FormTableEditorProps {
   valueOptions?: readonly FormTableEditorValueOption[]
   /** Placeholder for the value input when `valueOptions` is not provided. */
   valuePlaceholder?: string
+  /** Current key-value pairs */
+  values: Record<string, string>
+}
+
+export interface FormTableEditorValueOption {
+  label: string
+  value: string
 }

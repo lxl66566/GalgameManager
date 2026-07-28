@@ -4,7 +4,7 @@
 import type { VoiceSpeedupGameConfig } from '@bindings/VoiceSpeedupGameConfig'
 import { FieldHint } from '@components/ui/FieldHint'
 import { FormField, FormInput, FormSelect } from '@components/ui/form'
-import { useI18n, type Dictionary } from '~/i18n'
+import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'
 import { isLinux } from '~/utils/platform'
 import { Show } from 'solid-js'
@@ -12,11 +12,11 @@ import { AutoAddMetaEditor } from './AutoAddMetaEditor'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 
 /** Parse a speed value from user input, clamped to [1.0, 2.0]. */
-const parseSpeed = (raw: string): number | null => {
+const parseSpeed = (raw: string): null | number => {
   // Allow intermediate states like "1.", ".5", "1.2"
-  const val = parseFloat(raw)
-  if (isNaN(val)) return null
-  return Math.min(2.0, Math.max(1.0, val))
+  const value = Number.parseFloat(raw)
+  if (isNaN(value)) return null
+  return Math.min(2, Math.max(1, value))
 }
 
 function VoiceSpeedupGameConfigEditor(props: ConfigEditorProps<VoiceSpeedupGameConfig>) {
@@ -24,97 +24,91 @@ function VoiceSpeedupGameConfigEditor(props: ConfigEditorProps<VoiceSpeedupGameC
   const { config } = useConfig()
 
   const showMmdevapiWarn = () => isLinux && props.config.provider === 'mmdevapi'
-  const showWineRequired = () => isLinux && config.pluginMetadatas.wine?.enabled === false
+  const showWineRequired = () => isLinux && !config.pluginMetadatas.wine?.enabled
 
   return (
     <div class="flex flex-col gap-2">
       <div class="flex flex-wrap gap-5 items-start">
-        <FormField label={t('plugin.voiceSpeedup.speed')} class="w-28">
+        <FormField class="w-28" label={t('plugin.voiceSpeedup.speed')}>
           <FormInput
             class="w-full"
-            type="text"
             inputmode="decimal"
-            value={String(props.config.speed)}
             onBlur={(e: FocusEvent) => {
               // Normalize on blur: reformat to clean decimal
-              const el = e.target as HTMLInputElement
-              const parsed = parseSpeed(el.value)
-              if (parsed !== null) {
-                el.value = String(parsed)
-                props.onCommit({ ...props.config, speed: parsed })
-              } else {
+              const element = e.target as HTMLInputElement
+              const parsed = parseSpeed(element.value)
+              if (parsed === null) {
                 // Reset to current config value if invalid
-                el.value = String(props.config.speed)
+                element.value = String(props.config.speed)
+              } else {
+                element.value = String(parsed)
+                props.onCommit({ ...props.config, speed: parsed })
               }
             }}
+            type="text"
+            value={String(props.config.speed)}
           />
         </FormField>
-        <FormField label={t('plugin.voiceSpeedup.provider')} class="w-28">
+        <FormField class="w-28" label={t('plugin.voiceSpeedup.provider')}>
           <FormSelect
             class="w-full"
+            onChange={(e: Event) => {
+              props.onCommit({
+                ...props.config,
+                provider: (e.target as HTMLSelectElement).value as 'dsound' | 'mmdevapi'
+              })
+            }}
             options={[
               { label: 'MMDevAPI', value: 'mmdevapi' },
               { label: 'dsound', value: 'dsound' }
             ]}
             value={props.config.provider}
-            onChange={(e: Event) =>
-              props.onCommit({
-                ...props.config,
-                provider: (e.target as HTMLSelectElement).value as 'mmdevapi' | 'dsound'
-              })
-            }
           />
         </FormField>
-        <FormField label={t('plugin.arch')} class="w-28">
+        <FormField class="w-28" label={t('plugin.arch')}>
           <FormSelect
             class="w-full"
+            onChange={(e: Event) => {
+              props.onCommit({
+                ...props.config,
+                arch: (e.target as HTMLSelectElement).value as 'auto' | 'x64' | 'x86'
+              })
+            }}
             options={[
               { label: t('plugin.archAuto'), value: 'auto' },
               { label: 'x86', value: 'x86' },
               { label: 'x64', value: 'x64' }
             ]}
             value={props.config.arch}
-            onChange={(e: Event) =>
-              props.onCommit({
-                ...props.config,
-                arch: (e.target as HTMLSelectElement).value as 'auto' | 'x86' | 'x64'
-              })
-            }
           />
         </FormField>
       </div>
       <Show when={showMmdevapiWarn()}>
-        <FieldHint
-          variant="warning"
-          text={String(t('plugin.voiceSpeedup.mmdevapiWarn' as keyof Dictionary))}
-        />
+        <FieldHint text={t('plugin.voiceSpeedup.mmdevapiWarn')} variant="warning" />
       </Show>
       <Show when={showWineRequired()}>
-        <FieldHint
-          variant="warning"
-          text={String(t('plugin.wineRequired' as keyof Dictionary))}
-        />
+        <FieldHint text={t('plugin.wineRequired')} variant="warning" />
       </Show>
     </div>
   )
 }
 
 export const VOICE_SPEEDUP_PLUGIN: PluginDefinition<'voiceSpeedup'> = {
+  configDefaults: { arch: 'auto', provider: 'mmdevapi', speed: 1.5 },
+  GameEditor: VoiceSpeedupGameConfigEditor,
   info: {
-    id: 'voiceSpeedup',
-    nameKey: 'plugin.voiceSpeedup.name',
-    descriptionKey: 'plugin.voiceSpeedup.description',
-    version: '1.3.1',
     author: 'lxl66566',
+    descriptionKey: 'plugin.voiceSpeedup.description',
+    id: 'voiceSpeedup',
     links: [
       {
         label: 'GitHub',
         url: 'https://github.com/lxl66566/AudioSpeedHack'
       }
-    ]
+    ],
+    nameKey: 'plugin.voiceSpeedup.name',
+    version: '1.3.1'
   },
-  metaKey: 'voiceSpeedup',
-  configDefaults: { speed: 1.5, provider: 'mmdevapi', arch: 'auto' },
   MetaEditor: AutoAddMetaEditor,
-  GameEditor: VoiceSpeedupGameConfigEditor
+  metaKey: 'voiceSpeedup'
 }

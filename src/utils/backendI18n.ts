@@ -12,5 +12,5 @@
  */
 
 export function resolveBackendI18n(raw: string, t: (key: string) => string): string {
-  return raw.replace(/<([a-zA-Z0-9._]+)>/g, (_match, key: string) => t(key))
+  return raw.replaceAll(/<([\w.]+)>/g, (_match, key: string) => t(key))
 }

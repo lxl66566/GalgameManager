@@ -8,8 +8,8 @@ import { splitProps, type JSX } from 'solid-js'
 import { Input } from './Input'
 
 interface InputWithSuffixProps extends JSX.InputHTMLAttributes<HTMLInputElement> {
-  suffix: string
   containerClass?: string
+  suffix: string
 }
 
 export function InputWithSuffix(props: InputWithSuffixProps) {

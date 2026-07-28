@@ -19,20 +19,20 @@ import { describe, expect, it } from 'vitest'
 // values; the rest default via `as Game`.
 function game(id: number, over: Partial<Game> = {}): Game {
   return {
-    id,
-    name: `g${id}`,
-    excutablePath: null,
-    savePaths: [],
-    imageUrl: null,
-    imageSha256: null,
     addedTime: '2024-01-01T00:00:00Z',
-    useTime: [0, 0],
+    coverColor: null,
+    excutablePath: null,
+    id,
+    imageSha256: null,
+    imageUrl: null,
     lastPlayedTime: null,
     lastUploadTime: null,
-    coverColor: null,
+    name: `g${id}`,
     plugins: [],
+    savePaths: [],
+    useTime: [0, 0],
     ...over
-  } as Game
+  }
 }
 
 describe('diffGame', () => {
@@ -84,12 +84,12 @@ describe('appendGameOp / deleteGameOp / modifyGameOp', () => {
   })
 
   it('deleteGameOp only carries the id', () => {
-    expect(deleteGameOp(42)).toEqual({ games: [{ op: 'delete', id: 42 }] })
+    expect(deleteGameOp(42)).toEqual({ games: [{ id: 42, op: 'delete' }] })
   })
 
   it('modifyGameOp wraps the sub-patch with the id', () => {
     expect(modifyGameOp(3, { name: 'three' })).toEqual({
-      games: [{ op: 'modify', id: 3, value: { name: 'three' } }]
+      games: [{ id: 3, op: 'modify', value: { name: 'three' } }]
     })
   })
 })
@@ -153,26 +153,26 @@ describe('mergeConfigPatches', () => {
 
 describe('applyPatch', () => {
   it('replaces a leaf value', () => {
-    const t = { theme: 'light', lang: 'en' }
+    const t = { lang: 'en', theme: 'light' }
     applyPatch(t, { theme: 'dark' })
-    expect(t).toEqual({ theme: 'dark', lang: 'en' })
+    expect(t).toEqual({ lang: 'en', theme: 'dark' })
   })
 
   it('recurses into nested plain objects (2 levels)', () => {
-    const t = { appearance: { theme: 'light', lang: 'en' }, launch: { mode: true } }
+    const t = { appearance: { lang: 'en', theme: 'light' }, launch: { mode: true } }
     applyPatch(t, { appearance: { theme: 'dark' } })
     expect(t).toEqual({
-      appearance: { theme: 'dark', lang: 'en' },
+      appearance: { lang: 'en', theme: 'dark' },
       launch: { mode: true }
     })
   })
 
   it('recurses into three levels of nesting', () => {
     // This mirrors the deepest real-world path: settings.storage.local.path.
-    const t = { storage: { local: { path: '/old', operator: 'x' }, provider: 'local' } }
+    const t = { storage: { local: { operator: 'x', path: '/old' }, provider: 'local' } }
     applyPatch(t, { storage: { local: { path: '/new' } } })
     expect(t).toEqual({
-      storage: { local: { path: '/new', operator: 'x' }, provider: 'local' }
+      storage: { local: { operator: 'x', path: '/new' }, provider: 'local' }
     })
   })
 
@@ -191,29 +191,26 @@ describe('applyPatch', () => {
   })
 
   it('skips undefined values (means "no change")', () => {
-    const t = { theme: 'light', lang: 'en' }
-    applyPatch(t, { theme: 'dark', lang: undefined })
+    const t = { lang: 'en', theme: 'light' }
+    applyPatch(t, { lang: undefined, theme: 'dark' })
     // lang is unchanged because the patch carried undefined.
-    expect(t).toEqual({ theme: 'dark', lang: 'en' })
+    expect(t).toEqual({ lang: 'en', theme: 'dark' })
   })
 
   it('does nothing when target is not a plain object', () => {
-    const arr = [1, 2, 3]
-    applyPatch(
-      arr as unknown as Record<string, unknown>,
-      { 0: 99 } as unknown as Record<string, unknown>
-    )
+    const array = [1, 2, 3]
+    applyPatch(array as unknown as Record<string, unknown>, { 0: 99 })
     // Arrays should be left untouched — applyPatch only operates on plain objects.
-    expect(arr).toEqual([1, 2, 3])
+    expect(array).toEqual([1, 2, 3])
   })
 
   it('does nothing on null/undefined target', () => {
-    expect(() =>
+    expect(() => {
       applyPatch(null as unknown as Record<string, unknown>, { a: 1 })
-    ).not.toThrow()
-    expect(() =>
+    }).not.toThrow()
+    expect(() => {
       applyPatch(undefined as unknown as Record<string, unknown>, { a: 1 })
-    ).not.toThrow()
+    }).not.toThrow()
   })
 
   it('branch-merges at multiple keys simultaneously', () => {
@@ -228,7 +225,7 @@ describe('applyPatch', () => {
     const t = { nested: { a: 1, b: 2 }, other: 'keep' }
     // If the patch carries a Date (not a plain object) for a key whose target
     // value IS a plain object, we should replace, not recurse.
-    applyPatch(t, { nested: 'boom' as unknown as Record<string, unknown> })
+    applyPatch(t, { nested: 'boom' })
     expect(t.nested).toBe('boom')
     expect(t.other).toBe('keep')
   })
@@ -249,8 +246,8 @@ describe('applyPatch', () => {
 describe('expandPatch', () => {
   it('expands a nested partial into the full sub-struct', () => {
     const base = {
-      storage: { provider: 'webdav', webdav: { endpoint: 'https://a', username: 'old' } },
-      launch: { precisionMode: true, dailyStat: true }
+      launch: { dailyStat: true, precisionMode: true },
+      storage: { provider: 'webdav', webdav: { endpoint: 'https://a', username: 'old' } }
     }
     const patch = { storage: { webdav: { username: 'new' } } }
     expect(expandPatch(base, patch)).toEqual({
@@ -266,15 +263,15 @@ describe('expandPatch', () => {
   })
 
   it('does not mutate the base object', () => {
-    const base = { launch: { precisionMode: true, dailyStat: true } }
+    const base = { launch: { dailyStat: true, precisionMode: true } }
     expandPatch(base, { launch: { dailyStat: false } })
     expect(base.launch.dailyStat).toBe(true)
   })
 
   it('replaces (not merges) array leaves inside an expanded sub-struct', () => {
-    const base = { meta: { list: [1, 2, 3], flag: true } }
+    const base = { meta: { flag: true, list: [1, 2, 3] } }
     expect(expandPatch(base, { meta: { list: [9] } })).toEqual({
-      meta: { list: [9], flag: true }
+      meta: { flag: true, list: [9] }
     })
   })
 })
@@ -283,8 +280,8 @@ describe('expandPatch', () => {
 
 describe('appendDeviceOp / deleteDeviceOp / modifyDeviceOp', () => {
   const device = {
-    uid: 'dev-1',
     name: 'Dev 1',
+    uid: 'dev-1',
     variables: { PATH: '/usr/bin' }
   } as Device
 
@@ -296,13 +293,13 @@ describe('appendDeviceOp / deleteDeviceOp / modifyDeviceOp', () => {
 
   it('deleteDeviceOp only carries the uid', () => {
     expect(deleteDeviceOp('dev-1')).toEqual({
-      devices: [{ op: 'delete', id: 'dev-1' }]
+      devices: [{ id: 'dev-1', op: 'delete' }]
     })
   })
 
   it('modifyDeviceOp wraps the sub-patch with the uid', () => {
     expect(modifyDeviceOp('dev-1', { name: 'Renamed' })).toEqual({
-      devices: [{ op: 'modify', id: 'dev-1', value: { name: 'Renamed' } }]
+      devices: [{ id: 'dev-1', op: 'modify', value: { name: 'Renamed' } }]
     })
   })
 })

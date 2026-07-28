@@ -7,12 +7,12 @@
 /// actually need to assert on `invoke()` calls.
 
 export function invoke<T = unknown>(
-  _cmd: string,
+  _command: string,
   _args?: Record<string, unknown>
 ): Promise<T> {
   return Promise.reject(
     new Error(
-      `invoke() stub called in test without a mock — implement vi.mock for command "${_cmd}"`
+      `invoke() stub called in test without a mock — implement vi.mock for command "${_command}"`
     )
   )
 }
