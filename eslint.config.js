@@ -118,6 +118,8 @@ export default tseslint.config(
       'no-unassigned-vars': 'off',
       'no-undef': 'off',
       'no-underscore-dangle': 'off',
+      // --- rules from plugins not loaded in ESLint ---
+      'oxc/no-map-spread': 'off',
       // Import ordering is owned by `@ianvs/prettier-plugin-sort-imports`
       // (run via `prettier --write`, which executes *after* `eslint --fix` in
       // lint-staged). Perfectionist's sort-imports rules use a different
@@ -127,8 +129,6 @@ export default tseslint.config(
       // other Perfectionist rules (sort-objects, sort-object-types, …) stay.
       'perfectionist/sort-imports': 'off',
       'perfectionist/sort-named-imports': 'off',
-      // --- rules from plugins not loaded in ESLint ---
-      'oxc/no-map-spread': 'off',
       'prefer-const': 'error',
       'promise/always-return': 'off',
       'unicorn/consistent-boolean-name': 'off',

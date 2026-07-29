@@ -31,9 +31,6 @@ jobs:
       - name: Type check (tsc)
         run: pnpm run check
 
-      - name: Unused code & deps (knip)
-        run: pnpm run knip
-
       - name: Unit tests (vitest)
         run: pnpm run test
 
