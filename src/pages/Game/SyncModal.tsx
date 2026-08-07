@@ -614,3 +614,7 @@ function ActionButton(props: ActionButtonProps) {
     </button>
   )
 }
+
+// Default export so the Game page can lazy-load this modal with a plain
+// string-literal dynamic import (keeps types fully static).
+export default ArchiveSyncModal

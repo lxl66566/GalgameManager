@@ -42,17 +42,18 @@ export default defineConfig({
     // 预构建常用依赖：Vite 默认是"首次请求才 esbuild 预构建"，导致 dev
     // 冷启动时这些库的第一次 import 要等数百 ms。显式 include 让 Vite 在
     // dev server 启动阶段一次性预构建，避免首屏渲染被懒预构建阻塞。
+    // 注意：@solidjs/router、@kobalte/core、solid-toast 不能加进来——它们
+    // 经 vite-plugin-solid 的 'solid' export condition 解析为 .jsx 入口，
+    // 而 Vite 的 OPTIMIZABLE_ENTRY_RE 不含 .jsx，include 只会触发
+    // "Cannot optimize dependency" 警告（它们本来就走插件管线，无行为差异）。
     include: [
       'solid-js',
       'solid-js/web',
       'solid-js/store',
-      '@solidjs/router',
       '@tauri-apps/api',
       '@tauri-apps/plugin-fs',
       '@tauri-apps/plugin-dialog',
       '@tauri-apps/plugin-opener',
-      '@kobalte/core',
-      'solid-toast',
       'clsx',
       'tailwind-merge',
       'dayjs'
