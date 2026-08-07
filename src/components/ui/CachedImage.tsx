@@ -1,6 +1,5 @@
-import { invoke } from '@tauri-apps/api/core'
+import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import { log } from '@utils/log'
-import { isWindows } from '@utils/platform'
 import { resolveVarForDevice } from '@utils/resolveVar'
 import { useConfig } from '~/store'
 import {
@@ -38,13 +37,14 @@ interface ImageProps {
  * - No in-memory cache is kept; images are always served from the filesystem
  *   through the custom protocol, keeping JS heap usage minimal.
  */
-// Tauri v2 custom protocol URL differs by platform:
-//   Windows/Android → http://{scheme}.localhost/{path}
-//   Linux/macOS/iOS → {scheme}://localhost/{path}
-// Note: Tauri v2 serves custom protocols over http on Windows by default
-// (https requires WebviewBuilder::use_https_scheme), see tauri#9875.
+// Tauri's convertFileSrc handles the platform difference automatically:
+//   Windows/Android → http://galimg.localhost/{path}
+//   Linux/macOS/iOS → galimg://localhost/{path}
+// (On Windows Tauri v2 serves custom protocols over http by default — https
+// requires WebviewBuilder::use_https_scheme, see tauri#9875.) The path is
+// `encodeURIComponent`-ed, a no-op for sha256 hex hashes.
 export function galimgUrl(hash: string): string {
-  return isWindows ? `http://galimg.localhost/${hash}` : `galimg://localhost/${hash}`
+  return convertFileSrc(hash, 'galimg')
 }
 
 const CachedImage: Component<ImageProps> = props => {
