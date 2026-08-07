@@ -26,7 +26,6 @@ backhand                  = "0.25.1"
 backon                    = "1"
 chrono                    = { version = "0.4", features = ["serde"] }
 config-file2              = "0.7"
-dark-light                = "2"
 dashmap                   = "6"
 easy_strfmt               = { path = "./easy_strfmt", features = ["indexmap"] }
 flexi_logger              = { version = "0.31", features = ["compress"] }

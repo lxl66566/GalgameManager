@@ -32,7 +32,7 @@ use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_window_state::{AppHandleExt, StateFlags, WindowExt};
 
 use crate::{
-    db::{CONFIG, CONFIG_DIR, settings::ThemeMode},
+    db::{CONFIG, CONFIG_DIR},
     logging::{LOG_HANDLE, init_logger},
 };
 
@@ -108,30 +108,11 @@ pub fn run() {
             let config_json = serde_json::to_string(&*CONFIG.lock())
                 .expect("config serialization should not fail");
 
-            // Resolve the configured theme to a concrete window background so
-            // WebView2 paints the app color immediately instead of flashing
-            // its default white before the frontend loads. Must match the
-            // light/dark backgrounds used by index.html / App root.
-            let dark_mode = match CONFIG.lock().settings.appearance.theme {
-                ThemeMode::Dark => true,
-                ThemeMode::Light => false,
-                ThemeMode::System => {
-                    matches!(dark_light::detect(), Ok(dark_light::Mode::Dark))
-                },
-            };
-            // tailwind slate-900 (#0f172a) / plain white
-            let bg_color = if dark_mode {
-                tauri::window::Color(15, 23, 42, 255)
-            } else {
-                tauri::window::Color(255, 255, 255, 255)
-            };
-
             let main_window =
                 WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                     .title("GalgameManager")
                     .inner_size(800.0, 600.0)
                     .resizable(true)
-                    .background_color(bg_color)
                     .center();
             #[cfg(windows)]
             let main_window = main_window.drag_and_drop(true);
