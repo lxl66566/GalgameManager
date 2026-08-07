@@ -29,7 +29,7 @@ temperature: 0
 
 项目遵循相对严格的 ts 规范（详见 `tsconfig.json`）；使用 solid-icons 图标库、solid-toast 提示库、kobalte 辅助组件开发。
 
-- TS 侧禁止使用动态 import。
+- TS 侧的动态 import 仅允许字符串字面量路径（如路由/模态框的 `lazy(() => import('./Xxx'))`，类型完全静态可推导）；禁止变量路径的动态 import（类型会退化为 `Promise<any>`）。
 - src/components/ui 下，每个文件只导出一个组件；文件头部需要包含组件的简述。每个组件都应该暴露一个或多个 class 的 props，让外部可以为组件的每个主要部分覆盖默认样式。
 - 组件的可扩展性一般通过 `cn()` 实现（src/lib/utils.ts），也就是组件具有一个默认样式，然后用户可以覆盖默认样式。
 - i18n 内容在 src/i18n 下，使用时只能在 solidjs 组件内部调用 `useI18n()`。

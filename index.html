@@ -4,7 +4,43 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
-    <title>Tauri + Solid App</title>
+    <title>GalgameManager</title>
+    <script>
+      // Theme bootstrap: runs before the main bundle (and after Tauri's
+      // initialization_script injects __INITIAL_CONFIG__), so the very first
+      // paint already has the correct theme — no white/dark flash.
+      // `config.appearance.theme` is the cross-device source of truth;
+      // kobalte's localStorage entry ('vite-ui-theme') is only a device-local
+      // cache, so we overwrite it from config when available.
+      ;(function () {
+        try {
+          var t =
+            window.__INITIAL_CONFIG__ &&
+            window.__INITIAL_CONFIG__.settings.appearance.theme
+          if (t === 'light' || t === 'dark' || t === 'system') {
+            localStorage.setItem('vite-ui-theme', t)
+          } else {
+            t = localStorage.getItem('vite-ui-theme') || 'system'
+          }
+          var dark =
+            t === 'dark' ||
+            (t !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          var d = document.documentElement
+          d.classList.toggle('dark', dark)
+          d.style.colorScheme = dark ? 'dark' : 'light'
+        } catch (e) {}
+      })()
+    </script>
+    <style>
+      /* Match App root bg (white / slate-900) so the window never paints a
+         blank white frame while the bundle loads. */
+      html {
+        background: #fff;
+      }
+      html.dark {
+        background: #0f172a;
+      }
+    </style>
   </head>
   <body class="m-0 overflow-hidden p-0">
     <noscript>You need to enable JavaScript to run this app.</noscript>

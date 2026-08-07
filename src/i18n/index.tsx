@@ -34,7 +34,7 @@ export function resolveTimeLanguage(
   return globalLocale
 }
 
-const dictmap = {
+const dictmap: Partial<Record<Locale, DeepPartial<RawDictionary>>> = {
   'zh-CN': zh.dict
 }
 
@@ -48,19 +48,18 @@ interface I18nContextType {
   t: i18n.Translator<Dictionary>
 }
 
-async function fetchDictionary(locale: string): Promise<Dictionary> {
+const resolveDictionary = (locale: Locale): Dictionary => {
   const enDict = getEnDict()
+  const rawTargetDict = dictmap[locale]
+  // The DeepPartial cast mirrors the runtime merge: en covers every key, so
+  // missing zh entries fall back to English.
+  return rawTargetDict
+    ? { ...enDict, ...i18n.flatten(rawTargetDict as RawDictionary) }
+    : enDict
+}
 
-  const hasDict = Object.prototype.hasOwnProperty.call(dictmap, locale)
-
-  if (locale === 'en-US' || !hasDict) {
-    return enDict
-  }
-
-  // 确定 locale 存在于 dictmap 中
-  const rawTargetDict = dictmap[locale as keyof typeof dictmap] as RawDictionary
-  const targetDict = i18n.flatten(rawTargetDict)
-  return { ...enDict, ...targetDict }
+async function fetchDictionary(locale: string): Promise<Dictionary> {
+  return resolveDictionary(locale as Locale)
 }
 
 function getEnDict(): Dictionary {
@@ -68,14 +67,33 @@ function getEnDict(): Dictionary {
   return cachedEnDict
 }
 
+// __INITIAL_CONFIG__ is injected by the Rust initialization_script before any
+// page script runs (see src-tauri/src/lib.rs). Seeding the locale from it lets
+// the first render use the configured dictionary directly — no English flash
+// and no full-tree text re-render from a post-mount locale switch.
+const detectInitialLocale = (): Locale => {
+  try {
+    // The global is typed as always-present (Tauri injects it before page
+    // scripts), but plain-browser contexts (vitest, `vite preview`) never get
+    // the injection — hence the optional chains and the try/catch.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    const lang = globalThis.__INITIAL_CONFIG__?.settings?.appearance?.language
+    if (lang === 'zh-CN' || lang === 'en-US') return lang
+  } catch {
+    // fall through to the default below
+  }
+  return 'en-US'
+}
+
 const I18nContext = createContext<I18nContextType>()
 
 export const I18nProvider: FlowComponent = props => {
-  const [locale, setLocale] = createSignal<Locale>('en-US')
+  const initialLocale = detectInitialLocale()
+  const [locale, setLocale] = createSignal<Locale>(initialLocale)
 
-  // 使用 Resource 异步加载字典
+  // 使用 Resource 异步加载字典；初始值同步给出目标语言词典，避免闪烁
   const [dict] = createResource(locale, fetchDictionary, {
-    initialValue: i18n.flatten(en.dict) // 初始值设为英文，避免闪烁
+    initialValue: resolveDictionary(initialLocale)
   })
 
   // 生成翻译函数 t

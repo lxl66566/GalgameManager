@@ -30,6 +30,7 @@ import {
   createMemo,
   createSignal,
   For,
+  lazy,
   onCleanup,
   onMount,
   Show,
@@ -39,9 +40,13 @@ import {
 } from 'solid-js'
 import toast from 'solid-toast'
 import { Virtualizer } from 'virtua/solid'
-import GameEditModal from './GameEditModal'
 import { GameItem, GameItemWrapper } from './GameItem'
-import { ArchiveSyncModal } from './SyncModal'
+
+// 模态框按需加载（字符串字面量动态 import，类型静态可推导）：它们拖着的
+// form/tooltip 等 kobalte 组件不再进入首屏 chunk，首次打开时才加载（本地
+// 资源，延迟为毫秒级）。
+const GameEditModal = lazy(() => import('./GameEditModal'))
+const ArchiveSyncModal = lazy(() => import('./SyncModal'))
 
 const GamePage = (): JSX.Element => {
   const { actions, config } = useConfig()

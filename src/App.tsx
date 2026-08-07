@@ -8,24 +8,35 @@ import { Navigate, Route, Router } from '@solidjs/router'
 import { BiRegularBarChartSquare, BiRegularExtension } from 'solid-icons/bi'
 import { CgGames } from 'solid-icons/cg'
 import { IoSettingsOutline } from 'solid-icons/io'
-import { createEffect, createSignal, Show, type Component, type JSX } from 'solid-js'
+import {
+  createEffect,
+  createSignal,
+  lazy,
+  Show,
+  type Component,
+  type JSX
+} from 'solid-js'
 import { Toaster } from 'solid-toast'
 import { I18nProvider, useI18n, type Locale } from './i18n'
 import Game from './pages/Game'
-import Plugin from './pages/Plugin'
-import Settings from './pages/Settings'
-import Statistics from './pages/Statistics'
 import { Sidebar, SidebarItem } from './Sidebar'
 import { checkAndPullRemote, performAutoUpload, useConfig, useConfigInit } from './store'
 import { useAutoUploadService } from './store/AutoUploadService'
 import { initGameRuntime } from './store/gameRuntime'
+
+// 路由级代码分割（字符串字面量动态 import，类型完全静态可推导）：
+// Game 是默认路由保持静态引入；Statistics（d3）、Settings、Plugin 及其
+// 独占的 kobalte 组件推迟到首次切换时才加载/执行，降低首屏 JS 体积。
+const Statistics = lazy(() => import('./pages/Statistics'))
+const Plugin = lazy(() => import('./pages/Plugin'))
+const Settings = lazy(() => import('./pages/Settings'))
 
 // Persistent shell: stays mounted across route changes (it's the router
 // root), so the sidebar and all startup side effects run once.
 const MainLayout: Component<{ children?: JSX.Element }> = props => {
   const { config } = useConfig()
   const { setLocale, t } = useI18n()
-  const { colorMode } = useColorMode()
+  const { colorMode, setColorMode } = useColorMode()
   const [isServiceReady, setServiceReady] = createSignal(false)
 
   useConfigInit(t, () => {
@@ -51,6 +62,14 @@ const MainLayout: Component<{ children?: JSX.Element }> = props => {
     execUploadFunc: async () => {
       await performAutoUpload(t)
     }
+  })
+
+  // config.appearance.theme 是跨设备同步的主题真相；kobalte 的 localStorage
+  // 只是设备本地缓存（首帧已由 index.html 的 bootstrap 脚本对齐）。这里用
+  // effect 把 config 主题同步到 kobalte，本地修改与远端同步下发的主题变更
+  // 都会生效。
+  createEffect(() => {
+    setColorMode(config.settings.appearance.theme)
   })
 
   // 同步 Kobalte 状态到 HTML class
