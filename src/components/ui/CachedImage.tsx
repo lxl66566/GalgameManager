@@ -41,8 +41,10 @@ interface ImageProps {
 // Tauri v2 custom protocol URL differs by platform:
 //   Windows/Android → http://{scheme}.localhost/{path}
 //   Linux/macOS/iOS → {scheme}://localhost/{path}
+// Note: Tauri v2 serves custom protocols over http on Windows by default
+// (https requires WebviewBuilder::use_https_scheme), see tauri#9875.
 export function galimgUrl(hash: string): string {
-  return isWindows ? `https://galimg.localhost/${hash}` : `galimg://localhost/${hash}`
+  return isWindows ? `http://galimg.localhost/${hash}` : `galimg://localhost/${hash}`
 }
 
 const CachedImage: Component<ImageProps> = props => {

@@ -4,7 +4,7 @@
 //   1. eslint recommended + import-x             — generic bugs, import hygiene
 //   2. typescript-eslint strict/stylistic (type-aware) — needs type info, catches
 //      floating promises, unsafe `any` leakage, etc.
-//   3. unicorn + perfectionist + regexp          — opinionated consistency
+//   3. perfectionist + regexp                    — opinionated consistency
 //   4. eslint-plugin-solid (flat/typescript)     — SolidJS reactivity pitfalls
 //   5. eslint-plugin-oxlint                      — turn off rules already handled by oxlint
 //   6. eslint-config-prettier                    — disable formatting conflicts
@@ -21,7 +21,6 @@ import oxlint from 'eslint-plugin-oxlint'
 import { configs as perfectionist } from 'eslint-plugin-perfectionist'
 import { configs as regexpConfigs } from 'eslint-plugin-regexp'
 import solidPlugin from 'eslint-plugin-solid'
-import unicorn from 'eslint-plugin-unicorn'
 import tseslint from 'typescript-eslint'
 
 const solid = solidPlugin.default ?? solidPlugin
@@ -34,7 +33,6 @@ export default tseslint.config(
   importX.flatConfigs.recommended,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
-  unicorn.configs['flat/recommended'],
   perfectionist['recommended-natural'],
   regexpConfigs['flat/recommended'],
   {
@@ -131,39 +129,7 @@ export default tseslint.config(
       'perfectionist/sort-named-imports': 'off',
       'prefer-const': 'error',
       'promise/always-return': 'off',
-      'unicorn/consistent-boolean-name': 'off',
-      'unicorn/filename-case': [
-        'error',
-        { cases: { camelCase: true, kebabCase: true, pascalCase: true } },
-      ],
-      'unicorn/max-nested-calls': 'off',
-      'unicorn/name-replacements': 'off',
-      // --- opinionated unicorn rules that generate noise ---
-      'unicorn/no-anonymous-default-export': 'off',
-      'unicorn/no-array-callback-reference': 'off',
-      'unicorn/no-array-reduce': 'off',
-      'unicorn/no-break-in-nested-loop': 'off',
-      'unicorn/no-computed-property-existence-check': 'off',
-      'unicorn/no-declarations-before-early-exit': 'off',
-      'unicorn/no-null': 'off',
-      'unicorn/no-top-level-assignment-in-function': 'off',
-      'unicorn/no-unreadable-for-of-expression': 'off',
-      'unicorn/no-unsafe-string-replacement': 'off',
-      'unicorn/no-unused-array-method-return': 'off',
-      'unicorn/no-useless-switch-case': 'off',
-      'unicorn/prefer-minimal-ternary': 'off',
-      'unicorn/prefer-number-coercion': 'off',
-      'unicorn/prefer-simple-condition-first': 'off',
     },
-  },
-  // Standard test directory naming and locale hyphenated codes.
-  {
-    files: ['**/__tests__/**'],
-    rules: { 'unicorn/filename-case': 'off' },
-  },
-  {
-    files: ['**/en-US.*', '**/zh-CN.*'],
-    rules: { 'unicorn/filename-case': 'off' },
   },
   prettier,
 )
