@@ -4,10 +4,12 @@
 import type { VoiceSpeedupGameConfig } from '@bindings/VoiceSpeedupGameConfig'
 import { FieldHint } from '@components/ui/FieldHint'
 import { FormField, FormInput, FormSelect } from '@components/ui/form'
+import { Show } from 'solid-js'
+
 import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'
 import { isLinux } from '~/utils/platform'
-import { Show } from 'solid-js'
+
 import { AutoAddMetaEditor } from './AutoAddMetaEditor'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 
@@ -28,7 +30,7 @@ function VoiceSpeedupGameConfigEditor(props: ConfigEditorProps<VoiceSpeedupGameC
 
   return (
     <div class="flex flex-col gap-2">
-      <div class="flex flex-wrap gap-5 items-start">
+      <div class="flex flex-wrap items-start gap-5">
         <FormField class="w-28" label={t('plugin.voiceSpeedup.speed')}>
           <FormInput
             class="w-full"

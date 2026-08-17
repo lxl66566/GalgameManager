@@ -10,8 +10,9 @@ import type { SwitchRootProps } from '@kobalte/core/switch'
  * (form.tsx, settings.tsx) re-export or compose on top.
  */
 import * as KobalteSwitch from '@kobalte/core/switch'
-import { cn } from '~/lib/utils'
 import { For, splitProps, type Component, type JSX } from 'solid-js'
+
+import { cn } from '~/lib/utils'
 
 // ─── Size type ────
 
@@ -124,7 +125,7 @@ export const Select: Component<SelectProps> = props => {
         </For>
       </select>
       {/* Chevron icon */}
-      <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center text-gray-400 px-1.5">
+      <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1.5 text-gray-400">
         <svg
           class={cn(s() === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5')}
           fill="none"

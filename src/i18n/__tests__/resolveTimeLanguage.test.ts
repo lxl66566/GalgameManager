@@ -1,5 +1,6 @@
-import { resolveTimeLanguage } from '~/i18n'
 import { describe, expect, it } from 'vitest'
+
+import { resolveTimeLanguage } from '~/i18n'
 
 describe('resolveTimeLanguage', () => {
   it('returns en-US when override is "en"', () => {

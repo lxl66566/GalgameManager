@@ -4,8 +4,10 @@
 import type { AutoUploadGameConfig } from '@bindings/AutoUploadGameConfig'
 import type { RetentionScope } from '@bindings/RetentionScope'
 import { FormField, FormInput, FormSelect } from '@components/ui/form'
-import { useI18n } from '~/i18n'
 import type { JSX } from 'solid-js'
+
+import { useI18n } from '~/i18n'
+
 import { AutoAddMetaEditor } from './AutoAddMetaEditor'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 
@@ -22,7 +24,7 @@ function AutoUploadGameConfigEditor(
   }
 
   return (
-    <div class="flex flex-wrap gap-5 items-start">
+    <div class="flex flex-wrap items-start gap-5">
       <FormField
         class="w-28"
         description={t('plugin.autoUpload.maxKeptDesc')}

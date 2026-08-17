@@ -14,8 +14,9 @@
  * ```
  */
 import { ContextMenu as KobalteContextMenu } from '@kobalte/core/context-menu'
-import { cn } from '~/lib/utils'
 import { For, Show, type JSX } from 'solid-js'
+
+import { cn } from '~/lib/utils'
 
 // ── Types ─────────
 
@@ -52,7 +53,7 @@ export function ContextMenu(props: ContextMenuProps) {
         {props.children}
       </KobalteContextMenu.Trigger>
       <KobalteContextMenu.Portal>
-        <KobalteContextMenu.Content class="z-50 min-w-[160px] rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-1 shadow-md outline-none animate-in fade-in zoom-in-95 duration-100">
+        <KobalteContextMenu.Content class="animate-in fade-in zoom-in-95 z-50 min-w-[160px] rounded-md border border-gray-200 bg-white p-1 shadow-md duration-100 outline-none dark:border-gray-600 dark:bg-gray-800">
           <For each={props.items as ContextMenuEntry[]}>
             {item => (
               <Show
@@ -70,7 +71,7 @@ export function ContextMenu(props: ContextMenuProps) {
                     }}
                   >
                     <Show when={(item as ContextMenuItem).icon}>
-                      <span class="w-4 h-4 shrink-0 flex items-center justify-center">
+                      <span class="flex h-4 w-4 shrink-0 items-center justify-center">
                         {(item as ContextMenuItem).icon}
                       </span>
                     </Show>

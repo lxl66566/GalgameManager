@@ -16,8 +16,10 @@ import {
   FormSwitch
 } from '@components/ui/form'
 import { FormTableEditor } from '@components/ui/FormTableEditor'
-import { useI18n } from '~/i18n'
 import { type Component } from 'solid-js'
+
+import { useI18n } from '~/i18n'
+
 import { AutoAddMetaEditor } from './AutoAddMetaEditor'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 
@@ -63,9 +65,9 @@ function WineGameConfigEditor(props: ConfigEditorProps<WineGameConfig>) {
   const { t } = useI18n()
 
   return (
-    <div class="flex flex-wrap gap-4 items-start items-stretch">
+    <div class="flex flex-wrap items-start items-stretch gap-4">
       <FormField
-        class="flex-1 min-w-48"
+        class="min-w-48 flex-1"
         description={t('plugin.wine.prefixDesc')}
         label={t('plugin.wine.prefix')}
       >
@@ -102,7 +104,7 @@ function WineGameConfigEditor(props: ConfigEditorProps<WineGameConfig>) {
       </FormField>
 
       <FormField
-        class="flex-1 min-w-32"
+        class="min-w-32 flex-1"
         description={t('plugin.wine.localeDesc')}
         label={t('plugin.wine.locale')}
       >

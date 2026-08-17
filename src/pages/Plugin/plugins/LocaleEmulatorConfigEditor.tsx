@@ -6,7 +6,9 @@
  */
 import type { LocaleEmulatorGameConfig } from '@bindings/LocaleEmulatorGameConfig'
 import { FormField, FormInput } from '@components/ui/form'
+
 import { useI18n } from '~/i18n'
+
 import { AutoAddMetaEditor } from './AutoAddMetaEditor'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 
@@ -18,8 +20,8 @@ function LocaleEmulatorGameConfigEditor(
   const needsPlaceholder = () => !props.config.cmd.includes('{}')
 
   return (
-    <div class="flex flex-wrap gap-4 items-start items-stretch">
-      <FormField class="flex-1 min-w-48" label={t('plugin.localeEmulator.cmd')}>
+    <div class="flex flex-wrap items-start items-stretch gap-4">
+      <FormField class="min-w-48 flex-1" label={t('plugin.localeEmulator.cmd')}>
         <FormInput
           checkVars
           class="w-full"

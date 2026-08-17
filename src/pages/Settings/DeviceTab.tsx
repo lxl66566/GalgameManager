@@ -2,10 +2,11 @@ import type { Device } from '@bindings/Device'
 import { FormTableEditor } from '@components/ui/FormTableEditor'
 import { Input, SettingRow, SettingSection } from '@components/ui/settings'
 import { log } from '@utils/log'
-import { useI18n } from '~/i18n'
-import { useConfig } from '~/store'
 import { createResource, Show, Suspense, type Component } from 'solid-js'
 import { unwrap } from 'solid-js/store'
+
+import { useI18n } from '~/i18n'
+import { useConfig } from '~/store'
 
 export const DeviceTab: Component = () => {
   const { actions } = useConfig()
@@ -56,7 +57,7 @@ export const DeviceTab: Component = () => {
   }
 
   return (
-    <div class="max-w-4xl w-full mx-auto">
+    <div class="mx-auto w-full max-w-4xl">
       <Suspense
         fallback={
           <div class="p-8 text-center text-gray-500">
@@ -93,7 +94,7 @@ export const DeviceTab: Component = () => {
                   label={t('settings.device.uuid')}
                 >
                   <div class="flex items-center gap-2">
-                    <code class="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-gray-600 dark:text-gray-400 select-all">
+                    <code class="rounded bg-gray-100 px-2 py-1 font-mono text-xs text-gray-600 select-all dark:bg-gray-800 dark:text-gray-400">
                       {development().uid}
                     </code>
                   </div>

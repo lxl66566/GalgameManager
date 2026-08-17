@@ -7,8 +7,10 @@
  * `autoAdd`) so each plugin definition still gets full type inference.
  */
 import { FormField, FormSwitch } from '@components/ui/form'
-import { useI18n } from '~/i18n'
 import type { JSX } from 'solid-js'
+
+import { useI18n } from '~/i18n'
+
 import type { ConfigEditorProps } from './types'
 
 export function AutoAddMetaEditor<T extends { autoAdd: boolean }>(
@@ -16,7 +18,7 @@ export function AutoAddMetaEditor<T extends { autoAdd: boolean }>(
 ): JSX.Element {
   const { t } = useI18n()
   return (
-    <div class="flex flex-wrap gap-3 items-start">
+    <div class="flex flex-wrap items-start gap-3">
       <FormField class="w-auto" label={t('plugin.autoAdd')}>
         <FormSwitch
           checked={props.config.autoAdd}

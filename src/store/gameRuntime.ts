@@ -14,10 +14,11 @@ import { once } from '@tauri-apps/api/event'
 import { errToStr, log } from '@utils/log'
 import { formatSessionDuration } from '@utils/time'
 import { showOrDefer } from '@utils/toastFocus'
-import type { Dictionary } from '~/i18n'
-import { useConfig } from '~/store'
 import { createSignal } from 'solid-js'
 import toast from 'solid-toast'
+
+import type { Dictionary } from '~/i18n'
+import { useConfig } from '~/store'
 
 type TFunction = Translator<Dictionary>
 

@@ -1,5 +1,6 @@
 import { errToStr, log } from '@utils/log'
 import { createEffect, onCleanup, type Accessor } from 'solid-js'
+
 import { useConfig } from '.'
 
 interface AutoUploadOptions {

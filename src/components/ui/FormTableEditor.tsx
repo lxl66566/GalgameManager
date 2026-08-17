@@ -1,8 +1,9 @@
-import { useI18n } from '~/i18n'
-import { cn } from '~/lib/utils'
 import { FiPlusCircle } from 'solid-icons/fi'
 import { createSignal, For, Show, type Component } from 'solid-js'
 import toast from 'solid-toast'
+
+import { useI18n } from '~/i18n'
+import { cn } from '~/lib/utils'
 
 // 核心：自动调整 Textarea 高度的辅助函数
 const autoResize = (element: HTMLTextAreaElement) => {
@@ -114,7 +115,7 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
             </div>
           </Show>
           <button
-            class="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:text-gray-300 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center gap-1"
+            class="ml-auto flex cursor-pointer items-center gap-1 text-gray-400 transition-colors hover:text-gray-600 disabled:cursor-not-allowed disabled:text-gray-300 dark:hover:text-gray-300 dark:disabled:text-gray-600"
             disabled={isAdding()}
             onClick={() => {
               setIsAdding(true)
@@ -123,7 +124,7 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
             title={props.addLabel ?? ''}
             type="button"
           >
-            <FiPlusCircle class="w-4 h-4" />
+            <FiPlusCircle class="h-4 w-4" />
             <span class="text-xs">{props.addLabel ?? ''}</span>
           </button>
         </div>
@@ -132,7 +133,7 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
       <Show when={!hasHeader()}>
         <div class="flex justify-end">
           <button
-            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:text-gray-300 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center gap-1"
+            class="flex cursor-pointer items-center gap-1 text-gray-400 transition-colors hover:text-gray-600 disabled:cursor-not-allowed disabled:text-gray-300 dark:hover:text-gray-300 dark:disabled:text-gray-600"
             disabled={isAdding()}
             onClick={() => {
               setIsAdding(true)
@@ -141,7 +142,7 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
             title={props.addLabel ?? ''}
             type="button"
           >
-            <FiPlusCircle class="w-4 h-4" />
+            <FiPlusCircle class="h-4 w-4" />
             <span class="text-xs">{props.addLabel ?? ''}</span>
           </button>
         </div>
@@ -158,10 +159,10 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
         {/* Add new row */}
         <Show when={isAdding()}>
           {/* 将 items-center 改为 items-start，确保 textarea 变高时，其他元素依然顶部对齐 */}
-          <div class="flex items-start gap-1 bg-white dark:bg-gray-900/50 p-1 rounded border border-blue-500/30 mb-0.5 shadow-sm dark:shadow-none">
+          <div class="mb-0.5 flex items-start gap-1 rounded border border-blue-500/30 bg-white p-1 shadow-sm dark:bg-gray-900/50 dark:shadow-none">
             <input
               autofocus
-              class="w-1/3 mt-[1px] bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-[11px] px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none font-mono min-w-[50px]"
+              class="mt-[1px] w-1/3 min-w-[50px] rounded border border-gray-300 bg-gray-50 px-1 py-0.5 font-mono text-[11px] text-gray-900 outline-none focus:border-blue-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
               onInput={e => {
                 setNewKey(e.currentTarget.value)
                 setError(null)
@@ -181,7 +182,7 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
             <Show
               fallback={
                 <textarea
-                  class="flex-1 mt-[1px] bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-[11px] px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none min-w-0 resize-none overflow-hidden break-all"
+                  class="mt-[1px] min-w-0 flex-1 resize-none overflow-hidden rounded border border-gray-300 bg-gray-50 px-1 py-0.5 text-[11px] break-all text-gray-900 outline-none focus:border-blue-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
                   onInput={e => {
                     autoResize(e.currentTarget)
                     setNewValue(e.currentTarget.value)
@@ -208,7 +209,7 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
               when={props.valueOptions}
             >
               <select
-                class="flex-1 mt-[1px] bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-[11px] px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none min-w-0 appearance-none cursor-pointer"
+                class="mt-[1px] min-w-0 flex-1 cursor-pointer appearance-none rounded border border-gray-300 bg-gray-50 px-1 py-0.5 text-[11px] text-gray-900 outline-none focus:border-blue-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
                 onChange={e => setNewValue(e.currentTarget.value)}
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
@@ -226,16 +227,16 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
               </select>
             </Show>
 
-            <div class="flex gap-0.5 mt-[2px]">
+            <div class="mt-[2px] flex gap-0.5">
               <button
-                class="text-green-600 hover:text-green-500 dark:text-green-500 dark:hover:text-green-300 px-0.5 text-[11px]"
+                class="px-0.5 text-[11px] text-green-600 hover:text-green-500 dark:text-green-500 dark:hover:text-green-300"
                 onClick={handleConfirmAdd}
                 type="button"
               >
                 ✓
               </button>
               <button
-                class="text-red-600 hover:text-red-500 dark:text-red-500 dark:hover:text-red-300 px-0.5 text-[11px]"
+                class="px-0.5 text-[11px] text-red-600 hover:text-red-500 dark:text-red-500 dark:hover:text-red-300"
                 onClick={handleCancelAdd}
                 type="button"
               >
@@ -244,14 +245,14 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
             </div>
           </div>
           <Show when={error()}>
-            <span class="text-[9px] text-red-500 px-1 mb-1">{error()}</span>
+            <span class="mb-1 px-1 text-[9px] text-red-500">{error()}</span>
           </Show>
         </Show>
 
         {/* Existing entries */}
         <Show
           fallback={
-            <div class="text-gray-400 text-[11px] select-none flex-1 flex items-center justify-center">
+            <div class="flex flex-1 items-center justify-center text-[11px] text-gray-400 select-none">
               {props.emptyText ?? t('ui.none')}
             </div>
           }
@@ -260,9 +261,9 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
           <For each={sortedKeys()}>
             {key => (
               // items-center 改为 items-start，适配多行高度
-              <div class="flex items-start gap-1 bg-white dark:bg-gray-700/50 border border-gray-200 dark:border-transparent px-1 py-0.5 rounded group hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+              <div class="group flex items-start gap-1 rounded border border-gray-200 bg-white px-1 py-0.5 transition-colors hover:bg-gray-50 dark:border-transparent dark:bg-gray-700/50 dark:hover:bg-gray-700">
                 <input
-                  class="w-1/3 mt-[1px] min-w-[50px] bg-transparent text-blue-600 dark:text-blue-300 font-mono text-[11px] pl-0.5 pr-0.5 py-0 rounded border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:bg-gray-100 dark:focus:bg-gray-900 focus:border-blue-500 outline-none transition-all truncate"
+                  class="mt-[1px] w-1/3 min-w-[50px] truncate rounded border border-transparent bg-transparent py-0 pr-0.5 pl-0.5 font-mono text-[11px] text-blue-600 transition-all outline-none hover:border-gray-300 focus:border-blue-500 focus:bg-gray-100 dark:text-blue-300 dark:hover:border-gray-600 dark:focus:bg-gray-900"
                   onBlur={e => {
                     handleKeyBlur(key, e.currentTarget.value)
                   }}
@@ -274,11 +275,11 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
                   type="text"
                   value={key}
                 />
-                <span class="text-gray-400 text-[10px] mt-[2px]">=</span>
+                <span class="mt-[2px] text-[10px] text-gray-400">=</span>
                 <Show
                   fallback={
                     <textarea
-                      class="flex-1 mt-[1px] bg-transparent text-gray-800 dark:text-gray-200 text-[11px] px-0.5 py-0 rounded border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:bg-gray-100 dark:focus:bg-gray-900 focus:border-blue-500 outline-none transition-all min-w-0 resize-none overflow-hidden break-all"
+                      class="mt-[1px] min-w-0 flex-1 resize-none overflow-hidden rounded border border-transparent bg-transparent px-0.5 py-0 text-[11px] break-all text-gray-800 transition-all outline-none hover:border-gray-300 focus:border-blue-500 focus:bg-gray-100 dark:text-gray-200 dark:hover:border-gray-600 dark:focus:bg-gray-900"
                       onBlur={e => {
                         const newValue_ = e.currentTarget.value
                         if (newValue_ !== (props.values[key] ?? '')) {
@@ -312,7 +313,7 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
                   when={props.valueOptions}
                 >
                   <select
-                    class="flex-1 mt-[1px] bg-transparent text-gray-800 dark:text-gray-200 text-[11px] px-0.5 py-0 rounded border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:bg-gray-100 dark:focus:bg-gray-900 focus:border-blue-500 outline-none transition-all min-w-0 appearance-none cursor-pointer"
+                    class="mt-[1px] min-w-0 flex-1 cursor-pointer appearance-none rounded border border-transparent bg-transparent px-0.5 py-0 text-[11px] text-gray-800 transition-all outline-none hover:border-gray-300 focus:border-blue-500 focus:bg-gray-100 dark:text-gray-200 dark:hover:border-gray-600 dark:focus:bg-gray-900"
                     onChange={e => {
                       const newValue_ = e.currentTarget.value
                       if (newValue_ !== (props.values[key] ?? '')) {
@@ -327,7 +328,7 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
                   </select>
                 </Show>
                 <button
-                  class="text-gray-400 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity px-0 text-[11px] mt-[1px]"
+                  class="mt-[1px] px-0 text-[11px] text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500 focus:opacity-100 dark:hover:text-red-400"
                   onClick={() => {
                     const updated = { ...props.values }
                     delete updated[key]

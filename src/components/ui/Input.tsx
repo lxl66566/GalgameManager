@@ -3,8 +3,9 @@
  * 包含默认的边框、背景色、焦点高亮以及禁用状态样式
  */
 
-import { cn } from '~/lib/utils'
 import { splitProps, type JSX } from 'solid-js'
+
+import { cn } from '~/lib/utils'
 
 export function Input(props: JSX.InputHTMLAttributes<HTMLInputElement>) {
   const [local, rest] = splitProps(props, ['class'])

@@ -15,10 +15,11 @@ import {
 import { invoke } from '@tauri-apps/api/core'
 import { debounce } from '@utils/debounce'
 import { useVarWarning } from '@utils/useVarWarning'
-import { useI18n } from '~/i18n'
-import { checkAndPullRemote, performManualUpload, useConfig } from '~/store'
 import { FiDownload, FiLoader, FiUpload } from 'solid-icons/fi'
 import { createMemo, createSignal, Match, Show, Switch, type Component } from 'solid-js'
+
+import { useI18n } from '~/i18n'
+import { checkAndPullRemote, performManualUpload, useConfig } from '~/store'
 
 // Keyed by ArchiveAlgo (a finite union), not `string`: with
 // noUncheckedIndexedAccess a Record<string, T> lookup returns T | undefined
@@ -315,7 +316,7 @@ export const StorageTab: Component = () => {
   return (
     <div class="max-w-4xl">
       <SettingSection title={t('settings.storage.self')}>
-        <SettingRow class="z-10 relative" label={t('settings.storage.provider')}>
+        <SettingRow class="relative z-10" label={t('settings.storage.provider')}>
           <Select
             onChange={handleProviderChange}
             options={[
@@ -399,29 +400,29 @@ export const StorageTab: Component = () => {
           label={t('settings.config.manualSync')}
         >
           <Button
-            class="min-w-[100px] mx-1" // 保证加载时宽度不跳动
+            class="mx-1 min-w-[100px]" // 保证加载时宽度不跳动
             disabled={uploading()}
             onClick={handleUploadConfig}
           >
             <Show
-              fallback={<FiLoader class="animate-spin h-3.5 w-3.5 mr-1.5" />}
+              fallback={<FiLoader class="mr-1.5 h-3.5 w-3.5 animate-spin" />}
               when={!uploading()}
             >
-              <FiUpload class="h-3.5 w-3.5 mr-1.5 text-gray-500 dark:text-gray-400" />
+              <FiUpload class="mr-1.5 h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
             </Show>
             {uploading() ? 'Syncing...' : t('ui.push')}
           </Button>
 
           <Button
-            class="min-w-[100px] mx-1"
+            class="mx-1 min-w-[100px]"
             disabled={downloading()}
             onClick={handleDownloadConfig}
           >
             <Show
-              fallback={<FiLoader class="animate-spin h-3.5 w-3.5 mr-1.5" />}
+              fallback={<FiLoader class="mr-1.5 h-3.5 w-3.5 animate-spin" />}
               when={!downloading()}
             >
-              <FiDownload class="h-3.5 w-3.5 mr-1.5 text-gray-500 dark:text-gray-400" />
+              <FiDownload class="mr-1.5 h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
             </Show>
             {downloading() ? 'Syncing...' : t('ui.pull')}
           </Button>

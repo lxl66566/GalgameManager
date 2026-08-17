@@ -27,7 +27,7 @@ const solid = solidPlugin.default ?? solidPlugin
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'src-tauri/**', 'node_modules/**', 'coverage/**'],
+    ignores: ['dist/**', 'src-tauri/**', 'node_modules/**', 'coverage/**']
   },
   js.configs.recommended,
   importX.flatConfigs.recommended,
@@ -40,8 +40,8 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: import.meta.dirname,
-      },
+        tsconfigRootDir: import.meta.dirname
+      }
     },
     rules: {
       // SolidJS/React JSX event handlers (onClick, onBlur, onChange,
@@ -54,43 +54,40 @@ export default tseslint.config(
       // mistakes like `if (someAsyncFn)` or `arr.sort(async …)`) stay on.
       '@typescript-eslint/no-misused-promises': [
         'error',
-        { checksVoidReturn: { attributes: false } },
+        { checksVoidReturn: { attributes: false } }
       ],
-      '@typescript-eslint/restrict-template-expressions': [
-        'error',
-        { allowNumber: true },
-      ],
-    },
+      '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }]
+    }
   },
   {
     files: ['src/**/*.{ts,tsx}'],
     languageOptions: {
       parserOptions: {
-        ecmaFeatures: { jsx: true },
-      },
+        ecmaFeatures: { jsx: true }
+      }
     },
     plugins: { solid },
     rules: {
-      ...solid.configs['flat/typescript'].rules,
-    },
+      ...solid.configs['flat/typescript'].rules
+    }
   },
   {
     files: ['src/**/*.{test,spec}.{ts,tsx}'],
     ...vitest.configs.recommended,
     rules: {
       ...vitest.configs.recommended.rules,
-      'solid/reactivity': 'off',
-    },
+      'solid/reactivity': 'off'
+    }
   },
   {
     files: ['**/*.{js,mjs,cjs}', '*.{js,mjs,cjs}'],
-    ...tseslint.configs.disableTypeChecked,
+    ...tseslint.configs.disableTypeChecked
   },
   // Config files at root are not included in the TS project service,
   // so disable type-aware rules for them.
   {
     files: ['vite.config.ts', 'vitest.config.ts', 'uno.config.ts', 'eslint.config.js'],
-    ...tseslint.configs.disableTypeChecked,
+    ...tseslint.configs.disableTypeChecked
   },
   // Disable ESLint rules that oxlint already handles (avoids duplicate work).
   // Our overrides below still take precedence for rules we want ESLint to
@@ -107,7 +104,7 @@ export default tseslint.config(
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }
       ],
       '@typescript-eslint/prefer-optional-chain': 'off',
       '@typescript-eslint/require-await': 'off',
@@ -118,18 +115,18 @@ export default tseslint.config(
       'no-underscore-dangle': 'off',
       // --- rules from plugins not loaded in ESLint ---
       'oxc/no-map-spread': 'off',
-      // Import ordering is owned by `@ianvs/prettier-plugin-sort-imports`
-      // (run via `prettier --write`, which executes *after* `eslint --fix` in
-      // lint-staged). Perfectionist's sort-imports rules use a different
-      // grouping than the prettier plugin, so the two can never be satisfied
-      // at the same time — every file would flip-flop. Disable the redundant
-      // ESLint rules so `verify` (fmt:check && lint:full) is achievable; all
-      // other Perfectionist rules (sort-objects, sort-object-types, …) stay.
+      // Import ordering is owned by oxfmt's built-in sortImports (run via
+      // `oxfmt`, which executes *after* `eslint --fix` in lint-staged).
+      // Perfectionist's sort-imports rules use a different grouping, so the
+      // two can never be satisfied at the same time — every file would
+      // flip-flop. Disable the redundant ESLint rules so `verify`
+      // (fmt:check && lint:full) is achievable; all other Perfectionist
+      // rules (sort-objects, sort-object-types, …) stay.
       'perfectionist/sort-imports': 'off',
       'perfectionist/sort-named-imports': 'off',
       'prefer-const': 'error',
-      'promise/always-return': 'off',
-    },
+      'promise/always-return': 'off'
+    }
   },
-  prettier,
+  prettier
 )

@@ -6,7 +6,9 @@
 import type { GameWrapperGameConfig } from '@bindings/GameWrapperGameConfig'
 import { FormField, FormInput, FormPathInput } from '@components/ui/form'
 import { FormTableEditor } from '@components/ui/FormTableEditor'
+
 import { useI18n } from '~/i18n'
+
 import { AutoAddMetaEditor } from './AutoAddMetaEditor'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 
@@ -16,8 +18,8 @@ function GameWrapperGameConfigEditor(props: ConfigEditorProps<GameWrapperGameCon
   const needsPlaceholder = () => !props.config.cmd.includes('{}')
 
   return (
-    <div class="flex flex-wrap gap-4 items-start items-stretch">
-      <FormField class="flex-1 min-w-48" label={t('plugin.gameWrapper.cmd')}>
+    <div class="flex flex-wrap items-start items-stretch gap-4">
+      <FormField class="min-w-48 flex-1" label={t('plugin.gameWrapper.cmd')}>
         <FormInput
           checkVars
           class="w-full"
@@ -35,7 +37,7 @@ function GameWrapperGameConfigEditor(props: ConfigEditorProps<GameWrapperGameCon
       </FormField>
 
       <FormField
-        class="flex-1 min-w-48"
+        class="min-w-48 flex-1"
         description={t('plugin.currentDirDesc')}
         label={t('plugin.currentDir')}
       >

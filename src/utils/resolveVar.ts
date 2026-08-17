@@ -12,6 +12,7 @@
  */
 
 import type { Device } from '@bindings/Device'
+
 import { currentDeviceId } from '~/store/Singleton'
 
 // ─── resolveVar ───

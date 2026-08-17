@@ -1,7 +1,8 @@
-import { cn } from '~/lib/utils'
 import { FiAlertTriangle, FiInfo, FiX } from 'solid-icons/fi'
 import { createEffect, For, Show, type JSX } from 'solid-js'
 import toast from 'solid-toast'
+
+import { cn } from '~/lib/utils'
 
 // ----------------------------------------------------------------------
 // solid-toast–style animated icons (co-located, matching the visual style
@@ -191,11 +192,11 @@ function SuccessIcon() {
 // ----------------------------------------------------------------------
 
 const VARIANT_ICONS: Record<ToastVariant, () => JSX.Element> = {
-  default: () => <FiInfo class="w-5 h-5" />,
+  default: () => <FiInfo class="h-5 w-5" />,
   error: () => <ErrorIcon />,
   loading: () => <LoaderIcon />,
   success: () => <SuccessIcon />,
-  warning: () => <FiAlertTriangle class="w-5 h-5" />
+  warning: () => <FiAlertTriangle class="h-5 w-5" />
 }
 
 const ICON_COLORS: Record<ToastVariant, string> = {
@@ -303,7 +304,7 @@ export const myToast = (props: CustomToastOptions) => {
           <Show when={actions.length > 0}>
             <div class="mx-1 h-4 w-px bg-gray-200 dark:bg-slate-700" />
             {/* mr-1.5: 让最右按钮到 toast 边缘的距离 = 最左按钮到分割线的距离（gap-3 + 分割线 mx-1 = 16px） */}
-            <div class="flex shrink-0 items-center gap-3 mr-1.5">
+            <div class="mr-1.5 flex shrink-0 items-center gap-3">
               <For each={actions}>
                 {action => (
                   <button
@@ -326,7 +327,7 @@ export const myToast = (props: CustomToastOptions) => {
           {/* 4. Close */}
           <Show when={closable}>
             <button
-              class="ml-1 shrink-0 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-slate-700 dark:hover:text-gray-200 transition-colors"
+              class="ml-1 shrink-0 rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-slate-700 dark:hover:text-gray-200"
               onClick={() => {
                 toast.dismiss(t.id)
               }}

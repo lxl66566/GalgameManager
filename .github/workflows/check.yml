@@ -37,7 +37,7 @@ jobs:
       - name: Lint (eslint)
         run: pnpm run lint
 
-      - name: Format check (prettier)
+      - name: Format check (oxfmt)
         run: pnpm run fmt:check
 
       - name: Build frontend

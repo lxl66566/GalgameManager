@@ -11,8 +11,10 @@
 //   user can hover any column up top and immediately see the linked row even
 //   when the list is scrolled.
 import CachedImage from '@components/ui/CachedImage'
-import { useI18n } from '~/i18n'
 import { createEffect, For, Show, type Component } from 'solid-js'
+
+import { useI18n } from '~/i18n'
+
 import { formatDuration, type DurationUnits } from './timeRange'
 
 export interface GameBarRow {
@@ -101,7 +103,7 @@ const GamePlaytimeBars: Component<GamePlaytimeBarsProps> = props => {
                         width: `${(row.secs / maxSecs()) * 100}%`
                       }}
                     />
-                    <span class="shrink-0 text-xs tabular-nums text-gray-500 dark:text-gray-400">
+                    <span class="shrink-0 text-xs text-gray-500 tabular-nums dark:text-gray-400">
                       {formatDuration(row.secs, props.units)}
                     </span>
                   </div>

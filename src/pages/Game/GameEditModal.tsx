@@ -11,13 +11,6 @@ import { fuckBackslash, getParentPath } from '@utils/path'
 import { getDeviceVarMap, replaceWithVarNames } from '@utils/resolveVar'
 import { dateToInput, durationToForm, inputToDate } from '@utils/time'
 import { fetchVnCover } from '@utils/vndb'
-import { Button } from '~/components/ui/Button'
-import { Input } from '~/components/ui/Input'
-import { InputWithSuffix } from '~/components/ui/InputWithSuffix'
-import { useI18n } from '~/i18n'
-import { PLUGIN_REGISTRY } from '~/pages/Plugin/plugins'
-import { buildNewInstance } from '~/pages/Plugin/plugins/types'
-import { useConfig } from '~/store'
 import { FiRefreshCw, FiSearch } from 'solid-icons/fi'
 import {
   createEffect,
@@ -28,6 +21,14 @@ import {
   Suspense
 } from 'solid-js'
 import { createStore, unwrap } from 'solid-js/store'
+
+import { Button } from '~/components/ui/Button'
+import { Input } from '~/components/ui/Input'
+import { InputWithSuffix } from '~/components/ui/InputWithSuffix'
+import { useI18n } from '~/i18n'
+import { PLUGIN_REGISTRY } from '~/pages/Plugin/plugins'
+import { buildNewInstance } from '~/pages/Plugin/plugins/types'
+import { useConfig } from '~/store'
 
 // ─── Shared style constants for the modal's form fields ───────────────────────
 
@@ -226,10 +227,10 @@ export default function GameEditModal(props: GameEditModalProps) {
   // ─── Render ─────
 
   return (
-    <div class="dark:bg-zinc-800 bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col p-6 overflow-hidden border border-gray-200 dark:border-gray-700">
-      <div class="flex flex-col w-full h-full max-h-[85vh]">
+    <div class="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-700 dark:bg-zinc-800">
+      <div class="flex h-full max-h-[85vh] w-full flex-col">
         {/* Header */}
-        <div class="flex justify-between items-center mb-4 flex-shrink-0">
+        <div class="mb-4 flex flex-shrink-0 items-center justify-between">
           <h1 class="text-xl font-bold text-gray-900 dark:text-white">
             {(isEditMode() ? t('game.edit.editTitle') : t('game.edit.addTitle')) +
               ` (ID = ${localGame.id})`}
@@ -237,17 +238,17 @@ export default function GameEditModal(props: GameEditModalProps) {
         </div>
 
         {/* Body */}
-        <div class="flex flex-row gap-6 flex-1 min-h-0">
+        <div class="flex min-h-0 flex-1 flex-row gap-6">
           {/* Left Column: Image Preview */}
-          <div class="w-[25%] max-w-50 min-w-20 flex flex-col gap-3">
-            <div class="aspect-[2/3] w-full bg-gray-200 dark:bg-gray-900 rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600 relative shadow-lg">
+          <div class="flex w-[25%] max-w-50 min-w-20 flex-col gap-3">
+            <div class="relative aspect-[2/3] w-full overflow-hidden rounded-lg border border-gray-300 bg-gray-200 shadow-lg dark:border-gray-600 dark:bg-gray-900">
               <Suspense
                 fallback={
-                  <div class="w-full h-full animate-pulse bg-gray-300 dark:bg-gray-700" />
+                  <div class="h-full w-full animate-pulse bg-gray-300 dark:bg-gray-700" />
                 }
               >
                 <CachedImage
-                  class="object-cover w-full h-full"
+                  class="h-full w-full object-cover"
                   extractColor={!localGame.coverColor}
                   hash={localGame.imageSha256}
                   onColorExtracted={(color: string) => {
@@ -261,10 +262,10 @@ export default function GameEditModal(props: GameEditModalProps) {
               </Suspense>
               <Show when={!localGame.imageUrl}>
                 <div
-                  class="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                  class="absolute inset-0 flex cursor-pointer flex-col items-center justify-center transition-colors hover:bg-black/10 dark:hover:bg-white/10"
                   onClick={handleSelectImage}
                 >
-                  <span class="text-gray-400 text-xs">
+                  <span class="text-xs text-gray-400">
                     {t('game.edit.clickToSelectImage')}
                   </span>
                 </div>
@@ -273,7 +274,7 @@ export default function GameEditModal(props: GameEditModalProps) {
           </div>
 
           {/* Right Column: Form */}
-          <div class="flex-1 flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar">
+          <div class="custom-scrollbar flex flex-1 flex-col gap-4 overflow-y-auto pr-2">
             {/* Name */}
             <FormField label={t('game.edit.gameName')} labelClass={MODAL_LABEL}>
               <Input
@@ -286,7 +287,7 @@ export default function GameEditModal(props: GameEditModalProps) {
 
             {/* Image Source Input */}
             <FormField label={t('game.edit.imageUrl')} labelClass={MODAL_LABEL}>
-              <div class="flex gap-2 w-full">
+              <div class="flex w-full gap-2">
                 <Input
                   class="min-w-0"
                   disabled={isSearching()}
@@ -306,12 +307,12 @@ export default function GameEditModal(props: GameEditModalProps) {
                 >
                   {isSearching() ? (
                     <>
-                      <FiRefreshCw class="w-4 h-4 animate-spin" />
+                      <FiRefreshCw class="h-4 w-4 animate-spin" />
                       {t('ui.cancel')}
                     </>
                   ) : (
                     <>
-                      <FiSearch class="w-4 h-4" />
+                      <FiSearch class="h-4 w-4" />
                       VNDB
                     </>
                   )}
@@ -353,7 +354,7 @@ export default function GameEditModal(props: GameEditModalProps) {
               paths={localGame.savePaths}
             />
 
-            <hr class="border-gray-300 dark:border-gray-700 my-1" />
+            <hr class="my-1 border-gray-300 dark:border-gray-700" />
 
             {/* Time Settings */}
             <div class="grid grid-cols-2 gap-4">
@@ -385,7 +386,7 @@ export default function GameEditModal(props: GameEditModalProps) {
                 label={t('game.edit.useTime')}
                 labelClass={MODAL_LABEL}
               >
-                <div class="flex items-center gap-4 w-full">
+                <div class="flex w-full items-center gap-4">
                   <InputWithSuffix
                     min="0"
                     onInput={e => {
@@ -409,7 +410,7 @@ export default function GameEditModal(props: GameEditModalProps) {
               </FormField>
             </div>
 
-            <hr class="border-gray-300 dark:border-gray-700 my-1" />
+            <hr class="my-1 border-gray-300 dark:border-gray-700" />
 
             {/* Plugin Section */}
             <PluginSection
@@ -425,7 +426,7 @@ export default function GameEditModal(props: GameEditModalProps) {
         </div>
 
         {/* Footer Actions */}
-        <div class="flex flex-row items-center justify-between w-full mt-2 py-2 border-t border-gray-300 dark:border-gray-700 flex-shrink-0">
+        <div class="mt-2 flex w-full flex-shrink-0 flex-row items-center justify-between border-t border-gray-300 py-2 dark:border-gray-700">
           <div>
             <Show when={isEditMode()}>
               <Button onClick={handleDelete} variant="ghost-danger">

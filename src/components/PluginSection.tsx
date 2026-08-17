@@ -4,14 +4,6 @@
  */
 import type { PluginInstance } from '@bindings/PluginInstance'
 import type { PluginMetadatas } from '@bindings/PluginMetadatas'
-import { useI18n, type Dictionary } from '~/i18n'
-import { PLUGIN_REGISTRY, type AnyPluginDef } from '~/pages/Plugin/plugins'
-import {
-  buildNewInstance,
-  type AnyGameConfig,
-  type ConfigEditorProps
-} from '~/pages/Plugin/plugins/types'
-import { useConfig } from '~/store'
 import {
   FiArrowDown,
   FiArrowUp,
@@ -22,6 +14,15 @@ import {
 } from 'solid-icons/fi'
 import { createSignal, For, Show, type Component } from 'solid-js'
 import { Dynamic } from 'solid-js/web'
+
+import { useI18n, type Dictionary } from '~/i18n'
+import { PLUGIN_REGISTRY, type AnyPluginDef } from '~/pages/Plugin/plugins'
+import {
+  buildNewInstance,
+  type AnyGameConfig,
+  type ConfigEditorProps
+} from '~/pages/Plugin/plugins/types'
+import { useConfig } from '~/store'
 
 interface PluginSectionProps {
   onChange: (plugins: PluginInstance[]) => void
@@ -37,7 +38,8 @@ interface PluginSectionProps {
 /** Check whether a plugin type is enabled via its meta config. */
 const isPluginEnabled = (metas: PluginMetadatas, pluginId: string): boolean => {
   const meta = metas[pluginId as keyof PluginMetadatas] as
-    undefined | { enabled?: boolean }
+    | undefined
+    | { enabled?: boolean }
   return meta?.enabled !== false
 }
 
@@ -144,15 +146,14 @@ export default function PluginSection(props: PluginSectionProps) {
   }
 
   return (
-    <div class="flex flex-col gap-2 w-full" ref={sectionRef}>
-      <div class="flex justify-between items-center">
+    <div class="flex w-full flex-col gap-2" ref={sectionRef}>
+      <div class="flex items-center justify-between">
         <span class="text-sm font-bold text-gray-700 dark:text-gray-300">
           {t('plugin.pluginSection')}
         </span>
         <div class="relative">
           <button
-            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors cursor-pointer 
-         flex items-center gap-1"
+            class="flex cursor-pointer items-center gap-1 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
             onClick={() => {
               const isOpening = !showAddMenu()
               setShowAddMenu(isOpening)
@@ -161,11 +162,11 @@ export default function PluginSection(props: PluginSectionProps) {
             title={t('plugin.addPlugin')}
             type="button"
           >
-            <FiPlus class="w-4 h-4" />
+            <FiPlus class="h-4 w-4" />
             <span class="text-xs leading-none">{t('plugin.addPlugin')}</span>
           </button>
           <Show when={showAddMenu()}>
-            <div class="absolute right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-lg z-10 min-w-[160px] overflow-hidden">
+            <div class="absolute right-0 z-10 mt-1 min-w-[160px] overflow-hidden rounded border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-800">
               <For
                 each={PLUGIN_REGISTRY.filter(def =>
                   isPluginEnabled(config.pluginMetadatas, def.info.id)
@@ -173,7 +174,7 @@ export default function PluginSection(props: PluginSectionProps) {
               >
                 {def => (
                   <button
-                    class="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200"
+                    class="w-full px-3 py-2 text-left text-xs text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
                     onClick={() => {
                       handleAddPlugin(def)
                     }}
@@ -188,10 +189,10 @@ export default function PluginSection(props: PluginSectionProps) {
         </div>
       </div>
 
-      <div class="bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600 p-2 min-h-[60px] max-h-[400px] overflow-y-auto flex flex-col gap-1.5">
+      <div class="flex max-h-[400px] min-h-[60px] flex-col gap-1.5 overflow-y-auto rounded border border-gray-200 bg-gray-50 p-2 dark:border-gray-600 dark:bg-gray-800">
         <Show
           fallback={
-            <div class="text-gray-400 dark:text-gray-500 text-xs select-none py-3 text-center">
+            <div class="py-3 text-center text-xs text-gray-400 select-none dark:text-gray-500">
               {t('plugin.noPluginsAdded')}
             </div>
           }
@@ -207,10 +208,10 @@ export default function PluginSection(props: PluginSectionProps) {
                 isPluginEnabled(config.pluginMetadatas, instance.pluginId)
 
               return (
-                <div class="bg-white dark:bg-gray-700/50 border border-gray-200 dark:border-transparent rounded overflow-hidden transition-colors">
+                <div class="overflow-hidden rounded border border-gray-200 bg-white transition-colors dark:border-transparent dark:bg-gray-700/50">
                   <div class="flex items-center gap-2 px-2 py-1.5">
                     <button
-                      class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      class="text-gray-400 transition-colors hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:text-gray-300"
                       disabled={isFirst()}
                       onClick={() => {
                         handleMovePlugin(index(), -1)
@@ -218,10 +219,10 @@ export default function PluginSection(props: PluginSectionProps) {
                       title={t('plugin.moveUp')}
                       type="button"
                     >
-                      <FiArrowUp class="w-3 h-3" />
+                      <FiArrowUp class="h-3 w-3" />
                     </button>
                     <button
-                      class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      class="text-gray-400 transition-colors hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:text-gray-300"
                       disabled={isLast()}
                       onClick={() => {
                         handleMovePlugin(index(), 1)
@@ -229,14 +230,14 @@ export default function PluginSection(props: PluginSectionProps) {
                       title={t('plugin.moveDown')}
                       type="button"
                     >
-                      <FiArrowDown class="w-3 h-3" />
+                      <FiArrowDown class="h-3 w-3" />
                     </button>
 
                     <span
-                      class={`flex-1 text-xs font-medium cursor-pointer select-none truncate ${
+                      class={`flex-1 cursor-pointer truncate text-xs font-medium select-none ${
                         enabled()
                           ? 'text-gray-700 dark:text-gray-200'
-                          : 'text-gray-400 dark:text-gray-500 line-through'
+                          : 'text-gray-400 line-through dark:text-gray-500'
                       }`}
                       onClick={() => setExpandedIndex(isExpanded() ? null : index())}
                       title={enabled() ? undefined : t('plugin.disabled')}
@@ -245,27 +246,27 @@ export default function PluginSection(props: PluginSectionProps) {
                     </span>
 
                     <button
-                      class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      class="text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
                       onClick={() => setExpandedIndex(isExpanded() ? null : index())}
                       type="button"
                     >
                       <Show
-                        fallback={<FiChevronDown class="w-3 h-3" />}
+                        fallback={<FiChevronDown class="h-3 w-3" />}
                         when={isExpanded()}
                       >
-                        <FiChevronUp class="w-3 h-3" />
+                        <FiChevronUp class="h-3 w-3" />
                       </Show>
                     </button>
 
                     <button
-                      class="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                      class="text-gray-400 transition-colors hover:text-red-500 dark:hover:text-red-400"
                       onClick={() => {
                         handleRemovePlugin(index())
                       }}
                       title={t('plugin.removePlugin')}
                       type="button"
                     >
-                      <FiTrash2 class="w-3 h-3" />
+                      <FiTrash2 class="h-3 w-3" />
                     </button>
                   </div>
 
@@ -275,7 +276,7 @@ export default function PluginSection(props: PluginSectionProps) {
                         // No editor for this plugin type (e.g. AutoUpload).
                         // Without this branch the chevron flips but nothing
                         // appears, which looks like the click was a no-op.
-                        <div class="border-t border-gray-200 dark:border-gray-600/50 px-3 py-2 bg-gray-50/50 dark:bg-gray-900/20 text-xs text-gray-400 dark:text-gray-500 italic">
+                        <div class="border-t border-gray-200 bg-gray-50/50 px-3 py-2 text-xs text-gray-400 italic dark:border-gray-600/50 dark:bg-gray-900/20 dark:text-gray-500">
                           {t('plugin.configEmpty')}
                         </div>
                       }
@@ -294,7 +295,7 @@ export default function PluginSection(props: PluginSectionProps) {
                         >
                         const gameConfig = (instance as { config: AnyGameConfig }).config
                         return (
-                          <div class="border-t border-gray-200 dark:border-gray-600/50 px-3 py-2 bg-gray-50/50 dark:bg-gray-900/20">
+                          <div class="border-t border-gray-200 bg-gray-50/50 px-3 py-2 dark:border-gray-600/50 dark:bg-gray-900/20">
                             <Dynamic
                               component={Editor}
                               config={gameConfig}

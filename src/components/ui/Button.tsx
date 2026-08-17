@@ -3,8 +3,9 @@
  * 通过 variant 和 size 属性控制不同形态，支持传入 class 覆盖
  */
 
-import { cn } from '~/lib/utils'
 import { splitProps, type JSX } from 'solid-js'
+
+import { cn } from '~/lib/utils'
 
 export interface ButtonProps extends JSX.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: 'icon' | 'md' | 'sm'

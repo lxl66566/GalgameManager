@@ -11,9 +11,6 @@
 // needs to produce a different `Bucket[]`, the charts won't change.
 import { Button } from '@components/ui/Button'
 import * as Popover from '@kobalte/core/popover'
-import { useI18n } from '~/i18n'
-import { cn } from '~/lib/utils'
-import { useConfig } from '~/store'
 import { FiChevronLeft, FiChevronRight, FiRotateCcw } from 'solid-icons/fi'
 import {
   createEffect,
@@ -24,6 +21,11 @@ import {
   Show,
   type Component
 } from 'solid-js'
+
+import { useI18n } from '~/i18n'
+import { cn } from '~/lib/utils'
+import { useConfig } from '~/store'
+
 import { goldenColor } from './gameColors'
 import GamePlaytimeBars, { type GameBarRow } from './GamePlaytimeBars'
 import StackedPlaytimeChart, {
@@ -176,7 +178,7 @@ const StatisticsPage: Component = () => {
 
   return (
     <div class="flex h-full flex-col text-gray-900 dark:text-gray-100">
-      <div class="shrink-0 bg-white px-5 pb-3 pt-3 dark:bg-gray-900">
+      <div class="shrink-0 bg-white px-5 pt-3 pb-3 dark:bg-gray-900">
         <h1 class="text-2xl font-bold">{t('stats.self')}</h1>
       </div>
 
@@ -224,7 +226,7 @@ const StatisticsPage: Component = () => {
                   size="icon"
                   title={t('stats.backToCurrent')}
                 >
-                  <span class="inline-flex ggm-rewind">
+                  <span class="ggm-rewind inline-flex">
                     <FiRotateCcw />
                   </span>
                 </Button>
@@ -245,7 +247,7 @@ const StatisticsPage: Component = () => {
               <Popover.Root onOpenChange={setPickerOpen} open={pickerOpen()}>
                 <Popover.Trigger
                   aria-label={t('stats.jumpToDate')}
-                  class="rounded-md px-2 py-1 text-sm font-medium tabular-nums text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  class="rounded-md px-2 py-1 text-sm font-medium text-gray-700 tabular-nums hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                   title={t('stats.jumpToDate')}
                 >
                   {rangeLabel()}
@@ -308,7 +310,7 @@ const StatisticsPage: Component = () => {
                  tall ones; whatever is left goes to the list, which scrolls
                  internally. The chart's height is reactive (ResizeObserver
                  inside), so it always fills this flex item. */}
-            <div class="flex min-h-[200px] max-h-[420px] flex-[3] flex-col rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+            <div class="flex max-h-[420px] min-h-[200px] flex-[3] flex-col rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
               <StackedPlaytimeChart
                 data={bucketData()}
                 focusGameId={focusGameId()}

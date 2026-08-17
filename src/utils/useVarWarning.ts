@@ -12,8 +12,9 @@
  */
 import { extractUnknownVars } from '@utils/resolveVar'
 import { useVarMap } from '@utils/useVarMap'
-import { useI18n } from '~/i18n'
 import { createMemo, type Accessor } from 'solid-js'
+
+import { useI18n } from '~/i18n'
 
 export function useVarWarning(
   paths: Accessor<string | string[]>,

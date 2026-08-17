@@ -4,10 +4,12 @@
 import type { VoiceZerointerruptGameConfig } from '@bindings/VoiceZerointerruptGameConfig'
 import { FieldHint } from '@components/ui/FieldHint'
 import { FormField, FormSelect } from '@components/ui/form'
+import { Show } from 'solid-js'
+
 import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'
 import { isLinux } from '~/utils/platform'
-import { Show } from 'solid-js'
+
 import { AutoAddMetaEditor } from './AutoAddMetaEditor'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 
@@ -21,7 +23,7 @@ function VoiceZerointerruptGameConfigEditor(
 
   return (
     <div class="flex flex-col gap-2">
-      <div class="flex flex-wrap gap-3 items-start">
+      <div class="flex flex-wrap items-start gap-3">
         <FormField class="w-28" label={t('plugin.arch')}>
           <FormSelect
             onChange={(e: Event) => {

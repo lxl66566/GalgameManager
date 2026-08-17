@@ -24,10 +24,12 @@ import {
   type ConfigPatch,
   type DeepPartial
 } from '@utils/patch'
-import { type Dictionary } from '~/i18n'
 import { onCleanup, onMount } from 'solid-js'
 import { createStore, produce, reconcile, unwrap } from 'solid-js/store'
 import toast from 'solid-toast'
+
+import { type Dictionary } from '~/i18n'
+
 import { currentDeviceId } from './Singleton'
 
 type PluginMetadatasPatch = DeepPartial<RustPluginMetadatasPatch>

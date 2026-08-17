@@ -1,5 +1,6 @@
 import path from 'node:path'
 import process from 'node:process'
+
 import UnoCSS from 'unocss/vite'
 import { defineConfig } from 'vite'
 import solid from 'vite-plugin-solid'
@@ -14,8 +15,11 @@ export default defineConfig({
     minify: process.env.TAURI_DEBUG ? false : 'esbuild',
     // produce sourcemaps for debug builds
     sourcemap: !!process.env.TAURI_DEBUG,
-    // Tauri uses Chromium on Windows and WebKit on macOS and Linux
-    target: process.env.TAURI_PLATFORM == 'windows' ? 'chrome105' : 'safari13'
+    // Tauri uses Chromium on Windows and WebKit on macOS and Linux.
+    // NOTE: must be >= safari15 — esbuild cannot lower destructuring below
+    // that version ("Transforming destructuring ... is not supported yet"),
+    // and any modern WKWebView/WebKitGTK supports destructuring natively anyway.
+    target: process.env.TAURI_PLATFORM == 'windows' ? 'chrome105' : 'safari15'
   },
   // prevent vite from obscuring rust errors
   clearScreen: false,

@@ -1,7 +1,6 @@
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import { log } from '@utils/log'
 import { resolveVarForDevice } from '@utils/resolveVar'
-import { useConfig } from '~/store'
 import {
   createEffect,
   createResource,
@@ -9,6 +8,8 @@ import {
   Suspense,
   type Component
 } from 'solid-js'
+
+import { useConfig } from '~/store'
 
 interface ImageProps {
   alt?: string
@@ -114,10 +115,10 @@ const CachedImage: Component<ImageProps> = props => {
       <ErrorBoundary
         fallback={(error: Error) => (
           <div
-            class="absolute inset-0 flex flex-col items-center justify-center bg-red-900/20 border border-red-500/30 text-red-400 p-2"
+            class="absolute inset-0 flex flex-col items-center justify-center border border-red-500/30 bg-red-900/20 p-2 text-red-400"
             title={error.toString()}
           >
-            <span class="text-[10px] font-mono opacity-80">
+            <span class="font-mono text-[10px] opacity-80">
               Load Failed: {error.toString()}
             </span>
           </div>
@@ -125,19 +126,19 @@ const CachedImage: Component<ImageProps> = props => {
       >
         <Suspense
           fallback={
-            <div class="absolute inset-0 flex items-center justify-center bg-gray-100/10 backdrop-blur-sm z-10">
-              <div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            <div class="absolute inset-0 z-10 flex items-center justify-center bg-gray-100/10 backdrop-blur-sm">
+              <div class="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             </div>
           }
         >
           {imageHash() ? (
             <img
               alt={props.alt}
-              class="w-full h-full object-cover animate-in fade-in duration-300"
+              class="animate-in fade-in h-full w-full object-cover duration-300"
               src={galimgUrl(imageHash()!)}
             />
           ) : (
-            <div class="w-full h-full bg-transparent" />
+            <div class="h-full w-full bg-transparent" />
           )}
         </Suspense>
       </ErrorBoundary>

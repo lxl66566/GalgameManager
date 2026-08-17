@@ -4,13 +4,14 @@ import { ContextMenu, type ContextMenuEntry } from '@components/ui/ContextMenu'
 import { GameActionButton } from '@components/ui/GameActionButton'
 import { displayDuration } from '@utils/time'
 import { createRelativeTime } from '@utils/time/createRelativeTime'
-import { resolveTimeLanguage, useI18n } from '~/i18n'
-import { cn } from '~/lib/utils'
-import { useConfig } from '~/store'
 import { AiOutlineCloudUpload, AiOutlineEdit, AiOutlineSync } from 'solid-icons/ai'
 import { FaRegularCirclePlay, FaSolidGamepad } from 'solid-icons/fa'
 import { FiFolder } from 'solid-icons/fi'
 import { createMemo, Show, type JSX } from 'solid-js'
+
+import { resolveTimeLanguage, useI18n } from '~/i18n'
+import { cn } from '~/lib/utils'
+import { useConfig } from '~/store'
 
 // --- 组件：游戏卡片 ---
 interface GameItemProps {
@@ -51,7 +52,7 @@ export const GameItem = (props: GameItemProps) => {
   const contextMenuItems = (): ContextMenuEntry[] => {
     const items: ContextMenuEntry[] = [
       {
-        icon: <FiFolder class="w-3.5 h-3.5" />,
+        icon: <FiFolder class="h-3.5 w-3.5" />,
         label: t('game.context.openDir'),
         onSelect: () => props.onContextMenuAction?.('openDir')
       }
@@ -64,14 +65,14 @@ export const GameItem = (props: GameItemProps) => {
       {/* 上半部分：图片区域 */}
       <ContextMenu items={contextMenuItems()}>
         <div
-          class="relative group cursor-pointer h-52 overflow-hidden"
+          class="group relative h-52 cursor-pointer overflow-hidden"
           onClick={() => {
             if (!props.isPlaying) props.onStart()
           }}
         >
           <CachedImage
             alt={props.game.name}
-            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             extractColor={!props.game.coverColor}
             hash={props.game.imageSha256}
             onColorExtracted={props.onCoverColorUpdate}
@@ -83,24 +84,24 @@ export const GameItem = (props: GameItemProps) => {
           <Show
             fallback={
               /* 默认状态：悬浮显示开始游戏 */
-              <div class="absolute inset-0 bg-black/30 dark:bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[2px]">
-                <FaRegularCirclePlay class="w-16 h-16 text-white drop-shadow-lg hover:scale-110 transition-transform duration-200" />
+              <div class="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 backdrop-blur-[2px] transition-opacity duration-300 group-hover:opacity-100 dark:bg-black/50">
+                <FaRegularCirclePlay class="h-16 w-16 text-white drop-shadow-lg transition-transform duration-200 hover:scale-110" />
               </div>
             }
             when={props.isPlaying}
           >
             {/* 游玩中状态：常驻显示，带有呼吸效果 */}
-            <div class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[2px] cursor-default border-b-4 border-emerald-500">
+            <div class="absolute inset-0 z-10 flex cursor-default flex-col items-center justify-center border-b-4 border-emerald-500 bg-black/60 backdrop-blur-[2px]">
               {/* 居中图标与文字 */}
-              <FaSolidGamepad class="w-14 h-14 text-emerald-400 animate-pulse drop-shadow-lg" />
-              <span class="mt-2 text-emerald-100 font-bold text-xs tracking-widest uppercase">
+              <FaSolidGamepad class="h-14 w-14 animate-pulse text-emerald-400 drop-shadow-lg" />
+              <span class="mt-2 text-xs font-bold tracking-widest text-emerald-100 uppercase">
                 {t('game.playing')}
               </span>
 
               {/* 右上角呼吸灯 (Ping Animation) */}
               <div class="absolute top-3 right-3 flex h-3 w-3">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span class="relative inline-flex h-3 w-3 rounded-full bg-emerald-500" />
               </div>
             </div>
           </Show>
@@ -117,20 +118,20 @@ export const GameItem = (props: GameItemProps) => {
         )}
       >
         {/* 游戏信息容器 */}
-        <div class="flex flex-col h-full justify-center transition-opacity duration-300 group-hover/info:opacity-40">
+        <div class="flex h-full flex-col justify-center transition-opacity duration-300 group-hover/info:opacity-40">
           {/* 1. 游戏标题：动态字号 + 截断 */}
           <h2
-            class={`dark:text-gray-200 text-gray-800 font-bold truncate transition-all ${titleSizeClass()}`}
+            class={`truncate font-bold text-gray-800 transition-all dark:text-gray-200 ${titleSizeClass()}`}
             title={props.game.name}
           >
             {props.game.name}
           </h2>
 
           {/* 2. 信息行：左右分布 */}
-          <div class="flex items-center justify-between mt-1.5 font-mono text-xs">
+          <div class="mt-1.5 flex items-center justify-between font-mono text-xs">
             {/* 左侧：上次游玩时间（min-w-0 + truncate 防止过长时换行顶掉标题） */}
             <div
-              class="flex items-center min-w-0 text-gray-400 dark:text-gray-500"
+              class="flex min-w-0 items-center text-gray-400 dark:text-gray-500"
               title={`${t('game.lastPlayedLabel')}${props.game.lastPlayedTime ?? t('time.never')}`}
             >
               {/* <History class="w-3 h-3 mr-1 shrink-0" /> */}
@@ -139,7 +140,7 @@ export const GameItem = (props: GameItemProps) => {
 
             {/* 右侧：总游玩时长（shrink-0 保持完整可见） */}
             <div
-              class="shrink-0 whitespace-nowrap text-gray-500 dark:text-gray-400 font-medium"
+              class="shrink-0 font-medium whitespace-nowrap text-gray-500 dark:text-gray-400"
               title={t('game.totalPlayTime')}
             >
               {displayDuration(props.game.useTime)}
@@ -148,11 +149,11 @@ export const GameItem = (props: GameItemProps) => {
         </div>
 
         {/* 底部滑出工具栏 */}
-        <div class="absolute inset-0 flex items-center justify-around px-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md translate-y-full group-hover/info:translate-y-0 transition-transform duration-300 ease-out border-t dark:border-slate-600 border-gray-100">
+        <div class="absolute inset-0 flex translate-y-full items-center justify-around border-t border-gray-100 bg-white/90 px-2 backdrop-blur-md transition-transform duration-300 ease-out group-hover/info:translate-y-0 dark:border-slate-600 dark:bg-slate-800/90">
           {/* 按钮 1: 编辑 */}
           <GameActionButton
             colorClass="text-blue-600 dark:text-blue-400"
-            icon={<AiOutlineEdit class="w-6 h-6" />}
+            icon={<AiOutlineEdit class="h-6 w-6" />}
             onClick={props.onEdit}
             title={t('game.editGame')}
           />
@@ -160,7 +161,7 @@ export const GameItem = (props: GameItemProps) => {
           {/* 按钮 2: 备份 (上传) */}
           <GameActionButton
             colorClass="text-emerald-600 dark:text-emerald-400"
-            icon={<AiOutlineCloudUpload class="w-6 h-6" />}
+            icon={<AiOutlineCloudUpload class="h-6 w-6" />}
             loading={props.isBackingUp} // 传递 loading 状态
             onClick={props.onBackup}
             title={t('game.backupButtonHint')}
@@ -169,7 +170,7 @@ export const GameItem = (props: GameItemProps) => {
           {/* 按钮 3: 同步状态 */}
           <GameActionButton
             colorClass="text-amber-600 dark:text-amber-400"
-            icon={<AiOutlineSync class="w-6 h-6" />}
+            icon={<AiOutlineSync class="h-6 w-6" />}
             onClick={props.onSync}
             title={t('game.openSyncModal')}
           />

@@ -5,8 +5,10 @@
 // + relative/absolute format + custom absolute pattern) by reading them
 // off the supplied `options` accessor.
 import type { TimeDisplayConfig } from '@bindings/TimeDisplayConfig'
-import type { Locale } from '~/i18n'
 import { createMemo, createSignal, onCleanup, type Accessor } from 'solid-js'
+
+import type { Locale } from '~/i18n'
+
 import {
   formatAbsoluteIso,
   formatTimeAgo,

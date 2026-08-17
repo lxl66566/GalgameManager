@@ -7,10 +7,11 @@ import { fuckBackslash } from '@utils/path'
 import { resolveVar } from '@utils/resolveVar'
 import { useVarMap } from '@utils/useVarMap'
 import { useVarWarning } from '@utils/useVarWarning'
-import { useI18n } from '~/i18n'
 import { FiFilePlus, FiFolderPlus } from 'solid-icons/fi'
 import { createResource, createSignal, For, Show, type Component } from 'solid-js'
 import { Dynamic } from 'solid-js/web'
+
+import { useI18n } from '~/i18n'
 
 interface ActionButtonProps {
   icon: Component<{ class?: string }>
@@ -140,9 +141,9 @@ export default function PathListEditor(props: PathListEditorProps) {
   }
 
   return (
-    <div class="flex flex-col gap-2 w-full">
+    <div class="flex w-full flex-col gap-2">
       {/* Header */}
-      <div class="flex justify-between items-center">
+      <div class="flex items-center justify-between">
         <GameEditLabel children={props.label} class={props.labelClass} />
         <div class="flex gap-1">
           <ActionButton
@@ -159,24 +160,24 @@ export default function PathListEditor(props: PathListEditorProps) {
       </div>
 
       {/* List Container */}
-      <div class="bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600 p-2 min-h-[80px] max-h-[150px] overflow-y-auto flex flex-col transition-colors">
+      <div class="flex max-h-[150px] min-h-[80px] flex-col overflow-y-auto rounded border border-gray-200 bg-gray-50 p-2 transition-colors dark:border-gray-600 dark:bg-gray-800">
         <Show
           fallback={
-            <div class="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs select-none">
+            <div class="flex flex-1 items-center justify-center text-xs text-gray-400 select-none dark:text-gray-500">
               {t('hint.noPathPleaseAdd')}
             </div>
           }
           when={props.paths.length > 0}
         >
-          <ul class="flex flex-col gap-1 w-full">
+          <ul class="flex w-full flex-col gap-1">
             <For each={props.paths}>
               {(path, index) => (
-                <li class="flex items-center justify-between bg-white dark:bg-gray-700 border border-gray-200 dark:border-transparent px-2 py-1 rounded text-xs group min-h-[28px] transition-colors">
+                <li class="group flex min-h-[28px] items-center justify-between rounded border border-gray-200 bg-white px-2 py-1 text-xs transition-colors dark:border-transparent dark:bg-gray-700">
                   <Show
                     fallback={
                       // 显示模式
                       <span
-                        class="truncate text-gray-600 dark:text-gray-300 mr-2 flex-1 cursor-text select-text hover:text-gray-900 dark:hover:text-white transition-colors"
+                        class="mr-2 flex-1 cursor-text truncate text-gray-600 transition-colors select-text hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
                         onDblClick={() => setEditingIndex(index())}
                         title={t('hint.doubleClickToEdit')}
                       >
@@ -187,7 +188,7 @@ export default function PathListEditor(props: PathListEditorProps) {
                   >
                     {/* 编辑模式 */}
                     <input
-                      class="flex-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-1 rounded border border-blue-500 outline-none mr-2 min-w-0"
+                      class="mr-2 min-w-0 flex-1 rounded border border-blue-500 bg-white px-1 text-gray-900 outline-none dark:bg-gray-900 dark:text-white"
                       onBlur={e => {
                         handleUpdatePath(index(), e.currentTarget.value)
                       }}
@@ -215,7 +216,7 @@ export default function PathListEditor(props: PathListEditorProps) {
                   </Show>
 
                   <button
-                    class="text-gray-400 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity px-1 cursor-pointer"
+                    class="cursor-pointer px-1 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500 dark:hover:text-red-400"
                     onClick={() => {
                       handleRemovePath(index())
                     }}
@@ -233,8 +234,8 @@ export default function PathListEditor(props: PathListEditorProps) {
       </div>
 
       {/* 构建一个高度为 0 的锚点，让 warning 相对于这里进行绝对定位 */}
-      <div class="relative w-full h-0">
-        <div class="absolute top-0 left-0 flex flex-col gap-2 w-full z-10">
+      <div class="relative h-0 w-full">
+        <div class="absolute top-0 left-0 z-10 flex w-full flex-col gap-2">
           <Show when={variableWarning()}>
             <FieldHint text={variableWarning()} variant="warning" />
           </Show>
@@ -246,7 +247,7 @@ export default function PathListEditor(props: PathListEditorProps) {
 
       {/* 正常文档流中的提示，永远紧贴主体 */}
       <Show when={props.paths.length > 0}>
-        <div class="text-[10px] text-gray-400 dark:text-gray-500 text-right pr-1 top-0">
+        <div class="top-0 pr-1 text-right text-[10px] text-gray-400 dark:text-gray-500">
           {t('hint.doubleClickToEdit')}
         </div>
       </Show>
@@ -258,17 +259,17 @@ export default function PathListEditor(props: PathListEditorProps) {
 function ActionButton(props: ActionButtonProps) {
   return (
     <button
-      class="group flex items-center rounded p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-all cursor-pointer"
+      class="group flex cursor-pointer items-center rounded p-1.5 text-gray-400 transition-all hover:bg-gray-200/50 hover:text-gray-700 dark:hover:bg-gray-700/50 dark:hover:text-gray-200"
       onClick={() => {
         props.onClick()
       }}
       title={props.label}
       type="button"
     >
-      <Dynamic class="w-4 h-4 shrink-0" component={props.icon} />
+      <Dynamic class="h-4 w-4 shrink-0" component={props.icon} />
       {/* 利用 grid-template-columns 实现平滑的宽度展开动画 */}
-      <div class="grid grid-cols-[0fr] group-hover:grid-cols-[1fr] transition-[grid-template-columns] duration-300 ease-in-out">
-        <span class="overflow-hidden whitespace-nowrap text-xs font-medium pl-0 group-hover:pl-1.5 transition-all duration-300">
+      <div class="grid grid-cols-[0fr] transition-[grid-template-columns] duration-300 ease-in-out group-hover:grid-cols-[1fr]">
+        <span class="overflow-hidden pl-0 text-xs font-medium whitespace-nowrap transition-all duration-300 group-hover:pl-1.5">
           {props.label}
         </span>
       </div>

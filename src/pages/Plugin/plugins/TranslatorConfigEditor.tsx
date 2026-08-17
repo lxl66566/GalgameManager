@@ -6,7 +6,9 @@
  */
 import type { TranslatorGameConfig } from '@bindings/TranslatorGameConfig'
 import { FormField, FormInput, FormPathInput, FormSelect } from '@components/ui/form'
+
 import { useI18n } from '~/i18n'
+
 import { AutoAddMetaEditor } from './AutoAddMetaEditor'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 
@@ -14,8 +16,8 @@ function TranslatorGameConfigEditor(props: ConfigEditorProps<TranslatorGameConfi
   const { t } = useI18n()
 
   return (
-    <div class="flex flex-wrap gap-4 items-start items-stretch">
-      <FormField class="flex-1 min-w-48" label={t('plugin.translator.cmd')}>
+    <div class="flex flex-wrap items-start items-stretch gap-4">
+      <FormField class="min-w-48 flex-1" label={t('plugin.translator.cmd')}>
         <FormInput
           checkVars
           class="w-full"
@@ -31,7 +33,7 @@ function TranslatorGameConfigEditor(props: ConfigEditorProps<TranslatorGameConfi
         />
       </FormField>
 
-      <FormField class="flex-1 min-w-48" label={t('plugin.currentDir')}>
+      <FormField class="min-w-48 flex-1" label={t('plugin.currentDir')}>
         <FormPathInput
           class="w-full"
           isDir

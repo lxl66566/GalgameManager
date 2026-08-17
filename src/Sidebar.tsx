@@ -1,6 +1,7 @@
 import { A, useLocation } from '@solidjs/router'
-import { cn } from '~/lib/utils'
 import { createMemo, splitProps, type JSX } from 'solid-js'
+
+import { cn } from '~/lib/utils'
 
 interface SidebarItemProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElement> {
   href: string
@@ -48,7 +49,7 @@ const SidebarItem = (props: SidebarItemProps) => {
       </span>
 
       {/* 文字：响应式显示 */}
-      <span class="hidden md:block whitespace-nowrap opacity-0 md:opacity-100 transition-opacity duration-300">
+      <span class="hidden whitespace-nowrap opacity-0 transition-opacity duration-300 md:block md:opacity-100">
         {local.label}
       </span>
     </A>

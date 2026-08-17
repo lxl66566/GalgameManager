@@ -12,8 +12,6 @@ import { fuckBackslash } from '@utils/path'
 import { resolveVar } from '@utils/resolveVar'
 import { useVarMap } from '@utils/useVarMap'
 import { useVarWarning } from '@utils/useVarWarning'
-import { useI18n } from '~/i18n'
-import { cn } from '~/lib/utils'
 import { FiFolder, FiInfo } from 'solid-icons/fi'
 import {
   createResource,
@@ -23,6 +21,10 @@ import {
   type Component,
   type JSX
 } from 'solid-js'
+
+import { useI18n } from '~/i18n'
+import { cn } from '~/lib/utils'
+
 import {
   Button,
   Input,
@@ -75,7 +77,7 @@ export const FormInput: Component<FormInputProps> = props => {
   )
 
   return (
-    <div class="flex flex-col w-full">
+    <div class="flex w-full flex-col">
       <Input
         size={local.size ?? 'sm'}
         value={local.value}
@@ -93,7 +95,7 @@ export const FormInput: Component<FormInputProps> = props => {
           }
         }}
       />
-      <div class="flex flex-col gap-1 mt-1">
+      <div class="mt-1 flex flex-col gap-1">
         <Show when={variableWarning()}>
           <FieldHint text={variableWarning()} variant="warning" />
         </Show>
@@ -152,14 +154,14 @@ export const FormField: Component<FormFieldProps> = props => (
           props.labelClass
         )}
       >
-        <span class="truncate min-w-0">{props.label}</span>
+        <span class="min-w-0 truncate">{props.label}</span>
         <Show when={props.description}>
           <Tooltip closeDelay={0} openDelay={0}>
-            <Tooltip.Trigger class="inline-flex items-center shrink-0 cursor-help text-gray-400 dark:text-gray-500">
-              <FiInfo class="w-3 h-3" />
+            <Tooltip.Trigger class="inline-flex shrink-0 cursor-help items-center text-gray-400 dark:text-gray-500">
+              <FiInfo class="h-3 w-3" />
             </Tooltip.Trigger>
             <Tooltip.Portal>
-              <Tooltip.Content class="z-50 w-max max-w-[220px] rounded px-2 py-1 text-[10px] leading-tight font-normal bg-gray-800 text-gray-100 shadow-lg dark:bg-gray-200 dark:text-gray-800 animate-in fade-in">
+              <Tooltip.Content class="animate-in fade-in z-50 w-max max-w-[220px] rounded bg-gray-800 px-2 py-1 text-[10px] leading-tight font-normal text-gray-100 shadow-lg dark:bg-gray-200 dark:text-gray-800">
                 <Tooltip.Arrow />
                 {props.description}
               </Tooltip.Content>
@@ -168,7 +170,7 @@ export const FormField: Component<FormFieldProps> = props => (
         </Show>
       </label>
     </Show>
-    <div class={props.childrenClass ?? 'flex items-center min-h-7'}>{props.children}</div>
+    <div class={props.childrenClass ?? 'flex min-h-7 items-center'}>{props.children}</div>
     <Show when={props.warning}>
       <FieldHint text={props.warning} variant="warning" />
     </Show>
@@ -323,7 +325,7 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
   return (
     <div class={wrapperClass()}>
       {/* Input row: text input + browse button */}
-      <div class="relative flex items-center w-full">
+      <div class="relative flex w-full items-center">
         <input
           class={inputClass()}
           onBlur={(e: FocusEvent) => {
@@ -344,12 +346,12 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
           title={t('ui.browse')}
           type="button"
         >
-          <FiFolder class="w-4 h-4" />
+          <FiFolder class="h-4 w-4" />
         </button>
       </div>
 
       {/* Warning hints — stacked below the input */}
-      <div class="flex flex-col gap-2 mt-2">
+      <div class="mt-2 flex flex-col gap-2">
         <Show when={variableWarning()}>
           <FieldHint text={variableWarning()} variant="warning" />
         </Show>

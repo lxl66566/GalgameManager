@@ -1,9 +1,10 @@
 // ─── FieldHint ───
 
-import { cn } from '~/lib/utils'
 import { FiAlertCircle, FiAlertTriangle, FiInfo } from 'solid-icons/fi'
 import { type Component, type JSX } from 'solid-js'
 import { Dynamic } from 'solid-js/web'
+
+import { cn } from '~/lib/utils'
 
 export interface FieldHintProps {
   /** Arbitrary content rendered next to the icon. Mutually exclusive with `text`. */

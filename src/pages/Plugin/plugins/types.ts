@@ -23,8 +23,9 @@ import type { VoiceZerointerruptGameConfig } from '@bindings/VoiceZerointerruptG
 import type { VoiceZerointerruptPluginMeta } from '@bindings/VoiceZerointerruptPluginMeta'
 import type { WineGameConfig } from '@bindings/WineGameConfig'
 import type { WinePluginMeta } from '@bindings/WinePluginMeta'
-import { isLinux, isMac, isWindows } from '~/utils/platform'
 import type { Component } from 'solid-js'
+
+import { isLinux, isMac, isWindows } from '~/utils/platform'
 
 // ── Plugin info (presentation metadata, frontend-only) ────────────────────────
 

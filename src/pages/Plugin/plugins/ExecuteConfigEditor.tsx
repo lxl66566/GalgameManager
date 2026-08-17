@@ -10,9 +10,11 @@ import {
   FormSwitch
 } from '@components/ui/form'
 import { FormTableEditor } from '@components/ui/FormTableEditor'
+import { createMemo } from 'solid-js'
+
 import { useI18n } from '~/i18n'
 import { isWindows } from '~/utils/platform'
-import { createMemo } from 'solid-js'
+
 import { AutoAddMetaEditor } from './AutoAddMetaEditor'
 import type { ConfigEditorProps, PluginDefinition } from './types'
 
@@ -46,7 +48,7 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
   )
 
   return (
-    <div class="flex flex-wrap gap-4 items-start items-stretch">
+    <div class="flex flex-wrap items-start items-stretch gap-4">
       <FormField class="w-40" label={t('plugin.execute.on')}>
         <FormSelect
           class="w-full"
@@ -54,7 +56,9 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
             props.onCommit({
               ...props.config,
               on: (e.target as HTMLSelectElement).value as
-                'afterGameStart' | 'beforeGameStart' | 'gameExit'
+                | 'afterGameStart'
+                | 'beforeGameStart'
+                | 'gameExit'
             })
           }}
           options={[
@@ -67,7 +71,7 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
       </FormField>
 
       <FormField
-        class="flex-1 min-w-48"
+        class="min-w-48 flex-1"
         description={t('plugin.currentDirDesc')}
         label={t('plugin.currentDir')}
       >
@@ -82,7 +86,7 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
         />
       </FormField>
 
-      <FormField class="flex-1 min-w-48" label={t('plugin.execute.cmd')}>
+      <FormField class="min-w-48 flex-1" label={t('plugin.execute.cmd')}>
         <FormInput
           checkVars
           class="w-full"
@@ -127,7 +131,9 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
             props.onCommit({
               ...props.config,
               exitSignal: (e.target as HTMLSelectElement).value as
-                'none' | 'sigkill' | 'sigterm'
+                | 'none'
+                | 'sigkill'
+                | 'sigterm'
             })
           }}
           options={exitSignalOptions()}

@@ -7,23 +7,40 @@
 /// — we only need the types to resolve.
 
 import path from 'node:path'
+
+import solid from 'vite-plugin-solid'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-  plugins: [],
+  // Tests import .tsx modules (e.g. ~/i18n) containing JSX. Vite 8 respects
+  // tsconfig `jsx: "preserve"` and skips JSX transform, which breaks
+  // import-analysis — so the solid plugin (proper JSX transform) is required.
+  plugins: [solid()],
   resolve: {
     alias: {
-      '@bindings': path.resolve(__dirname, './src-tauri/bindings'),
-      '@components': path.resolve(__dirname, './src/components'),
+      '@bindings': path.resolve(import.meta.dirname, './src-tauri/bindings'),
+      '@components': path.resolve(import.meta.dirname, './src/components'),
       // Stub out Tauri IPC + plugin entry points. Any test that actually
       // needs to assert on `invoke()` calls should override these locally
       // via `vi.mock`.
-      '@tauri-apps/api/core': path.resolve(__dirname, './src/test/stubs/tauri-core.ts'),
-      '@tauri-apps/api/event': path.resolve(__dirname, './src/test/stubs/tauri-event.ts'),
-      '@tauri-apps/plugin-dialog': path.resolve(__dirname, './src/test/stubs/tauri-dialog.ts'),
-      '@tauri-apps/plugin-fs': path.resolve(__dirname, './src/test/stubs/tauri-fs.ts'),
-      '@utils': path.resolve(__dirname, './src/utils'),
-      '~': path.resolve(__dirname, './src')
+      '@tauri-apps/api/core': path.resolve(
+        import.meta.dirname,
+        './src/test/stubs/tauri-core.ts'
+      ),
+      '@tauri-apps/api/event': path.resolve(
+        import.meta.dirname,
+        './src/test/stubs/tauri-event.ts'
+      ),
+      '@tauri-apps/plugin-dialog': path.resolve(
+        import.meta.dirname,
+        './src/test/stubs/tauri-dialog.ts'
+      ),
+      '@tauri-apps/plugin-fs': path.resolve(
+        import.meta.dirname,
+        './src/test/stubs/tauri-fs.ts'
+      ),
+      '@utils': path.resolve(import.meta.dirname, './src/utils'),
+      '~': path.resolve(import.meta.dirname, './src')
     }
   },
   test: {

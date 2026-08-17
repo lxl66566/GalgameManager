@@ -17,10 +17,11 @@ import {
 import { useColorMode } from '@kobalte/core/color-mode'
 import { invoke } from '@tauri-apps/api/core'
 import { formatAbsoluteIso, formatTimeAgoLocale } from '@utils/time'
-import { resolveTimeLanguage, useI18n } from '~/i18n'
-import { useConfig } from '~/store'
 import { IoLanguage } from 'solid-icons/io'
 import { createMemo, type Component } from 'solid-js'
+
+import { resolveTimeLanguage, useI18n } from '~/i18n'
+import { useConfig } from '~/store'
 
 export const AppearanceTab: Component = () => {
   const { actions, config } = useConfig()
@@ -46,7 +47,7 @@ export const AppearanceTab: Component = () => {
           />
         </SettingRow>
 
-        <SettingRow label={<IoLanguage class="w-6 h-6" />}>
+        <SettingRow label={<IoLanguage class="h-6 w-6" />}>
           <Select
             onChange={e => {
               actions.updateSettings({
@@ -170,18 +171,16 @@ const TimeDisplaySection: Component = () => {
             label={t('settings.appearance.timeDisplay.absoluteFormat')}
           >
             <input
-              class="w-48 px-2 py-1 text-sm rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400"
-              onInput={e =>
+              class="w-48 rounded border border-gray-200 bg-white px-2 py-1 text-sm text-gray-800 focus:ring-1 focus:ring-blue-400 focus:outline-none dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+              onInput={e => {
                 // Avoid disk write per keystroke: use the debounced
                 // setter, the value still updates in-memory instantly.
-                {
-                  actions.updateSettingsDebounced({
-                    appearance: {
-                      timeDisplay: { absoluteFormat: e.currentTarget.value }
-                    }
-                  })
-                }
-              }
+                actions.updateSettingsDebounced({
+                  appearance: {
+                    timeDisplay: { absoluteFormat: e.currentTarget.value }
+                  }
+                })
+              }}
               placeholder={t('settings.appearance.timeDisplay.absoluteFormatPlaceholder')}
               type="text"
               value={config_().absoluteFormat}
@@ -192,7 +191,7 @@ const TimeDisplaySection: Component = () => {
 
       <SettingSubGroup>
         <SettingRow indent label={t('settings.appearance.timeDisplay.preview')}>
-          <span class="text-sm font-mono text-gray-700 dark:text-gray-200">
+          <span class="font-mono text-sm text-gray-700 dark:text-gray-200">
             {config_().format === 'absolute' ? previewAbsolute() : previewRelative()}
           </span>
         </SettingRow>

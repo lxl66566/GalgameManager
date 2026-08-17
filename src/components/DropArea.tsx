@@ -1,7 +1,9 @@
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-import { useI18n } from '~/i18n'
 import { FiDownloadCloud } from 'solid-icons/fi'
 import { createSignal, onCleanup, Show, type JSX } from 'solid-js'
+
+import { useI18n } from '~/i18n'
+
 import FullScreenMask from './ui/FullScreenMask'
 
 interface DropAreaProps {
@@ -69,7 +71,7 @@ export function DropArea(props: DropAreaProps) {
             of the dark/blur overlay, centered. */}
         <FullScreenMask>
           <div class="flex flex-col items-center gap-4 text-white select-none">
-            <FiDownloadCloud class="w-20 h-20 drop-shadow-lg animate-pulse" />
+            <FiDownloadCloud class="h-20 w-20 animate-pulse drop-shadow-lg" />
             <p class="text-xl font-medium drop-shadow">{t('hint.dragFileHere')}</p>
           </div>
         </FullScreenMask>

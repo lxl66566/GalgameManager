@@ -23,6 +23,7 @@ import {
   Show,
   type Component
 } from 'solid-js'
+
 import {
   dateKey,
   formatDuration,
@@ -474,7 +475,7 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
       <Show when={tipData()}>
         {td => (
           <div
-            class="pointer-events-none absolute z-10 min-w-36 max-w-64 rounded-lg border border-gray-200 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-gray-700 dark:bg-gray-800/95"
+            class="pointer-events-none absolute z-10 max-w-64 min-w-36 rounded-lg border border-gray-200 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-gray-700 dark:bg-gray-800/95"
             style={{
               left: `${td().x}px`,
               top: `${td().y}px`,

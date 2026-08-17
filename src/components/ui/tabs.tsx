@@ -1,6 +1,7 @@
+import { For, type JSX } from 'solid-js'
+
 // src/components/Tabs.tsx
 import { cn } from '~/lib/utils'
-import { For, type JSX } from 'solid-js'
 
 export interface TabItem<T extends string> {
   key: T
@@ -19,13 +20,13 @@ export function Tabs<T extends string>(props: TabsProps<T>): JSX.Element {
     <div
       class={cn('w-full border-b border-gray-200 dark:border-gray-800 mt-0', props.class)}
     >
-      {/* 
+      {/*
         justify-center: 居中所有 tab
         -mb-px: 让 active border 盖住底部分割线
       */}
       <nav
         aria-label="Tabs"
-        class="-mb-px flex justify-center space-x-8 overflow-x-auto no-scrollbar"
+        class="no-scrollbar -mb-px flex justify-center space-x-8 overflow-x-auto"
       >
         <For each={props.items}>
           {item => {

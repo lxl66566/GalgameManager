@@ -18,7 +18,7 @@ interface FullScreenMaskProps {
 export default (props: FullScreenMaskProps) => {
   return (
     <div
-      class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-20 p-4"
+      class="fixed inset-0 z-20 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
       onClick={() => props.onClose?.()}
     >
       <div

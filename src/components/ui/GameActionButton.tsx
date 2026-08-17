@@ -12,15 +12,11 @@ interface GameActionButtonProps {
 export const GameActionButton = (props: GameActionButtonProps) => {
   return (
     <button
-      class={`
-        p-2 rounded-full transition-all duration-200 
-        flex items-center justify-center
-        ${
-          props.loading || props.disabled
-            ? 'opacity-50 cursor-not-allowed bg-gray-200 dark:bg-gray-700'
-            : `${props.colorClass} hover:scale-110 active:scale-95 hover:bg-opacity-10 dark:hover:bg-opacity-20 hover:bg-gray-500 cursor-pointer`
-        }
-      `}
+      class={`flex items-center justify-center rounded-full p-2 transition-all duration-200 ${
+        props.loading || props.disabled
+          ? 'cursor-not-allowed bg-gray-200 opacity-50 dark:bg-gray-700'
+          : `${props.colorClass} hover:bg-opacity-10 dark:hover:bg-opacity-20 cursor-pointer hover:scale-110 hover:bg-gray-500 active:scale-95`
+      } `}
       disabled={
         // Intentional boolean OR: `??` would skip `loading` when `disabled`
         // is explicitly `false`, leaving the button enabled while loading.
@@ -38,7 +34,7 @@ export const GameActionButton = (props: GameActionButtonProps) => {
       <Show fallback={props.icon} when={props.loading}>
         {/* 加载动画 Spinner */}
         <svg
-          class="animate-spin h-5 w-5 text-current"
+          class="h-5 w-5 animate-spin text-current"
           fill="none"
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"

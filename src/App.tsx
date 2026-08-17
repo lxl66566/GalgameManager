@@ -17,6 +17,7 @@ import {
   type JSX
 } from 'solid-js'
 import { Toaster } from 'solid-toast'
+
 import { I18nProvider, useI18n, type Locale } from './i18n'
 import Game from './pages/Game'
 import { Sidebar, SidebarItem } from './Sidebar'
@@ -90,30 +91,30 @@ const MainLayout: Component<{ children?: JSX.Element }> = props => {
       <Sidebar>
         <SidebarItem
           href="/Game"
-          icon={<CgGames class="w-6 h-6" />}
+          icon={<CgGames class="h-6 w-6" />}
           label={t('sidebar.game')}
         />
         <SidebarItem
           href="/Plugin"
-          icon={<BiRegularExtension class="w-6 h-6" />}
+          icon={<BiRegularExtension class="h-6 w-6" />}
           label={t('sidebar.plugin')}
         />
         <Show when={config.settings.launch.dailyStat}>
           <SidebarItem
             href="/Statistics"
-            icon={<BiRegularBarChartSquare class="w-6 h-6" />}
+            icon={<BiRegularBarChartSquare class="h-6 w-6" />}
             label={t('sidebar.statistics')}
           />
         </Show>
         <SidebarItem
           href="/Settings"
-          icon={<IoSettingsOutline class="w-6 h-6" />}
+          icon={<IoSettingsOutline class="h-6 w-6" />}
           label={t('sidebar.settings')}
         />
       </Sidebar>
 
       {/* 让页面内容自己处理 overflow 滚动 */}
-      <div class="flex-1 min-w-0 p-0 dark:bg-slate-800 dark:text-gray-400 h-full overflow-hidden relative transition-colors duration-200">
+      <div class="relative h-full min-w-0 flex-1 overflow-hidden p-0 transition-colors duration-200 dark:bg-slate-800 dark:text-gray-400">
         {props.children}
       </div>
     </>
@@ -124,7 +125,7 @@ const App: Component = () => {
   const storageManager = createLocalStorageManager('vite-ui-theme')
 
   return (
-    <div class="flex h-screen w-screen overflow-hidden bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100">
+    <div class="flex h-screen w-screen overflow-hidden bg-white text-gray-900 dark:bg-slate-900 dark:text-gray-100">
       <ColorModeScript storageType={storageManager.type} />
       <ColorModeProvider storageManager={storageManager}>
         <I18nProvider>

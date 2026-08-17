@@ -1,7 +1,9 @@
 // src/pages/settings/Settings.tsx
 import { Tabs } from '@components/ui/tabs'
-import { useI18n } from '~/i18n'
 import { createSignal, Match, Switch, type Component } from 'solid-js'
+
+import { useI18n } from '~/i18n'
+
 import { AppearanceTab } from './AppearanceTab'
 import { DeviceTab } from './DeviceTab'
 import { LaunchTab } from './LaunchTab'
@@ -20,9 +22,9 @@ export const SettingsPage: Component = () => {
   const { t } = useI18n()
 
   return (
-    <div class="flex flex-col h-full text-gray-900 dark:text-gray-100">
+    <div class="flex h-full flex-col text-gray-900 dark:text-gray-100">
       {/* Header Section (Fixed at top) */}
-      <div class="bg-white dark:bg-gray-900 px-5 pt-3 pb-0 flex flex-col flex-shrink-0">
+      <div class="flex flex-shrink-0 flex-col bg-white px-5 pt-3 pb-0 dark:bg-gray-900">
         <h1 class="text-2xl font-bold">{t('settings.self')}</h1>
 
         {/* Reusable Horizontal Tabs */}
@@ -40,7 +42,7 @@ export const SettingsPage: Component = () => {
 
       {/* Content Area (Scrollable) */}
       <main class="flex-1 overflow-y-auto p-6 sm:p-8">
-        <div class="max-w-4xl mx-auto">
+        <div class="mx-auto max-w-4xl">
           <Switch>
             <Match when={activeTab() === 'general'}>
               <StorageTab />

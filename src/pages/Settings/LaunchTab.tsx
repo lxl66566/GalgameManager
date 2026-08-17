@@ -3,9 +3,10 @@ import { myToast } from '@components/ui/myToast'
 import { SettingRow, SettingSection, SwitchToggle } from '@components/ui/settings'
 import { invoke } from '@tauri-apps/api/core'
 import { errToStr } from '@utils/log'
+import { type Component } from 'solid-js'
+
 import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'
-import { type Component } from 'solid-js'
 
 export const LaunchTab: Component = () => {
   const { actions, config } = useConfig()
@@ -77,7 +78,7 @@ export const LaunchTab: Component = () => {
           label={t('settings.launch.clearDailyStat')}
         >
           <button
-            class="px-4 py-1.5 text-sm font-medium rounded-md border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
+            class="rounded-md border border-red-300 px-4 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
             onClick={handleClearDailyStat}
           >
             {t('ui.delete')}

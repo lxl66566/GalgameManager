@@ -7,8 +7,9 @@
  */
 
 import { getDeviceVarMap } from '@utils/resolveVar'
-import { useConfig } from '~/store'
 import { createResource } from 'solid-js'
+
+import { useConfig } from '~/store'
 
 export function useVarMap() {
   const { config } = useConfig()

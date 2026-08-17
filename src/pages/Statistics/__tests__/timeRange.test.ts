@@ -1,5 +1,6 @@
 // src/pages/Statistics/__tests__/timeRange.test.ts
 import { describe, expect, it } from 'vitest'
+
 import {
   aggregate,
   buildMonthBuckets,

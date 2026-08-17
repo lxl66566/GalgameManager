@@ -3,11 +3,13 @@
  */
 import { SwitchToggle } from '@components/ui/settings'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { useI18n, type Dictionary } from '~/i18n'
-import { useConfig } from '~/store'
 import { FiChevronDown, FiChevronUp, FiExternalLink } from 'solid-icons/fi'
 import { createSignal, For, Show, type Component } from 'solid-js'
 import { Dynamic } from 'solid-js/web'
+
+import { useI18n, type Dictionary } from '~/i18n'
+import { useConfig } from '~/store'
+
 import { PLUGIN_REGISTRY, type AnyPluginDef } from './plugins'
 import {
   getPluginMeta,
@@ -40,15 +42,15 @@ export default function PluginPage() {
   }
 
   return (
-    <div class="flex flex-col py-4 pl-4 pr-0 w-full h-full">
-      <div class="flex flex-row justify-between items-center mb-4">
+    <div class="flex h-full w-full flex-col py-4 pr-0 pl-4">
+      <div class="mb-4 flex flex-row items-center justify-between">
         <h1 class="text-2xl font-bold dark:text-white">{t('plugin.title')}</h1>
       </div>
 
-      <div class="flex-1 overflow-y-auto custom-scrollbar pr-4 pb-5">
+      <div class="custom-scrollbar flex-1 overflow-y-auto pr-4 pb-5">
         <Show
           fallback={
-            <div class="text-gray-400 dark:text-gray-500 text-center py-12">
+            <div class="py-12 text-center text-gray-400 dark:text-gray-500">
               {t('plugin.noPlugins')}
             </div>
           }
@@ -61,14 +63,14 @@ export default function PluginPage() {
                 const meta = () => getPluginMeta(def.metaKey, config.pluginMetadatas)
 
                 return (
-                  <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm transition-all">
+                  <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all dark:border-gray-700 dark:bg-gray-800">
                     <div
-                      class="flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                      class="flex cursor-pointer items-center gap-3 px-5 py-3.5 transition-colors select-none hover:bg-gray-50 dark:hover:bg-gray-700/30"
                       onClick={() => {
                         toggleExpand(def.info.id)
                       }}
                     >
-                      <div class="flex-1 min-w-0">
+                      <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2">
                           <span class="text-sm font-semibold text-gray-800 dark:text-gray-100">
                             {t(def.info.nameKey as keyof Dictionary) as string}
@@ -77,12 +79,12 @@ export default function PluginPage() {
                             v{def.info.version}
                           </span>
                           <Show when={!isPluginAvailable(def.info)}>
-                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 select-none">
+                            <span class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700 select-none dark:bg-amber-900/40 dark:text-amber-400">
                               {t('plugin.unavailableOnPlatform')}
                             </span>
                           </Show>
                         </div>
-                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
+                        <div class="mt-0.5 line-clamp-1 text-xs text-gray-500 dark:text-gray-400">
                           {t(def.info.descriptionKey as keyof Dictionary) as string}
                         </div>
                       </div>
@@ -93,7 +95,7 @@ export default function PluginPage() {
                           e.stopPropagation()
                         }}
                       >
-                        <span class="text-[10px] text-gray-400 dark:text-gray-500 select-none">
+                        <span class="text-[10px] text-gray-400 select-none dark:text-gray-500">
                           {isEnabled(def) ? t('plugin.enabled') : t('plugin.disabled')}
                         </span>
                         <SwitchToggle
@@ -106,16 +108,16 @@ export default function PluginPage() {
 
                       <div class="text-gray-400 dark:text-gray-500">
                         <Show
-                          fallback={<FiChevronDown class="w-4 h-4" />}
+                          fallback={<FiChevronDown class="h-4 w-4" />}
                           when={isExpanded()}
                         >
-                          <FiChevronUp class="w-4 h-4" />
+                          <FiChevronUp class="h-4 w-4" />
                         </Show>
                       </div>
                     </div>
 
                     <Show when={isExpanded()}>
-                      <div class="border-t border-gray-200 dark:border-gray-700 px-5 py-4 space-y-4 bg-gray-50/30 dark:bg-gray-900/20">
+                      <div class="space-y-4 border-t border-gray-200 bg-gray-50/30 px-5 py-4 dark:border-gray-700 dark:bg-gray-900/20">
                         <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
                           <Show when={def.info.author}>
                             <span>
@@ -137,7 +139,7 @@ export default function PluginPage() {
                                     target="_blank"
                                   >
                                     {link.label}
-                                    <FiExternalLink class="w-3 h-3" />
+                                    <FiExternalLink class="h-3 w-3" />
                                   </a>
                                 )}
                               </For>
@@ -147,10 +149,10 @@ export default function PluginPage() {
 
                         <Show when={def.MetaEditor}>
                           <div>
-                            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 px-1 uppercase tracking-wider">
+                            <h4 class="mb-2 px-1 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400">
                               {t('plugin.metaConfig')}
                             </h4>
-                            <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm p-3">
+                            <div class="overflow-hidden rounded-lg border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                               <Dynamic
                                 component={
                                   def.MetaEditor! as Component<ConfigEditorProps<AnyMeta>>
@@ -173,13 +175,13 @@ export default function PluginPage() {
                           when={def.GameEditor && 'configDefaults' in (meta() as object)}
                         >
                           <div>
-                            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 px-1 uppercase tracking-wider">
+                            <h4 class="mb-1 px-1 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400">
                               {t('plugin.defaultConfig')}
                             </h4>
-                            <p class="text-[10px] text-gray-400 dark:text-gray-500 mb-2 px-1">
+                            <p class="mb-2 px-1 text-[10px] text-gray-400 dark:text-gray-500">
                               {t('plugin.defaultConfigDesc')}
                             </p>
-                            <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm p-3">
+                            <div class="overflow-hidden rounded-lg border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                               <Dynamic
                                 component={
                                   def.GameEditor! as Component<

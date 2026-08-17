@@ -5,9 +5,10 @@
 // `AppearanceConfig`). The "absolute" formatter delegates to dayjs
 // so users can specify any pattern supported by dayjs.
 import type { Translator } from '@solid-primitives/i18n'
+import dayjs from 'dayjs'
+
 import type { Locale } from '~/i18n'
 import type { RawDictionary } from '~/i18n/en-US'
-import dayjs from 'dayjs'
 
 export type TFunc = Translator<import('@solid-primitives/i18n').Flatten<RawDictionary>>
 

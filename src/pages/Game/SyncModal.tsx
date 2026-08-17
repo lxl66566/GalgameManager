@@ -4,7 +4,6 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { formatBytes } from '@utils/file'
 import { errToStr, log } from '@utils/log'
-import { useI18n } from '~/i18n'
 import {
   TbOutlineArrowBackUp,
   TbOutlineCloudDownload,
@@ -16,6 +15,8 @@ import {
 } from 'solid-icons/tb'
 import { createSignal, For, Match, onMount, Show, Switch } from 'solid-js'
 import toast from 'solid-toast'
+
+import { useI18n } from '~/i18n'
 
 // --- 类型定义 ---
 
@@ -358,32 +359,32 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
 
   return (
     // 修改 1: 固定宽度 (w-[90vw] max-w-2xl) 和高度 (h-[80vh])，防止界面随内容抖动
-    <div class="flex flex-col w-[90vw] max-w-2xl h-[80vh] bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700 transition-all">
+    <div class="flex h-[80vh] w-[90vw] max-w-2xl flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl transition-all dark:border-gray-700 dark:bg-gray-800">
       {/* Header */}
-      <div class="flex justify-between items-center px-5 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex-shrink-0">
+      <div class="flex flex-shrink-0 items-center justify-between border-b border-gray-200 bg-gray-50 px-5 py-4 dark:border-gray-700 dark:bg-gray-800/50">
         <div class="flex items-center gap-2">
           <h2 class="text-lg font-bold text-gray-900 dark:text-white">
             {t('game.sync.self')}
           </h2>
-          <span class="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+          <span class="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-400">
             {archives().length} {t('game.sync.archiveNum')}
           </span>
         </div>
         <button
-          class="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors cursor-pointer"
+          class="cursor-pointer rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
           onClick={() => {
             props.onClose()
           }}
         >
-          <TbOutlineX class="w-5 h-5" />
+          <TbOutlineX class="h-5 w-5" />
         </button>
       </div>
 
       {/* Body List */}
-      <div class="flex-1 overflow-y-auto custom-scrollbar p-2 min-h-0">
+      <div class="custom-scrollbar min-h-0 flex-1 overflow-y-auto p-2">
         <Show
           fallback={
-            <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 text-sm">
+            <div class="flex h-full items-center justify-center text-sm text-gray-500 dark:text-gray-400">
               {t('ui.loading')}
             </div>
           }
@@ -391,8 +392,8 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
         >
           <Show
             fallback={
-              <div class="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 gap-2">
-                <TbOutlineFileZip class="w-8 h-8 opacity-50" />
+              <div class="flex h-full flex-col items-center justify-center gap-2 text-gray-400 dark:text-gray-500">
+                <TbOutlineFileZip class="h-8 w-8 opacity-50" />
                 <span class="text-sm">{t('game.sync.noArchive')}</span>
               </div>
             }
@@ -401,12 +402,12 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
             <div class="flex flex-col gap-1">
               <For each={archives()}>
                 {item => (
-                  <div class="group flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 border border-transparent hover:border-gray-200 dark:hover:border-gray-600 transition-all duration-200">
+                  <div class="group flex items-center justify-between rounded-lg border border-transparent p-3 transition-all duration-200 hover:border-gray-200 hover:bg-gray-100 dark:hover:border-gray-600 dark:hover:bg-gray-700/50">
                     {/* Left: Status & Name */}
-                    <div class="flex items-center gap-3 min-w-0 flex-1 mr-4">
+                    <div class="mr-4 flex min-w-0 flex-1 items-center gap-3">
                       {/* Status Dot */}
                       <div
-                        class="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
+                        class="h-2.5 w-2.5 flex-shrink-0 rounded-full shadow-sm"
                         classList={{
                           'bg-blue-500': item.status === 'RemoteOnly',
                           'bg-green-500': item.status === 'Synced',
@@ -416,29 +417,29 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                       />
 
                       {/* Filename / Rename Input / Meta Info */}
-                      <div class="flex-1 min-w-0 flex flex-col justify-center">
+                      <div class="flex min-w-0 flex-1 flex-col justify-center">
                         <Show
                           fallback={
                             <div
-                              class="flex items-center gap-2 cursor-text min-w-0"
+                              class="flex min-w-0 cursor-text items-center gap-2"
                               onDblClick={() => {
                                 startRename(item.name)
                               }}
                             >
                               <span
-                                class="text-sm font-medium text-gray-700 dark:text-gray-200 truncate select-none"
+                                class="truncate text-sm font-medium text-gray-700 select-none dark:text-gray-200"
                                 title={item.name}
                               >
                                 {item.name}
                               </span>
                               <button
-                                class="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-blue-500 transition-opacity cursor-pointer flex-shrink-0"
+                                class="flex-shrink-0 cursor-pointer p-1 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-blue-500"
                                 onClick={() => {
                                   startRename(item.name)
                                 }}
                                 title={t('ui.rename')}
                               >
-                                <TbOutlineEdit class="w-3.5 h-3.5" />
+                                <TbOutlineEdit class="h-3.5 w-3.5" />
                               </button>
                             </div>
                           }
@@ -446,7 +447,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                         >
                           <input
                             autofocus
-                            class="w-full min-w-0 bg-white dark:bg-gray-900 border border-blue-500 rounded px-2 py-0.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            class="w-full min-w-0 rounded border border-blue-500 bg-white px-2 py-0.5 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:outline-none dark:bg-gray-900 dark:text-white"
                             onBlur={() => commitRename(item.name, item.status)}
                             onClick={e => {
                               e.stopPropagation()
@@ -461,19 +462,19 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                         </Show>
 
                         {/* 修改部分：元数据行 (状态文本 + 文件大小) */}
-                        <div class="flex items-center gap-2 mt-0.5 min-w-0">
+                        <div class="mt-0.5 flex min-w-0 items-center gap-2">
                           {/* 状态文本 */}
-                          <span class="text-[10px] text-gray-400 dark:text-gray-500 leading-none truncate flex-shrink-1">
+                          <span class="flex-shrink-1 truncate text-[10px] leading-none text-gray-400 dark:text-gray-500">
                             {t('game.sync.statusLong')[item.status]}
                           </span>
 
                           {/* 分隔符 (仅在有状态文本时显示，视具体翻译长度而定，这里默认显示) */}
-                          <span class="text-[10px] text-gray-300 dark:text-gray-600 leading-none select-none">
+                          <span class="text-[10px] leading-none text-gray-300 select-none dark:text-gray-600">
                             •
                           </span>
 
                           {/* 文件大小 */}
-                          <span class="text-[11px] text-gray-400 dark:text-gray-500 leading-none font-mono whitespace-nowrap flex-shrink-0">
+                          <span class="flex-shrink-0 font-mono text-[11px] leading-none whitespace-nowrap text-gray-400 dark:text-gray-500">
                             {formatBytes(item.size)}
                           </span>
                         </div>
@@ -481,9 +482,9 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                     </div>
 
                     {/* Right: Actions (Grid Layout for Alignment) */}
-                    <div class="grid grid-cols-[2rem_2rem_5rem] gap-1 items-center justify-items-center flex-shrink-0">
+                    <div class="grid flex-shrink-0 grid-cols-[2rem_2rem_5rem] items-center justify-items-center gap-1">
                       {/* Slot 1: Restore */}
-                      <div class="w-full flex justify-center">
+                      <div class="flex w-full justify-center">
                         <Show when={item.status !== 'RemoteOnly'}>
                           <ActionButton
                             icon={TbOutlineArrowBackUp}
@@ -495,7 +496,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                       </div>
 
                       {/* Slot 2: Sync */}
-                      <div class="w-full flex justify-center">
+                      <div class="flex w-full justify-center">
                         <Switch>
                           <Match when={item.status === 'LocalOnly'}>
                             <ActionButton
@@ -517,11 +518,11 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                       </div>
 
                       {/* Slot 3: Delete (Fixed width container) */}
-                      <div class="w-full flex justify-end">
+                      <div class="flex w-full justify-end">
                         <Switch>
                           {/* Synced: Split Buttons */}
                           <Match when={item.status === 'Synced'}>
-                            <div class="flex items-center bg-gray-200 dark:bg-gray-800 rounded-md p-0.5 gap-0.5 w-full justify-between">
+                            <div class="flex w-full items-center justify-between gap-0.5 rounded-md bg-gray-200 p-0.5 dark:bg-gray-800">
                               <ActionButton
                                 icon={TbOutlineTrash}
                                 label={t('game.sync.local')}
@@ -530,7 +531,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                                 tooltip={t('game.sync.deleteLocalArchive')}
                                 variant="danger-ghost"
                               />
-                              <div class="w-[1px] h-3 bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
+                              <div class="h-3 w-[1px] flex-shrink-0 bg-gray-300 dark:bg-gray-600" />
                               <ActionButton
                                 icon={TbOutlineTrash}
                                 label={t('game.sync.remote')}
@@ -607,9 +608,9 @@ function ActionButton(props: ActionButtonProps) {
       }}
       title={props.tooltip}
     >
-      <props.icon class={props.size === 'xs' ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+      <props.icon class={props.size === 'xs' ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
       <Show when={props.label}>
-        <span class="text-[10px] ml-0.5 font-medium leading-none">{props.label}</span>
+        <span class="ml-0.5 text-[10px] leading-none font-medium">{props.label}</span>
       </Show>
     </button>
   )
