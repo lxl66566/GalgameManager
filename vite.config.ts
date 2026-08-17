@@ -3,7 +3,6 @@ import process from 'node:process'
 import UnoCSS from 'unocss/vite'
 import { defineConfig } from 'vite'
 import solid from 'vite-plugin-solid'
-import tsconfigPaths from 'vite-tsconfig-paths'
 
 const host = process.env.TAURI_DEV_HOST
 
@@ -59,11 +58,12 @@ export default defineConfig({
       'dayjs'
     ]
   },
-  plugins: [UnoCSS(), solid(), tsconfigPaths()],
+  plugins: [UnoCSS(), solid()],
   resolve: {
     alias: {
-      '~': path.resolve(__dirname, './src')
-    }
+      '~': path.resolve(import.meta.dirname, './src')
+    },
+    tsconfigPaths: true
   },
   // Tauri expects a fixed port, fail if that port is not available
   server: {
