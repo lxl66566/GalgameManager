@@ -44,6 +44,15 @@ export default (props: FullScreenMaskProps) => {
 
   onCleanup(() => {
     previouslyFocused?.focus()
+    // The mask unmounts synchronously inside its own click event; Chromium
+    // does not re-evaluate :hover for the elements uncovered that way, so a
+    // hover-driven UI underneath (e.g. GameItem's slide-up toolbar) stays
+    // stuck open. Toggling pointer-events with a forced reflow kicks the
+    // hover recalculation; real hover re-applies on the next pointer move.
+    const root = document.documentElement
+    root.style.pointerEvents = 'none'
+    void root.offsetWidth
+    root.style.pointerEvents = ''
   })
 
   const handleKeyDown = (e: KeyboardEvent) => {
