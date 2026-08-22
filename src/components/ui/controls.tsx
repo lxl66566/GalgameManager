@@ -21,12 +21,16 @@ export type ControlSize = 'md' | 'sm'
 // ─── Shared token maps ──────────────────────────────────────────────────────
 
 const INPUT_SIZES: Record<ControlSize, string> = {
-  md: 'h-8 w-full sm:w-64 flex-none px-2.5 py-0',
+  // Fixed width (not `w-full sm:w-64`): inside SettingRow's shrink-to-fit
+  // flex container a percentage width collapses to the control's intrinsic
+  // size below the sm breakpoint, which made narrow-window widths differ per
+  // control type.
+  md: 'h-8 w-64 flex-none px-2.5 py-0',
   sm: 'h-7 w-full px-2 py-0'
 }
 
 const SELECT_WRAPPER_SIZES: Record<ControlSize, string> = {
-  md: 'relative w-full sm:w-64 flex-none',
+  md: 'relative w-64 flex-none',
   sm: 'relative'
 }
 
