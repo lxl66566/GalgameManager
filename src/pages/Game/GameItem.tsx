@@ -126,13 +126,14 @@ export const GameItem = (props: GameItemProps) => {
 
       <div
         class={cn(
-          'relative flex-1 bg-white dark:bg-slate-700 group/info overflow-hidden',
+          // overflow-clip: 禁止 focus 时浏览器 scroll-into-view 滚动容器（overflow-hidden 会被滚动导致按钮卡中间态）
+          'relative flex-1 bg-white dark:bg-slate-700 group/info overflow-clip',
           // absolute 需要更多空间
           config.settings.appearance.timeDisplay.format === 'absolute' ? 'p-3' : 'p-4'
         )}
       >
         {/* 游戏信息容器 */}
-        <div class="flex h-full flex-col justify-center transition-opacity duration-300 group-hover/info:opacity-40">
+        <div class="flex h-full flex-col justify-center transition-opacity duration-300 group-hover/info:opacity-40 group-focus-within/info:opacity-40">
           {/* 1. 游戏标题：动态字号 + 截断 */}
           <h2
             class={`truncate font-bold text-gray-800 transition-all dark:text-gray-200 ${titleSizeClass()}`}
@@ -163,7 +164,7 @@ export const GameItem = (props: GameItemProps) => {
         </div>
 
         {/* 底部滑出工具栏 */}
-        <div class="absolute inset-0 flex translate-y-full items-center justify-around border-t border-gray-100 bg-white/90 px-2 backdrop-blur-md transition-transform duration-300 ease-out group-hover/info:translate-y-0 dark:border-slate-600 dark:bg-slate-800/90">
+        <div class="absolute inset-0 flex translate-y-full items-center justify-around border-t border-gray-100 bg-white/90 px-2 backdrop-blur-md transition-transform duration-300 ease-out group-hover/info:translate-y-0 group-focus-within/info:translate-y-0 dark:border-slate-600 dark:bg-slate-800/90">
           {/* 按钮 1: 编辑 */}
           <GameActionButton
             colorClass="text-blue-600 dark:text-blue-400"
@@ -201,7 +202,7 @@ export const GameItemWrapper = (props: {
   return (
     <div
       class={cn(
-        'relative rounded-xl overflow-hidden bg-white dark:bg-slate-700 shadow-lg hover:shadow-xl transition-shadow duration-300 w-44 h-72 flex flex-col',
+        'relative rounded-xl overflow-clip bg-white dark:bg-slate-700 shadow-lg hover:shadow-xl transition-shadow duration-300 w-44 h-72 flex flex-col',
         props.extra_class
       )}
     >
