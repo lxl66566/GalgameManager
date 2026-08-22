@@ -399,33 +399,36 @@ export const StorageTab: Component = () => {
           description={t('settings.config.forceOp')}
           label={t('settings.config.manualSync')}
         >
-          <Button
-            class="mx-1 min-w-[100px]" // 保证加载时宽度不跳动
-            disabled={uploading()}
-            onClick={handleUploadConfig}
-          >
-            <Show
-              fallback={<FiLoader class="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-              when={!uploading()}
+          {/* Matches the Input width (w-full sm:w-64) above: two flex-1 buttons */}
+          <div class="flex w-full gap-2 sm:w-64">
+            <Button
+              class="flex-1"
+              disabled={uploading()}
+              onClick={handleUploadConfig}
             >
-              <FiUpload class="mr-1.5 h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
-            </Show>
-            {uploading() ? 'Syncing...' : t('ui.push')}
-          </Button>
+              <Show
+                fallback={<FiLoader class="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                when={!uploading()}
+              >
+                <FiUpload class="mr-1.5 h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+              </Show>
+              {uploading() ? 'Syncing...' : t('ui.push')}
+            </Button>
 
-          <Button
-            class="mx-1 min-w-[100px]"
-            disabled={downloading()}
-            onClick={handleDownloadConfig}
-          >
-            <Show
-              fallback={<FiLoader class="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-              when={!downloading()}
+            <Button
+              class="flex-1"
+              disabled={downloading()}
+              onClick={handleDownloadConfig}
             >
-              <FiDownload class="mr-1.5 h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
-            </Show>
-            {downloading() ? 'Syncing...' : t('ui.pull')}
-          </Button>
+              <Show
+                fallback={<FiLoader class="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                when={!downloading()}
+              >
+                <FiDownload class="mr-1.5 h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+              </Show>
+              {downloading() ? 'Syncing...' : t('ui.pull')}
+            </Button>
+          </div>
         </SettingRow>
       </SettingSection>
     </div>
