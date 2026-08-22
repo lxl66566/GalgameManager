@@ -16,7 +16,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { debounce } from '@utils/debounce'
 import { useVarWarning } from '@utils/useVarWarning'
 import { FiDownload, FiLoader, FiUpload } from 'solid-icons/fi'
-import { createMemo, createSignal, Match, Show, Switch, type Component } from 'solid-js'
+import { createMemo, createSignal, Match, onCleanup, Show, Switch, type Component } from 'solid-js'
 
 import { useI18n } from '~/i18n'
 import { checkAndPullRemote, performManualUpload, useConfig } from '~/store'
@@ -273,6 +273,11 @@ export const StorageTab: Component = () => {
     () => void invoke('clean_current_operator'),
     500
   )
+  // Drop a pending IPC when the tab is unmounted (e.g. user switches tabs
+  // mid-typing) — the debounced call must not fire after disposal.
+  onCleanup(() => {
+    cleanOperatorDebounced.cancel()
+  })
 
   // 切换 Provider：只修改 provider 字段，不触碰具体配置
   const handleProviderChange = (e: Event) => {
