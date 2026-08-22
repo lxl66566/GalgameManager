@@ -9,7 +9,7 @@
 // Time selection is modeled as { granularity, offset } resolved into plain
 // buckets (see timeRange.ts); adding a free-form date-range picker later only
 // needs to produce a different `Bucket[]`, the charts won't change.
-import { Button } from '@components/ui/Button'
+import { Button } from '@components/ui/controls'
 import * as Popover from '@kobalte/core/popover'
 import { FiChevronLeft, FiChevronRight, FiRotateCcw } from 'solid-icons/fi'
 import {
@@ -225,6 +225,7 @@ const StatisticsPage: Component = () => {
                   onClick={() => setOffset(0)}
                   size="icon"
                   title={t('stats.backToCurrent')}
+                  variant="secondary"
                 >
                   <span class="ggm-rewind inline-flex">
                     <FiRotateCcw />
@@ -240,6 +241,7 @@ const StatisticsPage: Component = () => {
                 onClick={() => setOffset(o => o - 1)}
                 size="icon"
                 title={t('stats.prevPeriod')}
+                variant="secondary"
               >
                 <FiChevronLeft />
               </Button>
@@ -278,6 +280,7 @@ const StatisticsPage: Component = () => {
                 onClick={() => setOffset(o => Math.min(0, o + 1))}
                 size="icon"
                 title={t('stats.nextPeriod')}
+                variant="secondary"
               >
                 <FiChevronRight />
               </Button>

@@ -22,7 +22,7 @@ import {
 } from 'solid-js'
 import { createStore, unwrap } from 'solid-js/store'
 
-import { Button } from '~/components/ui/Button'
+import { Button } from '~/components/ui/controls'
 import { Input } from '~/components/ui/Input'
 import { InputWithSuffix } from '~/components/ui/InputWithSuffix'
 import { useI18n } from '~/i18n'
@@ -300,9 +300,10 @@ export default function GameEditModal(props: GameEditModalProps) {
                   value={temporaryImageUrl()}
                 />
                 <Button
+                  class="px-3 py-1.5"
                   disabled={!localGame.name && !isSearching()}
                   onClick={handleSearchVnCover}
-                  size="sm"
+                  size="lg"
                   variant={isSearching() ? 'danger' : 'primary'}
                 >
                   {isSearching() ? (
@@ -429,20 +430,21 @@ export default function GameEditModal(props: GameEditModalProps) {
         <div class="mt-2 flex w-full flex-shrink-0 flex-row items-center justify-between border-t border-gray-300 py-2 dark:border-gray-700">
           <div>
             <Show when={isEditMode()}>
-              <Button onClick={handleDelete} variant="ghost-danger">
+              <Button onClick={handleDelete} size="lg" variant="ghost-danger">
                 {t('game.edit.deleteGame')}
               </Button>
             </Show>
           </div>
 
           <div class="flex gap-3">
-            <Button onClick={props.cancel} variant="secondary">
+            <Button onClick={props.cancel} size="lg" variant="secondary">
               {t('game.edit.cancel')}
             </Button>
             <Button
               onClick={() => {
                 props.confirm(localGame)
               }}
+              size="lg"
               variant="primary"
             >
               {t('game.edit.confirmSave')}
