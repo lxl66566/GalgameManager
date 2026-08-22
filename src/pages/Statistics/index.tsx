@@ -178,7 +178,7 @@ const StatisticsPage: Component = () => {
 
   return (
     <div class="flex h-full flex-col text-gray-900 dark:text-gray-100">
-      <div class="shrink-0 bg-white px-5 pt-3 pb-3 dark:bg-gray-900">
+      <div class="shrink-0 bg-white px-5 pb-3 pt-3 dark:bg-gray-900">
         <h1 class="text-2xl font-bold">{t('stats.self')}</h1>
       </div>
 
@@ -249,7 +249,7 @@ const StatisticsPage: Component = () => {
               <Popover.Root onOpenChange={setPickerOpen} open={pickerOpen()}>
                 <Popover.Trigger
                   aria-label={t('stats.jumpToDate')}
-                  class="rounded-md px-2 py-1 text-sm font-medium text-gray-700 tabular-nums hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  class="rounded-md px-2 py-1 text-sm font-medium tabular-nums text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                   title={t('stats.jumpToDate')}
                 >
                   {rangeLabel()}

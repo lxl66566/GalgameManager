@@ -50,19 +50,25 @@ const SWITCH_TRANSLATE: Record<ControlSize, string> = {
   sm: 'group-data-[checked]:translate-x-[18px]'
 }
 
-const BUTTON_SIZES: Record<ControlSize | 'icon' | 'lg', string> = {
+const BUTTON_SIZES: Record<'icon' | 'lg' | ControlSize, string> = {
   icon: 'p-2 text-sm',
   lg: 'px-4 py-2 text-sm',
   md: 'h-8 px-3 text-xs',
   sm: 'h-7 px-2.5 text-xs'
 }
 
-export type ButtonVariant = 'danger' | 'ghost-danger' | 'outline' | 'primary' | 'secondary'
+export type ButtonVariant =
+  | 'danger'
+  | 'ghost-danger'
+  | 'outline'
+  | 'primary'
+  | 'secondary'
 
 const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
   danger:
     'bg-red-500 hover:bg-red-600 text-white dark:bg-red-600 dark:hover:bg-red-700 shadow-sm',
-  'ghost-danger': 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20',
+  'ghost-danger':
+    'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20',
   outline:
     'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800',
   primary: 'bg-blue-600 hover:bg-blue-700 text-white dark:hover:bg-blue-500 shadow-sm',
@@ -205,7 +211,7 @@ export const Switch: Component<SwitchProps> = props => {
 export interface ButtonProps extends JSX.ButtonHTMLAttributes<HTMLButtonElement> {
   /** 'md'/'sm' are the settings-page densities; 'lg' matches the modal
    *  footer buttons; 'icon' is a square icon-only button. */
-  size?: ControlSize | 'icon' | 'lg'
+  size?: 'icon' | 'lg' | ControlSize
   /** Visual style. 'outline' (default) is the settings-page bordered look;
    *  the others are the solid/ghost styles formerly in ui/Button.tsx. */
   variant?: ButtonVariant

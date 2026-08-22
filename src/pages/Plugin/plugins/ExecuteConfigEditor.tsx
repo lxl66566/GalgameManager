@@ -62,8 +62,14 @@ function ExecuteGameConfigEditor(props: ConfigEditorProps<ExecuteGameConfig>) {
             })
           }}
           options={[
-            { label: t('plugin.execute.beforeGameStart'), value: 'beforeGameStart' },
-            { label: t('plugin.execute.afterGameStart'), value: 'afterGameStart' },
+            {
+              label: t('plugin.execute.beforeGameStart'),
+              value: 'beforeGameStart'
+            },
+            {
+              label: t('plugin.execute.afterGameStart'),
+              value: 'afterGameStart'
+            },
             { label: t('plugin.execute.gameExit'), value: 'gameExit' }
           ]}
           value={props.config.on}
@@ -170,7 +176,7 @@ export const EXECUTE_PLUGIN: PluginDefinition<'execute'> = {
     id: 'execute',
     links: [],
     nameKey: 'plugin.execute.name',
-    version: '1.3.1'
+    version: '1.3.2'
   },
   MetaEditor: AutoAddMetaEditor,
   metaKey: 'execute'

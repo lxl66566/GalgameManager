@@ -428,13 +428,13 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                               }}
                             >
                               <span
-                                class="truncate text-sm font-medium text-gray-700 select-none dark:text-gray-200"
+                                class="select-none truncate text-sm font-medium text-gray-700 dark:text-gray-200"
                                 title={item.name}
                               >
                                 {item.name}
                               </span>
                               <button
-                                class="flex-shrink-0 cursor-pointer p-1 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-blue-500"
+                                class="flex-shrink-0 cursor-pointer p-1 text-gray-400 opacity-0 transition-opacity hover:text-blue-500 group-hover:opacity-100"
                                 onClick={() => {
                                   startRename(item.name)
                                 }}
@@ -448,7 +448,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                         >
                           <input
                             autofocus
-                            class="w-full min-w-0 rounded border border-blue-500 bg-white px-2 py-0.5 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:outline-none dark:bg-gray-900 dark:text-white"
+                            class="w-full min-w-0 rounded border border-blue-500 bg-white px-2 py-0.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:bg-gray-900 dark:text-white"
                             onBlur={() => commitRename(item.name, item.status)}
                             onClick={e => {
                               e.stopPropagation()
@@ -470,12 +470,12 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                           </span>
 
                           {/* 分隔符 (仅在有状态文本时显示，视具体翻译长度而定，这里默认显示) */}
-                          <span class="text-[10px] leading-none text-gray-300 select-none dark:text-gray-600">
+                          <span class="select-none text-[10px] leading-none text-gray-300 dark:text-gray-600">
                             •
                           </span>
 
                           {/* 文件大小 */}
-                          <span class="flex-shrink-0 font-mono text-[11px] leading-none whitespace-nowrap text-gray-400 dark:text-gray-500">
+                          <span class="flex-shrink-0 whitespace-nowrap font-mono text-[11px] leading-none text-gray-400 dark:text-gray-500">
                             {formatBytes(item.size)}
                           </span>
                         </div>
@@ -612,7 +612,7 @@ function ActionButton(props: ActionButtonProps) {
     >
       <props.icon class={props.size === 'xs' ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
       <Show when={props.label}>
-        <span class="ml-0.5 text-[10px] leading-none font-medium">{props.label}</span>
+        <span class="ml-0.5 text-[10px] font-medium leading-none">{props.label}</span>
       </Show>
     </button>
   )

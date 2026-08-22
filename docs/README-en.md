@@ -23,6 +23,10 @@ A cross-platform game launcher based on Tauri + SolidJS, designed for managing, 
 
 ## Changelog
 
+### v1.3.2
+
+Various UI optimizations and project management.
+
 ### v1.3.1
 
 - Critical fix: Resolved failure in new image downloads.

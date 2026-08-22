@@ -172,7 +172,9 @@ const refreshConfig = async () => {
     setConfig(reconcile(data))
   } catch (error) {
     log.error(`Failed to load local config: ${errToStr(error)}`)
-    toast.error(`${tt('hint.failToLoadLocalConfig', 'Failed to load local config')}: ${errToStr(error)}`)
+    toast.error(
+      `${tt('hint.failToLoadLocalConfig', 'Failed to load local config')}: ${errToStr(error)}`
+    )
   }
 }
 
@@ -279,7 +281,9 @@ const sendPatch = async (patch: ConfigPatch) => {
   try {
     await invoke('patch_config', { patch })
   } catch (error) {
-    toast.error(`${tt('hint.saveConfigFailed', 'Failed to save config')}: ${errToStr(error)}`)
+    toast.error(
+      `${tt('hint.saveConfigFailed', 'Failed to save config')}: ${errToStr(error)}`
+    )
     void refreshConfig()
   }
 }

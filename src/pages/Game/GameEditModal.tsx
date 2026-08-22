@@ -240,7 +240,7 @@ export default function GameEditModal(props: GameEditModalProps) {
         {/* Body */}
         <div class="flex min-h-0 flex-1 flex-row gap-6">
           {/* Left Column: Image Preview */}
-          <div class="flex w-[25%] max-w-50 min-w-20 flex-col gap-3">
+          <div class="max-w-50 flex w-[25%] min-w-20 flex-col gap-3">
             <div class="relative aspect-[2/3] w-full overflow-hidden rounded-lg border border-gray-300 bg-gray-200 shadow-lg dark:border-gray-600 dark:bg-gray-900">
               <Suspense
                 fallback={

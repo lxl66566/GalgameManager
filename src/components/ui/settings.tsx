@@ -28,7 +28,7 @@ export const SettingSection: Component<{
   title: string
 }> = props => (
   <div class={cn('mb-6', props.class)}>
-    <h3 class="mb-2 px-1 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400">
+    <h3 class="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
       {props.title}
     </h3>
     <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">

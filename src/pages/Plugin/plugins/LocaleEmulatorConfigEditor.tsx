@@ -52,7 +52,7 @@ export const LOCALE_EMULATOR_PLUGIN: PluginDefinition<'localeEmulator'> = {
     id: 'localeEmulator',
     links: [
       {
-        label: 'GitHub',
+        label: 'Locale-Emulator',
         url: 'https://github.com/xupefei/Locale-Emulator'
       }
     ],

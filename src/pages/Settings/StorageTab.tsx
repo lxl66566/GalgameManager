@@ -16,7 +16,15 @@ import { invoke } from '@tauri-apps/api/core'
 import { debounce } from '@utils/debounce'
 import { useVarWarning } from '@utils/useVarWarning'
 import { FiDownload, FiLoader, FiUpload } from 'solid-icons/fi'
-import { createMemo, createSignal, Match, onCleanup, Show, Switch, type Component } from 'solid-js'
+import {
+  createMemo,
+  createSignal,
+  Match,
+  onCleanup,
+  Show,
+  Switch,
+  type Component
+} from 'solid-js'
 
 import { useI18n } from '~/i18n'
 import { checkAndPullRemote, performManualUpload, useConfig } from '~/store'
@@ -406,11 +414,7 @@ export const StorageTab: Component = () => {
         >
           {/* Matches the Input width (w-full sm:w-64) above: two flex-1 buttons */}
           <div class="flex w-full gap-2 sm:w-64">
-            <Button
-              class="flex-1"
-              disabled={uploading()}
-              onClick={handleUploadConfig}
-            >
+            <Button class="flex-1" disabled={uploading()} onClick={handleUploadConfig}>
               <Show
                 fallback={<FiLoader class="mr-1.5 h-3.5 w-3.5 animate-spin" />}
                 when={!uploading()}

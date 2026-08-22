@@ -71,7 +71,7 @@ export const GameItem = (props: GameItemProps) => {
       <ContextMenu items={contextMenuItems()}>
         <div
           aria-label={props.game.name}
-          class="group relative h-52 cursor-pointer overflow-hidden focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:outline-none"
+          class="group relative h-52 cursor-pointer overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
           onClick={() => {
             if (!props.isPlaying) props.onStart()
           }}
@@ -108,12 +108,12 @@ export const GameItem = (props: GameItemProps) => {
             <div class="absolute inset-0 z-10 flex cursor-default flex-col items-center justify-center border-b-4 border-emerald-500 bg-black/60 backdrop-blur-[2px]">
               {/* 居中图标与文字 */}
               <FaSolidGamepad class="h-14 w-14 animate-pulse text-emerald-400 drop-shadow-lg" />
-              <span class="mt-2 text-xs font-bold tracking-widest text-emerald-100 uppercase">
+              <span class="mt-2 text-xs font-bold uppercase tracking-widest text-emerald-100">
                 {t('game.playing')}
               </span>
 
               {/* 右上角呼吸灯 (Ping Animation) */}
-              <div class="absolute top-3 right-3 flex h-3 w-3">
+              <div class="absolute right-3 top-3 flex h-3 w-3">
                 <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 <span class="relative inline-flex h-3 w-3 rounded-full bg-emerald-500" />
               </div>
@@ -133,7 +133,7 @@ export const GameItem = (props: GameItemProps) => {
         )}
       >
         {/* 游戏信息容器 */}
-        <div class="flex h-full flex-col justify-center transition-opacity duration-300 group-hover/info:opacity-40 group-focus-within/info:opacity-40">
+        <div class="flex h-full flex-col justify-center transition-opacity duration-300 group-focus-within/info:opacity-40 group-hover/info:opacity-40">
           {/* 1. 游戏标题：动态字号 + 截断 */}
           <h2
             class={`truncate font-bold text-gray-800 transition-all dark:text-gray-200 ${titleSizeClass()}`}
@@ -155,7 +155,7 @@ export const GameItem = (props: GameItemProps) => {
 
             {/* 右侧：总游玩时长（shrink-0 保持完整可见） */}
             <div
-              class="shrink-0 font-medium whitespace-nowrap text-gray-500 dark:text-gray-400"
+              class="shrink-0 whitespace-nowrap font-medium text-gray-500 dark:text-gray-400"
               title={t('game.totalPlayTime')}
             >
               {displayDuration(props.game.useTime)}
@@ -164,7 +164,7 @@ export const GameItem = (props: GameItemProps) => {
         </div>
 
         {/* 底部滑出工具栏 */}
-        <div class="absolute inset-0 flex translate-y-full items-center justify-around border-t border-gray-100 bg-white/90 px-2 backdrop-blur-md transition-transform duration-300 ease-out group-hover/info:translate-y-0 group-focus-within/info:translate-y-0 dark:border-slate-600 dark:bg-slate-800/90">
+        <div class="absolute inset-0 flex translate-y-full items-center justify-around border-t border-gray-100 bg-white/90 px-2 backdrop-blur-md transition-transform duration-300 ease-out group-focus-within/info:translate-y-0 group-hover/info:translate-y-0 dark:border-slate-600 dark:bg-slate-800/90">
           {/* 按钮 1: 编辑 */}
           <GameActionButton
             colorClass="text-blue-600 dark:text-blue-400"

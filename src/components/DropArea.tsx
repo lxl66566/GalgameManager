@@ -70,7 +70,7 @@ export function DropArea(props: DropAreaProps) {
         {/* The release hint is rendered *inside* the mask so it sits on top
             of the dark/blur overlay, centered. */}
         <FullScreenMask>
-          <div class="flex flex-col items-center gap-4 text-white select-none">
+          <div class="flex select-none flex-col items-center gap-4 text-white">
             <FiDownloadCloud class="h-20 w-20 animate-pulse drop-shadow-lg" />
             <p class="text-xl font-medium drop-shadow">{t('hint.dragFileHere')}</p>
           </div>

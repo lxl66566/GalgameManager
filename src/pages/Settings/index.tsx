@@ -24,7 +24,7 @@ export const SettingsPage: Component = () => {
   return (
     <div class="flex h-full flex-col text-gray-900 dark:text-gray-100">
       {/* Header Section (Fixed at top) */}
-      <div class="flex flex-shrink-0 flex-col bg-white px-5 pt-3 pb-0 dark:bg-gray-900">
+      <div class="flex flex-shrink-0 flex-col bg-white px-5 pb-0 pt-3 dark:bg-gray-900">
         <h1 class="text-2xl font-bold">{t('settings.self')}</h1>
 
         {/* Reusable Horizontal Tabs */}

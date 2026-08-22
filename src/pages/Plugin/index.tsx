@@ -42,12 +42,12 @@ export default function PluginPage() {
   }
 
   return (
-    <div class="flex h-full w-full flex-col py-4 pr-0 pl-4">
+    <div class="flex h-full w-full flex-col py-4 pl-4 pr-0">
       <div class="mb-4 flex flex-row items-center justify-between">
         <h1 class="text-2xl font-bold dark:text-white">{t('plugin.title')}</h1>
       </div>
 
-      <div class="custom-scrollbar flex-1 overflow-y-auto pr-4 pb-5">
+      <div class="custom-scrollbar flex-1 overflow-y-auto pb-5 pr-4">
         <Show
           fallback={
             <div class="py-12 text-center text-gray-400 dark:text-gray-500">
@@ -66,7 +66,7 @@ export default function PluginPage() {
                   <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all dark:border-gray-700 dark:bg-gray-800">
                     <div
                       aria-expanded={isExpanded()}
-                      class="flex cursor-pointer items-center gap-3 px-5 py-3.5 transition-colors select-none hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:outline-none dark:hover:bg-gray-700/30"
+                      class="flex cursor-pointer select-none items-center gap-3 px-5 py-3.5 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 dark:hover:bg-gray-700/30"
                       onClick={() => {
                         toggleExpand(def.info.id)
                       }}
@@ -88,7 +88,7 @@ export default function PluginPage() {
                             v{def.info.version}
                           </span>
                           <Show when={!isPluginAvailable(def.info)}>
-                            <span class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700 select-none dark:bg-amber-900/40 dark:text-amber-400">
+                            <span class="select-none rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
                               {t('plugin.unavailableOnPlatform')}
                             </span>
                           </Show>
@@ -104,7 +104,7 @@ export default function PluginPage() {
                           e.stopPropagation()
                         }}
                       >
-                        <span class="text-[10px] text-gray-400 select-none dark:text-gray-500">
+                        <span class="select-none text-[10px] text-gray-400 dark:text-gray-500">
                           {isEnabled(def) ? t('plugin.enabled') : t('plugin.disabled')}
                         </span>
                         <SwitchToggle
@@ -158,7 +158,7 @@ export default function PluginPage() {
 
                         <Show when={def.MetaEditor}>
                           <div>
-                            <h4 class="mb-2 px-1 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                            <h4 class="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                               {t('plugin.metaConfig')}
                             </h4>
                             <div class="overflow-hidden rounded-lg border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -184,7 +184,7 @@ export default function PluginPage() {
                           when={def.GameEditor && 'configDefaults' in (meta() as object)}
                         >
                           <div>
-                            <h4 class="mb-1 px-1 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                            <h4 class="mb-1 px-1 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                               {t('plugin.defaultConfig')}
                             </h4>
                             <p class="mb-2 px-1 text-[10px] text-gray-400 dark:text-gray-500">

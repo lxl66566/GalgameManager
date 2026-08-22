@@ -53,7 +53,7 @@ export function ContextMenu(props: ContextMenuProps) {
         {props.children}
       </KobalteContextMenu.Trigger>
       <KobalteContextMenu.Portal>
-        <KobalteContextMenu.Content class="animate-in fade-in zoom-in-95 z-50 min-w-[160px] rounded-md border border-gray-200 bg-white p-1 shadow-md duration-100 outline-none dark:border-gray-600 dark:bg-gray-800">
+        <KobalteContextMenu.Content class="animate-in fade-in zoom-in-95 z-50 min-w-[160px] rounded-md border border-gray-200 bg-white p-1 shadow-md outline-none duration-100 dark:border-gray-600 dark:bg-gray-800">
           <For each={props.items as ContextMenuEntry[]}>
             {item => (
               <Show

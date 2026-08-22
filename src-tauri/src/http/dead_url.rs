@@ -246,7 +246,7 @@ no-tab-line\n\
 
     #[test]
     fn parse_empty_string_yields_empty() {
-        assert!(parse_dead_urls("").is_empty());
+        assert_eq!(parse_dead_urls(""), [] as [(String, u64); 0]);
     }
 
     /// `persist_dead_urls` writes via `tempfile`; verify the on-disk

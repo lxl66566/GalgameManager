@@ -94,7 +94,7 @@ export const DeviceTab: Component = () => {
                   label={t('settings.device.uuid')}
                 >
                   <div class="flex items-center gap-2">
-                    <code class="rounded bg-gray-100 px-2 py-1 font-mono text-xs text-gray-600 select-all dark:bg-gray-800 dark:text-gray-400">
+                    <code class="select-all rounded bg-gray-100 px-2 py-1 font-mono text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-400">
                       {development().uid}
                     </code>
                   </div>

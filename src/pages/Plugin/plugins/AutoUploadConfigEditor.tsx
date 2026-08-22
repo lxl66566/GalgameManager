@@ -75,7 +75,7 @@ export const AUTO_UPLOAD_PLUGIN: PluginDefinition<'autoUpload'> = {
     id: 'autoUpload',
     links: [],
     nameKey: 'plugin.autoUpload.name',
-    version: '1.3.1'
+    version: '1.3.2'
   },
   MetaEditor: AutoAddMetaEditor,
   metaKey: 'autoUpload'

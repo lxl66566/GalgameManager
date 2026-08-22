@@ -493,7 +493,7 @@ mod tests {
         };
         let parts = ctx.resolved_parts().unwrap();
         assert_eq!(parts.program, PathBuf::from("foo"));
-        assert!(parts.args.is_empty());
+        assert_eq!(parts.args, [] as [String; 0]);
         assert!(parts.current_dir.is_none());
         assert!(parts.env.is_none());
     }

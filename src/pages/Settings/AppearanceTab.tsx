@@ -171,7 +171,7 @@ const TimeDisplaySection: Component = () => {
             label={t('settings.appearance.timeDisplay.absoluteFormat')}
           >
             <input
-              class="w-48 rounded border border-gray-200 bg-white px-2 py-1 text-sm text-gray-800 focus:ring-1 focus:ring-blue-400 focus:outline-none dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+              class="w-48 rounded border border-gray-200 bg-white px-2 py-1 text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
               onInput={e => {
                 // Avoid disk write per keystroke: use the debounced
                 // setter, the value still updates in-memory instantly.
