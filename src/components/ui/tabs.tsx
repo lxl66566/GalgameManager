@@ -1,6 +1,7 @@
 import { For, type JSX } from 'solid-js'
 
 // src/components/Tabs.tsx
+import { useI18n } from '~/i18n'
 import { cn } from '~/lib/utils'
 
 export interface TabItem<T extends string> {
@@ -16,6 +17,7 @@ interface TabsProps<T extends string> {
 }
 
 export function Tabs<T extends string>(props: TabsProps<T>): JSX.Element {
+  const { t } = useI18n()
   return (
     <div
       class={cn('w-full border-b border-gray-200 dark:border-gray-800 mt-0', props.class)}
@@ -25,7 +27,7 @@ export function Tabs<T extends string>(props: TabsProps<T>): JSX.Element {
         -mb-px: 让 active border 盖住底部分割线
       */}
       <nav
-        aria-label="Tabs"
+        aria-label={t('ui.tabs')}
         class="no-scrollbar -mb-px flex justify-center space-x-8 overflow-x-auto"
       >
         <For each={props.items}>

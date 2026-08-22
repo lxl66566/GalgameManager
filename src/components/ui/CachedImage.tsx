@@ -9,6 +9,7 @@ import {
   type Component
 } from 'solid-js'
 
+import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'
 
 interface ImageProps {
@@ -50,6 +51,7 @@ export function galimgUrl(hash: string): string {
 
 const CachedImage: Component<ImageProps> = props => {
   const { config } = useConfig()
+  const { t } = useI18n()
 
   // Use a stable string key so the fetcher only re-runs when a value
   // actually changes. Returning a fresh array would always trip Solid's
@@ -119,7 +121,7 @@ const CachedImage: Component<ImageProps> = props => {
             title={error.toString()}
           >
             <span class="font-mono text-[10px] opacity-80">
-              Load Failed: {error.toString()}
+              {t('ui.loadFailed')}: {error.toString()}
             </span>
           </div>
         )}

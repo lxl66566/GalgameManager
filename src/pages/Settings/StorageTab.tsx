@@ -412,7 +412,7 @@ export const StorageTab: Component = () => {
               >
                 <FiUpload class="mr-1.5 h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
               </Show>
-              {uploading() ? 'Syncing...' : t('ui.push')}
+              {uploading() ? t('ui.syncing') : t('ui.push')}
             </Button>
 
             <Button
@@ -426,7 +426,7 @@ export const StorageTab: Component = () => {
               >
                 <FiDownload class="mr-1.5 h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
               </Show>
-              {downloading() ? 'Syncing...' : t('ui.pull')}
+              {downloading() ? t('ui.syncing') : t('ui.pull')}
             </Button>
           </div>
         </SettingRow>

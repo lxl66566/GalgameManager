@@ -112,6 +112,10 @@ export const dict = {
     remoteConfigNotFound: 'Remote config not found',
     remoteNotConfigured: 'Remote provider is not configured',
     renameFailed: 'Rename Failed: ',
+    renameRemoteFailedRollback:
+      'Remote sync failed; local filename was restored. Error: ',
+    renameRemoteRollbackFailed:
+      'Critical: remote rename failed and local rollback failed. Please check the files manually. Remote: ',
     renameSuccess: 'Rename Success',
     renaming: 'Rename: ',
     resolveExeFailed: 'Failed to resolve game path (possibly an undefined variable)',
@@ -409,9 +413,13 @@ export const dict = {
     browse: 'Browse',
     cancel: 'Cancel',
     clear: 'Clear',
+    close: 'Close',
     confirm: 'Confirm',
     delete: 'Delete',
     interface: 'Interface',
+    keyAlreadyExists: 'Key already exists',
+    keyCannotBeEmpty: 'Key cannot be empty',
+    loadFailed: 'Load Failed',
     loading: 'Loading...',
     none: 'None',
     pull: 'Pull',
@@ -419,6 +427,8 @@ export const dict = {
     rename: 'Rename',
     save: 'Save',
     select: 'Select',
+    syncing: 'Syncing...',
+    tabs: 'Tabs',
     WIP: 'Wait in progress...',
     withdraw: 'Withdraw'
   },

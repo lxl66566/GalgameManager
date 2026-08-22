@@ -56,11 +56,11 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
   const handleConfirmAdd = () => {
     const key = newKey().trim()
     if (!key) {
-      setError('Key cannot be empty')
+      setError(t('ui.keyCannotBeEmpty'))
       return
     }
     if (Object.prototype.hasOwnProperty.call(props.values, key)) {
-      setError('Key already exists')
+      setError(t('ui.keyAlreadyExists'))
       return
     }
     // For enum-valued editors, don't trim (values are precise identifiers).

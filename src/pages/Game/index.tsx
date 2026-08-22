@@ -333,7 +333,6 @@ const GamePage = (): JSX.Element => {
   }
 
   const handleDropAdd = (paths: string[]) => {
-    console.log('Dropped paths:', paths)
     const first = paths[0]
     void openGameAddModal(first ? fuckBackslash(first) : undefined)
   }

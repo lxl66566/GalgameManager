@@ -93,7 +93,19 @@ const startToastListener = async (t: i18n.Translator<Dictionary>) => {
 // /磁盘 config 完全一致。TS 端只消费，不复制默认值，避免漂移。
 const [config, setConfig] = createStore<Config>(globalThis.__INITIAL_CONFIG__)
 
+// Module-level translator so non-component helpers (refreshConfig,
+// sendPatch) can localize toasts. Captured in useConfigInit (wired by App
+// before any of these can fire); the translator itself is reactive to
+// locale switches since it is backed by a resource.
+let tRef: i18n.Translator<Dictionary> | undefined
+
+/** Localized text with an English fallback for the (theoretical) window
+ *  before useConfigInit runs. */
+const tt = (key: keyof Dictionary, fallback: string): string =>
+  (tRef?.(key) as string | undefined) ?? fallback
+
 export const useConfigInit = (t?: i18n.Translator<Dictionary>, onReady?: () => void) => {
+  tRef = t
   onMount(() => {
     let unlisten: (() => void) | undefined
     let unlistenToast: (() => void) | undefined
@@ -113,7 +125,6 @@ export const useConfigInit = (t?: i18n.Translator<Dictionary>, onReady?: () => v
         ? startToastListener(t)
         : Promise.resolve(undefined)
       const listenTask = listen<Config>('config://updated', event => {
-        console.log('Config updated from Rust:', event.payload)
         setConfig(reconcile(event.payload))
       })
 
@@ -160,8 +171,8 @@ const refreshConfig = async () => {
     const data = await invoke<Config>('get_config')
     setConfig(reconcile(data))
   } catch (error) {
-    console.error('Failed to load local config:', error)
-    toast.error(`Failed to load local config: ${errToStr(error)}`)
+    log.error(`Failed to load local config: ${errToStr(error)}`)
+    toast.error(`${tt('hint.failToLoadLocalConfig', 'Failed to load local config')}: ${errToStr(error)}`)
   }
 }
 
@@ -268,7 +279,7 @@ const sendPatch = async (patch: ConfigPatch) => {
   try {
     await invoke('patch_config', { patch })
   } catch (error) {
-    toast.error(`Failed to save config: ${errToStr(error)}`)
+    toast.error(`${tt('hint.saveConfigFailed', 'Failed to save config')}: ${errToStr(error)}`)
     void refreshConfig()
   }
 }

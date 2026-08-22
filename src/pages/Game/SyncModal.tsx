@@ -322,13 +322,13 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
               newArchiveFilename: oldName
             })
             // 抛出特定错误信息给外层 catch
-            throw new Error(`云端同步失败，已恢复本地文件名。错误: ${errToStr(error)}`, {
+            throw new Error(`${t('hint.renameRemoteFailedRollback')}${errToStr(error)}`, {
               cause: error
             })
           } catch (error_) {
             // 极端的灾难性错误：本地回滚也失败了（文件被占用等）
             throw new Error(
-              `严重错误：云端重命名失败且本地回滚失败。请手动检查文件。Remote: ${errToStr(error)}, Rollback: ${errToStr(error_)}`,
+              `${t('hint.renameRemoteRollbackFailed')}${errToStr(error)}, Rollback: ${errToStr(error_)}`,
               { cause: error_ }
             )
           }
