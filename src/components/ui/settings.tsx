@@ -73,6 +73,9 @@ export const SettingRow: Component<SettingRowProps> = props => (
         </div>
       </Show>
     </div>
-    <div class="flex flex-shrink-0 items-center">{props.children}</div>
+    {/* w-64 gives controls their standard width; `shrink min-w-0` lets the
+        column narrow with the window instead of overflowing / staying rigid,
+        and `justify-end` keeps small controls (switch, buttons) right-aligned. */}
+    <div class="flex w-64 min-w-0 shrink items-center justify-end">{props.children}</div>
   </div>
 )
