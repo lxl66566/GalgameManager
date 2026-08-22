@@ -12,6 +12,7 @@ interface GameActionButtonProps {
 export const GameActionButton = (props: GameActionButtonProps) => {
   return (
     <button
+      aria-label={props.title}
       class={`flex items-center justify-center rounded-full p-2 transition-all duration-200 ${
         props.loading || props.disabled
           ? 'cursor-not-allowed bg-gray-200 opacity-50 dark:bg-gray-700'

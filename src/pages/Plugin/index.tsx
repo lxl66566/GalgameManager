@@ -65,10 +65,19 @@ export default function PluginPage() {
                 return (
                   <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all dark:border-gray-700 dark:bg-gray-800">
                     <div
-                      class="flex cursor-pointer items-center gap-3 px-5 py-3.5 transition-colors select-none hover:bg-gray-50 dark:hover:bg-gray-700/30"
+                      aria-expanded={isExpanded()}
+                      class="flex cursor-pointer items-center gap-3 px-5 py-3.5 transition-colors select-none hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:outline-none dark:hover:bg-gray-700/30"
                       onClick={() => {
                         toggleExpand(def.info.id)
                       }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          toggleExpand(def.info.id)
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
                     >
                       <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2">

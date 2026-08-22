@@ -328,13 +328,13 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
                   </select>
                 </Show>
                 <button
+                  aria-label={t('ui.delete')}
                   class="mt-[1px] px-0 text-[11px] text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500 focus:opacity-100 dark:hover:text-red-400"
                   onClick={() => {
                     const updated = { ...props.values }
                     delete updated[key]
                     props.onCommit(updated)
                   }}
-                  tabIndex={-1}
                   type="button"
                 >
                   ✕

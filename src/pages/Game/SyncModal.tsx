@@ -371,6 +371,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
           </span>
         </div>
         <button
+          aria-label={t('ui.close')}
           class="cursor-pointer rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
           onClick={() => {
             props.onClose()
@@ -601,6 +602,7 @@ function ActionButton(props: ActionButtonProps) {
 
   return (
     <button
+      aria-label={props.tooltip}
       class={`${baseClass} ${variants[props.variant]} ${sizes[props.size ?? 'sm']}`}
       onClick={e => {
         e.stopPropagation()

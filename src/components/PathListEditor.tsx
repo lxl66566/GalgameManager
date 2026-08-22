@@ -216,11 +216,11 @@ export default function PathListEditor(props: PathListEditorProps) {
                   </Show>
 
                   <button
-                    class="cursor-pointer px-1 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500 dark:hover:text-red-400"
+                    aria-label={t('ui.delete')}
+                    class="cursor-pointer px-1 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500 focus-visible:opacity-100 dark:hover:text-red-400"
                     onClick={() => {
                       handleRemovePath(index())
                     }}
-                    tabIndex={-1}
                     title={t('ui.delete')}
                     type="button"
                   >

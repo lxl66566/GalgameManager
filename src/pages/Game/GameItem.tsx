@@ -70,10 +70,19 @@ export const GameItem = (props: GameItemProps) => {
       {/* 上半部分：图片区域 */}
       <ContextMenu items={contextMenuItems()}>
         <div
-          class="group relative h-52 cursor-pointer overflow-hidden"
+          aria-label={props.game.name}
+          class="group relative h-52 cursor-pointer overflow-hidden focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:outline-none"
           onClick={() => {
             if (!props.isPlaying) props.onStart()
           }}
+          onKeyDown={e => {
+            if ((e.key === 'Enter' || e.key === ' ') && !props.isPlaying) {
+              e.preventDefault()
+              props.onStart()
+            }
+          }}
+          role="button"
+          tabIndex={0}
         >
           <CachedImage
             alt={props.game.name}

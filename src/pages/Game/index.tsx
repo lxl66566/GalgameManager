@@ -508,8 +508,17 @@ const GamePage = (): JSX.Element => {
                   <Show when={isLastRow()}>
                     <GameItemWrapper extra_class="border-2 border-dashed border-gray-300 dark:border-gray-600 bg-transparent shadow-none hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                       <div
-                        class="group flex h-full w-full flex-1 cursor-pointer flex-col items-center justify-center text-center"
+                        aria-label={t('game.clickToAdd')}
+                        class="group flex h-full w-full flex-1 cursor-pointer flex-col items-center justify-center rounded-lg text-center focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:outline-none"
                         onClick={() => openGameAddModal()}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            void openGameAddModal()
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
                       >
                         <AiTwotonePlusCircle class="h-16 w-16 text-gray-400 transition-colors duration-300 group-hover:text-blue-500" />
                         <p class="mt-2 px-4 text-sm text-gray-500 transition-colors group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-200">

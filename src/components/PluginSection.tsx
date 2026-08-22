@@ -233,17 +233,19 @@ export default function PluginSection(props: PluginSectionProps) {
                       <FiArrowDown class="h-3 w-3" />
                     </button>
 
-                    <span
-                      class={`flex-1 cursor-pointer truncate text-xs font-medium select-none ${
+                    <button
+                      aria-expanded={isExpanded()}
+                      class={`flex-1 cursor-pointer truncate text-left text-xs font-medium select-none ${
                         enabled()
                           ? 'text-gray-700 dark:text-gray-200'
                           : 'text-gray-400 line-through dark:text-gray-500'
                       }`}
                       onClick={() => setExpandedIndex(isExpanded() ? null : index())}
                       title={enabled() ? undefined : t('plugin.disabled')}
+                      type="button"
                     >
                       {getPluginName(instance)}
-                    </span>
+                    </button>
 
                     <button
                       class="text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
