@@ -9,6 +9,7 @@ export const dict: DeepPartial<RawDictionary> = {
     backupButtonHint: '备份存档并上传至远程',
     clickToAdd: '点击添加',
     context: {
+      copyName: '复制游戏名',
       openDir: '打开游戏目录'
     },
     edit: {
@@ -81,6 +82,8 @@ export const dict: DeepPartial<RawDictionary> = {
     configUploadConflict: '远端配置比本地更新，无法自动上传',
     configUploadFailed: '配置上传失败',
     configUploadSuccess: '配置上传成功',
+    copiedGameName: '已复制游戏名',
+    copyGameNameFailed: '复制游戏名失败: ',
     deleteArchiveFailed: '删除关联的存档失败: ',
     deleteFailed: '删除失败: ',
     deleteGameAndRemote: '删除游戏和所有存档成功: ',

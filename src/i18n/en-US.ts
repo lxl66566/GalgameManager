@@ -3,6 +3,7 @@ export const dict = {
     backupButtonHint: 'Backup saves and push to remote',
     clickToAdd: 'Click to add',
     context: {
+      copyName: 'Copy Game Name',
       openDir: 'Open Game Directory'
     },
     edit: {
@@ -75,6 +76,8 @@ export const dict = {
     configUploadConflict: 'Remote config is newer, cannot perform auto upload',
     configUploadFailed: 'Config upload failed',
     configUploadSuccess: 'Config upload successfully',
+    copiedGameName: 'Copied game name',
+    copyGameNameFailed: 'Failed to copy game name: ',
     deleteArchiveFailed: 'Delete related archives failed: ',
     deleteFailed: 'Delete Failed: ',
     deleteGameAndRemote: 'Delete game and all archives in remote successfully: ',

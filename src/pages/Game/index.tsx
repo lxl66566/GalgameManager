@@ -341,6 +341,17 @@ const GamePage = (): JSX.Element => {
   /** Handle context menu actions dispatched from GameItem. */
   const handleContextMenuAction = async (gameId: number, action: string) => {
     switch (action) {
+      case 'copyName': {
+        const game = config.games.find(g => g.id === gameId)
+        if (!game) break
+        try {
+          await navigator.clipboard.writeText(game.name)
+          toast.success(t('hint.copiedGameName'))
+        } catch (error) {
+          toast.error(t('hint.copyGameNameFailed') + errToStr(error))
+        }
+        break
+      }
       case 'openDir': {
         try {
           await invoke('open_game_dir', { gameId })

@@ -6,7 +6,7 @@ import { displayDuration } from '@utils/time'
 import { createRelativeTime } from '@utils/time/createRelativeTime'
 import { AiOutlineCloudUpload, AiOutlineEdit, AiOutlineSync } from 'solid-icons/ai'
 import { FaRegularCirclePlay, FaSolidGamepad } from 'solid-icons/fa'
-import { FiFolder } from 'solid-icons/fi'
+import { FiCopy, FiFolder } from 'solid-icons/fi'
 import { createMemo, Show, type JSX } from 'solid-js'
 
 import { resolveTimeLanguage, useI18n } from '~/i18n'
@@ -51,6 +51,11 @@ export const GameItem = (props: GameItemProps) => {
   /** Build right-click context menu entries. Easy to extend: just push more items. */
   const contextMenuItems = (): ContextMenuEntry[] => {
     const items: ContextMenuEntry[] = [
+      {
+        icon: <FiCopy class="h-3.5 w-3.5" />,
+        label: t('game.context.copyName'),
+        onSelect: () => props.onContextMenuAction?.('copyName')
+      },
       {
         icon: <FiFolder class="h-3.5 w-3.5" />,
         label: t('game.context.openDir'),
