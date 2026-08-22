@@ -404,8 +404,8 @@ export const StorageTab: Component = () => {
           description={t('settings.config.forceOp')}
           label={t('settings.config.manualSync')}
         >
-          {/* Matches the Input width (w-64) above: two flex-1 buttons */}
-          <div class="flex w-64 gap-2">
+          {/* Matches the Input width (w-full sm:w-64) above: two flex-1 buttons */}
+          <div class="flex w-full gap-2 sm:w-64">
             <Button
               class="flex-1"
               disabled={uploading()}
