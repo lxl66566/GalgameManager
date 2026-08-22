@@ -13,10 +13,10 @@ export const GameActionButton = (props: GameActionButtonProps) => {
   return (
     <button
       aria-label={props.title}
-      class={`flex items-center justify-center rounded-full p-2 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current ${
+      class={`flex items-center justify-center rounded-full p-2 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-current focus-visible:outline-none ${
         props.loading || props.disabled
           ? 'cursor-not-allowed bg-gray-200 opacity-50 dark:bg-gray-700'
-          : `${props.colorClass} cursor-pointer hover:scale-110 hover:bg-gray-500 hover:bg-opacity-10 active:scale-95 dark:hover:bg-opacity-20`
+          : `${props.colorClass} hover:bg-opacity-10 dark:hover:bg-opacity-20 cursor-pointer hover:scale-110 hover:bg-gray-500 active:scale-95`
       } `}
       disabled={
         // Intentional boolean OR: `??` would skip `loading` when `disabled`

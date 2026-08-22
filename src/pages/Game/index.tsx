@@ -441,7 +441,7 @@ const GamePage = (): JSX.Element => {
       */}
       <DropArea
         callback={handleDropAdd}
-        class="flex h-full w-full flex-col py-4 pl-4 pr-0"
+        class="flex h-full w-full flex-col py-4 pr-0 pl-4"
       >
         {/* 头部区域：标题 + 排序控件 */}
         <div class="mb-4 flex flex-row items-center justify-between">
@@ -457,7 +457,7 @@ const GamePage = (): JSX.Element => {
           />
         </div>
         <div
-          class="custom-scrollbar flex-1 overflow-y-auto pb-5 pr-4"
+          class="custom-scrollbar flex-1 overflow-y-auto pr-4 pb-5"
           ref={gridScrollRef}
           style={{ 'overflow-anchor': 'none' }}
         >
@@ -509,7 +509,7 @@ const GamePage = (): JSX.Element => {
                     <GameItemWrapper extra_class="border-2 border-dashed border-gray-300 dark:border-gray-600 bg-transparent shadow-none hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                       <div
                         aria-label={t('game.clickToAdd')}
-                        class="group flex h-full w-full flex-1 cursor-pointer flex-col items-center justify-center rounded-lg text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                        class="group flex h-full w-full flex-1 cursor-pointer flex-col items-center justify-center rounded-lg text-center focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:outline-none"
                         onClick={() => openGameAddModal()}
                         onKeyDown={e => {
                           if (e.key === 'Enter' || e.key === ' ') {

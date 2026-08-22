@@ -12,7 +12,8 @@ export default defineConfig({
   build: {
     cssMinify: process.env.TAURI_DEBUG ? false : 'lightningcss',
     // don't minify for debug builds
-    minify: process.env.TAURI_DEBUG ? false : 'esbuild',
+    // vite 8 (rolldown) 下 esbuild minify 需额外安装 esbuild 且 API 已废弃，改用内置 oxc minifier
+    minify: process.env.TAURI_DEBUG ? false : 'oxc',
     // produce sourcemaps for debug builds
     sourcemap: !!process.env.TAURI_DEBUG,
     // Tauri uses Chromium on Windows and WebKit on macOS and Linux.

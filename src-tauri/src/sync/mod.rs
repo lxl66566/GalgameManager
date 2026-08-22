@@ -295,8 +295,7 @@ impl BuildOperator for LocalConfig {
         let operator = Operator::new(
             services::Fs::default().root(path.as_os_str().to_str().ok_or(Error::InvalidPath)?),
         )?
-        .layer(LoggingLayer::default())
-        .finish();
+        .layer(LoggingLayer::default());
         *self.operator.borrow_mut() = Some(LocalOperator(operator));
         Ok(())
     }
@@ -351,8 +350,7 @@ impl BuildOperator for WebDavConfig {
                 .with_jitter()
                 .with_notify(notify),
         )
-        .layer(LoggingLayer::default())
-        .finish();
+        .layer(LoggingLayer::default());
         *self.operator.borrow_mut() = Some(WebdavOperator(operator));
         Ok(())
     }
@@ -406,8 +404,7 @@ impl BuildOperator for S3Config {
                 .with_jitter()
                 .with_notify(notify),
         )
-        .layer(LoggingLayer::default())
-        .finish();
+        .layer(LoggingLayer::default());
         *self.operator.borrow_mut() = Some(S3Operator(operator));
         Ok(())
     }
@@ -535,8 +532,7 @@ mod tests {
                 .username("webdav")
                 .password("")
                 .root("/test"),
-        )?
-        .finish();
+        )?;
         test_big_file(&op).await
     }
 }

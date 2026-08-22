@@ -20,7 +20,7 @@ export function InputWithSuffix(props: InputWithSuffixProps) {
   return (
     <div class={cn('relative flex-1', local.containerClass)}>
       <Input class={cn('pr-9', local.class)} {...rest} />
-      <span class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400">
+      <span class="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400">
         {local.suffix}
       </span>
     </div>

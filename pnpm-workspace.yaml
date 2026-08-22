@@ -1,0 +1,6 @@
+allowBuilds:
+  simple-git-hooks: true
+  unrs-resolver: true
+minimumReleaseAgeExclude:
+  - baseline-browser-mapping@2.11.18
+  - virtua@0.50.4

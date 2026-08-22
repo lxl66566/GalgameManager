@@ -105,7 +105,7 @@ const GamePlaytimeBars: Component<GamePlaytimeBarsProps> = props => {
                         width: `${(row.secs / maxSecs()) * 100}%`
                       }}
                     />
-                    <span class="shrink-0 text-xs tabular-nums text-gray-500 dark:text-gray-400">
+                    <span class="shrink-0 text-xs text-gray-500 tabular-nums dark:text-gray-400">
                       {formatDuration(row.secs, props.units)}
                     </span>
                   </div>

@@ -26,7 +26,7 @@
     "@tauri-apps/plugin-fs": "^2.5.1",
     "@tauri-apps/plugin-opener": "^2.5.4",
     "@tauri-apps/plugin-window-state": "^2.4.1",
-    "baseline-browser-mapping": "^2.11.15",
+    "baseline-browser-mapping": "^2.11.18",
     "caniuse-lite": "^1.0.30001809",
     "clsx": "^2.1.1",
     "d3": "^7.9.0",
@@ -36,7 +36,7 @@
     "solid-toast": "^0.5.0",
     "tailwind-merge": "^3.6.0",
     "unocss-preset-scrollbar-hide": "^1.0.1",
-    "virtua": "^0.50.2"
+    "virtua": "^0.50.4"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -45,27 +45,27 @@
     "@tauri-apps/cli": "^2.11.4",
     "@types/d3": "^7.4.3",
     "@types/node": "^26.2.0",
-    "@unocss/preset-wind4": "^66.7.5",
+    "@unocss/preset-wind4": "^66.8.1",
     "@vitest/eslint-plugin": "^1.6.27",
-    "eslint": "^10.8.1",
+    "eslint": "^10.9.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import-x": "^4.17.1",
-    "eslint-plugin-oxlint": "^1.78.0",
+    "eslint-plugin-oxlint": "^1.79.0",
     "eslint-plugin-perfectionist": "^5.10.1",
     "eslint-plugin-regexp": "^3.2.0",
-    "eslint-plugin-solid": "^0.15.0",
+    "eslint-plugin-solid": "^0.16.0",
     "lightningcss": "1.28.2",
     "lint-staged": "^17.3.0",
-    "oxfmt": "^0.63.0",
-    "oxlint": "^1.78.0",
+    "oxfmt": "^0.64.0",
+    "oxlint": "^1.79.0",
     "simple-git-hooks": "^2.13.1",
     "solid-icons": "^1.2.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.67.0",
-    "unocss": "^66.7.5",
-    "vite": "^8.2.1",
+    "unocss": "^66.8.1",
+    "vite": "^8.2.2",
     "vite-plugin-solid": "^2.11.14",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged"
@@ -77,5 +77,5 @@
       "oxfmt --no-error-on-unmatched-pattern"
     ]
   },
-  "packageManager": "pnpm@10.8.1"
+  "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621"
 }

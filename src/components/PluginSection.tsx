@@ -192,7 +192,7 @@ export default function PluginSection(props: PluginSectionProps) {
       <div class="flex max-h-[400px] min-h-[60px] flex-col gap-1.5 overflow-y-auto rounded border border-gray-200 bg-gray-50 p-2 dark:border-gray-600 dark:bg-gray-800">
         <Show
           fallback={
-            <div class="select-none py-3 text-center text-xs text-gray-400 dark:text-gray-500">
+            <div class="py-3 text-center text-xs text-gray-400 select-none dark:text-gray-500">
               {t('plugin.noPluginsAdded')}
             </div>
           }
@@ -235,7 +235,7 @@ export default function PluginSection(props: PluginSectionProps) {
 
                     <button
                       aria-expanded={isExpanded()}
-                      class={`flex-1 cursor-pointer select-none truncate text-left text-xs font-medium ${
+                      class={`flex-1 cursor-pointer truncate text-left text-xs font-medium select-none ${
                         enabled()
                           ? 'text-gray-700 dark:text-gray-200'
                           : 'text-gray-400 line-through dark:text-gray-500'
@@ -278,7 +278,7 @@ export default function PluginSection(props: PluginSectionProps) {
                         // No editor for this plugin type (e.g. AutoUpload).
                         // Without this branch the chevron flips but nothing
                         // appears, which looks like the click was a no-op.
-                        <div class="border-t border-gray-200 bg-gray-50/50 px-3 py-2 text-xs italic text-gray-400 dark:border-gray-600/50 dark:bg-gray-900/20 dark:text-gray-500">
+                        <div class="border-t border-gray-200 bg-gray-50/50 px-3 py-2 text-xs text-gray-400 italic dark:border-gray-600/50 dark:bg-gray-900/20 dark:text-gray-500">
                           {t('plugin.configEmpty')}
                         </div>
                       }

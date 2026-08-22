@@ -161,7 +161,7 @@ export const FormField: Component<FormFieldProps> = props => (
               <FiInfo class="h-3 w-3" />
             </Tooltip.Trigger>
             <Tooltip.Portal>
-              <Tooltip.Content class="animate-in fade-in z-50 w-max max-w-[220px] rounded bg-gray-800 px-2 py-1 text-[10px] font-normal leading-tight text-gray-100 shadow-lg dark:bg-gray-200 dark:text-gray-800">
+              <Tooltip.Content class="animate-in fade-in z-50 w-max max-w-[220px] rounded bg-gray-800 px-2 py-1 text-[10px] leading-tight font-normal text-gray-100 shadow-lg dark:bg-gray-200 dark:text-gray-800">
                 <Tooltip.Arrow />
                 {props.description}
               </Tooltip.Content>

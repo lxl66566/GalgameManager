@@ -163,7 +163,7 @@ export default function PathListEditor(props: PathListEditorProps) {
       <div class="flex max-h-[150px] min-h-[80px] flex-col overflow-y-auto rounded border border-gray-200 bg-gray-50 p-2 transition-colors dark:border-gray-600 dark:bg-gray-800">
         <Show
           fallback={
-            <div class="flex flex-1 select-none items-center justify-center text-xs text-gray-400 dark:text-gray-500">
+            <div class="flex flex-1 items-center justify-center text-xs text-gray-400 select-none dark:text-gray-500">
               {t('hint.noPathPleaseAdd')}
             </div>
           }
@@ -177,7 +177,7 @@ export default function PathListEditor(props: PathListEditorProps) {
                     fallback={
                       // 显示模式
                       <span
-                        class="mr-2 flex-1 cursor-text select-text truncate text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                        class="mr-2 flex-1 cursor-text truncate text-gray-600 transition-colors select-text hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
                         onDblClick={() => setEditingIndex(index())}
                         title={t('hint.doubleClickToEdit')}
                       >
@@ -217,7 +217,7 @@ export default function PathListEditor(props: PathListEditorProps) {
 
                   <button
                     aria-label={t('ui.delete')}
-                    class="cursor-pointer px-1 text-gray-400 opacity-0 transition-opacity hover:text-red-500 focus-visible:opacity-100 group-hover:opacity-100 dark:hover:text-red-400"
+                    class="cursor-pointer px-1 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500 focus-visible:opacity-100 dark:hover:text-red-400"
                     onClick={() => {
                       handleRemovePath(index())
                     }}
@@ -235,7 +235,7 @@ export default function PathListEditor(props: PathListEditorProps) {
 
       {/* 构建一个高度为 0 的锚点，让 warning 相对于这里进行绝对定位 */}
       <div class="relative h-0 w-full">
-        <div class="absolute left-0 top-0 z-10 flex w-full flex-col gap-2">
+        <div class="absolute top-0 left-0 z-10 flex w-full flex-col gap-2">
           <Show when={variableWarning()}>
             <FieldHint text={variableWarning()} variant="warning" />
           </Show>
@@ -269,7 +269,7 @@ function ActionButton(props: ActionButtonProps) {
       <Dynamic class="h-4 w-4 shrink-0" component={props.icon} />
       {/* 利用 grid-template-columns 实现平滑的宽度展开动画 */}
       <div class="grid grid-cols-[0fr] transition-[grid-template-columns] duration-300 ease-in-out group-hover:grid-cols-[1fr]">
-        <span class="overflow-hidden whitespace-nowrap pl-0 text-xs font-medium transition-all duration-300 group-hover:pl-1.5">
+        <span class="overflow-hidden pl-0 text-xs font-medium whitespace-nowrap transition-all duration-300 group-hover:pl-1.5">
           {props.label}
         </span>
       </div>

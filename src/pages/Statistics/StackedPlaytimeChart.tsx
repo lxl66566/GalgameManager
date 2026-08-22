@@ -475,7 +475,7 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
       <Show when={tipData()}>
         {td => (
           <div
-            class="pointer-events-none absolute z-10 min-w-36 max-w-80 rounded-lg border border-gray-200 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-gray-700 dark:bg-gray-800/95"
+            class="pointer-events-none absolute z-10 max-w-80 min-w-36 rounded-lg border border-gray-200 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-gray-700 dark:bg-gray-800/95"
             style={{
               left: `${td().x}px`,
               top: `${td().y}px`,
@@ -506,7 +506,7 @@ const StackedPlaytimeChart: Component<StackedPlaytimeChartProps> = props => {
                         {r.name}
                       </span>
                       <span
-                        class="ml-auto shrink-0 whitespace-nowrap pl-2 font-medium"
+                        class="ml-auto shrink-0 pl-2 font-medium whitespace-nowrap"
                         style={{ color: dimmed() ? '#9ca3af' : r.color }}
                       >
                         {formatDuration(r.secs, props.units)}

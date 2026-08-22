@@ -82,7 +82,7 @@ impl super::MyOperation for Operator {
 
     #[inline]
     fn chunkable(&self) -> bool {
-        self.info().full_capability().write_can_multi
+        self.info().capability().write_can_multi
     }
 
     async fn list_archive(&self, game_id: u32) -> Result<Vec<ArchiveInfo>> {

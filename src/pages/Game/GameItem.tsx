@@ -71,7 +71,7 @@ export const GameItem = (props: GameItemProps) => {
       <ContextMenu items={contextMenuItems()}>
         <div
           aria-label={props.game.name}
-          class="group relative h-52 cursor-pointer overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+          class="group relative h-52 cursor-pointer overflow-hidden focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:outline-none"
           onClick={() => {
             if (!props.isPlaying) props.onStart()
           }}
@@ -108,12 +108,12 @@ export const GameItem = (props: GameItemProps) => {
             <div class="absolute inset-0 z-10 flex cursor-default flex-col items-center justify-center border-b-4 border-emerald-500 bg-black/60 backdrop-blur-[2px]">
               {/* 居中图标与文字 */}
               <FaSolidGamepad class="h-14 w-14 animate-pulse text-emerald-400 drop-shadow-lg" />
-              <span class="mt-2 text-xs font-bold uppercase tracking-widest text-emerald-100">
+              <span class="mt-2 text-xs font-bold tracking-widest text-emerald-100 uppercase">
                 {t('game.playing')}
               </span>
 
               {/* 右上角呼吸灯 (Ping Animation) */}
-              <div class="absolute right-3 top-3 flex h-3 w-3">
+              <div class="absolute top-3 right-3 flex h-3 w-3">
                 <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 <span class="relative inline-flex h-3 w-3 rounded-full bg-emerald-500" />
               </div>
@@ -155,7 +155,7 @@ export const GameItem = (props: GameItemProps) => {
 
             {/* 右侧：总游玩时长（shrink-0 保持完整可见） */}
             <div
-              class="shrink-0 whitespace-nowrap font-medium text-gray-500 dark:text-gray-400"
+              class="shrink-0 font-medium whitespace-nowrap text-gray-500 dark:text-gray-400"
               title={t('game.totalPlayTime')}
             >
               {displayDuration(props.game.useTime)}
