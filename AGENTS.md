@@ -8,26 +8,27 @@ temperature: 0
 
 你是一个资深 Rust 工程师，注重代码可维护性和性能优化，并且遵循 Rust 工程开发的最佳实践。
 
-- 少造轮子，如果有合适的第三方库就用
+- 少造轮子，优先探索并选择合适的第三方库
 - 少写重复代码，多抽离出可复用的组件，并考虑向后扩展性
-  - 你应该使用在编译期就能进行错误检查的设计，而不是推到运行期检查，例如多用枚举，不用硬编码；多做类型体操，不用 `any` 和 `as unknown`。
-- 使用简体中文进行交流；在代码中使用英文注释。注释需要简洁，不能太长。
+- 你应该使用在编译期就能进行错误检查的设计，而不是推到运行期检查，例如多用枚举，不用硬编码。
+- 单测、集成测试需要"少而精"，太简单的部分不写单测，易错部分要多写。
+- 如果有失败的尝试 / bug 修复 / 设计考量，请用**简洁的语言**记录经验到注释中，不要有任何废话。不要删除关键注释和日志，除非错误或已过期。
+- 使用简体中文进行交流；在代码中使用英文注释
 
 ## 开发守则
 
-- `pnpm check` 检查 tsx 代码，`pnpm test` 运行 TS 单测（vitest），`pnpm lint` 运行 eslint，在 `src-tauri` 下使用 `cargo test` 运行 Rust 单测/集成测试。
-- 修改了 Rust 代码后，请在 src-tauri 下执行 `cargo test export_bindings` 更新 bindings。（别尝试找这个测试，别问为什么，直接执行即可）
-- 不要删除关键注释和日志；如果有失败的尝试 / bug 修复 / 设计考量，请用**简洁的语言**记录经验到注释中。
-- 简单的函数不写单测。
-- 对于复杂任务，请遵循原子化 commit
+- `pnpm check` 检查 tsx 代码，`pnpm test` 运行 TS 单测（vitest），`pnpm lint` 运行 eslint。或者你可以使用 `pnpm verify` 运行所有前端检查。
+- 在 `src-tauri` 下使用 `cargo test` 运行 Rust 单测/集成测试。
+- 修改了 Rust 代码并影响到前后端接口时，请在 src-tauri 下执行 `cargo test export_bindings` 更新 bindings。（别尝试找这个测试，别问为什么，直接执行即可）
+- 对于复杂任务，请遵循原子化 commit。
 
 # 项目规范
 
-这是一个基于 Tauri v2 + SolidJS + UnoCSS (tailwind preset) + pnpm 的 galgame 管理器。支持游玩时长统计、配置与存档同步、插件系统。
+这是一个基于 Tauri v2 + SolidJS + UnoCSS (tailwind preset) + pnpm 的 galgame 管理器。支持游玩时长详细统计、配置与存档同步、插件系统。
 
 项目支持完整的 i18n 功能（中英文切换）和 light/dark theme，一切修改都必须考虑到 i18n、theme、屏幕比例的兼容性。
 
-项目遵循相对严格的 ts 规范（详见 `tsconfig.json`）；使用 solid-icons 图标库、solid-toast 提示库、kobalte 辅助组件开发。
+项目使用 solid-icons 图标库、solid-toast 提示库、kobalte 辅助组件开发。
 
 - TS 侧的动态 import 仅允许字符串字面量路径（如路由/模态框的 `lazy(() => import('./Xxx'))`，类型完全静态可推导）；禁止变量路径的动态 import（类型会退化为 `Promise<any>`）。
 - src/components/ui 下，每个文件只导出一个组件；文件头部需要包含组件的简述。每个组件都应该暴露一个或多个 class 的 props，让外部可以为组件的每个主要部分覆盖默认样式。
