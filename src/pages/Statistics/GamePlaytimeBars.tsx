@@ -11,7 +11,7 @@
 //   user can hover any column up top and immediately see the linked row even
 //   when the list is scrolled.
 import CachedImage from '@components/ui/CachedImage'
-import { createEffect, For, Show, type Component } from 'solid-js'
+import { createEffect, createMemo, For, Show, type Component } from 'solid-js'
 
 import { useI18n } from '~/i18n'
 
@@ -36,7 +36,9 @@ interface GamePlaytimeBarsProps {
 
 const GamePlaytimeBars: Component<GamePlaytimeBarsProps> = props => {
   const { t } = useI18n()
-  const maxSecs = () => Math.max(1, ...props.rows.map(r => r.secs))
+  // Memoized so each row's width computation doesn't re-scan the whole list
+  // (O(n) once per scope change instead of O(n²) per render).
+  const maxSecs = createMemo(() => Math.max(1, ...props.rows.map(r => r.secs)))
 
   // When the stacked chart highlights a game (chart segment hover), bring the
   // matching row into view. `scrollIntoView({ block: 'nearest' })` is a no-op
