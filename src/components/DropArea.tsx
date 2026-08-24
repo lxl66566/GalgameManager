@@ -1,4 +1,5 @@
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { FiDownloadCloud } from 'solid-icons/fi'
 import { createSignal, onCleanup, Show, type JSX } from 'solid-js'
 
@@ -44,6 +45,9 @@ export function DropArea(props: DropAreaProps) {
       // eslint-disable-next-line solid/reactivity -- listeners are set up once; props.callback doesn't change
       listen<{ paths: string[] }>('tauri://drag-drop', event => {
         setHovering(false)
+        // Bring the window to front and focus it once files are dropped
+        // (one-shot, not always-on-top).
+        void getCurrentWindow().setFocus()
         props.callback?.(event.payload.paths)
       })
     ])
