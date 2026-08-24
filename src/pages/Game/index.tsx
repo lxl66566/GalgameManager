@@ -140,12 +140,12 @@ const GamePage = (): JSX.Element => {
   // and chunk games into rows of that width. This keeps the layout responsive
   // while only rendering the visible rows.
   const MIN_CARD_PX = 11 * 16 // 11rem
-  const CARD_GAP_PX = 24 // gap-x-6 (1.5rem)
+  const CARD_GAP_PX = 24 // gap-6 (1.5rem)
   const PAD_RIGHT_PX = 16 // pr-4 (1rem)
   let gridScrollRef: HTMLDivElement | undefined
   const [scrollWidth, setScrollWidth] = createSignal(0)
 
-  // Match the old `auto-fill, minmax(11rem,1fr)` + gap-x-6 + pr-4 grid:
+  // Match the old `auto-fill, minmax(11rem,1fr)` + gap-6 + pr-4 grid:
   // columns = floor((clientWidth - pr-4 + gap) / (minCard + gap))
   const columns = createMemo(() => {
     const w = scrollWidth()
@@ -466,7 +466,7 @@ const GamePage = (): JSX.Element => {
               const isLastRow = () => rowIndex() === rows().length - 1
               return (
                 <div
-                  class="grid gap-x-6 pb-6"
+                  class="grid gap-6 pb-6"
                   style={{
                     'grid-template-columns': `repeat(${columns()}, minmax(11rem, 1fr))`
                   }}
