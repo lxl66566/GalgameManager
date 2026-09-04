@@ -400,8 +400,12 @@ export const StorageTab: Component = () => {
         >
           <Input
             onChange={e => {
+              // `|| 1200` guards the cleared-input case: NaN would render as
+              // "NaN", serialize to null over IPC (diverging store and disk)
+              // and defeat AutoUploadService's `intervalSecs < 1` guard,
+              // turning setInterval(NaN * 1000) into an upload storm.
               actions.updateSettingsDebounced({
-                autoSyncInterval: parseInt(e.currentTarget.value)
+                autoSyncInterval: parseInt(e.currentTarget.value) || 1200
               })
             }}
             placeholder={t('settings.config.autoSyncIntervalPlaceholder')}
