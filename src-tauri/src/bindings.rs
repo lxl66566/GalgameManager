@@ -160,34 +160,50 @@ pub fn rename_local_archive(
     Ok(())
 }
 
-#[tauri::command]
-pub fn archive(app: AppHandle, game_id: u32) -> Result<String> {
+// Plain sync commands would run on the main thread and freeze the whole
+// window (webview included) for the duration of a multi-hundred-MB zstd
+// job — hence async + spawn_blocking, which also keeps the CPU-bound work
+// off the async runtime workers.
+#[tauri::command(async)]
+pub async fn archive(app: AppHandle, game_id: u32) -> Result<String> {
     let game_backup_dir = game_backup_dir(&app, game_id)?;
 
-    let lock = CONFIG.lock();
-    let archive_conf = lock.settings.archive.clone();
-    let paths = lock.get_game_by_id(game_id)?.save_paths.clone();
-    let device_name = lock
-        .get_device()
-        .map(|d| d.name.clone())
-        .unwrap_or(format!("Unknown{}", lock.devices.len()));
-    drop(lock);
+    let (archive_conf, paths, device_name) = {
+        let lock = CONFIG.lock();
+        let archive_conf = lock.settings.archive.clone();
+        let paths = lock.get_game_by_id(game_id)?.save_paths.clone();
+        let device_name = lock
+            .get_device()
+            .map(|d| d.name.clone())
+            .unwrap_or(format!("Unknown{}", lock.devices.len()));
+        (archive_conf, paths, device_name)
+    };
 
     // logged inner
-    archive_impl(&device_name, &archive_conf, &game_backup_dir, &paths)
+    tauri::async_runtime::spawn_blocking(move || {
+        archive_impl(&device_name, &archive_conf, &game_backup_dir, &paths)
+    })
+    .await
+    .map_err(|e| Error::JoinError(e.to_string()))?
 }
 
-#[tauri::command]
-pub fn extract(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
+#[tauri::command(async)]
+pub async fn extract(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
     let game_backup_dir = game_backup_dir(&app, game_id)?;
 
-    let lock = CONFIG.lock();
-    let archive_conf = lock.settings.archive.clone();
-    let paths = lock.get_game_by_id(game_id)?.save_paths.clone();
-    drop(lock);
+    let (archive_conf, paths) = {
+        let lock = CONFIG.lock();
+        let archive_conf = lock.settings.archive.clone();
+        let paths = lock.get_game_by_id(game_id)?.save_paths.clone();
+        (archive_conf, paths)
+    };
 
     // logged inner
-    restore_impl(&archive_conf, &game_backup_dir, &archive_filename, &paths)
+    tauri::async_runtime::spawn_blocking(move || {
+        restore_impl(&archive_conf, &game_backup_dir, &archive_filename, &paths)
+    })
+    .await
+    .map_err(|e| Error::JoinError(e.to_string()))?
 }
 
 // region sync

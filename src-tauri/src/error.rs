@@ -77,6 +77,9 @@ pub enum Error {
 
     #[error("Dead URL (previous 4xx client error): {0}")]
     DeadUrl(String),
+
+    #[error("Background task join error: {0}")]
+    JoinError(String),
 }
 
 impl Clone for Error {
