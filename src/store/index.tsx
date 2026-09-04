@@ -353,12 +353,17 @@ export const useConfig = () => {
         }
         return device
       },
-      removeGame: (index: number) => {
-        const id = config.games[index]?.id
-        if (id === undefined) return
+      removeGame: (id: number) => {
         setConfig(
           produce(state => {
-            state.games.splice(index, 1)
+            // Resolve by id at apply time: callers capture the id when the
+            // user clicks, and an index captured earlier can point at a
+            // different game once an await (remote archive deletion) or a
+            // pending confirm toast lets the list change in between.
+            const idx = state.games.findIndex(g => g.id === id)
+            if (idx >= 0) {
+              state.games.splice(idx, 1)
+            }
           })
         )
         void sendPatch(deleteGameOp(id))

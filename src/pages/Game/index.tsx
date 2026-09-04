@@ -300,13 +300,13 @@ const GamePage = (): JSX.Element => {
       if (game.savePaths.length > 0) {
         void invoke('delete_local_archive_all', { gameId: game.id })
         if (config.settings.storage.provider === 'none') {
-          actions.removeGame(index)
+          actions.removeGame(game.id)
           toast.success(t('hint.deleteGameSuccess') + game.name)
           return
         }
         await invoke('delete_archive_all', { gameId: game.id })
       }
-      actions.removeGame(index)
+      actions.removeGame(game.id)
       toast.success(t('hint.deleteGameAndRemote') + game.name)
     } catch (error) {
       toast.error(t('hint.deleteArchiveFailed') + errToStr(error))
@@ -320,7 +320,7 @@ const GamePage = (): JSX.Element => {
           {
             label: t('ui.delete'),
             onClick: () => {
-              actions.removeGame(index)
+              actions.removeGame(game.id)
             },
             variant: 'danger'
           }
