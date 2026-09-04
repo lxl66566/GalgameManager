@@ -227,10 +227,23 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
 
     // 2. get_launch_override hooks
     let mut launch_override = None;
-    for (_, handler, ctx) in enabled_plugin_contexts(&plugins, &configs, &metas, &launch) {
-        if let Some(override_ctx) = handler.get_launch_override(&ctx)? {
-            launch_override = Some(override_ctx);
-            break;
+    for (handler_key, handler, ctx) in enabled_plugin_contexts(&plugins, &configs, &metas, &launch)
+    {
+        match handler.get_launch_override(&ctx) {
+            Ok(Some(override_ctx)) => {
+                launch_override = Some(override_ctx);
+                break;
+            },
+            Ok(None) => {},
+            Err(e) => {
+                // Same as a before_game_start failure: without the rollback,
+                // everything the earlier hooks registered (extracted DLLs,
+                // user-level SPEEDUP env var, MMDevAPI registry redirect)
+                // would leak permanently.
+                log::error!("Plugin '{handler_key}' get_launch_override failed: {e}");
+                launch.transaction.rollback();
+                return Err(e);
+            },
         }
     }
 
