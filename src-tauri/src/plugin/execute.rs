@@ -4,7 +4,7 @@
 //! handler in one place. To register a new plugin, follow this pattern and
 //! add the corresponding entries in `config.rs` and `mod.rs`.
 
-use std::{collections::HashMap, sync::LazyLock as Lazy};
+use std::{collections::HashMap, process::Child, sync::LazyLock as Lazy};
 
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
@@ -74,43 +74,41 @@ impl Default for ExecutePluginMeta {
 
 // ── Process tracking for exit signals ────────────────────────────────────────
 
-/// Tracks PIDs spawned by execute plugins per game, paired with the exit
-/// signal config. The first `after_game_exit` call removes the entry
-/// atomically, so cleanup happens exactly once per game session.
-static TRACKED_PROCESSES: Lazy<DashMap<u32, Vec<(u32, ExitSignal)>>> = Lazy::new(DashMap::new);
+/// Tracks spawned `Child` handles per game, paired with the exit signal
+/// config. The first `after_game_exit` call removes the entry atomically, so
+/// cleanup happens exactly once per game session.
+///
+/// We hold the `Child` itself instead of a bare PID: game sessions run for
+/// hours, and a tracked tool that exits early would have its PID recycled by
+/// the OS, making the game-exit kill hit an unrelated process. Holding the
+/// handle keeps the PID reserved on both platforms (Windows: open process
+/// handle; Unix: unreaped zombie), so a late signal can never miss.
+static TRACKED_PROCESSES: Lazy<DashMap<u32, Vec<(Child, ExitSignal)>>> = Lazy::new(DashMap::new);
 
-/// Send a signal to a process by PID.
+/// Send the configured exit signal to a tracked child via its owned handle.
 #[cfg(windows)]
-fn send_signal(pid: u32, signal: ExitSignal) -> Result<()> {
-    use windows::Win32::{
-        Foundation::CloseHandle,
-        System::Threading::{OpenProcess, PROCESS_TERMINATE, TerminateProcess},
-    };
+fn send_signal(child: &mut Child, signal: ExitSignal) -> Result<()> {
     match signal {
         ExitSignal::None => Ok(()),
         ExitSignal::Sigterm | ExitSignal::Sigkill => {
             if signal == ExitSignal::Sigterm {
                 log::warn!(
                     "SIGTERM is not natively supported on Windows, falling back to \
-                     TerminateProcess for pid {pid}"
+                     TerminateProcess"
                 );
             }
-            let handle = unsafe { OpenProcess(PROCESS_TERMINATE, false, pid) }
-                .map_err(|_| crate::error::Error::Launch)?;
-            let res = unsafe { TerminateProcess(handle, 1) };
-            unsafe {
-                let _ = CloseHandle(handle);
-            }
-            res.map_err(|_| crate::error::Error::Launch)?;
-            log::info!("Terminated process {pid}");
+            // kill() goes through the child's own handle — no OpenProcess by
+            // PID, so no PID-reuse race.
+            child.kill().map_err(|_| crate::error::Error::Launch)?;
+            log::info!("Terminated tracked process (pid={})", child.id());
             Ok(())
         },
     }
 }
 
-/// Send a signal to a process by PID.
+/// Send the configured exit signal to a tracked child.
 #[cfg(not(windows))]
-fn send_signal(pid: u32, signal: ExitSignal) -> Result<()> {
+fn send_signal(child: &mut Child, signal: ExitSignal) -> Result<()> {
     match signal {
         ExitSignal::None => Ok(()),
         ExitSignal::Sigterm | ExitSignal::Sigkill => {
@@ -119,10 +117,12 @@ fn send_signal(pid: u32, signal: ExitSignal) -> Result<()> {
                 ExitSignal::Sigkill => "KILL",
                 ExitSignal::None => unreachable!(),
             };
+            // The PID is still reserved while we hold the un-reaped Child;
+            // if the tool already exited this is a harmless no-op on a zombie.
             std::process::Command::new("kill")
-                .args(["-s", sig_name, &pid.to_string()])
+                .args(["-s", sig_name, &child.id().to_string()])
                 .status()?;
-            log::info!("Sent SIG{sig_name} to process {pid}");
+            log::info!("Sent SIG{sig_name} to tracked process {}", child.id());
             Ok(())
         },
     }
@@ -173,11 +173,10 @@ impl ExecutePlugin {
         })?;
 
         if phase != ExecutePhase::GameExit && config.exit_signal != ExitSignal::None {
-            let pid = child.id();
             TRACKED_PROCESSES
                 .entry(ctx.launch.game_id)
                 .or_default()
-                .push((pid, config.exit_signal));
+                .push((child, config.exit_signal));
         }
 
         Ok(())
@@ -195,10 +194,10 @@ impl super::PluginHandler for ExecutePlugin {
     }
 
     async fn after_game_exit(&self, ctx: super::PluginContext) -> Result<()> {
-        if let Some((_, processes)) = TRACKED_PROCESSES.remove(&ctx.launch.game_id) {
-            for (pid, signal) in processes {
-                if let Err(e) = send_signal(pid, signal) {
-                    log::warn!("Failed to send {signal:?} to process {pid}: {e}");
+        if let Some((_, mut processes)) = TRACKED_PROCESSES.remove(&ctx.launch.game_id) {
+            for (child, signal) in &mut processes {
+                if let Err(e) = send_signal(child, *signal) {
+                    log::warn!("Failed to send {signal:?} to tracked process: {e}");
                 }
             }
         }
