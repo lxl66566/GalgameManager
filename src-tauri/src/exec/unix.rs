@@ -63,7 +63,13 @@ pub async fn game_loop(
                     Ok(s) => info!("Game exited with status: {}", s),
                     Err(e) => error!("Error waiting for game process: {}", e),
                 }
-                super::update_game_time(&app, game_id, chunk, true)?;
+                // A failure here (e.g. the game was deleted from the config
+                // mid-session) must not abort the loop: skipping the exit
+                // signal would also skip every after_game_exit hook (incl.
+                // auto_upload) and leave the frontend stuck on "running".
+                if let Err(e) = super::update_game_time(&app, game_id, chunk, true) {
+                    error!("update_game_time failed on exit: {e}");
+                }
                 game_exit_sender
                     .send(())
                     .map_err(|_| Error::InvalidChannel("game_exit_sender"))?;
@@ -73,7 +79,11 @@ pub async fn game_loop(
             _ = interval.tick() => {
                 let chunk = chrono::Utc::now() - last_time_saved;
                 total_session += chunk;
-                super::update_game_time(&app, game_id, chunk, false)?;
+                // GameNotFound (deleted mid-session) or a transient save
+                // error must not kill the timing loop.
+                if let Err(e) = super::update_game_time(&app, game_id, chunk, false) {
+                    error!("update_game_time failed: {e}");
+                }
                 last_time_saved = chrono::Utc::now();
             }
         }

@@ -266,7 +266,13 @@ pub async fn game_loop(
                 session_secs,
             };
             app.emit(&format!("game://exit/{game_id}"), &payload)?;
-            super::update_game_time(&app, game_id, time_counter, true)?;
+            // A failure here (e.g. the game was deleted from the config
+            // mid-session) must not abort the loop: skipping the exit
+            // signal would also skip every after_game_exit hook (incl.
+            // auto_upload) and leave the frontend stuck on "running".
+            if let Err(e) = super::update_game_time(&app, game_id, time_counter, true) {
+                error!("update_game_time failed on exit: {e}");
+            }
             game_exit_sender
                 .send(())
                 .map_err(|()| Error::InvalidChannel("game_exit_sender"))?;
@@ -285,7 +291,11 @@ pub async fn game_loop(
 
         if time_counter >= SAVE_INTERVAL {
             total_session += time_counter;
-            super::update_game_time(&app, game_id, time_counter, false)?;
+            // GameNotFound (deleted mid-session) or a transient save error
+            // must not kill the timing loop.
+            if let Err(e) = super::update_game_time(&app, game_id, time_counter, false) {
+                error!("update_game_time failed: {e}");
+            }
             time_counter = TimeDelta::milliseconds(0);
         }
     }

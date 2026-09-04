@@ -307,7 +307,13 @@ pub async fn game_loop(
                 session_secs: total_session.num_seconds() as u64,
             };
             app.emit(&format!("game://exit/{game_id}"), &payload)?;
-            super::update_game_time(&app, game_id, time_counter, true)?;
+            // A failure here (e.g. the game was deleted from the config
+            // mid-session) must not abort the loop: skipping the exit
+            // signal would also skip every after_game_exit hook (incl.
+            // auto_upload) and leave the frontend stuck on "running".
+            if let Err(e) = super::update_game_time(&app, game_id, time_counter, true) {
+                error!("update_game_time failed on exit: {e}");
+            }
             game_exit_sender
                 .send(())
                 .map_err(|_| Error::InvalidChannel("game_exit_sender"))?;
