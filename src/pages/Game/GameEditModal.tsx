@@ -7,6 +7,7 @@ import { MODAL_LABEL } from '@components/ui/GameEditLabel'
 import { myToast } from '@components/ui/myToast'
 import { open } from '@tauri-apps/plugin-dialog'
 import { errToStr } from '@utils/log'
+import { refreshBackendOwnedFields } from '@utils/patch'
 import { fuckBackslash, getParentPath } from '@utils/path'
 import { getDeviceVarMap, replaceWithVarNames } from '@utils/resolveVar'
 import { dateToInput, durationToForm, inputToDate } from '@utils/time'
@@ -442,7 +443,16 @@ export default function GameEditModal(props: GameEditModalProps) {
             </Button>
             <Button
               onClick={() => {
-                props.confirm(localGame)
+                // Submit with backend-owned fields (useTime, dailyPlaytime,
+                // lastPlayedTime, lastUploadTime) taken from the live store
+                // unless the user edited them — otherwise a play session
+                // that ended while the modal was open would be reverted by
+                // the diff in replaceGame.
+                props.confirm(
+                  isEditMode() && props.gameInfo
+                    ? refreshBackendOwnedFields(baseGame, localGame, props.gameInfo)
+                    : localGame
+                )
               }}
               size="lg"
               variant="primary"

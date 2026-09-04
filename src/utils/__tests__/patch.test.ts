@@ -11,6 +11,7 @@ import {
   mergeConfigPatches,
   modifyDeviceOp,
   modifyGameOp,
+  refreshBackendOwnedFields,
   type ConfigPatch
 } from '@utils/patch'
 import { describe, expect, it } from 'vitest'
@@ -234,6 +235,74 @@ describe('applyPatch', () => {
     const t = { a: 1, b: { c: 2 } }
     applyPatch(t, {})
     expect(t).toEqual({ a: 1, b: { c: 2 } })
+  })
+})
+
+// ── refreshBackendOwnedFields: edit-dialog submit snapshot refresh ──────────
+//
+// The edit dialog works on an open-time clone while the backend keeps
+// writing use_time / daily_playtime / last_played_time / last_upload_time.
+// The refreshed submit must carry the live values for untouched fields so
+// diffGame in replaceGame never reverts a backend write.
+
+describe('refreshBackendOwnedFields', () => {
+  it('takes untouched backend-owned fields from the live store value', () => {
+    // Regression: game loop advanced use_time while the dialog was open.
+    const snapshot = game(1, { dailyPlaytime: { '2026-09-04': 10 }, useTime: [100, 0] })
+    const edited = structuredClone(snapshot)
+    edited.name = 'renamed' // the only user edit
+    const live = structuredClone(snapshot)
+    live.useTime = [500, 0]
+    live.dailyPlaytime = { '2026-09-04': 10, '2026-09-05': 390 }
+    live.lastPlayedTime = '2026-09-05T10:00:00Z'
+    live.lastUploadTime = '2026-09-05T11:00:00Z'
+
+    const out = refreshBackendOwnedFields(snapshot, edited, live)
+    expect(out.useTime).toEqual([500, 0])
+    expect(out.dailyPlaytime).toEqual({ '2026-09-04': 10, '2026-09-05': 390 })
+    expect(out.lastPlayedTime).toBe('2026-09-05T10:00:00Z')
+    expect(out.lastUploadTime).toBe('2026-09-05T11:00:00Z')
+    expect(out.name).toBe('renamed')
+  })
+
+  it('keeps user-edited useTime / lastPlayedTime over the live value', () => {
+    const snapshot = game(1, {
+      lastPlayedTime: '2026-01-01T00:00:00Z',
+      useTime: [100, 0]
+    })
+    const edited = structuredClone(snapshot)
+    edited.useTime = [7200, 0]
+    edited.lastPlayedTime = '2026-02-02T00:00:00Z'
+    const live = structuredClone(snapshot)
+    live.useTime = [500, 0]
+
+    const out = refreshBackendOwnedFields(snapshot, edited, live)
+    expect(out.useTime).toEqual([7200, 0])
+    expect(out.lastPlayedTime).toBe('2026-02-02T00:00:00Z')
+  })
+
+  it('yields an empty diffGame delta against the live store after refresh', () => {
+    // End-to-end contract with replaceGame: the refreshed submit vs the live
+    // store must produce no backend-owned entries in the patch.
+    const snapshot = game(1, { useTime: [100, 0] })
+    const edited = structuredClone(snapshot)
+    const live = structuredClone(snapshot)
+    live.useTime = [500, 0]
+    live.dailyPlaytime = { '2026-09-05': 390 }
+
+    const out = refreshBackendOwnedFields(snapshot, edited, live)
+    expect(diffGame(live, out)).toEqual({})
+  })
+
+  it('does not mutate its inputs', () => {
+    const snapshot = game(1, { useTime: [100, 0] })
+    const edited = structuredClone(snapshot)
+    const live = structuredClone(snapshot)
+    live.useTime = [500, 0]
+
+    refreshBackendOwnedFields(snapshot, edited, live)
+    expect(edited.useTime).toEqual([100, 0])
+    expect(snapshot.useTime).toEqual([100, 0])
   })
 })
 

@@ -173,15 +173,6 @@ export function expandPatch<T extends Record<string, unknown>>(
   return out as { [K in keyof T]?: T[K] }
 }
 
-// ── applyPatch: deep-merge a patch into a draft ─────────────────────────────
-//
-// Used by declarative store actions (e.g. `updateSettings(patch)`) to mirror
-// the Rust-side `apply` on the local SolidJS store, so the UI updates before
-// the IPC roundtrip completes. Recurses through plain objects only — arrays
-// and primitive fields are replaced whole, matching struct-patch's semantics
-// for the leaf patch fields (Option<T>) and the whole-replacement fields
-// (`save_paths`, `variables`, etc.).
-
 /** Merge two patches into one. `games`/`devices` ops are concatenated (the
  * backend applies them in order, so coalescing same-id modifies is
  * unnecessary); `settings`/`pluginMetadatas` are **deep**-merged (a shallow
@@ -212,6 +203,15 @@ export function mergeConfigPatches(a: ConfigPatch, b: ConfigPatch): ConfigPatch 
   return merged
 }
 
+// ── applyPatch: deep-merge a patch into a draft ─────────────────────────────
+//
+// Used by declarative store actions (e.g. `updateSettings(patch)`) to mirror
+// the Rust-side `apply` on the local SolidJS store, so the UI updates before
+// the IPC roundtrip completes. Recurses through plain objects only — arrays
+// and primitive fields are replaced whole, matching struct-patch's semantics
+// for the leaf patch fields (Option<T>) and the whole-replacement fields
+// (`save_paths`, `variables`, etc.).
+
 /** Build a patch that upserts a device (modify by uid). */
 export function modifyDeviceOp(id: string, patch: DevicePatch): ConfigPatch {
   return { devices: [{ id, op: 'modify', value: patch }] }
@@ -220,6 +220,34 @@ export function modifyDeviceOp(id: string, patch: DevicePatch): ConfigPatch {
 /** Build a patch that applies a sub-patch to one game by id. */
 export function modifyGameOp(id: number, patch: GamePatch): ConfigPatch {
   return { games: [{ id, op: 'modify', value: patch }] }
+}
+
+/** Refresh backend-owned fields on an edit dialog's submit snapshot.
+ *
+ * The dialog edits a deep clone taken when it opened. While it is open, the
+ * Rust game loop / archive upload may write `useTime`, `dailyPlaytime`,
+ * `lastPlayedTime` and `lastUploadTime` — diffing the stale clone against
+ * the live store (what `replaceGame` does) would ship those fields as
+ * "changes" and revert the backend writes (e.g. losing a play session that
+ * ended mid-edit). The two form-editable fields (`useTime`,
+ * `lastPlayedTime`) are only taken from `live` when the user left them
+ * untouched (still equal to the open-time `snapshot`); `dailyPlaytime` /
+ * `lastUploadTime` are not editable anywhere and always come from `live`.
+ * Returns a clone; inputs are not modified. */
+export function refreshBackendOwnedFields(
+  snapshot: Game,
+  edited: Game,
+  live: Game
+): Game {
+  const rawEdited = unwrap(edited)
+  const rawLive = unwrap(live)
+  const out = structuredClone(rawEdited)
+  if (jsonEq(rawEdited.useTime, snapshot.useTime)) out.useTime = rawLive.useTime
+  if (jsonEq(rawEdited.lastPlayedTime, snapshot.lastPlayedTime))
+    out.lastPlayedTime = rawLive.lastPlayedTime
+  out.dailyPlaytime = rawLive.dailyPlaytime
+  out.lastUploadTime = rawLive.lastUploadTime
+  return out
 }
 
 // ── Diff helpers ───────────────────────────────────────────────────────────
