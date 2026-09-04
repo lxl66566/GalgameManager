@@ -277,6 +277,11 @@ pub fn run() {
 fn sync_and_exit(app: &AppHandle) {
     info!("[exit] uploading config...");
     let res = tauri::async_runtime::block_on(async move { upload_config(app.clone(), true).await });
+    // upload_config force-queues its last_sync flush on the writer task
+    // (non-blocking); block here so it — plus any config write that happened
+    // during the upload window — hits disk before process::exit kills the
+    // writer.
+    db::saver::ConfigSaver::force_save_blocking("sync_and_exit");
     let notify = |title: &str, body: &str| {
         _ = app.notification().builder().title(title).body(body).show();
     };

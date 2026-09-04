@@ -174,7 +174,11 @@ pub trait MyOperation {
         {
             let mut locked_config = CONFIG.lock();
             locked_config.last_sync = Some(local_config.last_updated);
-            locked_config.save_and_emit_no_update(app)?;
+            // Must be durable before the upload counts as done: if this
+            // throttled write is lost (crash / app exit within MIN_INTERVAL),
+            // disk keeps last_updated > last_sync and the next safe sync
+            // misjudges it as a conflict / local-dirty deadlock.
+            locked_config.force_save_and_emit_no_update(app)?;
         }
         Ok(UploadConfigStatus::Uploaded)
     }
