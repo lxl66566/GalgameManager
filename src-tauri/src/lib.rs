@@ -14,12 +14,12 @@ pub mod utils;
 
 use bindings::{
     apply_remote_config, archive, clean_current_operator, clear_all_cover_colors,
-    clear_all_daily_playtime, delete_archive, delete_archive_all, delete_local_archive,
-    delete_local_archive_all, device_id, exec, extract, get_config, get_remote_config,
-    is_game_running, list_archive, list_local_archive, log, open_game_dir, patch_config,
-    paths_exist, prepare_image, pull_archive, refresh_all_cover_colors, rename_local_archive,
-    rename_remote_archive, resolve_var, running_game_ids, save_config, upload_archive,
-    upload_config,
+    clear_all_daily_playtime, config_was_corrupted, delete_archive, delete_archive_all,
+    delete_local_archive, delete_local_archive_all, device_id, exec, extract, get_config,
+    get_remote_config, is_game_running, list_archive, list_local_archive, log, open_game_dir,
+    patch_config, paths_exist, prepare_image, pull_archive, refresh_all_cover_colors,
+    rename_local_archive, rename_remote_archive, resolve_var, running_game_ids, save_config,
+    upload_archive, upload_config,
 };
 use log::{error, info, warn};
 use sync::UploadConfigStatus;
@@ -51,6 +51,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             get_config,
+            config_was_corrupted,
             save_config,
             patch_config,
             device_id,

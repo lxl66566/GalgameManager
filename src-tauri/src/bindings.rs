@@ -28,6 +28,15 @@ pub fn get_config() -> Result<Config> {
     Ok(lock.clone())
 }
 
+/// Whether this launch started from a corrupted-config fallback (the broken
+/// file was backed up as `config.toml.bak`, see `db::CONFIG`). The frontend
+/// polls this once its listeners are up and warns the user — polling instead
+/// of an emitted event so the notice can't be lost to the webview-load race.
+#[tauri::command]
+pub fn config_was_corrupted() -> bool {
+    crate::db::CONFIG_CORRUPTED.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 // called from frontend, do not use it in other places
 #[tauri::command]
 pub fn save_config(new_config: Config) -> Result<()> {

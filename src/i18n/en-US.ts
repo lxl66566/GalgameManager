@@ -73,6 +73,8 @@ export const dict = {
     checkRemoteConfigFailed: 'Failed to check remote config',
     configAutoUploadFailed: 'Config auto upload failed',
     configAutoUploadSuccess: 'Config auto upload successfully',
+    configCorrupted:
+      'The config file was corrupted; the app started with defaults. The original file was backed up as config.toml.bak for manual recovery.',
     configUploadConflict: 'Remote config is newer, cannot perform auto upload',
     configUploadFailed: 'Config upload failed',
     configUploadSuccess: 'Config upload successfully',

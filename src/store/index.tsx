@@ -144,6 +144,22 @@ export const useConfigInit = (t?: i18n.Translator<Dictionary>, onReady?: () => v
       //    这里是防御性的：确保 listener 注册期间若发生外部修改能被纠正。
       await refreshPromise
 
+      // 配置损坏回退提示：Rust 启动时检测到 config.toml 损坏会静默回退默认值，
+      // 但彼时 webview 尚未注册监听器，emit 的 toast 会丢失，因此在这里主动查询。
+      try {
+        if (await invoke<boolean>('config_was_corrupted')) {
+          myToast({
+            message: tt(
+              'hint.configCorrupted',
+              'Config file was corrupted; started with defaults (backup: config.toml.bak)'
+            ),
+            variant: 'warning'
+          })
+        }
+      } catch (error) {
+        log.error(`Failed to query config corruption flag: ${errToStr(error)}`)
+      }
+
       // onReady 在至少一次 await 后调用，此时必然已切到 microtask 队列，
       // SolidJS 的所有同步 effects（colorMode 同步 dark class、Toaster 的
       // mergeContainerOptions 同步 position 等）都已执行完毕。这样由

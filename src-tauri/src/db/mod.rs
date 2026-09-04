@@ -45,6 +45,13 @@ pub static CONFIG_DIR: Lazy<PathBuf> = Lazy::new(|| {
 pub static CONFIG_FILENAME: &str = "config.toml";
 pub static CONFIG_PATH: Lazy<PathBuf> = Lazy::new(|| CONFIG_DIR.join(CONFIG_FILENAME));
 
+/// Set when the startup config load failed and we fell back to defaults
+/// (the broken file was renamed to `config.toml.bak`). Surfaced to the user
+/// via the `config_was_corrupted` command — an emitted toast would race the
+/// webview's listener registration.
+pub static CONFIG_CORRUPTED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
 pub static CONFIG: Lazy<Mutex<Config>> = Lazy::new(|| {
     let config = match Config::load_or_default(CONFIG_PATH.as_path()) {
         Ok(c) => c,
@@ -55,6 +62,7 @@ pub static CONFIG: Lazy<Mutex<Config>> = Lazy::new(|| {
             log::error!("failed to load config, using default: {e}");
             let backup = CONFIG_PATH.with_extension("toml.bak");
             let _ = fs::rename(CONFIG_PATH.as_path(), &backup);
+            CONFIG_CORRUPTED.store(true, std::sync::atomic::Ordering::Relaxed);
             Config::default()
         },
     };

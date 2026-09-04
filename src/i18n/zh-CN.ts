@@ -79,6 +79,8 @@ export const dict: DeepPartial<RawDictionary> = {
     checkRemoteConfigFailed: '检查远端配置失败',
     configAutoUploadFailed: '配置自动上传失败',
     configAutoUploadSuccess: '配置自动上传成功',
+    configCorrupted:
+      '检测到配置文件损坏，已使用默认配置启动。原文件已备份为 config.toml.bak，可手动恢复。',
     configUploadConflict: '远端配置比本地更新，无法自动上传',
     configUploadFailed: '配置上传失败',
     configUploadSuccess: '配置上传成功',
