@@ -157,13 +157,29 @@ impl super::MyOperation for Operator {
         let archive_dir = backup_dir.join(game_id.to_string());
         fs::create_dir_all(&archive_dir).await?;
         let archive_path = archive_dir.join(archive_filename);
-        let file = fs::File::create(archive_path).await?;
-        futures::io::copy(
-            downloader.into_futures_async_read(..).await?,
-            &mut file.compat(),
-        )
-        .await?;
-        Ok(())
+        // Download to a temp file and atomically replace the target: writing
+        // the destination directly leaves a truncated archive behind on a
+        // network failure, which list_local_archive would happily offer for
+        // restore. Same pattern as the dead-URL cache.
+        let tmp = tempfile::NamedTempFile::new_in(&archive_dir)?;
+        let file = fs::File::from_std(tmp.reopen()?);
+        let mut writer = file.compat();
+        let copy_res =
+            futures::io::copy(downloader.into_futures_async_read(..).await?, &mut writer).await;
+        // Drop our duplicate handle before persist renames the file
+        // (rename with an open handle is brittle on Windows).
+        drop(writer);
+        match copy_res {
+            Ok(_) => {
+                tmp.persist(&archive_path).map_err(|e| e.error)?;
+                Ok(())
+            },
+            Err(e) => {
+                // Best-effort cleanup of the partial download.
+                let _ = tmp.close();
+                Err(e.into())
+            },
+        }
     }
 
     async fn rename_archive(
