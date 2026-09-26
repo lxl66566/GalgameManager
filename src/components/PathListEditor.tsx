@@ -2,6 +2,7 @@ import { FieldHint } from '@components/ui/FieldHint'
 import { GameEditLabel } from '@components/ui/GameEditLabel'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
+import { nextEditingIndex } from '@utils/editingIndex'
 import { errToStr } from '@utils/log'
 import { fuckBackslash } from '@utils/path'
 import { resolveVar } from '@utils/resolveVar'
@@ -131,10 +132,7 @@ export default function PathListEditor(props: PathListEditorProps) {
 
   const handleRemovePath = (index: number) => {
     props.onChange(props.paths.filter((_, index_) => index_ !== index))
-    // 如果删除的是当前正在编辑的项，重置编辑状态
-    if (editingIndex() === index) {
-      setEditingIndex(null)
-    }
+    setEditingIndex(nextEditingIndex(editingIndex(), index))
   }
 
   const handleUpdatePath = (index: number, newValue: string) => {
