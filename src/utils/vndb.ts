@@ -15,7 +15,8 @@ interface VndbResponse {
 /**
  * 根据名称搜索 VNDB 并返回封面图片 URL
  * @param gameName 游戏名称
- * @returns 封面图片的 URL，如果未找到则返回 null
+ * @returns 封面图片的 URL，未找到时返回 null
+ * @throws 网络异常或 HTTP 非 2xx（如限流）时抛出错误，调用方据此区分“未找到”与“查询失败”
  */
 export async function fetchVnCover(gameName: string): Promise<null | string> {
   if (!gameName.trim()) return null
@@ -34,39 +35,35 @@ export async function fetchVnCover(gameName: string): Promise<null | string> {
     sort: 'searchrank'
   }
 
-  try {
-    // The custom User-Agent is set globally on the webview via
-    // `app.windows[].userAgent` in tauri.conf.json — browser fetch treats
-    // 'User-Agent' as a forbidden header and silently drops it, so setting
-    // it here would be a no-op.
-    const response = await fetch(endpoint, {
-      body: JSON.stringify(body),
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      method: 'POST'
-    })
+  // The custom User-Agent is set globally on the webview via
+  // `app.windows[].userAgent` in tauri.conf.json — browser fetch treats
+  // 'User-Agent' as a forbidden header and silently drops it, so setting
+  // it here would be a no-op.
+  // Network failures reject here; both cases must surface to the caller
+  // instead of being flattened into a misleading "not found".
+  const response = await fetch(endpoint, {
+    body: JSON.stringify(body),
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    method: 'POST'
+  })
 
-    if (!response.ok) {
-      console.error(`VNDB API 请求失败: ${response.status} ${response.statusText}`)
-      return null
-    }
-
-    const data = (await response.json()) as VndbResponse
-
-    if (data.results.length > 0) {
-      const topResult = data.results[0]
-
-      // 可选：如果你想屏蔽 NSFW 封面，可以在这里做判断
-      // if (topResult.image && topResult.image.sexual && topResult.image.sexual > 0) {
-      //   return null; // 或者返回一张特定的 SFW 占位图
-      // }
-
-      return topResult?.image?.url ?? null
-    }
-    return null
-  } catch (error) {
-    console.error('访问 VNDB 时发生错误:', error)
-    return null
+  if (!response.ok) {
+    throw new Error(`VNDB API request failed: ${response.status} ${response.statusText}`)
   }
+
+  const data = (await response.json()) as VndbResponse
+
+  if (data.results.length > 0) {
+    const topResult = data.results[0]
+
+    // 可选：如果你想屏蔽 NSFW 封面，可以在这里做判断
+    // if (topResult.image && topResult.image.sexual && topResult.image.sexual > 0) {
+    //   return null; // 或者返回一张特定的 SFW 占位图
+    // }
+
+    return topResult?.image?.url ?? null
+  }
+  return null
 }

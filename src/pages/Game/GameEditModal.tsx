@@ -210,10 +210,10 @@ export default function GameEditModal(props: GameEditModalProps) {
           })
         }
       }
-    } catch {
+    } catch (error) {
       if (isSearching() && searchId() === currentSearchId) {
         myToast({
-          message: t('game.edit.searchFailedMsg'),
+          message: `${t('game.edit.searchFailedMsg')}: ${errToStr(error)}`,
           title: t('game.edit.searchFailed'),
           variant: 'error'
         })
