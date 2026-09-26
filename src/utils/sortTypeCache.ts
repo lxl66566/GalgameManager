@@ -29,9 +29,11 @@ export async function getSortType(): Promise<SortType> {
     const raw = await readTextFile(SORT_TYPE_FILENAME, {
       baseDir: BaseDirectory.Home
     })
-    cached = parse(raw)
+    // A setSortType() call landing while the read was in flight holds the
+    // user's newer choice; the stale disk value must not overwrite it.
+    cached ??= parse(raw)
   } catch {
-    cached = DEFAULT_SORT_TYPE
+    cached ??= DEFAULT_SORT_TYPE
   }
   return cached
 }
