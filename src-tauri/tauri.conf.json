@@ -12,7 +12,7 @@
   "app": {
     "windows": [],
     "security": {
-      "csp": {}
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: galimg: http://galimg.localhost; connect-src 'self' ipc: http://ipc.localhost https://api.vndb.org; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
     }
   },
   "bundle": {
