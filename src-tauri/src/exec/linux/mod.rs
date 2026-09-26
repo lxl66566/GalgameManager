@@ -192,10 +192,13 @@ fn systemctl_unit_is_active(unit: &str) -> bool {
 /// Ask systemd how the scope ended. systemd exposes the outcome on the
 /// unit's `Result` property: `success` for a clean exit, and one of
 /// `exit-code` / `signal` / `core-dump` / `timeout` / `oom-kill` / ... for
-/// abnormal terminations. Anything other than `success` (including a
-/// failure to query systemd at all, which most often means the unit has
-/// already been garbage-collected) is reported as abnormal so the user
-/// sees the "exited abnormally" toast for crashed games.
+/// abnormal terminations. Only a definitive abnormal value is reported as
+/// abnormal; anything we cannot positively identify as a crash falls back
+/// to the historical "clean" behaviour so we don't spam false-positive
+/// abnormal toasts. That includes an empty value — it means the unit was
+/// already garbage-collected, and systemd keeps failed units for
+/// inspection, so a collected scope had exited cleanly (a crashed game
+/// would still be queryable as `Result=exit-code`/`signal`/...).
 fn query_unit_result(unit: &str) -> bool {
     let out = std::process::Command::new("systemctl")
         .args(["--user", "show", unit, "--property=Result", "--value"])
@@ -203,7 +206,7 @@ fn query_unit_result(unit: &str) -> bool {
         .stderr(std::process::Stdio::null())
         .output();
     match out {
-        Ok(o) => String::from_utf8_lossy(&o.stdout).trim() == "success",
+        Ok(o) => super::unit_result_is_clean(&String::from_utf8_lossy(&o.stdout)),
         Err(e) => {
             warn!("systemctl show Result for {unit} failed: {e}");
             // Be conservative: if we can't tell, fall back to the

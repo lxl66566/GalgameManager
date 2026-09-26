@@ -79,6 +79,18 @@ fn fold_cgroup_liveness(read: std::io::Result<Vec<u32>>, failures: &mut u32) -> 
     }
 }
 
+/// Interpret the `Result=` property value of a finished systemd scope.
+/// `success` (and only it) means clean; `exit-code` / `signal` /
+/// `core-dump` / ... mean abnormal. An *empty* value means the unit was
+/// already garbage-collected — and systemd keeps failed units for
+/// inspection, so a collected scope had exited cleanly. Kept
+/// platform-independent (test-gated off Linux) for unit-testability.
+#[cfg(any(target_os = "linux", test))]
+fn unit_result_is_clean(result: &str) -> bool {
+    let result = result.trim();
+    result.is_empty() || result == "success"
+}
+
 use std::fmt;
 
 impl fmt::Display for StartCtx {
@@ -582,5 +594,17 @@ mod tests {
         assert!(fold_cgroup_liveness(Err(err()), &mut failures));
         assert!(fold_cgroup_liveness(Err(err()), &mut failures));
         assert!(!fold_cgroup_liveness(Err(err()), &mut failures));
+    }
+
+    #[test]
+    fn unit_result_clean_only_for_success_or_collected_unit() {
+        assert!(unit_result_is_clean("success"));
+        // systemctl --value output keeps a trailing newline.
+        assert!(unit_result_is_clean(" success\n"));
+        // Empty output ⇒ unit garbage-collected ⇒ was not failed ⇒ clean.
+        assert!(unit_result_is_clean(""));
+        for abnormal in ["exit-code", "signal", "core-dump", "timeout", "oom-kill"] {
+            assert!(!unit_result_is_clean(abnormal), "{abnormal}");
+        }
     }
 }
