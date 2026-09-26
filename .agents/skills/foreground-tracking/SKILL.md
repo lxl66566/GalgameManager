@@ -49,7 +49,7 @@ enum GameTracker {
 
 文件: `src-tauri/src/exec/linux/spawn.rs`
 
-- `systemd-run --user --scope --no-block --unit=galgame-manager-{game_id}-{pid}.scope`
+- `systemd-run --user --scope --unit=galgame-manager-{game_id}-{pid}.scope`
 - 通过 `systemctl --user show --property=ControlGroup --value` 获取 scope 的 cgroup 子路径
 - 轮询 `/sys/fs/cgroup/{subpath}/cgroup.procs` 来判断进程树存活性
 

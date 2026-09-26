@@ -39,9 +39,8 @@ const UNIT_LIVENESS_CACHE: Duration = Duration::from_secs(5);
 /// Tracking strategy chosen at launch time.
 ///
 /// * `Systemd` — preferred when a user systemd session is available. We spawn the game inside a
-///   transient scope via `systemd-run --user --scope --no-block`, then poll the scope's
-///   `cgroup.procs` to know whether the game is still running and whether the focused window
-///   belongs to it.
+///   transient scope via `systemd-run --user --scope`, then poll the scope's `cgroup.procs` to know
+///   whether the game is still running and whether the focused window belongs to it.
 ///
 /// * `SystemdUnit` — degraded systemd path. The scope was created but its cgroup could not be
 ///   resolved (e.g. empty `ControlGroup` property on some systemd versions). We poll `systemctl
@@ -119,15 +118,14 @@ impl GameTracker {
 
     /// Returns `true` if the currently focused window is owned by one of
     /// the processes in this tracker.
+    #[must_use]
     pub fn is_focused(&self) -> bool {
         match self {
             Self::Systemd { procs_path, .. } => {
                 let Some(pid) = foreground::shared().focused_pid() else {
                     return false;
                 };
-                read_procs(procs_path)
-                    .map(|pids| pids.contains(&pid))
-                    .unwrap_or(false)
+                read_procs(procs_path).is_ok_and(|pids| pids.contains(&pid))
             },
             // No process list available — assume focus so playtime
             // accumulates. Precision mode may over-count when the user
@@ -185,8 +183,7 @@ fn systemctl_unit_is_active(unit: &str) -> bool {
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
+        .is_ok_and(|o| o.status.success())
 }
 
 /// Ask systemd how the scope ended. systemd exposes the outcome on the
@@ -286,7 +283,7 @@ pub async fn launch_game(
     app.emit(&format!("game://spawn/{game_id}"), ())?;
     game_start_sender
         .send(())
-        .map_err(|_| Error::InvalidChannel("game_start_sender"))?;
+        .map_err(|()| Error::InvalidChannel("game_start_sender"))?;
 
     Ok(tracker)
 }
@@ -317,7 +314,9 @@ pub async fn game_loop(
             );
             let payload = super::GameExitPayload {
                 success: tracker.last_exit_success(),
-                session_secs: total_session.num_seconds() as u64,
+                // Session deltas only accumulate forward, but clamp anyway
+                // so a clock skew cannot poison the payload with a negative cast.
+                session_secs: u64::try_from(total_session.num_seconds()).unwrap_or(0),
             };
             app.emit(&format!("game://exit/{game_id}"), &payload)?;
             // A failure here (e.g. the game was deleted from the config
@@ -329,7 +328,7 @@ pub async fn game_loop(
             }
             game_exit_sender
                 .send(())
-                .map_err(|_| Error::InvalidChannel("game_exit_sender"))?;
+                .map_err(|()| Error::InvalidChannel("game_exit_sender"))?;
             break Ok(());
         }
 

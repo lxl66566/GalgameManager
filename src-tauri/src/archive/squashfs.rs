@@ -217,7 +217,7 @@ impl super::Archive for SquashfsArchiver {
             // 恢复权限 (Unix only)
             #[cfg(unix)]
             if !dest_path.is_symlink() {
-                let perms = fs::Permissions::from_mode(node.header.permissions as u32);
+                let perms = fs::Permissions::from_mode(u32::from(node.header.permissions));
                 let _ = fs::set_permissions(&dest_path, perms);
             }
         }

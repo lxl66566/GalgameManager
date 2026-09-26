@@ -5,6 +5,7 @@
 //! itself) ends up in the same cgroup, which we poll via `cgroup.procs`.
 
 use std::{
+    io::{Read, Seek, SeekFrom},
     path::{Path, PathBuf},
     process::Stdio,
     time::Duration,
@@ -37,10 +38,7 @@ fn which(bin: &str) -> Option<PathBuf> {
     let paths = std::env::var_os("PATH")?;
     std::env::split_paths(&paths).find_map(|dir| {
         let full = dir.join(bin);
-        let is_exec = std::fs::metadata(&full)
-            .ok()
-            .map(|m| !m.is_dir())
-            .unwrap_or(false);
+        let is_exec = std::fs::metadata(&full).is_ok_and(|m| !m.is_dir());
         if is_exec {
             Some(full)
         } else {
@@ -53,12 +51,25 @@ fn which(bin: &str) -> Option<PathBuf> {
 ///
 /// Returns `Error::Launch` ("executable not found") for programs that
 /// cannot be launched, so the caller can distinguish user-side config
-/// errors from systemd-side issues. We deliberately keep this heuristic
+/// errors from systemd-side issues. A missing working directory is also rejected here.
+/// We deliberately keep this heuristic
 /// cheap: a bare name is searched on `$PATH`, an absolute path must
 /// exist, and a relative path with a separator is checked against
 /// `current_dir` when one is set.
 fn validate_program_findable(program: &Path, current_dir: Option<&str>) -> Result<()> {
     let prog_str = program.to_string_lossy();
+
+    // systemd-run exits 1 with its reason only on stderr when
+    // --working-directory points to a missing path; reject it here with an
+    // actionable message instead.
+    if let Some(cd) = current_dir {
+        if !Path::new(cd).is_dir() {
+            log::warn!("validate_program_findable: working directory not found: {cd}");
+            return Err(Error::Cloned(format!(
+                "working directory does not exist: {cd}"
+            )));
+        }
+    }
     if program.is_absolute() {
         if program.exists() {
             return Ok(());
@@ -81,11 +92,7 @@ fn validate_program_findable(program: &Path, current_dir: Option<&str>) -> Resul
         if joined.exists() {
             return Ok(());
         }
-        log::warn!(
-            "validate_program_findable: relative path '{}' not found under '{}'",
-            prog_str,
-            cd
-        );
+        log::warn!("validate_program_findable: relative path '{prog_str}' not found under '{cd}'");
         return Err(Error::Launch);
     }
     // No current_dir to resolve against — let the launcher try.
@@ -102,6 +109,36 @@ fn current_uid() -> Option<u32> {
     last.parse().ok()
 }
 
+/// How many bytes of captured stderr to inline into errors / logs.
+const STDERR_TAIL_BYTES: u64 = 2048;
+
+/// stderr of `systemd-run` (and, via fd inheritance, of the game itself)
+/// lands here to diagnose launch failures.
+///
+/// Temp dir on purpose: the name is unique per launch (unit names embed the
+/// app pid) and the OS wipes it on reboot, so game output never grows the
+/// app's own log folder.
+fn stderr_log_path(unit_name: &str) -> PathBuf {
+    std::env::temp_dir().join(format!("{unit_name}.stderr.log"))
+}
+
+/// Read the last ~[`STDERR_TAIL_BYTES`] of a stderr capture file.
+///
+/// Snaps to a UTF-8 boundary. Returns `None` for
+/// an empty (or unreadable) tail.
+fn read_stderr_tail(path: &Path) -> Option<String> {
+    let mut file = std::fs::File::open(path).ok()?;
+    let len = file.metadata().ok()?.len();
+    let start = len.saturating_sub(STDERR_TAIL_BYTES);
+    file.seek(SeekFrom::Start(start)).ok()?;
+    let mut buf = Vec::new();
+    file.read_to_end(&mut buf).ok()?;
+    // Skip leading continuation bytes when `start` landed mid-char.
+    let begin = buf.iter().take_while(|b| **b & 0xc0 == 0x80).count();
+    let s = String::from_utf8_lossy(&buf[begin..]).trim().to_string();
+    (!s.is_empty()).then_some(s)
+}
+
 /// Spawn the resolved [`StartCtx`] command in a transient user scope.
 ///
 /// On success returns `Ok(Some(procs_path))` when cgroup tracking is
@@ -115,6 +152,8 @@ fn current_uid() -> Option<u32> {
 /// * Anything else — the user's command or systemd configuration is at fault; surface the error
 ///   instead of masking it.
 pub async fn spawn_in_scope(start_ctx: &StartCtx, unit_name: &str) -> Result<Option<PathBuf>> {
+    const SYSTEMD_RUN_PROBE: Duration = Duration::from_millis(500);
+
     let parts = start_ctx.resolved_parts()?;
 
     // Pre-validate the program is actually findable. `systemd-run`'s own
@@ -126,8 +165,6 @@ pub async fn spawn_in_scope(start_ctx: &StartCtx, unit_name: &str) -> Result<Opt
     let mut cmd = Command::new("systemd-run");
     cmd.arg("--user")
         .arg("--scope")
-        // Don't block on the unit's lifetime — we'll track via cgroup.
-        .arg("--no-block")
         .arg(format!("--unit={unit_name}"));
 
     if let Some(cwd) = parts.current_dir {
@@ -141,45 +178,69 @@ pub async fn spawn_in_scope(start_ctx: &StartCtx, unit_name: &str) -> Result<Opt
 
     cmd.arg("--").arg(&parts.program).args(parts.args);
 
-    // NB: stderr is intentionally *not* piped. With `--scope` the spawned
-    // command is forked as a child of `systemd-run` and inherits its file
-    // descriptors. If we pipe stderr, the game holds the pipe open and
-    // `output()` blocks until the game exits — by which time the scope is
-    // already gone and cgroup tracking fails. With `stderr=null` the game
-    // inherits `/dev/null`.
-    cmd.stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
+    // NB: stderr must not be piped. With `--scope` the spawned command is
+    // forked as a child of `systemd-run` and inherits its file descriptors.
+    // If we pipe stderr, the game holds the pipe open and `output()` blocks
+    // until the game exits.
+    //
+    // A regular file gives the best of both worlds: the game inheriting
+    // the fd never blocks, and systemd-run's own failure reason survives for the probe below to
+    // surface. See `stderr_log_path`.
+    let stderr_path = stderr_log_path(unit_name);
+    let stderr_capture = match std::fs::File::create(&stderr_path) {
+        Ok(f) => {
+            cmd.stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::from(f));
+            Some(stderr_path)
+        },
+        Err(e) => {
+            // Capture is a diagnostic nicety, never worth failing the launch.
+            log::warn!("stderr capture unavailable ({e}); game stderr discarded");
+            cmd.stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null());
+            None
+        },
+    };
 
     let mut child = cmd.spawn().map_err(|e| {
         log::warn!("systemd-run invocation failed: {e}");
         Error::from(e)
     })?;
 
-    // Do NOT synchronously wait for systemd-run to exit. With some
-    // systemd versions `--no-block` does not actually decouple the
-    // launcher from the scope's lifetime, so `wait()` would block for
-    // the entire game session — by the time it returned the spawn log
-    // would fire, the UI would never see `game://spawn` until the game
-    // was already gone, and cgroup tracking would race with scope
-    // teardown.
+    // Do NOT synchronously wait for systemd-run to exit. In --scope mode
+    // systemd-run forks the game as its own child and waits on it, so it
+    // lives as long as the game session; a synchronous `wait()` would block
+    // for that entire session — by the time it returned, the spawn log
+    // would fire, the UI would never see `game://spawn` until the game was
+    // already gone, and cgroup tracking would race with scope teardown.
     //
-    // Instead we briefly poll for an immediate failure (bad args, D-Bus
-    // error, scope name conflict, ...). If systemd-run is still alive
+    // Instead we briefly poll for an immediate failure. If systemd-run is still alive
     // after the timeout, the scope was registered successfully and we
     // move on; a background task reaps the orphaned parent to avoid a
     // zombie.
-    const SYSTEMD_RUN_PROBE: Duration = Duration::from_millis(500);
     match tokio::time::timeout(SYSTEMD_RUN_PROBE, child.wait()).await {
         Ok(Ok(status)) if !status.success() => {
-            log::warn!(
-                "systemd-run exited with {:?} (stderr suppressed; check `journalctl --user-unit \
-                 {}` for details)",
-                status.code(),
-                unit_name
-            );
+            // Prefer the captured stderr: systemd-run prints its real
+            // failure reason there.
+            let detail = stderr_capture.as_deref().and_then(read_stderr_tail);
+            match (&detail, &stderr_capture) {
+                (Some(d), Some(p)) => log::warn!(
+                    "systemd-run exited with {:?}: {d} (full stderr: {})",
+                    status.code(),
+                    p.display()
+                ),
+                _ => log::warn!(
+                    "systemd-run exited with {:?}; check `journalctl --user-unit {unit_name}`",
+                    status.code()
+                ),
+            }
+            let reason = detail.unwrap_or_else(|| {
+                format!("no stderr captured; check `journalctl --user-unit {unit_name}`")
+            });
             return Err(Error::Cloned(format!(
-                "systemd-run exited with status {:?}",
+                "systemd-run exited with status {:?}: {reason}",
                 status.code()
             )));
         },
@@ -237,7 +298,9 @@ pub async fn spawn_in_scope(start_ctx: &StartCtx, unit_name: &str) -> Result<Opt
 }
 
 /// Query systemd for the unit's `ControlGroup` property. Retries a few
-/// times because `--no-block` returns before the unit is registered.
+/// times as cheap insurance: scope registration is a synchronous D-Bus
+/// call inside systemd-run, but under load it may not be visible to a
+/// freshly spawned `systemctl` query yet.
 async fn retry_find_cgroup(unit_name: &str, tries: u32, delay: Duration) -> Result<String> {
     let mut last_err: Option<String> = None;
     for _ in 0..tries {
@@ -293,4 +356,38 @@ fn cgroup_v2_procs_path(cgroup_subpath: &str) -> PathBuf {
     Path::new("/sys/fs/cgroup")
         .join(trimmed)
         .join("cgroup.procs")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stderr_tail_snaps_to_utf8_boundary() {
+        let p = std::env::temp_dir().join("galmgr-stderr-tail-test.log");
+        std::fs::write(&p, format!("{}缘之空", "x".repeat(3000))).unwrap();
+
+        let tail = read_stderr_tail(&p).unwrap();
+
+        assert!(tail.ends_with("缘之空"));
+        // Cut window never contains a replacement char from a sliced
+        // multi-byte sequence.
+        assert!(!tail.contains('\u{FFFD}'));
+    }
+
+    #[test]
+    fn stderr_tail_empty_file_is_none() {
+        let p = std::env::temp_dir().join("galmgr-stderr-tail-empty.log");
+        std::fs::write(&p, "").unwrap();
+        assert!(read_stderr_tail(&p).is_none());
+    }
+
+    #[test]
+    fn validate_rejects_missing_working_directory() {
+        let exe = std::env::temp_dir().join("galmgr-validate-test-exe");
+        std::fs::write(&exe, b"").unwrap();
+
+        validate_program_findable(&exe, Some("/definitely/not/here")).unwrap_err();
+        validate_program_findable(&exe, Some(exe.parent().unwrap().to_str().unwrap())).unwrap();
+    }
 }

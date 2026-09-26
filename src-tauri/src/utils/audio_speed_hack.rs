@@ -635,15 +635,14 @@ pub fn cleanup_crashed_session() {}
 #[cfg(target_os = "linux")]
 mod wine_regedit {
     use std::{
+        fmt::Write as _,
         fs, io,
         path::PathBuf,
         process::{Command, Stdio},
         time::{SystemTime, UNIX_EPOCH},
     };
 
-    use super::{
-        MMDEVAPI_REG_ITEMS, SPEEDUP_ENV_NAME, System, mmdevapi_stub_name,
-    };
+    use super::{MMDEVAPI_REG_ITEMS, SPEEDUP_ENV_NAME, System, mmdevapi_stub_name};
 
     /// Resolve the host-side `drive_c` directory of a Wine prefix.
     fn prefix_drive_c(prefix: Option<&str>) -> PathBuf {
@@ -664,17 +663,18 @@ mod wine_regedit {
         let mut s = String::from("REGEDIT4\r\n\r\n");
         for item in MMDEVAPI_REG_ITEMS {
             if delete {
-                s.push_str(&format!("[-HKEY_CURRENT_USER\\{}]\r\n\r\n", item.path));
+                let _ = write!(s, "[-HKEY_CURRENT_USER\\{}]\r\n\r\n", item.path);
             } else {
                 let dll = if item.stub == System::X64 {
                     stub_x64
                 } else {
                     stub_x86
                 };
-                s.push_str(&format!(
+                let _ = write!(
+                    s,
                     "[HKEY_CURRENT_USER\\{}]\r\n@=\"{dll}\"\r\n\"ThreadingModel\"=\"{}\"\r\n\r\n",
                     item.path, item.threading_model
-                ));
+                );
             }
         }
         s

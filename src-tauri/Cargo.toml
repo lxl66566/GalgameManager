@@ -132,9 +132,6 @@ wildcard_imports        = "allow"
 unsafe_code           = "allow"
 unused_qualifications = "warn"
 
-[profile.dev]
-incremental = true  # Compile your binary in smaller steps.
-
 [profile.release]
 opt-level     = "s"
 strip         = true

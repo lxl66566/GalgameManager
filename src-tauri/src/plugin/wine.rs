@@ -224,9 +224,10 @@ impl super::PluginHandler for WinePlugin {
 
             // `wine` is resolved from PATH. exe_path is already resolved and
             // is shlex-quoted to survive paths with spaces.
-            let quoted_exe = shlex::try_quote(&ctx.launch.exe_path)
-                .map(|c| c.into_owned())
-                .unwrap_or_else(|_| ctx.launch.exe_path.clone());
+            let quoted_exe = shlex::try_quote(&ctx.launch.exe_path).map_or_else(
+                |_| ctx.launch.exe_path.clone(),
+                std::borrow::Cow::into_owned,
+            );
             let cmd = format!("wine {quoted_exe}");
 
             let current_dir = if ctx.launch.current_dir.is_empty() {
@@ -257,11 +258,11 @@ impl super::PluginHandler for WinePlugin {
 
         #[cfg(target_os = "linux")]
         {
+            use crate::db::device::ResolveVar;
+
             if !config.kill_wineserver_on_exit {
                 return Ok(());
             }
-
-            use crate::db::device::ResolveVar;
 
             let prefix = {
                 let lock = crate::db::CONFIG.lock();
