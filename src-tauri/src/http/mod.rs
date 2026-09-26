@@ -19,8 +19,14 @@ use reqwest::{Client, header};
 use crate::error::{Error, Result};
 
 pub static CACHE_DIR: Lazy<PathBuf> = Lazy::new(|| {
+    // Degrade instead of panicking: with release `panic = "abort"` a missing
+    // home dir would crash the whole app on first image access. The temp dir
+    // is an acceptable fallback for a cache. Mirrors `db::CONFIG_DIR`.
     let dir = home::home_dir()
-        .expect("cannot find home dir on your OS!")
+        .unwrap_or_else(|| {
+            log::warn!("cannot find home dir; image cache falls back to the temp dir");
+            std::env::temp_dir()
+        })
         .join(".cache")
         .join(env!("CARGO_PKG_NAME"));
     _ = fs::create_dir_all(&dir);

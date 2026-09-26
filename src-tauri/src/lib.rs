@@ -40,10 +40,16 @@ use crate::{
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            let handle = app.get_webview_window("main").expect("no main window");
-            let _ = handle.show();
-            let _ = handle.unminimize();
-            let _ = handle.set_focus();
+            // The main window is only ever hidden (CloseRequested is
+            // prevented), so this should always exist — but with release
+            // `panic = "abort"` an expect here would take down the already
+            // running instance, the exact opposite of what the user wants
+            // when relaunching the app.
+            if let Some(handle) = app.get_webview_window("main") {
+                let _ = handle.show();
+                let _ = handle.unminimize();
+                let _ = handle.set_focus();
+            }
         }))
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
@@ -166,17 +172,14 @@ pub fn run() {
                     },
                     "open_config" => _ = opener::open(CONFIG_DIR.as_os_str()),
                     "open_save" => {
-                        _ = opener::open(
-                            app.path()
-                                .app_local_data_dir()
-                                .expect("failed to get app local data dir")
-                                .join("backup"),
-                        );
+                        if let Ok(dir) = app.path().app_local_data_dir() {
+                            _ = opener::open(dir.join("backup"));
+                        }
                     },
                     "open_log" => {
-                        _ = opener::open(
-                            app.path().app_log_dir().expect("failed to get app log dir"),
-                        );
+                        if let Ok(dir) = app.path().app_log_dir() {
+                            _ = opener::open(dir);
+                        }
                     },
                     _ => {},
                 })
