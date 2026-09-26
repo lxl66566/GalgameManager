@@ -3,6 +3,7 @@ import type { Game } from '@bindings/Game'
 import { myToast } from '@components/ui/myToast'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { isDuplicateArchiveName } from '@utils/archiveName'
 import { formatBytes } from '@utils/file'
 import { errToStr, log } from '@utils/log'
 import {
@@ -299,9 +300,11 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       return
     }
 
-    // 2. 冲突校验：检查新名称是否已存在于列表中
-    const isDuplicate = archives().some(
-      a => a.name.toLowerCase() === newName.toLowerCase()
+    // 2. 冲突校验：检查新名称是否已存在于列表中（排除自身，允许仅大小写变化的重命名）
+    const isDuplicate = isDuplicateArchiveName(
+      archives().map(a => a.name),
+      oldName,
+      newName
     )
 
     if (isDuplicate) {
