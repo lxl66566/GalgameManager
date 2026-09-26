@@ -339,13 +339,20 @@ const MMDEVAPI_REG_ITEMS: &[MmdevapiRegItem] = &[
 
 #[cfg(windows)]
 mod win_impl {
+    use std::{
+        fs, io,
+        path::{Path, PathBuf},
+        sync::atomic::{AtomicUsize, Ordering},
+    };
+
     use windows_registry_obj::{BaseKey, RegValueData};
 
     use super::{MMDEVAPI_DLL_NAME, MMDEVAPI_REG_ITEMS, SPEEDUP_ENV_NAME};
-    use crate::error::Result;
+    use crate::{db::CONFIG_DIR, error::Result};
 
     /// Add MMDevAPI registry entries (for MMDevAPI DLL injection).
-    pub fn set_mmdevapi_registry() -> std::io::Result<()> {
+    pub fn set_mmdevapi_registry() -> io::Result<()> {
+        acquire_session_marker();
         for item in MMDEVAPI_REG_ITEMS {
             BaseKey::CurrentUser
                 .reg(item.path)
@@ -371,12 +378,14 @@ mod win_impl {
                 Err(e) => log::warn!("Failed to remove registry HKCU\\{}: {e}", item.path),
             }
         }
+        release_session_marker();
     }
 
     // ── Environment variable ──
 
     /// Set the SPEEDUP environment variable to the given speed value.
     pub fn set_speedup_env(speed: f32) -> Result<()> {
+        acquire_session_marker();
         windows_env::set(SPEEDUP_ENV_NAME, format!("{speed:.1}"))?;
         log::info!("Set env {SPEEDUP_ENV_NAME}={speed:.1}");
         Ok(())
@@ -387,13 +396,145 @@ mod win_impl {
         if let Err(e) = windows_env::remove(SPEEDUP_ENV_NAME) {
             log::warn!("Failed to remove env {SPEEDUP_ENV_NAME}: {e}");
         }
+        release_session_marker();
+    }
+
+    // ── Crash-residue detection ──
+    //
+    // The SPEEDUP env var (HKCU\Environment) and the MMDevAPI COM redirect
+    // (HKCU\SOFTWARE\Classes\CLSID\...) are *persistent* user-level
+    // mutations. Normally the launch Transaction removes them, but a crash /
+    // force-kill skips those cleanups and the residue would affect every
+    // process started afterwards. While at least one speedup session is
+    // active we keep a marker file holding our PID; it is deleted when the
+    // last session's cleanup runs. A marker still present at the next
+    // startup means the previous instance died mid-session — the
+    // single-instance plugin guarantees that process is gone by the time we
+    // run — so the residue is ours and safe to remove.
+
+    static ACTIVE_SESSIONS: AtomicUsize = AtomicUsize::new(0);
+
+    fn session_marker_path() -> PathBuf {
+        CONFIG_DIR.join("speedup_session")
+    }
+
+    fn write_session_marker(path: &Path, pid: u32) -> io::Result<()> {
+        fs::write(path, pid.to_string())
+    }
+
+    /// A marker only counts as crash residue when it was written by a
+    /// *different* process (our own marker legitimately exists mid-session;
+    /// at startup the PIDs can never match — this is belt and braces). A
+    /// marker whose PID can't be parsed proves nothing, so it is treated as
+    /// residue too: the file is only ever created by this app.
+    fn is_crash_residue(path: &Path, current_pid: u32) -> bool {
+        let Ok(content) = fs::read_to_string(path) else {
+            return false;
+        };
+        content.trim().parse::<u32>() != Ok(current_pid)
+    }
+
+    /// Track one more in-flight persistent mutation (0→1 writes the marker).
+    fn acquire_session_marker() {
+        if ACTIVE_SESSIONS.fetch_add(1, Ordering::AcqRel) == 0 {
+            let path = session_marker_path();
+            if let Err(e) = write_session_marker(&path, std::process::id()) {
+                log::warn!(
+                    "Failed to write speedup session marker {}: {e}",
+                    path.display()
+                );
+            }
+        }
+    }
+
+    /// Track one finished cleanup (1→0 deletes the marker). Saturating: a
+    /// cleanup may run without a matching acquire when the corresponding
+    /// `set_*` failed halfway.
+    fn release_session_marker() {
+        // Saturating decrement via CAS loop (cleanup may run without a
+        // matching acquire when the corresponding `set_*` failed halfway).
+        // Written by hand because `AtomicUsize::fetch_update` is deprecated
+        // and its replacement `try_update` exceeds our MSRV.
+        let mut prev = ACTIVE_SESSIONS.load(Ordering::Acquire);
+        loop {
+            if prev == 0 {
+                return;
+            }
+            match ACTIVE_SESSIONS.compare_exchange_weak(
+                prev,
+                prev - 1,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            ) {
+                Ok(_) => break,
+                Err(p) => prev = p,
+            }
+        }
+        if prev == 1 {
+            let path = session_marker_path();
+            if let Err(e) = fs::remove_file(&path) {
+                log::warn!(
+                    "Failed to remove speedup session marker {}: {e}",
+                    path.display()
+                );
+            }
+        }
+    }
+
+    /// Remove leftover speedup residue from a crashed/killed previous
+    /// instance. Must run at startup, before any new speedup session begins.
+    pub fn cleanup_crashed_session() {
+        let path = session_marker_path();
+        if !is_crash_residue(&path, std::process::id()) {
+            return;
+        }
+        log::warn!("Found speedup residue from a crashed session; cleaning up");
+        remove_speedup_env();
+        clean_mmdevapi_registry();
+        if let Err(e) = fs::remove_file(&path) {
+            log::warn!(
+                "Failed to remove speedup session marker {}: {e}",
+                path.display()
+            );
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn marker_residue_detection() {
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join("speedup_session");
+
+            // No marker → nothing to clean.
+            assert!(!is_crash_residue(&path, 1234));
+
+            // Marker from another (dead) process → residue.
+            write_session_marker(&path, 4242).unwrap();
+            assert!(is_crash_residue(&path, 1234));
+            // Our own live marker → not residue.
+            assert!(!is_crash_residue(&path, 4242));
+
+            // Unparseable marker can't prove ownership → treat as residue.
+            fs::write(&path, b"not a pid").unwrap();
+            assert!(is_crash_residue(&path, 4242));
+        }
     }
 }
 
 #[cfg(windows)]
 pub use win_impl::{
-    clean_mmdevapi_registry, remove_speedup_env, set_mmdevapi_registry, set_speedup_env,
+    clean_mmdevapi_registry, cleanup_crashed_session, remove_speedup_env, set_mmdevapi_registry,
+    set_speedup_env,
 };
+
+/// No-op outside Windows: the persistent HKCU residue only exists there.
+/// (On Linux the MMDevAPI redirect lives inside the per-game Wine prefix,
+/// where leftover entries are harmless until that prefix is reused.)
+#[cfg(not(windows))]
+pub fn cleanup_crashed_session() {}
 
 // ── Wine registry (Linux-only) ──────────────────────────────────────────────
 //

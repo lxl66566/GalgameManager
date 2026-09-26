@@ -93,6 +93,11 @@ pub fn run() {
             // mutation can rely on it. See [`db::saver`] for the rationale.
             let _ = db::saver::ConfigSaver::init(app.handle());
 
+            // Remove persistent VoiceSpeedup residue (SPEEDUP user env var,
+            // MMDevAPI COM redirect) if the previous instance was killed
+            // mid-session and its Transaction cleanups never ran.
+            utils::audio_speed_hack::cleanup_crashed_session();
+
             #[cfg(desktop)]
             {
                 _ = app
