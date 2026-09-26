@@ -37,6 +37,12 @@ pub enum Error {
     #[error("Remote Operation Error: {0}")]
     RemoteOperation(#[from] opendal::Error),
 
+    #[error(
+        "Archive too large for the configured storage backend: {size} bytes exceeds the {limit} \
+         bytes in-memory upload limit"
+    )]
+    ArchiveTooLarge { size: u64, limit: u64 },
+
     #[error("Launch error: executable not found")]
     Launch,
 

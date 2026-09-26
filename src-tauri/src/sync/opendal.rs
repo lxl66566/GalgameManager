@@ -10,11 +10,16 @@ use tokio_util::compat::TokioAsyncReadCompatExt;
 use crate::{
     archive::ArchiveInfo,
     db::{CONFIG, CONFIG_FILENAME, Config},
-    error::Result,
+    error::{Error, Result},
 };
 
 // https://t.me/withabsolutex/2598
-const WRITER_MAX_BUFFER_SIZE: usize = 1024 * 1024 * 1024 * 1024;
+// Backends without multipart upload (e.g. plain WebDAV) buffer the whole
+// upload in memory before sending, so this "chunk size" doubles as the memory
+// cap. 256 MiB is far above a realistic save archive (typically tens of MiB)
+// while keeping worst-case memory bounded — with release `panic = "abort"` an
+// unbounded buffer turns a huge archive into an OOM crash instead of an error.
+const WRITER_MAX_BUFFER_SIZE: usize = 256 * 1024 * 1024;
 
 const WRITER_NORMAL_CHUNK_SIZE: usize = 4 * 1024 * 1024;
 
@@ -108,6 +113,19 @@ impl super::MyOperation for Operator {
         archive_filename: &str,
         backup_dir: &Path,
     ) -> Result<()> {
+        let archive_path = backup_dir.join(game_id.to_string()).join(archive_filename);
+        // Fail fast when the backend must buffer the whole upload in memory:
+        // anything above the cap could never succeed and would OOM trying.
+        if !self.chunkable() {
+            let size = fs::metadata(&archive_path).await?.len();
+            if size > WRITER_MAX_BUFFER_SIZE as u64 {
+                return Err(Error::ArchiveTooLarge {
+                    size,
+                    limit: WRITER_MAX_BUFFER_SIZE as u64,
+                });
+            }
+        }
+
         // create game dir first, otherwise the upload will fail 409
         self.create_dir(&format!("{game_id}/")).await?;
 
@@ -121,8 +139,7 @@ impl super::MyOperation for Operator {
             })
             .await?;
         let mut writer = uploader.into_futures_async_write();
-        let archive_path = backup_dir.join(game_id.to_string()).join(archive_filename);
-        let file = fs::File::open(archive_path).await?;
+        let file = fs::File::open(&archive_path).await?;
         futures::io::copy(file.compat(), &mut writer).await?;
         writer.close().await?;
         Ok(())
