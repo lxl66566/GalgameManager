@@ -43,7 +43,9 @@ export const dict = {
     sync: {
       archiveNum: 'Archives',
       deleteLocalArchive: 'Delete Local Archive',
+      deleteLocalConfirm: 'Delete local archive {{name}}? This cannot be undone.',
       deleteRemoteArchive: 'Delete Remote Archive',
+      deleteRemoteConfirm: 'Delete remote archive {{name}}? This cannot be undone.',
       download: 'Download to local',
       local: 'Lo',
       noArchive: 'No archive',

@@ -49,7 +49,9 @@ export const dict: DeepPartial<RawDictionary> = {
     sync: {
       archiveNum: '个存档',
       deleteLocalArchive: '删除本地存档',
+      deleteLocalConfirm: '确认删除本地存档 {{name}}？此操作不可撤销。',
       deleteRemoteArchive: '删除云端存档',
+      deleteRemoteConfirm: '确认删除云端存档 {{name}}？此操作不可撤销。',
       download: '下载到本地',
       local: '本',
       noArchive: '暂无存档记录',

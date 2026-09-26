@@ -1,5 +1,6 @@
 import { type ArchiveInfo } from '@bindings/ArchiveInfo'
 import type { Game } from '@bindings/Game'
+import { myToast } from '@components/ui/myToast'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { formatBytes } from '@utils/file'
@@ -197,6 +198,35 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
         id: toastId
       })
     }
+  }
+
+  // Deletion is irreversible, so ask for confirmation first (same pattern as
+  // deleting a game in GameEditModal).
+  const confirmDelete = (kind: 'local' | 'remote', filename: string) => {
+    const isLocal = kind === 'local'
+    myToast({
+      actions: [
+        {
+          label: t('ui.cancel'),
+          onClick: () => {},
+          variant: 'secondary'
+        },
+        {
+          label: t('ui.delete'),
+          onClick: () => {
+            void (isLocal ? handleDeleteLocal(filename) : handleDeleteRemote(filename))
+          },
+          variant: 'danger'
+        }
+      ],
+      message: isLocal
+        ? t('game.sync.deleteLocalConfirm', { name: filename })
+        : t('game.sync.deleteRemoteConfirm', { name: filename }),
+      title: isLocal
+        ? t('game.sync.deleteLocalArchive')
+        : t('game.sync.deleteRemoteArchive'),
+      variant: 'warning'
+    })
   }
 
   const handleDeleteRemote = async (filename: string) => {
@@ -527,7 +557,9 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                               <ActionButton
                                 icon={TbOutlineTrash}
                                 label={t('game.sync.local')}
-                                onClick={() => handleDeleteLocal(item.name)}
+                                onClick={() => {
+                                  confirmDelete('local', item.name)
+                                }}
                                 size="xs"
                                 tooltip={t('game.sync.deleteLocalArchive')}
                                 variant="danger-ghost"
@@ -536,7 +568,9 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                               <ActionButton
                                 icon={TbOutlineTrash}
                                 label={t('game.sync.remote')}
-                                onClick={() => handleDeleteRemote(item.name)}
+                                onClick={() => {
+                                  confirmDelete('remote', item.name)
+                                }}
                                 size="xs"
                                 tooltip={t('game.sync.deleteRemoteArchive')}
                                 variant="danger-ghost"
@@ -548,7 +582,9 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                           <Match when={item.status === 'LocalOnly'}>
                             <ActionButton
                               icon={TbOutlineTrash}
-                              onClick={() => handleDeleteLocal(item.name)}
+                              onClick={() => {
+                                confirmDelete('local', item.name)
+                              }}
                               tooltip={t('game.sync.deleteLocalArchive')}
                               variant="danger"
                             />
@@ -556,7 +592,9 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                           <Match when={item.status === 'RemoteOnly'}>
                             <ActionButton
                               icon={TbOutlineTrash}
-                              onClick={() => handleDeleteRemote(item.name)}
+                              onClick={() => {
+                                confirmDelete('remote', item.name)
+                              }}
                               tooltip={t('game.sync.deleteRemoteArchive')}
                               variant="danger"
                             />
