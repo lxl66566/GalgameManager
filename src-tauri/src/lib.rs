@@ -215,12 +215,11 @@ pub fn run() {
                 // minimize notification
                 let seen_path = CONFIG_DIR.join("minimize_seen");
                 if !seen_path.exists() {
-                    _ = app
-                        .notification()
-                        .builder()
-                        .title(env!("CARGO_PKG_NAME"))
-                        .body("GalgameManager is running in the background")
-                        .show();
+                    notify(
+                        app,
+                        env!("CARGO_PKG_NAME"),
+                        "GalgameManager is running in the background",
+                    );
                     _ = std::fs::File::create(seen_path);
                 }
 
@@ -228,27 +227,28 @@ pub fn run() {
                 let app = app.clone();
                 tauri::async_runtime::spawn(async move {
                     info!("[minimize] uploading config...");
-                    let app_clone = app.clone();
-                    let notify = move |title: &str, body: &str| {
-                        _ = app_clone
-                            .notification()
-                            .builder()
-                            .title(title)
-                            .body(body)
-                            .show();
-                    };
-                    match upload_config(app, true).await {
+                    let res = upload_config(app.clone(), true).await;
+                    match res {
                         Ok(UploadConfigStatus::Uploaded) => {
                             info!("[minimize] upload config success");
-                            notify("\u{2705} Synced", "Configuration uploaded successfully");
+                            notify(
+                                &app,
+                                "\u{2705} Synced",
+                                "Configuration uploaded successfully",
+                            );
                         },
                         Ok(UploadConfigStatus::LocalClean) => {
                             warn!("[minimize] local clean, skip upload");
-                            notify("\u{23ed} Sync Skipped", "Local configuration is up to date");
+                            notify(
+                                &app,
+                                "\u{23ed} Sync Skipped",
+                                "Local configuration is up to date",
+                            );
                         },
                         Ok(UploadConfigStatus::Conflict) => {
                             warn!("[minimize] conflict detected");
                             notify(
+                                &app,
                                 "\u{26a0}\u{fe0f} Sync Conflict",
                                 "Remote configuration is newer \u{2014} please pull first",
                             );
@@ -256,6 +256,7 @@ pub fn run() {
                         Err(e) => {
                             error!("[minimize] failed to upload config: {e}");
                             notify(
+                                &app,
                                 "\u{274c} Sync Failed",
                                 &format!("Failed to upload configuration: {e}"),
                             );
@@ -282,6 +283,20 @@ pub fn run() {
         });
 }
 
+/// Show a desktop notification off the current thread.
+///
+/// notify-rust's sync `show()` ends in `zbus::block_on`; our AT-SPI dep unifies
+/// zbus with the `tokio` feature, so that call runs `Runtime::block_on` on a fresh
+/// runtime and panics on tokio worker threads.
+fn notify(app: &AppHandle, title: &str, body: &str) {
+    let app = app.clone();
+    let title = title.to_string();
+    let body = body.to_string();
+    tauri::async_runtime::spawn_blocking(move || {
+        _ = app.notification().builder().title(title).body(body).show();
+    });
+}
+
 /// Upload config then exit. Called when the user clicks "Quit (with sync)".
 fn sync_and_exit(app: &AppHandle) {
     info!("[exit] uploading config...");
@@ -291,20 +306,25 @@ fn sync_and_exit(app: &AppHandle) {
     // during the upload window — hits disk before process::exit kills the
     // writer.
     db::saver::ConfigSaver::force_save_blocking("sync_and_exit");
-    let notify = |title: &str, body: &str| {
-        _ = app.notification().builder().title(title).body(body).show();
-    };
     match res {
         Ok(UploadConfigStatus::Uploaded) => {
             info!("[exit] upload config success");
-            notify("\u{2705} Synced", "Configuration uploaded successfully");
+            notify(
+                &app,
+                "\u{2705} Synced",
+                "Configuration uploaded successfully",
+            );
             before_exit();
             std::thread::sleep(std::time::Duration::from_secs(1));
             std::process::exit(0);
         },
         Ok(UploadConfigStatus::LocalClean) => {
             warn!("[exit] local clean, skip upload");
-            notify("\u{23ed} Sync Skipped", "Local configuration is up to date");
+            notify(
+                &app,
+                "\u{23ed} Sync Skipped",
+                "Local configuration is up to date",
+            );
             before_exit();
             std::thread::sleep(std::time::Duration::from_secs(1));
             std::process::exit(0);
@@ -312,6 +332,7 @@ fn sync_and_exit(app: &AppHandle) {
         Ok(UploadConfigStatus::Conflict) => {
             warn!("[exit] conflict detected");
             notify(
+                &app,
                 "\u{26a0}\u{fe0f} Sync Conflict",
                 "Remote configuration is newer \u{2014} please pull first",
             );
@@ -322,6 +343,7 @@ fn sync_and_exit(app: &AppHandle) {
         Err(e) => {
             error!("[exit] failed to upload config: {e}");
             notify(
+                &app,
                 "\u{274c} Sync Failed",
                 &format!("Failed to upload configuration: {e}"),
             );
