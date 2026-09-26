@@ -4,7 +4,11 @@
 // design issues — suppress the pedantic lints module-wide.
 #![allow(clippy::needless_pass_by_value, clippy::unnecessary_wraps)]
 
-use std::{fs, path::PathBuf};
+use std::{
+    ffi::OsStr,
+    fs,
+    path::{Path, PathBuf},
+};
 
 use chrono::Utc;
 use log::info;
@@ -124,6 +128,17 @@ fn game_backup_dir(app: &AppHandle, game_id: u32) -> Result<PathBuf> {
         .join(game_id.to_string()))
 }
 
+/// Reject archive filenames that are not a single plain path component, so a
+/// crafted name (e.g. `../foo` or an absolute path) cannot escape the
+/// per-game backup directory. Input comes from our own frontend — this is
+/// defense in depth.
+fn validate_archive_filename(name: &str) -> Result<()> {
+    if Path::new(name).file_name() != Some(OsStr::new(name)) {
+        return Err(Error::InvalidPath);
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub fn list_local_archive(app: AppHandle, game_id: u32) -> Result<Vec<ArchiveInfo>> {
     let game_backup_dir = game_backup_dir(&app, game_id)?;
@@ -135,6 +150,7 @@ pub fn list_local_archive(app: AppHandle, game_id: u32) -> Result<Vec<ArchiveInf
 
 #[tauri::command]
 pub fn delete_local_archive(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
+    validate_archive_filename(&archive_filename)?;
     let game_backup_dir = game_backup_dir(&app, game_id)?;
     let archive_path = game_backup_dir.join(archive_filename);
     fs::remove_file(&archive_path)?;
@@ -157,6 +173,8 @@ pub fn rename_local_archive(
     archive_filename: String,
     new_archive_filename: String,
 ) -> Result<()> {
+    validate_archive_filename(&archive_filename)?;
+    validate_archive_filename(&new_archive_filename)?;
     let game_backup_dir = game_backup_dir(&app, game_id)?;
     let archive_path = game_backup_dir.join(archive_filename);
     let new_archive_path = game_backup_dir.join(new_archive_filename);
@@ -198,6 +216,7 @@ pub async fn archive(app: AppHandle, game_id: u32) -> Result<String> {
 
 #[tauri::command(async)]
 pub async fn extract(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
+    validate_archive_filename(&archive_filename)?;
     let game_backup_dir = game_backup_dir(&app, game_id)?;
 
     let (archive_conf, paths) = {
@@ -383,7 +402,7 @@ pub fn paths_exist(paths: Vec<String>) -> Result<Vec<bool>> {
         .iter()
         .map(|p| {
             lock.resolve_var(p)
-                .is_ok_and(|resolved| std::path::Path::new(&resolved).exists())
+                .is_ok_and(|resolved| Path::new(&resolved).exists())
         })
         .collect();
     Ok(results)
@@ -399,7 +418,7 @@ pub fn open_game_dir(game_id: u32) -> Result<()> {
     let resolved = lock.resolve_var(exe_path)?;
     drop(lock);
 
-    let dir = std::path::Path::new(&resolved)
+    let dir = Path::new(&resolved)
         .parent()
         .ok_or_else(|| Error::InvalidCommand("no parent dir".into()))?;
     opener::open(dir).map_err(Error::Open)?;
@@ -420,4 +439,29 @@ pub fn clear_all_daily_playtime(app: AppHandle) -> Result<()> {
         game.daily_playtime.clear();
     }
     lock.save_and_emit(&app)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_archive_filename;
+
+    #[test]
+    fn archive_filename_must_be_a_single_component() {
+        assert!(validate_archive_filename("2024-01-01_12-00.tar.zst").is_ok());
+        assert!(validate_archive_filename("a b.sqfs").is_ok());
+
+        assert!(validate_archive_filename("").is_err());
+        assert!(validate_archive_filename("..").is_err());
+        assert!(validate_archive_filename("../evil").is_err());
+        assert!(validate_archive_filename("sub/dir").is_err());
+        assert!(validate_archive_filename("/abs").is_err());
+    }
+
+    // Backslash is a separator only on Windows.
+    #[cfg(windows)]
+    #[test]
+    fn archive_filename_rejects_windows_separators() {
+        assert!(validate_archive_filename("..\\evil").is_err());
+        assert!(validate_archive_filename("C:\\abs").is_err());
+    }
 }
