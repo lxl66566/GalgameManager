@@ -222,7 +222,9 @@ pub enum GameLaunchRes {
     /// as exited when the launcher exits, and focus matching only works
     /// when the launcher itself owns the foreground window.
     Child {
-        child: tokio::process::Child,
+        // Boxed: tokio Child is ~280 bytes, inflating the whole enum for
+        // every variant otherwise (clippy::large_enum_variant).
+        child: Box<tokio::process::Child>,
         pid: u32,
         /// Exit status captured when `try_wait` observed the child had
         /// exited, for `last_exit_success()` after the fact.
@@ -291,7 +293,7 @@ pub async fn launch_game(
                      polling"
                 );
                 GameLaunchRes::Child {
-                    child,
+                    child: Box::new(child),
                     pid: child_pid,
                     last_success: None,
                 }

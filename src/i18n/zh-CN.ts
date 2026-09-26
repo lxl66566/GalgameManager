@@ -230,6 +230,8 @@ export const dict: DeepPartial<RawDictionary> = {
     version: '版本',
     voiceSpeedup: {
       description: '加速游戏音频播放',
+      liveSpeedUpdated: '已实时更新运行中游戏的加速倍率',
+      liveSpeedUpdateFailed: '实时更新加速倍率失败',
       mmdevapiWarn: 'MMDevAPI 注入方式在 Linux/Wine 下不可用，请使用 dsound。',
       name: 'SPEED UP!',
       provider: '注入方式',

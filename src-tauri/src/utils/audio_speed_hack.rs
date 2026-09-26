@@ -179,6 +179,56 @@ pub fn extract_mmdevapi(system: System, dest: &Path) -> Result<ExtractedFile> {
     )
 }
 
+/// File name of the MMDevAPI COM forwarding stub for an architecture.
+#[must_use]
+pub fn mmdevapi_stub_name(system: System) -> String {
+    format!("MMDevAPI-stub-{system}.dll")
+}
+
+/// Extract the MMDevAPI COM forwarding stubs (both architectures) to `dest`,
+/// overwriting any previous version.
+///
+/// The COM registry references these by absolute path: a bare `MMDevAPI.dll`
+/// value fails to resolve inside games that restrict the DLL search order
+/// (SetDefaultDllDirectories & co.), which makes the engine give up on audio
+/// entirely. The stub forwards DGCO either to a game-dir proxy or to the real
+/// system DLL, so it is pass-through for every other process — therefore the
+/// stubs are deliberately NOT tracked for cleanup after the game exits.
+pub fn extract_mmdevapi_stubs(dest: &Path) -> Result<()> {
+    #[cfg(not(debug_assertions))]
+    let archive = NamedArchive::load(include_dir!(
+        "assets/MMDevAPI",
+        compression = "zstd",
+        level = 22
+    ));
+    #[cfg(debug_assertions)]
+    let archive = NamedArchive::load(include_dir!("assets/MMDevAPI"));
+
+    for system in [System::X64, System::X86] {
+        let name = mmdevapi_stub_name(system);
+        let bytes = archive.get(&name).ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!("asset not found: {name}"),
+            )
+        })?;
+        let dest_file = dest.join(&name);
+        if let Err(e) = fs::write(&dest_file, bytes) {
+            if !dest_file.exists() {
+                return Err(e.into());
+            }
+            // Locked by a running game: the old stub still serves the
+            // registry path, keep it.
+            warn!(
+                "Stub {} busy, keeping existing copy: {e}",
+                dest_file.display()
+            );
+        }
+        info!("Deployed stub {}", dest_file.display());
+    }
+    Ok(())
+}
+
 pub fn extract_onnxruntime(system: System, dest: &Path) -> Result<ExtractedFile> {
     #[cfg(not(debug_assertions))]
     let archive = NamedArchive::load(include_dir!(
@@ -296,6 +346,9 @@ struct MmdevapiRegItem {
     path: &'static str,
     /// `ThreadingModel` value.
     threading_model: &'static str,
+    /// Which stub architecture this view serves: 64-bit view → x64 stub,
+    /// WOW6432Node view → x86 stub (32-bit COM clients).
+    stub: System,
 }
 
 /// All 8 CLSID redirect entries (4 CLSIDs × {64-bit, WOW6432Node}).
@@ -303,35 +356,43 @@ const MMDEVAPI_REG_ITEMS: &[MmdevapiRegItem] = &[
     MmdevapiRegItem {
         path: r"SOFTWARE\Classes\CLSID\{06CCA63E-9941-441B-B004-39F999ADA412}\InprocServer32",
         threading_model: "both",
+        stub: System::X64,
     },
     MmdevapiRegItem {
         path: r"SOFTWARE\Classes\CLSID\{93C063B0-68CB-4DE7-B032-8F56C1D2E99D}\InprocServer32",
         threading_model: "both",
+        stub: System::X64,
     },
     MmdevapiRegItem {
         path: r"SOFTWARE\Classes\CLSID\{BCDE0395-E52F-467C-8E3D-C4579291692E}\InprocServer32",
         threading_model: "both",
+        stub: System::X64,
     },
     MmdevapiRegItem {
         path: r"SOFTWARE\Classes\CLSID\{E2F7A62A-862B-40AE-BBC2-5C0CA9A5B7E1}\InprocServer32",
         threading_model: "free",
+        stub: System::X64,
     },
     // WOW6432Node entries (32-bit view)
     MmdevapiRegItem {
         path: r"SOFTWARE\Classes\WOW6432Node\CLSID\{06CCA63E-9941-441B-B004-39F999ADA412}\InprocServer32",
         threading_model: "both",
+        stub: System::X86,
     },
     MmdevapiRegItem {
         path: r"SOFTWARE\Classes\WOW6432Node\CLSID\{93C063B0-68CB-4DE7-B032-8F56C1D2E99D}\InprocServer32",
         threading_model: "both",
+        stub: System::X86,
     },
     MmdevapiRegItem {
         path: r"SOFTWARE\Classes\WOW6432Node\CLSID\{BCDE0395-E52F-467C-8E3D-C4579291692E}\InprocServer32",
         threading_model: "both",
+        stub: System::X86,
     },
     MmdevapiRegItem {
         path: r"SOFTWARE\Classes\WOW6432Node\CLSID\{E2F7A62A-862B-40AE-BBC2-5C0CA9A5B7E1}\InprocServer32",
         threading_model: "free",
+        stub: System::X86,
     },
 ];
 
@@ -347,17 +408,28 @@ mod win_impl {
 
     use windows_registry_obj::{BaseKey, RegValueData};
 
-    use super::{MMDEVAPI_DLL_NAME, MMDEVAPI_REG_ITEMS, SPEEDUP_ENV_NAME};
+    use super::{MMDEVAPI_REG_ITEMS, SPEEDUP_ENV_NAME};
     use crate::{db::CONFIG_DIR, error::Result};
 
     /// Add MMDevAPI registry entries (for MMDevAPI DLL injection).
-    pub fn set_mmdevapi_registry() -> io::Result<()> {
+    ///
+    /// The entries point at the COM forwarding stub's absolute path (a bare
+    /// `MMDevAPI.dll` value fails to resolve in games that restrict the DLL
+    /// search order), so the stub is (re)deployed to `stub_dir` (the app's
+    /// local data dir) first. Stubs are pass-through for non-game processes
+    /// and outlive the game session.
+    pub fn set_mmdevapi_registry(stub_dir: &Path) -> io::Result<()> {
+        super::extract_mmdevapi_stubs(stub_dir).map_err(io::Error::other)?;
         acquire_session_marker();
         for item in MMDEVAPI_REG_ITEMS {
+            let stub = stub_dir.join(super::mmdevapi_stub_name(item.stub));
             BaseKey::CurrentUser
                 .reg(item.path)
                 .with_values([
-                    ("", RegValueData::ExpandableString(MMDEVAPI_DLL_NAME.into())),
+                    (
+                        "",
+                        RegValueData::ExpandableString(stub.to_string_lossy().into_owned().into()),
+                    ),
                     (
                         "ThreadingModel",
                         RegValueData::String(item.threading_model.into()),
@@ -391,6 +463,17 @@ mod win_impl {
         Ok(())
     }
 
+    /// Update SPEEDUP for a session already tracked by a launch-time
+    /// [`set_speedup_env`]. Deliberately skips the session marker: the launch
+    /// still owns its acquire, and a second one would strand the counter
+    /// above zero (marker file leaked → false crash-residue cleanup at the
+    /// next startup).
+    pub fn update_speedup_env(speed: f32) -> Result<()> {
+        windows_env::set(SPEEDUP_ENV_NAME, format!("{speed:.1}"))?;
+        log::info!("Updated env {SPEEDUP_ENV_NAME}={speed:.1}");
+        Ok(())
+    }
+
     /// Remove the SPEEDUP environment variable.
     pub fn remove_speedup_env() {
         if let Err(e) = windows_env::remove(SPEEDUP_ENV_NAME) {
@@ -405,10 +488,13 @@ mod win_impl {
     // (HKCU\SOFTWARE\Classes\CLSID\...) are *persistent* user-level
     // mutations. Normally the launch Transaction removes them, but a crash /
     // force-kill skips those cleanups and the residue would affect every
-    // process started afterwards. While at least one speedup session is
-    // active we keep a marker file holding our PID; it is deleted when the
-    // last session's cleanup runs. A marker still present at the next
-    // startup means the previous instance died mid-session — the
+    // process started afterwards. (The COM redirect points at the forwarding
+    // stub, which passes through to the system DLL for processes without a
+    // game-dir proxy — the residue is behaviorally harmless but still
+    // removed. The stub files themselves are left in place.) While at least
+    // one speedup session is active we keep a marker file holding our PID; it
+    // is deleted when the last session's cleanup runs. A marker still present
+    // at the next startup means the previous instance died mid-session — the
     // single-instance plugin guarantees that process is gone by the time we
     // run — so the residue is ours and safe to remove.
 
@@ -527,7 +613,7 @@ mod win_impl {
 #[cfg(windows)]
 pub use win_impl::{
     clean_mmdevapi_registry, cleanup_crashed_session, remove_speedup_env, set_mmdevapi_registry,
-    set_speedup_env,
+    set_speedup_env, update_speedup_env,
 };
 
 /// No-op outside Windows: the persistent HKCU residue only exists there.
@@ -555,19 +641,38 @@ mod wine_regedit {
         time::{SystemTime, UNIX_EPOCH},
     };
 
-    use super::{MMDEVAPI_DLL_NAME, MMDEVAPI_REG_ITEMS};
+    use super::{
+        MMDEVAPI_REG_ITEMS, SPEEDUP_ENV_NAME, System, extract_mmdevapi_stubs, mmdevapi_stub_name,
+    };
+
+    /// Resolve the host-side `drive_c` directory of a Wine prefix.
+    fn prefix_drive_c(prefix: Option<&str>) -> PathBuf {
+        let base = match prefix {
+            Some(p) => PathBuf::from(p),
+            // wine's default prefix is $HOME/.wine
+            None => home::home_dir()
+                .unwrap_or_else(|| PathBuf::from("."))
+                .join(".wine"),
+        };
+        base.join("drive_c")
+    }
 
     /// Build a `REGEDIT4` file body. When `delete` is true each key is prefixed
-    /// with `-`, which regedit interprets as "delete this key".
-    fn build_reg_file(delete: bool) -> String {
+    /// with `-`, which regedit interprets as "delete this key". The non-delete
+    /// form points each view at its matching stub via an absolute `C:\` path.
+    fn build_reg_file(delete: bool, stub_x64: &str, stub_x86: &str) -> String {
         let mut s = String::from("REGEDIT4\r\n\r\n");
         for item in MMDEVAPI_REG_ITEMS {
             if delete {
                 s.push_str(&format!("[-HKEY_CURRENT_USER\\{}]\r\n\r\n", item.path));
             } else {
+                let dll = if item.stub == System::X64 {
+                    stub_x64
+                } else {
+                    stub_x86
+                };
                 s.push_str(&format!(
-                    "[HKEY_CURRENT_USER\\{}]\r\n@=\"{MMDEVAPI_DLL_NAME}\"\r\n\"ThreadingModel\"=\"\
-                     {}\"\r\n\r\n",
+                    "[HKEY_CURRENT_USER\\{}]\r\n@=\"{dll}\"\r\n\"ThreadingModel\"=\"{}\"\r\n\r\n",
                     item.path, item.threading_model
                 ));
             }
@@ -613,8 +718,18 @@ mod wine_regedit {
     }
 
     /// Add MMDevAPI registry entries to the Wine prefix.
+    ///
+    /// The forwarding stubs are (re)deployed to the prefix's `C:\` root
+    /// first; the registry then references them by absolute path — a bare
+    /// `MMDevAPI.dll` value fails to resolve in games that restrict the DLL
+    /// search order. Stubs are pass-through and are never removed afterwards.
     pub fn set_mmdevapi_registry(prefix: Option<&str>) -> io::Result<()> {
-        let content = build_reg_file(false);
+        let drive_c = prefix_drive_c(prefix);
+        fs::create_dir_all(&drive_c)?;
+        super::extract_mmdevapi_stubs(&drive_c).map_err(io::Error::other)?;
+        let stub_x64 = windows_drive_path(System::X64);
+        let stub_x86 = windows_drive_path(System::X86);
+        let content = build_reg_file(false, &stub_x64, &stub_x86);
         run_regedit("mmdevapi-set", prefix, &content)?;
         log::info!(
             "Wine MMDevAPI registry set ({} entries)",
@@ -623,15 +738,81 @@ mod wine_regedit {
         Ok(())
     }
 
+    /// Wine-visible absolute path of a stub deployed at the prefix drive_c root.
+    fn windows_drive_path(system: System) -> String {
+        format!("C:\\{}", mmdevapi_stub_name(system))
+    }
+
     /// Remove MMDevAPI registry entries from the Wine prefix. Best-effort.
     pub fn clean_mmdevapi_registry(prefix: Option<&str>) {
-        let content = build_reg_file(true);
+        let content = build_reg_file(true, "", "");
         match run_regedit("mmdevapi-del", prefix, &content) {
             Ok(()) => log::info!("Wine MMDevAPI registry cleaned"),
             Err(e) => log::warn!("Failed to clean wine MMDevAPI registry: {e}"),
         }
     }
+
+    // ── SPEEDUP env in the prefix registry ──
+    //
+    // The injected DLL reads SPEEDUP from `HKCU\Environment` via the registry
+    // API (on Windows `windows_env::set` targets the same key). Under Wine
+    // that key lives in the prefix registry, so the value is mirrored there
+    // for both launch (alongside the process-env overlay) and live updates.
+
+    /// Build a `REGEDIT4` body setting SPEEDUP in `HKCU\Environment`.
+    fn build_speedup_env_reg(speed: f32) -> String {
+        format!(
+            "REGEDIT4\r\n\r\n[HKEY_CURRENT_USER\\Environment]\r\n\"{SPEEDUP_ENV_NAME}\"=\"{speed:.\
+             1}\"\r\n"
+        )
+    }
+
+    /// Build a `REGEDIT4` body deleting only the SPEEDUP *value*. Must not use
+    /// the `[-HKEY...]` key-deletion form: the Environment key also holds the
+    /// user's other variables.
+    fn build_speedup_env_delete_reg() -> String {
+        format!("REGEDIT4\r\n\r\n[HKEY_CURRENT_USER\\Environment]\r\n\"{SPEEDUP_ENV_NAME}\"=-\r\n")
+    }
+
+    /// Set SPEEDUP in the prefix's `HKCU\Environment`.
+    pub fn set_speedup_env_registry(prefix: Option<&str>, speed: f32) -> io::Result<()> {
+        run_regedit("speedup-env-set", prefix, &build_speedup_env_reg(speed))?;
+        log::info!("Wine env {SPEEDUP_ENV_NAME}={speed:.1} set in prefix registry");
+        Ok(())
+    }
+
+    /// Remove SPEEDUP from the prefix's `HKCU\Environment`. Best-effort.
+    pub fn clean_speedup_env_registry(prefix: Option<&str>) {
+        match run_regedit("speedup-env-del", prefix, &build_speedup_env_delete_reg()) {
+            Ok(()) => log::info!("Wine env {SPEEDUP_ENV_NAME} removed from prefix registry"),
+            Err(e) => log::warn!("Failed to remove wine env {SPEEDUP_ENV_NAME}: {e}"),
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn speedup_env_reg_sets_value_in_environment_key() {
+            let reg = build_speedup_env_reg(1.5);
+            assert!(reg.contains("[HKEY_CURRENT_USER\\Environment]"));
+            assert!(reg.contains("\"SPEEDUP\"=\"1.5\""));
+        }
+
+        #[test]
+        fn speedup_env_reg_delete_targets_value_not_key() {
+            let reg = build_speedup_env_delete_reg();
+            // Value deletion only; deleting the whole key would wipe the
+            // user's other environment variables.
+            assert!(reg.contains("\"SPEEDUP\"=-"));
+            assert!(!reg.contains("[-HKEY_CURRENT_USER\\Environment]"));
+        }
+    }
 }
 
 #[cfg(target_os = "linux")]
-pub use wine_regedit::{clean_mmdevapi_registry, set_mmdevapi_registry};
+pub use wine_regedit::{
+    clean_mmdevapi_registry, clean_speedup_env_registry, set_mmdevapi_registry,
+    set_speedup_env_registry,
+};

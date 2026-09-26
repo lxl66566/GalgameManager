@@ -2,6 +2,7 @@ mod auto_upload;
 pub mod config;
 mod execute;
 mod game_wrapper;
+mod live_update;
 mod locale_emulator;
 mod transaction;
 mod translator;
@@ -25,6 +26,7 @@ pub use config::{
     VoiceZerointerruptGameConfig, VoiceZerointerruptPluginMeta, WineArch, WineGameConfig,
     WinePluginMeta,
 };
+pub use live_update::{LiveUpdateCtx, collect_live_updates, dispatch_live_updates};
 use parking_lot::Mutex;
 use serde::Deserialize;
 use tauri::AppHandle;
@@ -97,6 +99,19 @@ pub trait PluginHandler: Send + Sync + 'static {
 
     /// Called after a save archive has been uploaded to remote storage.
     async fn after_save_upload(&self, _ctx: PluginContext, _archive_filename: &str) -> Result<()> {
+        Ok(())
+    }
+
+    /// Called when this plugin's config on a *running* game is patched.
+    ///
+    /// Receives the pre/post instance-config groups (see [`LiveUpdateCtx`]);
+    /// only plugin types enabled by the pre-patch metadatas and with an
+    /// actual change are dispatched. The handler owns its user-facing
+    /// feedback (toast); its `Err` is only logged by the dispatcher.
+    ///
+    /// The default implementation is a no-op — most plugins read config only
+    /// at launch and have nothing to push into a live session.
+    async fn on_live_update(&self, _ctx: LiveUpdateCtx) -> Result<()> {
         Ok(())
     }
 

@@ -109,10 +109,17 @@ impl Default for WinePluginMeta {
 /// `wine regedit` at the correct prefix.
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub(crate) fn wine_prefix_for_game(game_id: u32) -> Option<String> {
+    let lock = crate::db::CONFIG.lock();
+    wine_prefix_for_config(&lock, game_id)
+}
+
+/// Lock-free variant of [`wine_prefix_for_game`] for callers that already
+/// hold the config lock (the game-id variant would self-deadlock there).
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+pub(crate) fn wine_prefix_for_config(config: &crate::db::Config, game_id: u32) -> Option<String> {
     use crate::plugin::PluginInstance;
 
-    let lock = crate::db::CONFIG.lock();
-    let game = lock.get_game_by_id(game_id).ok()?;
+    let game = config.get_game_by_id(game_id).ok()?;
     let prefix = game.plugins.iter().find_map(|p| match p {
         PluginInstance::Wine { config } => Some(config.prefix.as_str()),
         _ => None,
@@ -120,7 +127,7 @@ pub(crate) fn wine_prefix_for_game(game_id: u32) -> Option<String> {
     if prefix.is_empty() {
         return None;
     }
-    lock.resolve_var(prefix).ok()
+    config.resolve_var(prefix).ok()
 }
 
 pub struct WinePlugin;

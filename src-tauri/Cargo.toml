@@ -113,6 +113,9 @@ default             = ["config-daily-backup", "custom-protocol"]
 config-daily-backup = []
 custom-protocol     = ["tauri/custom-protocol"]
 
+[lints.cargo]
+non_kebab_case_bins = "allow"
+
 [lints.clippy]
 all                     = { level = "warn", priority = -1 }
 cargo                   = { level = "warn", priority = -1 }

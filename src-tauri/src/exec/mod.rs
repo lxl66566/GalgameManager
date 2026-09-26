@@ -37,6 +37,13 @@ pub use windows::{game_loop, launch_game};
 pub(crate) static GAME_LOOP_HANDLES: Lazy<DashMap<u32, JoinHandle<Result<()>>>> =
     Lazy::new(DashMap::new);
 
+/// Whether a game session (spawned game loop) is still active.
+pub fn is_game_running(game_id: u32) -> bool {
+    GAME_LOOP_HANDLES
+        .get(&game_id)
+        .is_some_and(|h| !h.inner().is_finished())
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
 pub struct StartCtx {
     pub cmd: String,
@@ -67,15 +74,12 @@ const MAX_CGROUP_READ_FAILURES: u32 = 3;
 /// previous "alive" state is kept.
 #[cfg(any(target_os = "linux", test))]
 fn fold_cgroup_liveness(read: std::io::Result<Vec<u32>>, failures: &mut u32) -> bool {
-    match read {
-        Ok(pids) => {
-            *failures = 0;
-            !pids.is_empty()
-        },
-        Err(_) => {
-            *failures += 1;
-            *failures < MAX_CGROUP_READ_FAILURES
-        },
+    if let Ok(pids) = read {
+        *failures = 0;
+        !pids.is_empty()
+    } else {
+        *failures += 1;
+        *failures < MAX_CGROUP_READ_FAILURES
     }
 }
 
@@ -563,7 +567,7 @@ mod tests {
 
     #[test]
     fn cgroup_transient_read_errors_keep_alive_until_threshold() {
-        let err = || std::io::Error::new(std::io::ErrorKind::Other, "boom");
+        let err = || std::io::Error::other("boom");
         let mut failures = 0;
         // Below the threshold the previous "alive" state is kept.
         assert!(fold_cgroup_liveness(Err(err()), &mut failures));
@@ -583,7 +587,7 @@ mod tests {
 
     #[test]
     fn cgroup_successful_read_resets_failure_streak() {
-        let err = || std::io::Error::new(std::io::ErrorKind::Other, "boom");
+        let err = || std::io::Error::other("boom");
         let mut failures = 0;
         assert!(fold_cgroup_liveness(Err(err()), &mut failures));
         assert!(fold_cgroup_liveness(Err(err()), &mut failures));

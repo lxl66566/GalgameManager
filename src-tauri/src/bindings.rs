@@ -67,10 +67,19 @@ pub fn save_config(new_config: Config) -> Result<()> {
 /// throttled; emit is skipped for the same reason as `save_config`.
 // called from frontend, do not use it in other places
 #[tauri::command]
-pub fn patch_config(patch: ConfigPatch) -> Result<()> {
+pub fn patch_config(app: AppHandle, patch: ConfigPatch) -> Result<()> {
     let mut lock = CONFIG.lock();
+    // Live updates must be collected pre-apply: apply destroys the old plugin
+    // configs the diff needs. Dispatched in the background after the lock is
+    // released (platform work there — e.g. `wine regedit` — can block).
+    let live_updates =
+        crate::plugin::collect_live_updates(&lock, &patch, crate::exec::is_game_running);
     lock.apply(patch);
     lock.last_updated = Utc::now();
+    drop(lock);
+    if !live_updates.is_empty() {
+        tauri::async_runtime::spawn(crate::plugin::dispatch_live_updates(app, live_updates));
+    }
     ConfigSaver::request("frontend::patch_config");
     Ok(())
 }
@@ -376,11 +385,7 @@ pub async fn exec(app: AppHandle, game_id: u32) -> Result<()> {
 // currently not used
 #[tauri::command]
 pub fn is_game_running(game_id: u32) -> bool {
-    if let Some(handle) = GAME_LOOP_HANDLES.get(&game_id) {
-        !handle.inner().is_finished()
-    } else {
-        false
-    }
+    crate::exec::is_game_running(game_id)
 }
 
 #[tauri::command]
