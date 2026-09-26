@@ -378,7 +378,7 @@ mod linux_impl {
             info!(
                 "VoiceSpeedup: prepared for game {} on Wine (speed={:.1}, provider={:?}, \
                  arch={system})",
-                ctx.launch.game_id, config.speed, config.provider, system
+                ctx.launch.game_id, config.speed, config.provider
             );
             Ok(())
         }

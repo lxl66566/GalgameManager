@@ -642,7 +642,7 @@ mod wine_regedit {
     };
 
     use super::{
-        MMDEVAPI_REG_ITEMS, SPEEDUP_ENV_NAME, System, extract_mmdevapi_stubs, mmdevapi_stub_name,
+        MMDEVAPI_REG_ITEMS, SPEEDUP_ENV_NAME, System, mmdevapi_stub_name,
     };
 
     /// Resolve the host-side `drive_c` directory of a Wine prefix.
