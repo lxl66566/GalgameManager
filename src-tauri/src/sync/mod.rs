@@ -1,5 +1,6 @@
 mod opendal;
 use std::{
+    future::Future,
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -31,6 +32,48 @@ const RETRY_TIMES: usize = 3;
 
 /// Tauri event key emitted when a sync operation fails.
 const EVENT_SYNC_FAILED: &str = "sync://failed";
+
+/// Payload of the `sync://failed` event, emitted on each failed attempt of a
+/// retried remote sync operation.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SyncFailedPayload {
+    /// Game whose sync operation hit the error; `None` for global operations
+    /// (e.g. config sync) that are not tied to a specific game.
+    pub game_id: Option<u32>,
+    /// Human-readable error description.
+    pub message: String,
+}
+
+tokio::task_local! {
+    /// Game whose remote sync operation is running in the current task.
+    /// opendal's `RetryLayer` notify callback carries no per-call context, so
+    /// the game id is passed through a task-local instead; the retry loop
+    /// (backon) is awaited inline in the caller's task, never spawned.
+    static CURRENT_SYNC_GAME: u32;
+}
+
+/// Run `fut` with `game_id` tagged as the current sync target, so that
+/// `sync://failed` retry events emitted during the operation carry it.
+pub async fn with_sync_game<F: Future>(game_id: u32, fut: F) -> F::Output {
+    CURRENT_SYNC_GAME.scope(game_id, fut).await
+}
+
+/// Game id of the sync operation running in this task, if any.
+fn current_sync_game() -> Option<u32> {
+    CURRENT_SYNC_GAME.try_with(|id| *id).ok()
+}
+
+/// Emit a `sync://failed` event; emitting can only fail if the app/event loop
+/// is shutting down, and unwinding from inside an opendal notify callback
+/// would abort the process, so the result is deliberately ignored.
+fn emit_sync_failed(app: &AppHandle, err: &::opendal::Error) {
+    let _ = app.emit(EVENT_SYNC_FAILED, SyncFailedPayload {
+        game_id: current_sync_game(),
+        message: err.to_string(),
+    });
+}
 
 /// Default timeouts used as fallback.
 pub const DEFAULT_IO_TIMEOUT: Duration = Duration::from_secs(60);
@@ -329,10 +372,7 @@ impl BuildOperator for WebDavConfig {
         let notify = move |event: RetryEvent| {
             let err = event.err;
             log::warn!("webdav sync failed: {err}");
-            // Emitting can only fail if the app/event loop is shutting down;
-            // there's nothing useful to do with that, and unwinding from inside
-            // an opendal notify callback would abort the process.
-            let _ = ctx.emit(EVENT_SYNC_FAILED, err.to_string());
+            emit_sync_failed(&ctx, err);
         };
 
         let operator = Operator::new(
@@ -384,10 +424,7 @@ impl BuildOperator for S3Config {
         let notify = move |event: RetryEvent| {
             let err = event.err;
             log::warn!("s3 sync failed: {err}");
-            // Emitting can only fail if the app/event loop is shutting down;
-            // there's nothing useful to do with that, and unwinding from inside
-            // an opendal notify callback would abort the process.
-            let _ = ctx.emit(EVENT_SYNC_FAILED, err.to_string());
+            emit_sync_failed(&ctx, err);
         };
 
         let operator = Operator::new(

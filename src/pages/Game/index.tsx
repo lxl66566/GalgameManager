@@ -1,5 +1,6 @@
 import { type Game } from '@bindings/Game'
 import { type SortType } from '@bindings/SortType'
+import { type SyncFailedPayload } from '@bindings/SyncFailedPayload'
 import { DropArea } from '@components/DropArea'
 import FullScreenMask from '@components/ui/FullScreenMask'
 import { myToast } from '@components/ui/myToast'
@@ -388,10 +389,13 @@ const GamePage = (): JSX.Element => {
 
       toast.loading(t('hint.uploading') + game.name + '...', { id: toastId })
 
-      unlistenUploadError = await listen<string>('sync://failed', event => {
+      unlistenUploadError = await listen<SyncFailedPayload>('sync://failed', event => {
         const { payload } = event
+        // Retry events are tagged with the game being synced; ignore failures
+        // from other games' backups and global (config) sync.
+        if (payload.gameId !== game.id) return
         toast.loading(
-          `${t('hint.uploading')} ${game.name}...\n${t('hint.retryError')}: ${payload}`,
+          `${t('hint.uploading')} ${game.name}...\n${t('hint.retryError')}: ${payload.message}`,
           { id: toastId }
         )
       })

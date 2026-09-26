@@ -1,5 +1,6 @@
 import { type ArchiveInfo } from '@bindings/ArchiveInfo'
 import type { Game } from '@bindings/Game'
+import { type SyncFailedPayload } from '@bindings/SyncFailedPayload'
 import { myToast } from '@components/ui/myToast'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
@@ -138,12 +139,17 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
   const handleUpload = async (filename: string) => {
     const toastId = toast.loading(t('hint.uploading') + filename + '...')
     let unlistenUploadError: undefined | UnlistenFn
+    // Capture once: reading props inside the (untracked) event callback would
+    // break reactivity tracking; the game id never changes for this modal.
+    const gameId = props.gameId
 
     try {
-      unlistenUploadError = await listen<string>('sync://failed', event => {
+      unlistenUploadError = await listen<SyncFailedPayload>('sync://failed', event => {
         const { payload } = event
+        // Ignore retry events of other games / global (config) sync.
+        if (payload.gameId !== gameId) return
         toast.loading(
-          `${t('hint.uploading')}${filename}...\n${t('hint.retryError')}: ${payload}`,
+          `${t('hint.uploading')}${filename}...\n${t('hint.retryError')}: ${payload.message}`,
           {
             id: toastId
           }

@@ -18,7 +18,7 @@ use crate::{
     exec::{GAME_LOOP_HANDLES, launch_game_with_plugins},
     logging::LogLevel,
     plugin::{SaveUploadDispatcher, Transaction},
-    sync::{MyOperation, UploadConfigStatus},
+    sync::{MyOperation, UploadConfigStatus, with_sync_game},
     utils::list_dir_all,
 };
 
@@ -233,9 +233,8 @@ fn build_operator_with_varmap(app: &AppHandle) -> Result<Box<dyn MyOperation + S
 
 #[tauri::command(async)]
 pub async fn list_archive(app: AppHandle, game_id: u32) -> Result<Vec<ArchiveInfo>> {
-    build_operator_with_varmap(&app)?
-        .list_archive(game_id)
-        .await
+    let op = build_operator_with_varmap(&app)?;
+    with_sync_game(game_id, op.list_archive(game_id)).await
 }
 
 #[tauri::command(async)]
@@ -250,13 +249,15 @@ pub async fn upload_archive(app: AppHandle, game_id: u32, archive_filename: Stri
         return Err(e);
     }
 
-    if let Err(e) = build_operator_with_varmap(&app)?
-        .upload_archive(
+    if let Err(e) = with_sync_game(
+        game_id,
+        build_operator_with_varmap(&app)?.upload_archive(
             game_id,
             &archive_filename,
             &app.path().app_local_data_dir()?.join("backup"),
-        )
-        .await
+        ),
+    )
+    .await
     {
         tx.rollback();
         return Err(e);
@@ -269,27 +270,28 @@ pub async fn upload_archive(app: AppHandle, game_id: u32, archive_filename: Stri
 
 #[tauri::command(async)]
 pub async fn delete_archive(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
-    build_operator_with_varmap(&app)?
-        .delete_archive(game_id, &archive_filename)
-        .await
+    let op = build_operator_with_varmap(&app)?;
+    with_sync_game(game_id, op.delete_archive(game_id, &archive_filename)).await
 }
 
 #[tauri::command(async)]
 pub async fn delete_archive_all(app: AppHandle, game_id: u32) -> Result<()> {
-    build_operator_with_varmap(&app)?
-        .delete_archive_all(game_id)
-        .await
+    let op = build_operator_with_varmap(&app)?;
+    with_sync_game(game_id, op.delete_archive_all(game_id)).await
 }
 
 #[tauri::command(async)]
 pub async fn pull_archive(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
-    build_operator_with_varmap(&app)?
-        .pull_archive(
+    let op = build_operator_with_varmap(&app)?;
+    with_sync_game(
+        game_id,
+        op.pull_archive(
             game_id,
             &archive_filename,
             &app.path().app_local_data_dir()?.join("backup"),
-        )
-        .await
+        ),
+    )
+    .await
 }
 
 #[tauri::command(async)]
@@ -299,9 +301,12 @@ pub async fn rename_remote_archive(
     archive_filename: String,
     new_archive_filename: String,
 ) -> Result<()> {
-    build_operator_with_varmap(&app)?
-        .rename_archive(game_id, &archive_filename, &new_archive_filename)
-        .await
+    let op = build_operator_with_varmap(&app)?;
+    with_sync_game(
+        game_id,
+        op.rename_archive(game_id, &archive_filename, &new_archive_filename),
+    )
+    .await
 }
 
 /// Operator needs to be cleaned every time the config of storage backend is

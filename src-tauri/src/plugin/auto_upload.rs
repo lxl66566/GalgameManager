@@ -13,7 +13,7 @@ use ts_rs::TS;
 use super::{PluginConfig, PluginContext, SaveUploadDispatcher, Transaction};
 use crate::{
     error::Result,
-    sync::MyOperation,
+    sync::{MyOperation, with_sync_game},
     utils::{
         list_dir_all,
         toast::{ToastVariant, dismiss_toast, emit_loading_toast, emit_toast},
@@ -196,13 +196,15 @@ impl super::PluginHandler for AutoUploadPlugin {
             return Err(e);
         }
 
-        if let Err(e) = op
-            .upload_archive(
+        if let Err(e) = with_sync_game(
+            ctx.launch.game_id,
+            op.upload_archive(
                 ctx.launch.game_id,
                 &archive_filename,
                 &data_dir.join("backup"),
-            )
-            .await
+            ),
+        )
+        .await
         {
             tx.rollback();
             dismiss_toast(&ctx.launch.app, &loading_toast_id);
@@ -221,7 +223,11 @@ impl super::PluginHandler for AutoUploadPlugin {
                 retention_scope,
                 RetentionScope::Remote | RetentionScope::Both
             ) {
-                prune_remote(&*op, ctx.launch.game_id, max_kept as usize).await;
+                with_sync_game(
+                    ctx.launch.game_id,
+                    prune_remote(&*op, ctx.launch.game_id, max_kept as usize),
+                )
+                .await;
             }
             if matches!(
                 retention_scope,
