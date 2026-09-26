@@ -405,7 +405,10 @@ const GamePage = (): JSX.Element => {
         gameId: game.id
       })
 
-      toast.success(t('hint.syncSuccess') + game.name, {
+      // The separator lives at the call site, not in the locale string —
+      // relying on a trailing ": " inside translations is fragile (the en-US
+      // value didn't have one, producing "Sync Success<name>").
+      toast.success(`${t('hint.syncSuccess')}: ${game.name}`, {
         duration: 3000,
         id: toastId
       })

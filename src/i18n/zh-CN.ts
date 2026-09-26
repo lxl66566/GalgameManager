@@ -138,7 +138,7 @@ export const dict: DeepPartial<RawDictionary> = {
     selectSaveArchive: '选择存档文件/文件夹',
     supportVar: '支持插入花括号模板，类似 {变量名}',
     syncFailed: '同步失败: ',
-    syncSuccess: '同步成功: ',
+    syncSuccess: '同步成功',
     unknownVar: '未知变量: ',
     uploadFailed: '上传失败: ',
     uploading: '正在上传: ',
