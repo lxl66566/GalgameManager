@@ -1,6 +1,7 @@
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import { log } from '@utils/log'
 import { resolveVarForDevice } from '@utils/resolveVar'
+import { FiAlertTriangle } from 'solid-icons/fi'
 import {
   createEffect,
   createResource,
@@ -10,11 +11,16 @@ import {
 } from 'solid-js'
 
 import { useI18n } from '~/i18n'
+import { cn } from '~/lib/utils'
 import { useConfig } from '~/store'
 
 interface ImageProps {
   alt?: string
   class?: string
+  /** Override the small corner badge shown on the error placeholder. */
+  errorBadgeClass?: string
+  /** Override the neutral placeholder container shown when loading fails. */
+  errorClass?: string
   /** When true, ask the backend to also derive an accent color from this
    *  image. Callers set this to "color not yet cached" (e.g.
    *  `!game.coverColor`) so each image is decoded at most once. */
@@ -116,12 +122,24 @@ const CachedImage: Component<ImageProps> = props => {
     <div class={`relative overflow-hidden bg-gray-800/50 ${props.class ?? ''}`}>
       <ErrorBoundary
         fallback={(error: Error) => (
+          // Neutral gray placeholder + small corner badge: a grid of broken
+          // covers must not turn into a wall of red. The full error stays
+          // available in the title tooltip.
           <div
-            class="absolute inset-0 flex flex-col items-center justify-center border border-red-500/30 bg-red-900/20 p-2 text-red-400"
+            class={cn(
+              'absolute inset-0 flex items-center justify-center bg-gray-200 dark:bg-gray-700',
+              props.errorClass
+            )}
             title={error.toString()}
           >
-            <span class="font-mono text-[10px] opacity-80">
-              {t('ui.loadFailed')}: {error.toString()}
+            <span
+              class={cn(
+                'absolute top-1 right-1 flex items-center gap-0.5 rounded bg-black/50 px-1 py-0.5 text-[9px] text-gray-100',
+                props.errorBadgeClass
+              )}
+            >
+              <FiAlertTriangle class="h-2.5 w-2.5" />
+              {t('ui.loadFailed')}
             </span>
           </div>
         )}
