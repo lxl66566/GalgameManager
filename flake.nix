@@ -1,5 +1,5 @@
 {
-  description = "Development shell for GalgameManager (Tauri v2 + SolidJS)";
+  description = "Development shell for GalgameManager (Tauri v2 + SolidJS + nightly rust)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -32,7 +32,7 @@
             ];
 
             buildInputs = with pkgs; [
-              (rust-bin.stable.latest.default.override {
+              (rust-bin.nightly.latest.default.override {
                 extensions = [
                   "rust-src"
                   "rust-analyzer"
