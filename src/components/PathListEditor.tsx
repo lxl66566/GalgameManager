@@ -8,7 +8,14 @@ import { resolveVar } from '@utils/resolveVar'
 import { useVarMap } from '@utils/useVarMap'
 import { useVarWarning } from '@utils/useVarWarning'
 import { FiFilePlus, FiFolderPlus } from 'solid-icons/fi'
-import { createResource, createSignal, For, Show, type Component } from 'solid-js'
+import {
+  createMemo,
+  createResource,
+  createSignal,
+  For,
+  Show,
+  type Component
+} from 'solid-js'
 import { Dynamic } from 'solid-js/web'
 
 import { useI18n } from '~/i18n'
@@ -65,23 +72,27 @@ export default function PathListEditor(props: PathListEditorProps) {
   )
 
   /** Check if any resolved path does not exist on disk. */
-  const [pathExistWarning] = createResource(
+  const [anyPathMissing] = createResource(
     () => ({
       enabled: props.checkPathExist === true,
       paths: [...props.paths],
       vars: variableMap()
     }),
     async ({ enabled, paths, vars }) => {
-      if (!enabled || paths.length === 0 || !vars) return
+      if (!enabled || paths.length === 0 || !vars) return false
       try {
         const resolved = paths.map(p => resolveVar(p, vars))
         const results = await invoke<boolean[]>('paths_exist', { paths: resolved })
-        const missing = paths.filter((_, index) => !results[index])
-        return missing.length > 0 ? t('hint.partialPathNotExist') : undefined
+        return results.some(exists => !exists)
       } catch {
-        return
+        return false
       }
     }
+  )
+  // Derive the message in a memo so a locale switch re-translates it without
+  // re-invoking the IPC (calling `t` inside the fetcher is not tracked).
+  const pathExistWarning = createMemo(() =>
+    anyPathMissing() ? t('hint.partialPathNotExist') : undefined
   )
 
   // ─── Path helpers ─────────────────────────────────────────────────────────

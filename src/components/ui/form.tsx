@@ -14,6 +14,7 @@ import { useVarMap } from '@utils/useVarMap'
 import { useVarWarning } from '@utils/useVarWarning'
 import { FiFolder, FiInfo } from 'solid-icons/fi'
 import {
+  createMemo,
   createResource,
   mergeProps,
   Show,
@@ -251,23 +252,30 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
     () => props.checkVars !== false
   )
 
-  // Path existence validation — async check via `paths_exist`
-  const [pathExistWarning] = createResource(
+  // Path existence validation — async check via `paths_exist`.
+  // The resource stores the raw result; the localized message is derived in
+  // a memo so a locale switch re-translates it without re-invoking the IPC
+  // (calling `t` inside the fetcher is not tracked and would freeze the
+  // warning in the old language).
+  const [pathMissing] = createResource(
     () => ({
       enabled: props.checkPathExist === true,
       path: props.value,
       vars: variableMap()
     }),
     async ({ enabled, path, vars }) => {
-      if (!enabled || !path || !vars) return
+      if (!enabled || !path || !vars) return false
       try {
         const resolved = resolveVar(path, vars)
         const results = await invoke<boolean[]>('paths_exist', { paths: [resolved] })
-        return results[0] ? undefined : t('hint.pathNotExist')
+        return !results[0]
       } catch {
-        return
+        return false
       }
     }
+  )
+  const pathExistWarning = createMemo(() =>
+    pathMissing() ? t('hint.pathNotExist') : undefined
   )
 
   const wrapperClass = () => cn('flex flex-col', props.class)
