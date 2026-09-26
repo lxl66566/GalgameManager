@@ -1,3 +1,17 @@
+//! Lenient `strfmt`-style formatter: `{var}` placeholders are substituted
+//! from a [`MapLike`] source, `{{`/`}}` escape literal braces.
+//!
+//! Anything that cannot be substituted is kept **verbatim** instead of
+//! failing: unmatched braces and unknown variables pass through unchanged.
+//! Rationale: this crate resolves user-provided paths (game dirs, save
+//! paths), and Windows folder names may legitimately contain braces
+//! (e.g. `New Folder {1}`) — a hard error there breaks launch/archive for a
+//! perfectly valid path. The trade-off is that a *typo'd* variable no longer
+//! errors either; it degrades to a literal path segment that downstream
+//! path-existence checks (`paths_exist`, launch failures) surface to the
+//! user, which is acceptable and far less opaque than a low-level
+//! `KeyNotFound` error.
+
 use std::{
     borrow::{Borrow, Cow},
     collections::{BTreeMap, HashMap},
@@ -9,12 +23,6 @@ use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum Error {
-    #[error("Key not found: {0}")]
-    KeyNotFound(String),
-    #[error("'{{' not found")]
-    UnmatchedOpenBrace,
-    #[error("Unmatched '}}'")]
-    UnmatchedCloseBrace,
     #[error("Write error: {0}")]
     WriteError(fmt::Error),
 }
@@ -78,40 +86,46 @@ pub fn strfmt_write<M: MapLike + ?Sized, W: Write>(mut w: W, s: &str, m: &M) -> 
     let len = bytes.len();
 
     while i < len {
-        if let Some(pos) = bytes[i..].iter().position(|&b| b == b'{' || b == b'}') {
-            w.write_str(&s[i..i + pos]).map_err(Error::WriteError)?;
-            i += pos;
-
-            if bytes[i] == b'{' {
-                if i + 1 < len && bytes[i + 1] == b'{' {
-                    w.write_char('{').map_err(Error::WriteError)?;
-                    i += 2;
-                } else {
-                    i += 1;
-                    if let Some(end_pos) = bytes[i..].iter().position(|&b| b == b'}') {
-                        let var_name = &s[i..i + end_pos];
-                        match m.get_value(var_name) {
-                            Some(val) => {
-                                w.write_str(val.as_ref()).map_err(Error::WriteError)?;
-                            }
-                            None => return Err(Error::KeyNotFound(var_name.to_string())),
-                        }
-                        i += end_pos + 1;
-                    } else {
-                        return Err(Error::UnmatchedOpenBrace);
-                    }
-                }
-            } else {
-                if i + 1 < len && bytes[i + 1] == b'}' {
-                    w.write_char('}').map_err(Error::WriteError)?;
-                    i += 2;
-                } else {
-                    return Err(Error::UnmatchedCloseBrace);
-                }
-            }
-        } else {
+        let Some(pos) = bytes[i..].iter().position(|&b| b == b'{' || b == b'}') else {
             w.write_str(&s[i..]).map_err(Error::WriteError)?;
             break;
+        };
+        w.write_str(&s[i..i + pos]).map_err(Error::WriteError)?;
+        i += pos;
+
+        // Braces are ASCII, so slicing `s` at these byte offsets never splits
+        // a UTF-8 sequence.
+        if bytes[i] == b'{' {
+            if i + 1 < len && bytes[i + 1] == b'{' {
+                w.write_char('{').map_err(Error::WriteError)?;
+                i += 2;
+                continue;
+            }
+            match bytes[i + 1..].iter().position(|&b| b == b'}') {
+                Some(end_pos) => {
+                    let var_name = &s[i + 1..i + 1 + end_pos];
+                    match m.get_value(var_name) {
+                        Some(val) => w.write_str(val.as_ref()).map_err(Error::WriteError)?,
+                        // Unknown variable: keep `{name}` verbatim.
+                        None => w
+                            .write_str(&s[i..=i + 1 + end_pos])
+                            .map_err(Error::WriteError)?,
+                    }
+                    i += end_pos + 2;
+                },
+                // Unmatched open brace: emit verbatim.
+                None => {
+                    w.write_char('{').map_err(Error::WriteError)?;
+                    i += 1;
+                },
+            }
+        } else if i + 1 < len && bytes[i + 1] == b'}' {
+            w.write_char('}').map_err(Error::WriteError)?;
+            i += 2;
+        } else {
+            // Unmatched close brace: emit verbatim.
+            w.write_char('}').map_err(Error::WriteError)?;
+            i += 1;
         }
     }
     Ok(())
@@ -182,22 +196,25 @@ mod tests {
     }
 
     #[test]
-    fn test_errors() {
+    fn test_unresolvable_is_kept_verbatim() {
         let vars = [("a", "b")];
 
+        // Unknown variable
+        assert_eq!(strfmt("{c}", &vars[..]).unwrap(), "{c}");
+        // Unmatched open brace
+        assert_eq!(strfmt("hello {a", &vars[..]).unwrap(), "hello {a");
+        // Unmatched close brace
+        assert_eq!(strfmt("hello }", &vars[..]).unwrap(), "hello }");
+        // A Windows-style auto-generated folder name must survive untouched.
+        let empty: [(&str, &str); 0] = [];
         assert_eq!(
-            strfmt("{c}", &vars[..]),
-            Err(Error::KeyNotFound("c".to_string()))
+            strfmt("New Folder {1}", &empty[..]).unwrap(),
+            "New Folder {1}"
         );
-
+        // Known variables still substitute around verbatim fragments.
         assert_eq!(
-            strfmt("hello {a", &vars[..]),
-            Err(Error::UnmatchedOpenBrace)
-        );
-
-        assert_eq!(
-            strfmt("hello }", &vars[..]),
-            Err(Error::UnmatchedCloseBrace)
+            strfmt("{a} and {unknown} ({", &vars[..]).unwrap(),
+            "b and {unknown} ({"
         );
     }
 }
