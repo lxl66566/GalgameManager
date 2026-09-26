@@ -52,6 +52,33 @@ pub struct GameExitPayload {
     pub session_secs: u64,
 }
 
+/// Consecutive `cgroup.procs` read failures tolerated before the game is
+/// considered exited. Kept platform-independent (test-gated off Linux) so
+/// the liveness logic is unit-testable on any dev machine.
+#[cfg(any(target_os = "linux", test))]
+const MAX_CGROUP_READ_FAILURES: u32 = 3;
+
+/// Fold one `cgroup.procs` read into a liveness decision, tolerating
+/// transient cgroupfs read errors (the file can briefly fail while the
+/// scope is being torn down or the cgroup is migrating). A successful read
+/// is authoritative — an empty PID list means the scope is really dead and
+/// resets the failure streak; a read error only ends the session after
+/// [`MAX_CGROUP_READ_FAILURES`] consecutive failures, otherwise the
+/// previous "alive" state is kept.
+#[cfg(any(target_os = "linux", test))]
+fn fold_cgroup_liveness(read: std::io::Result<Vec<u32>>, failures: &mut u32) -> bool {
+    match read {
+        Ok(pids) => {
+            *failures = 0;
+            !pids.is_empty()
+        },
+        Err(_) => {
+            *failures += 1;
+            *failures < MAX_CGROUP_READ_FAILURES
+        },
+    }
+}
+
 use std::fmt;
 
 impl fmt::Display for StartCtx {
@@ -520,5 +547,40 @@ mod tests {
         .resolved_parts()
         .unwrap_err();
         assert!(matches!(err, Error::InvalidCommand(_)));
+    }
+
+    #[test]
+    fn cgroup_transient_read_errors_keep_alive_until_threshold() {
+        let err = || std::io::Error::new(std::io::ErrorKind::Other, "boom");
+        let mut failures = 0;
+        // Below the threshold the previous "alive" state is kept.
+        assert!(fold_cgroup_liveness(Err(err()), &mut failures));
+        assert!(fold_cgroup_liveness(Err(err()), &mut failures));
+        // Third consecutive failure declares the game exited.
+        assert!(!fold_cgroup_liveness(Err(err()), &mut failures));
+        assert_eq!(failures, MAX_CGROUP_READ_FAILURES);
+    }
+
+    #[test]
+    fn cgroup_empty_pid_list_is_dead_immediately() {
+        let mut failures = 0;
+        // A successful read is authoritative: no PIDs ⇒ scope is gone, even
+        // on the very first poll.
+        assert!(!fold_cgroup_liveness(Ok(vec![]), &mut failures));
+    }
+
+    #[test]
+    fn cgroup_successful_read_resets_failure_streak() {
+        let err = || std::io::Error::new(std::io::ErrorKind::Other, "boom");
+        let mut failures = 0;
+        assert!(fold_cgroup_liveness(Err(err()), &mut failures));
+        assert!(fold_cgroup_liveness(Err(err()), &mut failures));
+        // One good read with live PIDs resets the streak ...
+        assert!(fold_cgroup_liveness(Ok(vec![1234]), &mut failures));
+        assert_eq!(failures, 0);
+        // ... so it takes another full streak to declare exit.
+        assert!(fold_cgroup_liveness(Err(err()), &mut failures));
+        assert!(fold_cgroup_liveness(Err(err()), &mut failures));
+        assert!(!fold_cgroup_liveness(Err(err()), &mut failures));
     }
 }

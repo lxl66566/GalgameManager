@@ -60,6 +60,10 @@ pub enum GameTracker {
     Systemd {
         procs_path: PathBuf,
         unit: String,
+        /// Consecutive `cgroup.procs` read failures; the game is only
+        /// declared exited once this reaches the threshold, so transient
+        /// cgroupfs errors don't end the session early.
+        procs_failures: u32,
     },
     SystemdUnit {
         unit: String,
@@ -79,9 +83,11 @@ impl GameTracker {
     /// Returns `true` if the tracked process tree still has live members.
     pub fn has_active_processes(&mut self) -> bool {
         match self {
-            Self::Systemd { procs_path, .. } => read_procs(procs_path)
-                .map(|pids| !pids.is_empty())
-                .unwrap_or(false),
+            Self::Systemd {
+                procs_path,
+                procs_failures,
+                ..
+            } => super::fold_cgroup_liveness(read_procs(procs_path), procs_failures),
             Self::SystemdUnit {
                 unit,
                 last_check,
@@ -239,7 +245,11 @@ pub async fn launch_game(
         match spawn::spawn_in_scope(&start_ctx, &unit).await {
             Ok(Some(procs_path)) => {
                 info!("Game spawned via systemd scope: {unit}");
-                GameTracker::Systemd { procs_path, unit }
+                GameTracker::Systemd {
+                    procs_path,
+                    unit,
+                    procs_failures: 0,
+                }
             },
             Ok(None) => {
                 info!(
