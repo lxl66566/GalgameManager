@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use chrono::TimeDelta;
-use log::{error, info, trace};
+use log::{error, info, trace, warn};
 use tauri::{AppHandle, Emitter as _};
 use tokio::{sync::oneshot, time};
 use windows::Win32::{
@@ -30,6 +30,22 @@ use crate::{
 /// running. Anything else is the real exit code (0 = clean, non-zero =
 /// abnormal). Hard-coded here to avoid pulling in another windows feature.
 const STILL_ACTIVE: u32 = 259;
+
+/// PID of the process that owns the current foreground window.
+fn foreground_pid() -> Option<u32> {
+    unsafe {
+        // 1. 获取前台窗口句柄
+        let hwnd = GetForegroundWindow();
+        if hwnd.is_invalid() {
+            return None;
+        }
+
+        // 2. 获取窗口对应的 PID
+        let mut pid = 0;
+        GetWindowThreadProcessId(hwnd, Some(&raw mut pid));
+        (pid != 0).then_some(pid)
+    }
+}
 
 pub struct GameJob {
     handle: HANDLE,
@@ -137,20 +153,8 @@ impl GameJob {
     }
 
     pub fn is_focused(&mut self) -> bool {
-        let foreground_pid = unsafe {
-            // 1. 获取前台窗口句柄
-            let hwnd = GetForegroundWindow();
-            if hwnd.is_invalid() {
-                return false;
-            }
-
-            // 2. 获取窗口对应的 PID
-            let mut pid = 0;
-            GetWindowThreadProcessId(hwnd, Some(&raw mut pid));
-            if pid == 0 {
-                return false;
-            }
-            pid
+        let Some(foreground_pid) = foreground_pid() else {
+            return false;
         };
 
         let in_job = unsafe {
@@ -203,7 +207,67 @@ impl Drop for GameJob {
 
 const SAVE_INTERVAL: TimeDelta = TimeDelta::seconds(60);
 
-pub type GameLaunchRes = GameJob;
+/// Tracking strategy for a launched game.
+pub enum GameLaunchRes {
+    /// Preferred path: the launcher is assigned to a Job Object, so the
+    /// whole process tree (incl. wrappers like Locale Emulator) is tracked
+    /// and focus matching works via `IsProcessInJob`.
+    Job(GameJob),
+    /// Degraded path used when `AssignProcessToJobObject` fails (e.g. a
+    /// restrictive job-nesting policy). We poll the direct child's liveness
+    /// instead of aborting the launch: the game itself spawned fine, and
+    /// killing a healthy, already-running game just because tracking is
+    /// degraded is worse than losing precise tracking. Trade-offs (same as
+    /// the Linux `Child` fallback): wrapper-launched games may be reported
+    /// as exited when the launcher exits, and focus matching only works
+    /// when the launcher itself owns the foreground window.
+    Child {
+        child: tokio::process::Child,
+        pid: u32,
+        /// Exit status captured when `try_wait` observed the child had
+        /// exited, for `last_exit_success()` after the fact.
+        last_success: Option<bool>,
+    },
+}
+
+impl GameLaunchRes {
+    fn has_active_processes(&mut self) -> bool {
+        match self {
+            Self::Job(job) => job.has_active_processes(),
+            Self::Child {
+                child,
+                last_success,
+                ..
+            } => match child.try_wait() {
+                Ok(Some(status)) => {
+                    *last_success = Some(status.success());
+                    false
+                },
+                Ok(None) => true,
+                Err(_) => {
+                    *last_success = Some(false);
+                    false
+                },
+            },
+        }
+    }
+
+    fn is_focused(&mut self) -> bool {
+        match self {
+            Self::Job(job) => job.is_focused(),
+            // The fallback path only tracks the launcher PID; see the
+            // `Child` variant docs for the trade-off.
+            Self::Child { pid, .. } => foreground_pid() == Some(*pid),
+        }
+    }
+
+    fn last_exit_success(&self) -> bool {
+        match self {
+            Self::Job(job) => job.last_exit_success(),
+            Self::Child { last_success, .. } => last_success.unwrap_or(true),
+        }
+    }
+}
 
 pub async fn launch_game(
     game_id: u32,
@@ -215,14 +279,24 @@ pub async fn launch_game(
     let child_pid = child.id().ok_or(Error::Launch)?;
 
     // 2. 创建 Job 并绑定
-    let job = {
-        let j = GameJob::new().map_err(|_| Error::Launch)?;
+    let tracker = {
+        let job = GameJob::new().map_err(|_| Error::Launch)?;
         // 关键点：将启动器加入 Job。
         // 之后启动器生成的任何子进程（游戏本体）都会自动继承进入这个 Job。
-        if let Err(e) = j.assign_process(child_pid) {
-            error!("Failed to assign process to job: {e:?}");
+        match job.assign_process(child_pid) {
+            Ok(()) => GameLaunchRes::Job(job),
+            Err(e) => {
+                warn!(
+                    "Failed to assign process {child_pid} to job ({e}); falling back to child \
+                     polling"
+                );
+                GameLaunchRes::Child {
+                    child,
+                    pid: child_pid,
+                    last_success: None,
+                }
+            },
         }
-        j
     };
 
     // 3. 发出事件，告知前端已经启动了
@@ -232,7 +306,7 @@ pub async fn launch_game(
         .send(())
         .map_err(|()| Error::InvalidChannel("game_start_sender"))?;
 
-    Ok(job)
+    Ok(tracker)
 }
 
 pub async fn game_loop(
