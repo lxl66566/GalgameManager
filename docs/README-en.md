@@ -20,8 +20,18 @@ A cross-platform game launcher based on Tauri + SolidJS, designed for managing, 
 ![Game Edit](../assets/edit.png)
 ![Save Management](../assets/sync.png)
 ![Plugin Management](../assets/plugin.png)
+![Time Statistics](../assets/time.png)
 
 ## Changelog
+
+### v1.3.3
+
+- New feature: Audio SPEEDUP now supports adjusting the speed multiplier in-game.
+- Critical fix: False configuration sync conflicts caused by delayed disk writes.
+- Fixed: Audio SPEEDUP MMDevAPI backend causing no sound, freezing, etc. in some games[^AudioSpeedHack130].
+- Some UI fixes and improvements, plus safeguards against unconventional operations.
+
+[^AudioSpeedHack130]: <https://github.com/lxl66566/AudioSpeedHack/releases/tag/v1.3.0>
 
 ### v1.3.2
 

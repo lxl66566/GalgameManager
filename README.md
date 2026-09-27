@@ -20,8 +20,18 @@
 ![游戏编辑](./assets/edit.png)
 ![存档管理](./assets/sync.png)
 ![插件管理](./assets/plugin.png)
+![时长统计](./assets/time.png)
 
 ## Changelog
+
+### v1.3.3
+
+- 新功能：语音加速支持游戏中调整加速倍率
+- 关键修复：延迟落盘导致的配置同步假冲突
+- 修复：语音加速 MMDevAPI 后端在某些游戏上无声、卡死等[^AudioSpeedHack130]
+- 部分 UI 修复与优化、非常规操作防护
+
+[^AudioSpeedHack130]: <https://github.com/lxl66566/AudioSpeedHack/releases/tag/v1.3.0>
 
 ### v1.3.2
 

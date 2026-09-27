@@ -78,7 +78,7 @@ export const GAME_WRAPPER_PLUGIN: PluginDefinition<'gameWrapper'> = {
     id: 'gameWrapper',
     links: [],
     nameKey: 'plugin.gameWrapper.name',
-    version: '1.3.2'
+    version: '1.3.3'
   },
   MetaEditor: AutoAddMetaEditor,
   metaKey: 'gameWrapper'
