@@ -1,4 +1,5 @@
 #![allow(clippy::unreadable_literal)] // actuallly its readable ^o^
+#![allow(clippy::needless_borrows_for_generic_args)] // https://github.com/rust-lang/rust-clippy/issues/17717
 
 pub mod archive;
 mod bindings;
@@ -310,7 +311,7 @@ fn sync_and_exit(app: &AppHandle) {
         Ok(UploadConfigStatus::Uploaded) => {
             info!("[exit] upload config success");
             notify(
-                &app,
+                app,
                 "\u{2705} Synced",
                 "Configuration uploaded successfully",
             );
@@ -321,7 +322,7 @@ fn sync_and_exit(app: &AppHandle) {
         Ok(UploadConfigStatus::LocalClean) => {
             warn!("[exit] local clean, skip upload");
             notify(
-                &app,
+                app,
                 "\u{23ed} Sync Skipped",
                 "Local configuration is up to date",
             );
@@ -332,7 +333,7 @@ fn sync_and_exit(app: &AppHandle) {
         Ok(UploadConfigStatus::Conflict) => {
             warn!("[exit] conflict detected");
             notify(
-                &app,
+                app,
                 "\u{26a0}\u{fe0f} Sync Conflict",
                 "Remote configuration is newer \u{2014} please pull first",
             );
@@ -343,7 +344,7 @@ fn sync_and_exit(app: &AppHandle) {
         Err(e) => {
             error!("[exit] failed to upload config: {e}");
             notify(
-                &app,
+                app,
                 "\u{274c} Sync Failed",
                 &format!("Failed to upload configuration: {e}"),
             );

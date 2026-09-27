@@ -6,4 +6,4 @@ max-fn-params-bools            = 2
 msrv                           = "1.85"
 too-many-arguments-threshold   = 8
 too-many-lines-threshold       = 260
-warn-on-all-wildcard-imports   = true
+warn-on-all-wildcard-imports   = false  # https://github.com/rust-lang/rust-clippy/issues/17799
