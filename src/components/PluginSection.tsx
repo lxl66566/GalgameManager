@@ -146,7 +146,9 @@ export default function PluginSection(props: PluginSectionProps) {
   }
 
   return (
-    <div class="flex w-full flex-col gap-2" ref={sectionRef}>
+    // shrink-0: the modal form column is a flex scroll container; without it
+    // this section gets compressed whenever the form overflows, re-clipping the plugin list.
+    <div class="flex w-full shrink-0 flex-col gap-2" ref={sectionRef}>
       <div class="flex items-center justify-between">
         <span class="text-sm font-bold text-gray-700 dark:text-gray-300">
           {t('plugin.pluginSection')}
@@ -208,7 +210,7 @@ export default function PluginSection(props: PluginSectionProps) {
                 isPluginEnabled(config.pluginMetadatas, instance.pluginId)
 
               return (
-                <div class="overflow-hidden rounded border border-gray-200 bg-white transition-colors dark:border-transparent dark:bg-gray-700/50">
+                <div class="shrink-0 overflow-hidden rounded border border-gray-200 bg-white transition-colors dark:border-transparent dark:bg-gray-700/50">
                   <div class="flex items-center gap-2 px-2 py-1.5">
                     <button
                       class="text-gray-400 transition-colors hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:text-gray-300"
