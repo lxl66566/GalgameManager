@@ -12,7 +12,7 @@ mod image;
 use std::{fs, path::PathBuf, sync::LazyLock as Lazy, time::Duration};
 
 use dead_url::is_url_dead;
-use image::{detect_mime, download_single_flight, hash_image, is_valid_hash};
+use image::{cached_hash_for_url, detect_mime, download_single_flight, hash_image, is_valid_hash};
 use log::debug;
 use reqwest::{Client, header};
 
@@ -87,7 +87,14 @@ pub async fn prepare_image(path_or_url: &str, sha256: Option<&str>) -> Result<St
         return Ok(h);
     }
 
-    // 3. Remote URL: check dead-URL cache first, then single-flight dedup.
+    // 3. Remote URL: session cache, dead-URL cache, then single-flight dedup.
+    // The session index serves URLs fetched without a known hash (transient
+    // callers like the Steam import picker) — the disk fast-path in step 1
+    // already covers everything with a persisted `imageSha256`.
+    if let Some(h) = cached_hash_for_url(path_or_url) {
+        debug!("image session cache hit: {path_or_url}");
+        return Ok(h);
+    }
     if is_url_dead(path_or_url) {
         return Err(Error::DeadUrl(path_or_url.to_string()));
     }

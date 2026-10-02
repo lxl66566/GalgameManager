@@ -70,6 +70,26 @@ pub(super) fn detect_mime(bytes: &[u8]) -> &'static str {
 /// `onHashUpdate`, so subsequent calls hit the disk fast-path directly.
 static INFLIGHT: Lazy<DashMap<String, broadcast::Sender<Result<String>>>> = Lazy::new(DashMap::new);
 
+/// URL → content-hash index for images fetched without a known hash.
+/// Session-memory only: persisted cache hits go through the `imageSha256`
+/// fast-path once a game is actually added, so nothing needs to survive a
+/// restart. Without this index, transient callers (the Steam import picker
+/// shows entries that are never persisted with a hash) would re-download
+/// every cover on each open.
+static URL_HASH_INDEX: Lazy<DashMap<String, String>> = Lazy::new(DashMap::new);
+
+/// Look up a URL downloaded earlier in this session. The disk check guards
+/// against the cache file having been removed after the insert.
+pub(super) fn cached_hash_for_url(url: &str) -> Option<String> {
+    let hash = (*URL_HASH_INDEX.get(url)?).clone();
+    if IMAGE_CACHE_DIR.join(&hash).exists() {
+        Some(hash)
+    } else {
+        URL_HASH_INDEX.remove(url);
+        None
+    }
+}
+
 /// Single-flight wrapper around the actual HTTP download.
 ///
 /// - If no other task is downloading this key, the current task becomes the **leader**: it performs
@@ -145,6 +165,7 @@ async fn download_and_cache(url: &str, expected: Option<&str>) -> Result<String>
                 );
             }
             fs::write(IMAGE_CACHE_DIR.join(&actual), &bytes)?;
+            URL_HASH_INDEX.insert(url.to_string(), actual.clone());
             Ok(actual)
         },
         Err(e) => {
