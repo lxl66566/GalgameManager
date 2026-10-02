@@ -49,11 +49,7 @@ impl SquashfsArchiver {
         #[cfg(not(unix))]
         {
             Ok(NodeHeader {
-                permissions: if metadata.is_dir() {
-                    0o755
-                } else {
-                    0o644
-                },
+                permissions: if metadata.is_dir() { 0o755 } else { 0o644 },
                 uid: 1000,
                 gid: 1000,
                 mtime,
@@ -185,11 +181,8 @@ impl super::Archive for SquashfsArchiver {
             coverage.cover(root, &rel);
             // join("") would append a trailing separator, which Windows
             // rejects on file creation
-            let dest_path = if rel.as_os_str().is_empty() {
-                root.to_path_buf()
-            } else {
-                root.join(&rel)
-            };
+            let dest_path =
+                if rel.as_os_str().is_empty() { root.to_path_buf() } else { root.join(&rel) };
 
             // Handle node types
             match &node.inner {

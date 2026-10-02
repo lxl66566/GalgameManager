@@ -39,11 +39,7 @@ fn which(bin: &str) -> Option<PathBuf> {
     std::env::split_paths(&paths).find_map(|dir| {
         let full = dir.join(bin);
         let is_exec = std::fs::metadata(&full).is_ok_and(|m| !m.is_dir());
-        if is_exec {
-            Some(full)
-        } else {
-            None
-        }
+        if is_exec { Some(full) } else { None }
     })
 }
 

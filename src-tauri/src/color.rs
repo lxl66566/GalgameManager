@@ -55,11 +55,7 @@ pub async fn prepare_image(
     need_color: bool,
 ) -> Result<(String, Option<String>)> {
     let resolved = crate::http::prepare_image(path_or_url, sha256).await?;
-    let color = if need_color {
-        compute_color(&resolved).await
-    } else {
-        None
-    };
+    let color = if need_color { compute_color(&resolved).await } else { None };
     Ok((resolved, color))
 }
 

@@ -666,11 +666,7 @@ mod wine_regedit {
             if delete {
                 let _ = write!(s, "[-HKEY_CURRENT_USER\\{}]\r\n\r\n", item.path);
             } else {
-                let dll = if item.stub == System::X64 {
-                    stub_x64
-                } else {
-                    stub_x86
-                };
+                let dll = if item.stub == System::X64 { stub_x64 } else { stub_x86 };
                 let _ = write!(
                     s,
                     "[HKEY_CURRENT_USER\\{}]\r\n@=\"{dll}\"\r\n\"ThreadingModel\"=\"{}\"\r\n\r\n",

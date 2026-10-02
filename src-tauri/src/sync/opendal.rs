@@ -132,11 +132,7 @@ impl super::MyOperation for Operator {
         let remote_path = format!("{game_id}/{archive_filename}");
         let uploader = self
             .writer_with(&remote_path)
-            .chunk(if self.chunkable() {
-                WRITER_NORMAL_CHUNK_SIZE
-            } else {
-                WRITER_MAX_BUFFER_SIZE
-            })
+            .chunk(if self.chunkable() { WRITER_NORMAL_CHUNK_SIZE } else { WRITER_MAX_BUFFER_SIZE })
             .await?;
         let mut writer = uploader.into_futures_async_write();
         let file = fs::File::open(&archive_path).await?;
@@ -214,11 +210,7 @@ impl super::MyOperation for Operator {
     async fn upload_config_inner(&self, filename: &str) -> Result<()> {
         let mut uploader = self
             .writer_with(filename)
-            .chunk(if self.chunkable() {
-                WRITER_NORMAL_CHUNK_SIZE
-            } else {
-                WRITER_MAX_BUFFER_SIZE
-            })
+            .chunk(if self.chunkable() { WRITER_NORMAL_CHUNK_SIZE } else { WRITER_MAX_BUFFER_SIZE })
             .concurrent(8)
             .await?;
         let config_str = toml::to_string(&*CONFIG.lock()).unwrap();

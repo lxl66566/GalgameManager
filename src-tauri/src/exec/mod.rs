@@ -326,11 +326,8 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
         if let Some(ctx) = launch_override {
             Some(ctx)
         } else {
-            let current_dir = if launch.current_dir.is_empty() {
-                None
-            } else {
-                Some(launch.current_dir.clone())
-            };
+            let current_dir =
+                if launch.current_dir.is_empty() { None } else { Some(launch.current_dir.clone()) };
             let exe = Path::new(&launch.exe_path);
             if exe.is_relative() && current_dir.is_none() {
                 warn!(
@@ -477,11 +474,7 @@ fn update_game_time(
     // Periodic ticks are throttled by the writer (one disk write per
     // MIN_INTERVAL); game exit is forced so the final session chunk is
     // never lost to the throttle window.
-    if force {
-        lock.force_save_and_emit(app)
-    } else {
-        lock.save_and_emit(app)
-    }
+    if force { lock.force_save_and_emit(app) } else { lock.save_and_emit(app) }
 }
 
 #[cfg(test)]
@@ -506,11 +499,7 @@ mod tests {
         // Use forward-slash absolute paths so shlex doesn't strip backslashes
         // (shlex treats `\` as an escape). On Windows, `C:/...` is still
         // considered absolute by Path::is_absolute.
-        let abs = if cfg!(windows) {
-            "C:/usr/bin/foo.exe"
-        } else {
-            "/usr/bin/foo"
-        };
+        let abs = if cfg!(windows) { "C:/usr/bin/foo.exe" } else { "/usr/bin/foo" };
         let ctx = StartCtx {
             cmd: format!("{abs} --bar baz"),
             current_dir: None,
@@ -529,16 +518,8 @@ mod tests {
 
     #[test]
     fn explicit_current_dir_overrides_parent_inference() {
-        let abs = if cfg!(windows) {
-            "C:/usr/bin/foo.exe"
-        } else {
-            "/usr/bin/foo"
-        };
-        let cwd = if cfg!(windows) {
-            "C:/cwd"
-        } else {
-            "/cwd"
-        };
+        let abs = if cfg!(windows) { "C:/usr/bin/foo.exe" } else { "/usr/bin/foo" };
+        let cwd = if cfg!(windows) { "C:/cwd" } else { "/cwd" };
         let ctx = StartCtx {
             cmd: abs.to_string(),
             current_dir: Some(cwd.to_string()),
@@ -555,11 +536,7 @@ mod tests {
         // Bare name (no path separator) must NOT be joined with current_dir —
         // otherwise `wine` next to a game exe would be mis-resolved to
         // `<game_dir>/wine`. Regression test for that historical bug.
-        let cwd = if cfg!(windows) {
-            "C:/games/foo"
-        } else {
-            "/games/foo"
-        };
+        let cwd = if cfg!(windows) { "C:/games/foo" } else { "/games/foo" };
         let ctx = StartCtx {
             cmd: "wine notepad".to_string(),
             current_dir: Some(cwd.to_string()),
@@ -575,11 +552,7 @@ mod tests {
     fn relative_program_with_cd_is_joined() {
         // A relative path that contains a separator (./foo or subdir/foo)
         // must be resolved against current_dir to a fully-qualified path.
-        let cwd = if cfg!(windows) {
-            "C:/parent"
-        } else {
-            "/parent"
-        };
+        let cwd = if cfg!(windows) { "C:/parent" } else { "/parent" };
         let ctx = StartCtx {
             cmd: "./helper --x".to_string(),
             current_dir: Some(cwd.to_string()),

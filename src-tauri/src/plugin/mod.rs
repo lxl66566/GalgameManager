@@ -159,11 +159,7 @@ pub(crate) fn resolve_cmd_config(
     let resolved_cmd = varmap.resolve_var(cmd)?;
 
     let resolved_current_dir = if current_dir.is_empty() {
-        if exe_dir.is_empty() {
-            None
-        } else {
-            Some(exe_dir.to_string())
-        }
+        if exe_dir.is_empty() { None } else { Some(exe_dir.to_string()) }
     } else {
         Some(varmap.resolve_var(current_dir)?)
     };
