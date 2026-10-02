@@ -11,7 +11,10 @@ import { cn } from '~/lib/utils'
 interface HoverExpandButtonProps {
   /** Extra class for the root <button>, merged via cn(). */
   class?: string
+  /** Icon component rendered at the leading edge. */
   icon: Component<{ class?: string }>
+  /** Extra class for the icon element, merged via cn() (e.g. size overrides). */
+  iconClass?: string
   label: string
   onClick: () => void
 }
@@ -29,7 +32,7 @@ export default function HoverExpandButton(props: HoverExpandButtonProps) {
       title={props.label}
       type="button"
     >
-      <Dynamic class="h-4 w-4 shrink-0" component={props.icon} />
+      <Dynamic class={cn('h-4 w-4 shrink-0', props.iconClass)} component={props.icon} />
       {/* 利用 grid-template-columns 实现平滑的宽度展开动画 */}
       <div class="grid grid-cols-[0fr] transition-[grid-template-columns] duration-300 ease-in-out group-hover:grid-cols-[1fr]">
         <span class="overflow-hidden pl-0 text-xs font-medium whitespace-nowrap transition-all duration-300 group-hover:pl-1.5">

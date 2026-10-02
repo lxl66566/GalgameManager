@@ -238,7 +238,9 @@ export default function GameEditModal(props: GameEditModalProps) {
   // Prefill the form from a picked Steam library entry. Paths arrive with
   // forward slashes from the backend and are variable-templated here so the
   // config stays portable across devices; the launch path is the `steam://`
-  // schema URL resolved by the launch flow.
+  // schema URL resolved by the launch flow. Only these identity fields are
+  // replaced — playtime, last-played, save paths, plugins etc. are left
+  // untouched, which is what "import into an existing game" wants.
   const handleSteamPick = (entry: SteamGameEntry) => {
     setSteamPickerOpen(false)
     setLocalGame('name', entry.name)
@@ -267,16 +269,14 @@ export default function GameEditModal(props: GameEditModalProps) {
             {(isEditMode() ? t('game.edit.editTitle') : t('game.edit.addTitle')) +
               ` (ID = ${localGame.id})`}
           </h1>
-          {/* Steam 导入只服务于新增；编辑已有游戏的 steam 归属应保持稳定 */}
-          <Show when={!isEditMode()}>
-            <HoverExpandButton
-              icon={FaBrandsSteam}
-              label={t('game.edit.importFromSteam')}
-              onClick={() => {
-                setSteamPickerOpen(true)
-              }}
-            />
-          </Show>
+          <HoverExpandButton
+            icon={FaBrandsSteam}
+            iconClass="h-5 w-5 ggm-breathing text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            label={t('game.edit.importFromSteam')}
+            onClick={() => {
+              setSteamPickerOpen(true)
+            }}
+          />
         </div>
 
         {/* Body */}
