@@ -12,6 +12,7 @@
 //! kept platform-neutral but non-Windows stubs return
 //! [`SteamError::UnsupportedPlatform`].
 
+#[cfg(windows)]
 mod windows;
 
 use std::path::PathBuf;
