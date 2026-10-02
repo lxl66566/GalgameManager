@@ -12,6 +12,7 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { errToStr } from '@utils/log'
 import { refreshBackendOwnedFields } from '@utils/patch'
 import { fuckBackslash, getParentPath } from '@utils/path'
+import { isWindows } from '@utils/platform'
 import { getDeviceVarMap, replaceWithVarNames } from '@utils/resolveVar'
 import { dateToInput, durationToForm, inputToDate } from '@utils/time'
 import { fetchVnCover } from '@utils/vndb'
@@ -31,6 +32,7 @@ import { Button } from '~/components/ui/controls'
 import { Input } from '~/components/ui/Input'
 import { InputWithSuffix } from '~/components/ui/InputWithSuffix'
 import { useI18n } from '~/i18n'
+import { cn } from '~/lib/utils'
 import { PLUGIN_REGISTRY } from '~/pages/Plugin/plugins'
 import { buildNewInstance } from '~/pages/Plugin/plugins/types'
 import { useConfig } from '~/store'
@@ -270,12 +272,17 @@ export default function GameEditModal(props: GameEditModalProps) {
               ` (ID = ${localGame.id})`}
           </h1>
           <HoverExpandButton
+            disabled={!isWindows}
             icon={FaBrandsSteam}
-            iconClass="h-5 w-5 ggm-breathing text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            iconClass={cn(
+              'h-5 w-5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
+              isWindows && 'ggm-breathing'
+            )}
             label={t('game.edit.importFromSteam')}
             onClick={() => {
               setSteamPickerOpen(true)
             }}
+            title={isWindows ? undefined : t('game.edit.importFromSteamUnsupported')}
           />
         </div>
 

@@ -143,7 +143,7 @@ export default function SteamPickModal(props: SteamPickModalProps) {
                       type="button"
                     >
                       {/* Cover thumbnail (2:3 portrait, matches Steam CDN) */}
-                      <div class="h-16 w-11 flex-shrink-0 overflow-hidden rounded border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-900">
+                      <div class="h-18 w-12 flex-shrink-0 overflow-hidden rounded border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-900">
                         <CachedImage
                           alt={entry.name}
                           class="h-full w-full object-cover"

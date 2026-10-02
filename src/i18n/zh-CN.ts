@@ -26,6 +26,8 @@ export const dict: DeepPartial<RawDictionary> = {
       imageUrl: '封面图片',
       imageUrlPlaceholder: 'https://... 或 C:/...',
       importFromSteam: '从 Steam 导入',
+      importFromSteamUnsupported:
+        '当前系统不支持从 Steam 导入游戏，若需要该功能请提 issue！',
       lastPlayedTime: '最后游玩时间',
       savePath: '存档路径',
       searchFailed: '搜索失败',

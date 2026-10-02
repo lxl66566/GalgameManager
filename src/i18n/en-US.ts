@@ -20,6 +20,8 @@ export const dict = {
       imageUrl: 'Image Url',
       imageUrlPlaceholder: 'https://... or C:/...',
       importFromSteam: 'Import from Steam',
+      importFromSteamUnsupported:
+        'Importing from Steam is not supported on this platform yet. If you need it, please open an issue!',
       lastPlayedTime: 'Last Played Time',
       savePath: 'Save Path',
       searchFailed: 'Search Failed',
