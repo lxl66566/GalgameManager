@@ -21,6 +21,9 @@ export const dict = {
       goToStats: 'Edit daily playtime in Statistics →',
       imageUrl: 'Image Url',
       imageUrlPlaceholder: 'https://... or C:/...',
+      importFromSteam: 'Import from Steam',
+      importFromSteamUnsupported:
+        'Importing from Steam is not supported on this platform yet. If you need it, please open an issue!',
       lastPlayedTime: 'Last Played Time',
       savePath: 'Save Path',
       searchFailed: 'Search Failed',
@@ -41,6 +44,14 @@ export const dict = {
       lastPlayed: 'Last Played',
       name: 'Name',
       playTime: 'Play Time'
+    },
+    steam: {
+      alreadyAdded: 'Added',
+      gameNum: 'Games',
+      loadFailed: 'Failed to load the Steam library',
+      noGames: 'No installed Steam games found',
+      notRunning: 'Steam is not running. Please start the Steam client and try again.',
+      self: 'Select a Steam Game'
     },
     sync: {
       archiveNum: 'Archives',

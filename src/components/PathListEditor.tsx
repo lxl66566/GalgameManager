@@ -1,5 +1,6 @@
 import { FieldHint } from '@components/ui/FieldHint'
 import { GameEditLabel } from '@components/ui/GameEditLabel'
+import HoverExpandButton from '@components/ui/HoverExpandButton'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { nextEditingIndex } from '@utils/editingIndex'
@@ -9,23 +10,9 @@ import { resolveVar } from '@utils/resolveVar'
 import { useVarMap } from '@utils/useVarMap'
 import { useVarWarning } from '@utils/useVarWarning'
 import { FiFilePlus, FiFolderPlus } from 'solid-icons/fi'
-import {
-  createMemo,
-  createResource,
-  createSignal,
-  For,
-  Show,
-  type Component
-} from 'solid-js'
-import { Dynamic } from 'solid-js/web'
+import { createMemo, createResource, createSignal, For, Show } from 'solid-js'
 
 import { useI18n } from '~/i18n'
-
-interface ActionButtonProps {
-  icon: Component<{ class?: string }>
-  label: string
-  onClick: () => void
-}
 
 interface PathListEditorProps {
   /**
@@ -155,12 +142,12 @@ export default function PathListEditor(props: PathListEditorProps) {
       <div class="flex items-center justify-between">
         <GameEditLabel children={props.label} class={props.labelClass} />
         <div class="flex gap-1">
-          <ActionButton
+          <HoverExpandButton
             icon={FiFilePlus}
             label={t('ui.addFile')}
             onClick={() => handleAddPath(false)}
           />
-          <ActionButton
+          <HoverExpandButton
             icon={FiFolderPlus}
             label={t('ui.addFolder')}
             onClick={() => handleAddPath(true)}
@@ -261,27 +248,5 @@ export default function PathListEditor(props: PathListEditorProps) {
         </div>
       </Show>
     </div>
-  )
-}
-
-// 抽离的带展开动画的按钮组件
-function ActionButton(props: ActionButtonProps) {
-  return (
-    <button
-      class="group flex cursor-pointer items-center rounded p-1.5 text-gray-400 transition-all hover:bg-gray-200/50 hover:text-gray-700 dark:hover:bg-gray-700/50 dark:hover:text-gray-200"
-      onClick={() => {
-        props.onClick()
-      }}
-      title={props.label}
-      type="button"
-    >
-      <Dynamic class="h-4 w-4 shrink-0" component={props.icon} />
-      {/* 利用 grid-template-columns 实现平滑的宽度展开动画 */}
-      <div class="grid grid-cols-[0fr] transition-[grid-template-columns] duration-300 ease-in-out group-hover:grid-cols-[1fr]">
-        <span class="overflow-hidden pl-0 text-xs font-medium whitespace-nowrap transition-all duration-300 group-hover:pl-1.5">
-          {props.label}
-        </span>
-      </div>
-    </button>
   )
 }

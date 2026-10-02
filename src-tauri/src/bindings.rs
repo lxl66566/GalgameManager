@@ -22,6 +22,7 @@ use crate::{
     exec::{GAME_LOOP_HANDLES, launch_game_with_plugins},
     logging::LogLevel,
     plugin::{SaveUploadDispatcher, Transaction},
+    steam::SteamListResult,
     sync::{MyOperation, UploadConfigStatus, with_sync_game},
     utils::list_dir_all,
 };
@@ -414,21 +415,41 @@ pub fn paths_exist(paths: Vec<String>) -> Result<Vec<bool>> {
 }
 
 /// Open the directory containing the game executable in the system file
-/// manager.
+/// manager. Steam games open their install dir instead (`steam://` URLs
+/// have no parent).
 #[tauri::command]
 pub fn open_game_dir(game_id: u32) -> Result<()> {
     let lock = CONFIG.lock();
     let game = lock.get_game_by_id(game_id)?;
-    let exe_path = game.excutable_path.as_deref().ok_or(Error::Launch)?;
-    let resolved = lock.resolve_var(exe_path)?;
+    let dir: PathBuf = if let Some(steam) = &game.steam {
+        crate::steam::resolve_app_install_dir(steam.appid)
+            .or_else(|| lock.resolve_var(&steam.install_dir).ok().map(PathBuf::from))
+            .ok_or(Error::Launch)?
+    } else {
+        let exe_path = game.excutable_path.as_deref().ok_or(Error::Launch)?;
+        let resolved = lock.resolve_var(exe_path)?;
+        Path::new(&resolved)
+            .parent()
+            .ok_or_else(|| Error::InvalidCommand("no parent dir".into()))?
+            .to_path_buf()
+    };
     drop(lock);
-
-    let dir = Path::new(&resolved)
-        .parent()
-        .ok_or_else(|| Error::InvalidCommand("no parent dir".into()))?;
-    opener::open(dir).map_err(Error::Open)?;
+    opener::open(&dir).map_err(Error::Open)?;
     Ok(())
 }
+
+// region steam
+
+/// Scan the local Steam library for installed games (import candidates).
+/// Only meant for the import dialog — never during normal browsing.
+#[tauri::command(async)]
+pub async fn list_steam_games() -> Result<SteamListResult> {
+    tauri::async_runtime::spawn_blocking(crate::steam::list_installed_games)
+        .await
+        .map_err(|e| Error::JoinError(e.to_string()))?
+}
+
+// endregion
 
 // region daily playtime
 

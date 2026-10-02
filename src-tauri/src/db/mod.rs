@@ -28,6 +28,7 @@ use crate::{
         PluginInstance, PluginMetadatas, deserialize_metadatas_fallback,
         deserialize_plugins_fallback,
     },
+    steam::SteamInfo,
 };
 
 pub static CONFIG_DIR: Lazy<PathBuf> = Lazy::new(|| {
@@ -179,6 +180,12 @@ pub struct Game {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[patch(nullable)]
     pub cover_color: Option<String>,
+    /// Present when this game is launched through Steam (`steam://rungameid/`
+    /// lives in `excutable_path`). Whole-replacement on the patch side —
+    /// written only by the import flow / whole-game edits.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[patch(nullable)]
+    pub steam: Option<SteamInfo>,
     #[serde(
         skip_serializing_if = "Vec::is_empty",
         default,

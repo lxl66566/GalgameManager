@@ -45,6 +45,7 @@ fn sample_config() -> Config {
         last_upload_time: None,
         daily_playtime: HashMap::default(),
         cover_color: None,
+        steam: None,
         plugins: vec![],
     });
     cfg

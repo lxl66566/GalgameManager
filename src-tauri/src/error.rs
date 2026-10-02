@@ -86,6 +86,9 @@ pub enum Error {
 
     #[error("Background task join error: {0}")]
     JoinError(String),
+
+    #[error("{0}")]
+    Steam(#[from] crate::steam::SteamError),
 }
 
 impl Clone for Error {

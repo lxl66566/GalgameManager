@@ -7,7 +7,7 @@ import { myToast } from '@components/ui/myToast'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { errToStr, log } from '@utils/log'
-import { fuckBackslash, getParentPath, isAbsolutePath } from '@utils/path'
+import { fuckBackslash, getParentPath, isAbsolutePath, isUrl } from '@utils/path'
 import {
   getDeviceVarMap,
   replaceWithVarNames,
@@ -263,8 +263,9 @@ const GamePage = (): JSX.Element => {
     closeEditModal()
 
     // Validate that the resolved executable path is absolute
+    // (URL-scheme launch paths like steam:// are exempt)
     const exePath = game.excutablePath
-    if (exePath) {
+    if (exePath && !isUrl(exePath)) {
       void (async () => {
         try {
           const resolved = await resolveVarForDevice(exePath, config.devices)

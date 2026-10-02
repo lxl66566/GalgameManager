@@ -27,6 +27,9 @@ export const dict: DeepPartial<RawDictionary> = {
       goToStats: '去编辑每日时长 →',
       imageUrl: '封面图片',
       imageUrlPlaceholder: 'https://... 或 C:/...',
+      importFromSteam: '从 Steam 导入',
+      importFromSteamUnsupported:
+        '当前系统不支持从 Steam 导入游戏，若需要该功能请提 issue！',
       lastPlayedTime: '最后游玩时间',
       savePath: '存档路径',
       searchFailed: '搜索失败',
@@ -47,6 +50,14 @@ export const dict: DeepPartial<RawDictionary> = {
       lastPlayed: '最近',
       name: '名称',
       playTime: '时长'
+    },
+    steam: {
+      alreadyAdded: '已添加',
+      gameNum: '款游戏',
+      loadFailed: '加载 Steam 游戏库失败',
+      noGames: '未找到已安装的 Steam 游戏',
+      notRunning: 'Steam 未运行，请先启动 Steam 客户端后重试。',
+      self: '选择 Steam 游戏'
     },
     sync: {
       archiveNum: '个存档',

@@ -1,19 +1,24 @@
 import { type Game } from '@bindings/Game'
+import { type SteamGameEntry } from '@bindings/SteamGameEntry'
 import PathListEditor from '@components/PathListEditor'
 import PluginSection from '@components/PluginSection'
 import CachedImage from '@components/ui/CachedImage'
 import { FieldHint } from '@components/ui/FieldHint'
 import { FormField, FormPathInput } from '@components/ui/form'
+import FullScreenMask from '@components/ui/FullScreenMask'
 import { MODAL_LABEL } from '@components/ui/GameEditLabel'
+import HoverExpandButton from '@components/ui/HoverExpandButton'
 import { myToast } from '@components/ui/myToast'
 import { useNavigate } from '@solidjs/router'
 import { open } from '@tauri-apps/plugin-dialog'
 import { errToStr } from '@utils/log'
 import { refreshBackendOwnedFields } from '@utils/patch'
 import { fuckBackslash, getParentPath } from '@utils/path'
+import { isWindows } from '@utils/platform'
 import { getDeviceVarMap, replaceWithVarNames } from '@utils/resolveVar'
 import { dateToInput, durationToForm, inputToDate } from '@utils/time'
 import { fetchVnCover } from '@utils/vndb'
+import { FaBrandsSteam } from 'solid-icons/fa'
 import { FiRefreshCw, FiSearch } from 'solid-icons/fi'
 import {
   createEffect,
@@ -29,9 +34,12 @@ import { Button } from '~/components/ui/controls'
 import { Input } from '~/components/ui/Input'
 import { InputWithSuffix } from '~/components/ui/InputWithSuffix'
 import { useI18n } from '~/i18n'
+import { cn } from '~/lib/utils'
 import { PLUGIN_REGISTRY } from '~/pages/Plugin/plugins'
 import { buildNewInstance } from '~/pages/Plugin/plugins/types'
 import { useConfig } from '~/store'
+
+import SteamPickModal from './SteamPickModal'
 
 // ─── Shared style constants for the modal's form fields ───────────────────────
 
@@ -61,6 +69,7 @@ const DEFAULT_GAME: Game = {
   name: '',
   plugins: [],
   savePaths: [],
+  steam: null,
   useTime: [0, 0]
 }
 
@@ -102,6 +111,9 @@ export default function GameEditModal(props: GameEditModalProps) {
   // VNDB 搜索相关状态与逻辑
   const [isSearching, setIsSearching] = createSignal(false)
   const [searchId, setSearchId] = createSignal(0)
+
+  // Steam 导入弹窗开关
+  const [steamPickerOpen, setSteamPickerOpen] = createSignal(false)
 
   // eslint-disable-next-line solid/reactivity -- used once for initial signal value
   const [playTime, setPlayTime] = createSignal(durationToForm(localGame.useTime))
@@ -239,6 +251,29 @@ export default function GameEditModal(props: GameEditModalProps) {
     }
   }
 
+  // Prefill the form from a picked Steam library entry. Paths arrive with
+  // forward slashes from the backend and are variable-templated here so the
+  // config stays portable across devices; the launch path is the `steam://`
+  // schema URL resolved by the launch flow. Only these identity fields are
+  // replaced — playtime, last-played, save paths, plugins etc. are left
+  // untouched, which is what "import into an existing game" wants.
+  const handleSteamPick = (entry: SteamGameEntry) => {
+    setSteamPickerOpen(false)
+    setLocalGame('name', entry.name)
+    setLocalGame('excutablePath', `steam://rungameid/${entry.appid}`)
+    setLocalGame('steam', {
+      appid: entry.appid,
+      exePath: entry.exePath ? bulkPathTransform(entry.exePath) : null,
+      installDir: bulkPathTransform(entry.installDir)
+    })
+    setTemporaryImageUrl(entry.coverUrl)
+    setLocalGame('imageUrl', entry.coverUrl)
+    setLocalGame('imageSha256', null)
+    // The Steam CDN cover differs from any previous image — reset the accent
+    // color so it gets re-extracted for the new art.
+    setLocalGame('coverColor', null)
+  }
+
   // ─── Render ─────
 
   return (
@@ -250,6 +285,19 @@ export default function GameEditModal(props: GameEditModalProps) {
             {(isEditMode() ? t('game.edit.editTitle') : t('game.edit.addTitle')) +
               ` (ID = ${localGame.id})`}
           </h1>
+          <HoverExpandButton
+            disabled={!isWindows}
+            icon={FaBrandsSteam}
+            iconClass={cn(
+              'h-5 w-5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
+              isWindows && 'ggm-breathing'
+            )}
+            label={t('game.edit.importFromSteam')}
+            onClick={() => {
+              setSteamPickerOpen(true)
+            }}
+            title={isWindows ? undefined : t('game.edit.importFromSteamUnsupported')}
+          />
         </div>
 
         {/* Body */}
@@ -353,6 +401,12 @@ export default function GameEditModal(props: GameEditModalProps) {
                 onBulkInput={bulkPathTransform}
                 onCommit={v => {
                   setLocalGame('excutablePath', v || null)
+                  // Editing the launch path away from the `steam://` schema
+                  // invalidates the Steam metadata (a plain exe launch
+                  // bypasses Steam).
+                  if (localGame.steam && !v.startsWith('steam://')) {
+                    setLocalGame('steam', null)
+                  }
                 }}
                 placeholder={t('game.edit.exePathPlaceholder')}
                 value={localGame.excutablePath ?? ''}
@@ -490,6 +544,16 @@ export default function GameEditModal(props: GameEditModalProps) {
           </div>
         </div>
       </div>
+
+      {/* Steam import picker — nested mask stacks above this modal */}
+      <Show when={steamPickerOpen()}>
+        <FullScreenMask onClose={() => setSteamPickerOpen(false)}>
+          <SteamPickModal
+            onClose={() => setSteamPickerOpen(false)}
+            onPick={handleSteamPick}
+          />
+        </FullScreenMask>
+      </Show>
     </div>
   )
 }

@@ -32,7 +32,24 @@ pub use linux::*;
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
-pub use windows::{game_loop, launch_game};
+pub use windows::{GameLaunchRes, game_loop, launch_game, launch_game_steam};
+
+// Steam launches are Windows-only for now (native Linux Steam + Proton has
+// a different library/process model); the seam lives here so a future Linux
+// implementation only has to provide this one function.
+#[cfg(not(windows))]
+// Signature must match the windows variant so call sites can `.await` it
+// identically; the stub never awaits.
+#[allow(clippy::unused_async)]
+async fn launch_game_steam(
+    _game_id: u32,
+    _app: AppHandle,
+    _game_start_sender: oneshot::Sender<()>,
+    _appid: u32,
+    _install_dir: PathBuf,
+) -> Result<GameLaunchRes> {
+    Err(Error::Steam(crate::steam::SteamError::UnsupportedPlatform))
+}
 
 pub(crate) static GAME_LOOP_HANDLES: Lazy<DashMap<u32, JoinHandle<Result<()>>>> =
     Lazy::new(DashMap::new);
@@ -218,23 +235,34 @@ pub struct ResolvedParts {
     pub env: Option<HashMap<String, String>>,
 }
 pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()> {
-    let (plugins, metas, exe_path, current_dir) = {
+    let (plugins, metas, exe_path, current_dir, steam_launch) = {
         let lock = CONFIG.lock();
         let game = lock.get_game_by_id(game_id)?;
-        let exe = match &game.excutable_path {
-            Some(p) => Some(lock.resolve_var(p)?),
-            None => None,
+        // Steam games launch through the steam:// protocol; their exe/dir
+        // resolve from the live Steam library (snapshot fallback) so plugins
+        // still get a real deploy target for DLL side-loading.
+        let (exe, current_dir, steam_launch) = if let Some(steam) = &game.steam {
+            let paths = crate::steam::resolve_launch_paths(&lock, &game.name, steam)?;
+            let launch = Some((steam.appid, paths.install_dir));
+            (Some(paths.exe_path), paths.current_dir, launch)
+        } else {
+            let exe = match &game.excutable_path {
+                Some(p) => Some(lock.resolve_var(p)?),
+                None => None,
+            };
+            let current_dir = exe
+                .as_ref()
+                .and_then(|p| Path::new(p).parent())
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_default();
+            (exe, current_dir, None)
         };
-        let current_dir = exe
-            .as_ref()
-            .and_then(|p| Path::new(p).parent())
-            .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_default();
         (
             game.plugins.clone(),
             lock.plugin_metadatas.clone(),
             exe,
             current_dir,
+            steam_launch,
         )
     };
 
@@ -268,51 +296,59 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
         }
     }
 
-    // 2. get_launch_override hooks
-    let mut launch_override = None;
-    for (handler_key, handler, ctx) in enabled_plugin_contexts(&plugins, &configs, &metas, &launch)
-    {
-        match handler.get_launch_override(&ctx) {
-            Ok(Some(override_ctx)) => {
-                launch_override = Some(override_ctx);
-                break;
-            },
-            Ok(None) => {},
-            Err(e) => {
-                // Same as a before_game_start failure: without the rollback,
-                // everything the earlier hooks registered (extracted DLLs,
-                // user-level SPEEDUP env var, MMDevAPI registry redirect)
-                // would leak permanently.
-                log::error!("Plugin '{handler_key}' get_launch_override failed: {e}");
-                launch.transaction.rollback();
-                return Err(e);
-            },
+    // 2. get_launch_override hooks — skipped for Steam games: override plugins (GameWrapper /
+    //    LocaleEmulator / Wine) replace the command line with a direct exe launch, which trips
+    //    Steam's ticket/DRM validation. The before/after hooks above still run — speedup-style DLL
+    //    side-loading is parent-agnostic and keeps working.
+    let start_ctx = if steam_launch.is_none() {
+        let mut launch_override = None;
+        for (handler_key, handler, ctx) in
+            enabled_plugin_contexts(&plugins, &configs, &metas, &launch)
+        {
+            match handler.get_launch_override(&ctx) {
+                Ok(Some(override_ctx)) => {
+                    launch_override = Some(override_ctx);
+                    break;
+                },
+                Ok(None) => {},
+                Err(e) => {
+                    // Same as a before_game_start failure: without the rollback,
+                    // everything the earlier hooks registered (extracted DLLs,
+                    // user-level SPEEDUP env var, MMDevAPI registry redirect)
+                    // would leak permanently.
+                    log::error!("Plugin '{handler_key}' get_launch_override failed: {e}");
+                    launch.transaction.rollback();
+                    return Err(e);
+                },
+            }
         }
-    }
 
-    let start_ctx = if let Some(ctx) = launch_override {
-        ctx
-    } else {
-        let current_dir = if launch.current_dir.is_empty() {
-            None
+        if let Some(ctx) = launch_override {
+            Some(ctx)
         } else {
-            Some(launch.current_dir.clone())
-        };
-        let exe = Path::new(&launch.exe_path);
-        if exe.is_relative() && current_dir.is_none() {
-            warn!(
-                "Game executable '{}' is relative without a resolvable parent directory...",
-                launch.exe_path
-            );
+            let current_dir = if launch.current_dir.is_empty() {
+                None
+            } else {
+                Some(launch.current_dir.clone())
+            };
+            let exe = Path::new(&launch.exe_path);
+            if exe.is_relative() && current_dir.is_none() {
+                warn!(
+                    "Game executable '{}' is relative without a resolvable parent directory...",
+                    launch.exe_path
+                );
+            }
+            Some(StartCtx {
+                cmd: match shlex::try_quote(&launch.exe_path) {
+                    Ok(quoted) => quoted.into_owned(),
+                    Err(_) => launch.exe_path.clone(),
+                },
+                current_dir,
+                env: None,
+            })
         }
-        StartCtx {
-            cmd: match shlex::try_quote(&launch.exe_path) {
-                Ok(quoted) => quoted.into_owned(),
-                Err(_) => launch.exe_path.clone(),
-            },
-            current_dir,
-            env: None,
-        }
+    } else {
+        None
     };
 
     let (game_start_tx, game_start_rx) = oneshot::channel();
@@ -358,8 +394,25 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
         rx_res.map_err(|_| Error::InvalidChannel("game_exit_rx"))
     });
 
-    info!("launch_game with StartCtx: {start_ctx}");
-    let res = launch_game(game_id, launch.app.clone(), game_start_tx, start_ctx).await;
+    let res = if let Some((appid, install_dir)) = steam_launch {
+        info!(
+            "launch_game via steam: appid={appid}, install_dir={}",
+            install_dir.display()
+        );
+        launch_game_steam(
+            game_id,
+            launch.app.clone(),
+            game_start_tx,
+            appid,
+            install_dir,
+        )
+        .await
+    } else {
+        // steam path consumes start_ctx above; non-steam always has one
+        let start_ctx = start_ctx.expect("non-steam launch always builds a StartCtx");
+        info!("launch_game with StartCtx: {start_ctx}");
+        launch_game(game_id, launch.app.clone(), game_start_tx, start_ctx).await
+    };
 
     // 4. 如果游戏进程本身启动失败，立即回滚
     let res = match res {

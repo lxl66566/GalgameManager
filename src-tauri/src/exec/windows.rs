@@ -1,7 +1,13 @@
-use std::time::Duration;
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Duration,
+};
 
 use chrono::TimeDelta;
 use log::{error, info, trace, warn};
+use parking_lot::Mutex;
 use tauri::{AppHandle, Emitter as _};
 use tokio::{sync::oneshot, time};
 use windows::Win32::{
@@ -24,6 +30,8 @@ use windows_result::BOOL;
 use crate::{
     db::CONFIG,
     error::{Error, Result},
+    steam::SteamError,
+    utils::win_procs,
 };
 
 /// Exit code returned by `GetExitCodeProcess` for a process that is still
@@ -93,18 +101,8 @@ impl GameJob {
 
     // 将进程加入 Job
     fn assign_process(&self, pid: u32) -> Result<()> {
-        unsafe {
-            // 获取进程句柄，需要 PROCESS_SET_QUOTA | PROCESS_TERMINATE 权限，
-            // 但 AssignProcessToJobObject 主要需要句柄有效。
-            // 这里使用 PROCESS_ALL_ACCESS 或者特定权限
-            let process_handle = OpenProcess(PROCESS_SET_QUOTA | PROCESS_TERMINATE, false, pid)?;
-
-            let res = AssignProcessToJobObject(self.handle, process_handle);
-            // 用完进程句柄记得关闭（Rust 的 Drop 不会自动关 Raw Handle）
-            let _ = CloseHandle(process_handle);
-
-            res?;
-        }
+        // SAFETY: plain kernel call with our own job handle.
+        unsafe { assign_pid_to_job(self.handle, pid)? };
         Ok(())
     }
 
@@ -309,6 +307,175 @@ pub async fn launch_game(
         .map_err(|()| Error::InvalidChannel("game_start_sender"))?;
 
     Ok(tracker)
+}
+
+// ─── Steam launch path ──────────────────────────────────────────────────────
+//
+// `steam://rungameid/{appid}` hands the spawn to steam.exe: the game is NOT
+// our child, so it does not inherit the Job. But AssignProcessToJobObject
+// works on any same-user process — we poll for a process whose exe lives
+// under the install dir and assign it into the regular GameJob. Everything
+// downstream (game_loop: exit detection, focus tracking, time accounting)
+// is reused unchanged.
+
+/// Poll interval for discovering the game process spawned by Steam.
+const STEAM_POLL_SECS: u64 = 1;
+/// How long to wait for the game process to appear after the URL is
+/// triggered. Steam may cloud-sync / update first and launcher chains take
+/// even longer — observed ~2.5s for a plain game; no short timeout is safe.
+const STEAM_LAUNCH_TIMEOUT_SECS: u64 = 120;
+/// After the first process is assigned, keep scanning for sibling processes
+/// (e.g. a launcher that spawned the real game before our first assign) to
+/// pull into the job. Processes spawned *after* their parent joined the job
+/// inherit membership automatically; this only catches pre-assign stragglers.
+const STEAM_SIBLING_WINDOW_SECS: u64 = 30;
+
+pub async fn launch_game_steam(
+    game_id: u32,
+    app: AppHandle,
+    game_start_sender: oneshot::Sender<()>,
+    appid: u32,
+    install_dir: PathBuf,
+) -> Result<GameLaunchRes> {
+    if !win_procs::is_process_running("steam.exe") {
+        return Err(Error::Steam(SteamError::NotRunning));
+    }
+
+    // Job first: it stays empty until the waiter discovers the game process,
+    // and game_loop only starts after the first successful assignment, so
+    // the empty-job "has_active_processes == false" check can never misfire.
+    let job = GameJob::new()?;
+
+    let url = format!("steam://rungameid/{appid}");
+    opener::open(&url).map_err(Error::Open)?;
+    info!("Steam launch triggered: game_id={game_id}, appid={appid}, url={url}");
+
+    let seen: Arc<Mutex<HashSet<u32>>> = Arc::new(Mutex::new(HashSet::new()));
+    let deadline = time::Instant::now() + Duration::from_secs(STEAM_LAUNCH_TIMEOUT_SECS);
+    loop {
+        time::sleep(Duration::from_secs(STEAM_POLL_SECS)).await;
+        if time::Instant::now() >= deadline {
+            return Err(Error::Steam(SteamError::LaunchTimeout(
+                STEAM_LAUNCH_TIMEOUT_SECS,
+            )));
+        }
+
+        let found = snapshot_pids_under(&install_dir).await;
+        let mut assigned_any = false;
+        for pid in found {
+            if !seen.lock().insert(pid) {
+                continue;
+            }
+            match job.assign_process(pid) {
+                Ok(()) => {
+                    info!("Steam game process {pid} assigned to job (appid={appid})");
+                    assigned_any = true;
+                },
+                // Most likely raced with a fast-exiting process (OpenProcess
+                // fails on a dead pid). Not a launch failure — keep waiting
+                // for the next candidate; the whole window expiring is.
+                Err(e) => {
+                    warn!("Failed to assign pid {pid} to job: {e}");
+                    seen.lock().remove(&pid);
+                },
+            }
+        }
+
+        if assigned_any {
+            // The session is live: emit spawn (and run after_game_start
+            // hooks) only now that a process is actually tracked.
+            info!("Steam game spawned: game_id={game_id}, appid={appid}");
+            app.emit(&format!("game://spawn/{game_id}"), ())?;
+            game_start_sender
+                .send(())
+                .map_err(|()| Error::InvalidChannel("game_start_sender"))?;
+            spawn_sibling_scanner(job.handle, install_dir, seen);
+            return Ok(GameLaunchRes::Job(job));
+        }
+    }
+}
+
+/// Off-thread process snapshot: pids whose exe path lies under `dir`.
+async fn snapshot_pids_under(dir: &Path) -> Vec<u32> {
+    let dir = dir.to_path_buf();
+    tauri::async_runtime::spawn_blocking(move || find_pids_under_sync(&dir))
+        .await
+        .unwrap_or_default()
+}
+
+fn find_pids_under_sync(dir: &Path) -> Vec<u32> {
+    win_procs::snapshot_processes()
+        .into_iter()
+        .filter(|p| {
+            win_procs::process_image_path(p.pid)
+                .is_some_and(|exe| win_procs::path_is_under(&exe, dir))
+        })
+        .map(|p| p.pid)
+        .collect()
+}
+
+/// Open + assign one (arbitrary, non-child) process to a job. Does NOT
+/// require a parent/child relationship — `PROCESS_SET_QUOTA` is what
+/// `AssignProcessToJobObject` needs on the handle.
+///
+/// # Safety
+///
+/// `job` must be a live job-object handle for the whole call (the caller
+/// owning the handle must not have closed it).
+unsafe fn assign_pid_to_job(job: HANDLE, pid: u32) -> windows_result::Result<()> {
+    unsafe {
+        let process_handle = OpenProcess(PROCESS_SET_QUOTA | PROCESS_TERMINATE, false, pid)?;
+        let res = AssignProcessToJobObject(job, process_handle);
+        // 用完进程句柄记得关闭（Rust 的 Drop 不会自动关 Raw Handle）
+        let _ = CloseHandle(process_handle);
+        res
+    }
+}
+
+/// Late-arrival catch-up scanner (see [`STEAM_SIBLING_WINDOW_SECS`]).
+///
+/// Holds a raw copy of the job HANDLE: the `GameJob` itself moves into the
+/// game loop, and the copy is only ever passed to AssignProcessToJobObject —
+/// never closed here (the job's own Drop owns the single close). The window
+/// is far shorter than any game session, so racing job teardown is
+/// practically impossible; even then the assign would just fail harmlessly.
+fn spawn_sibling_scanner(job_handle: HANDLE, install_dir: PathBuf, seen: Arc<Mutex<HashSet<u32>>>) {
+    // raw HANDLE is not Send; wrap it (same rationale as `unsafe impl Send
+    // for GameJob` — an opaque kernel handle is safe to move/share).
+    // Exposed as a method so closures capture the whole SendHandle instead
+    // of disjoint-capturing the raw `.0` field (which is not Send).
+    #[derive(Clone, Copy)]
+    struct SendHandle(HANDLE);
+    unsafe impl Send for SendHandle {}
+    impl SendHandle {
+        fn assign(self, pid: u32) -> windows_result::Result<()> {
+            // SAFETY: plain kernel call on a copied handle value.
+            unsafe { assign_pid_to_job(self.0, pid) }
+        }
+    }
+
+    let job_handle = SendHandle(job_handle);
+    std::thread::Builder::new()
+        .name("steam-sibling-scanner".into())
+        .spawn(move || {
+            let deadline =
+                std::time::Instant::now() + Duration::from_secs(STEAM_SIBLING_WINDOW_SECS);
+            while std::time::Instant::now() < deadline {
+                std::thread::sleep(Duration::from_secs(STEAM_POLL_SECS));
+                for pid in find_pids_under_sync(&install_dir) {
+                    if !seen.lock().insert(pid) {
+                        continue;
+                    }
+                    if let Err(e) = job_handle.assign(pid) {
+                        warn!("sibling assign of pid {pid} failed: {e}");
+                    } else {
+                        info!("sibling process {pid} assigned to job");
+                    }
+                }
+            }
+        })
+        .map_err(|e| warn!("failed to spawn sibling scanner thread: {e}"))
+        .ok();
 }
 
 pub async fn game_loop(
