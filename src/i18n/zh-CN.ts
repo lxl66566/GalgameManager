@@ -19,10 +19,12 @@ export const dict: DeepPartial<RawDictionary> = {
       clickToSelectImage: '点击选择图片',
       confirmSave: '保存更改',
       deleteGame: '删除游戏',
+      editInStatsHint: '在此修改游玩时长不会更新每日统计时长。推荐',
       editTitle: '编辑游戏',
       exePath: '启动路径',
       exePathPlaceholder: '选择可执行文件',
       gameName: '游戏名称',
+      goToStats: '去编辑每日时长 →',
       imageUrl: '封面图片',
       imageUrlPlaceholder: 'https://... 或 C:/...',
       lastPlayedTime: '最后游玩时间',
@@ -370,6 +372,9 @@ export const dict: DeepPartial<RawDictionary> = {
   },
   stats: {
     backToCurrent: '回到本期',
+    dateExists: '该日期已有记录',
+    editDailyPlaytime: '编辑该游戏的每日游玩时长',
+    emptyDaily: '暂无每日时长记录，选择下方日期添加。',
     granularity: {
       month: '月',
       week: '周',
@@ -400,7 +405,10 @@ export const dict: DeepPartial<RawDictionary> = {
       }
     },
     prevPeriod: '上一期',
-    self: '统计'
+    removeDate: '删除该日记录',
+    saveAdjustsTotal: '保存后将同步调整总游玩时长',
+    self: '统计',
+    totalLabel: '合计'
   },
   time: {
     daysAgo: '{{n}} 天前',

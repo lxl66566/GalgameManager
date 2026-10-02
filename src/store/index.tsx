@@ -340,6 +340,26 @@ export const useConfig = () => {
         )
         void sendPatch(appendGameOp(g))
       },
+      /** Replace one game's daily playtime map and total use time in one
+       *  patch (the statistics page's daily-playtime editor). `useTime` must
+       *  be precomputed by the caller as a delta against the live value —
+       *  never an absolute sum, since most games' totals predate the
+       *  daily-statistics feature and don't equal sum(dailyPlaytime). */
+      editGamePlaytime: (
+        id: number,
+        dailyPlaytime: Record<string, number>,
+        useTime: [number, number]
+      ) => {
+        setConfig(
+          produce(state => {
+            const game = state.games.find(g => g.id === id)
+            if (!game) return
+            game.dailyPlaytime = dailyPlaytime
+            game.useTime = useTime
+          })
+        )
+        void sendPatch(modifyGameOp(id, { dailyPlaytime, useTime }))
+      },
       getCurrentDevice: async (): Promise<Device | undefined> => {
         const uid = await currentDeviceId()
         return config.devices.find(d => d.uid === uid)

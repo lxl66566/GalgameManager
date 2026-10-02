@@ -2,9 +2,11 @@ import { type Game } from '@bindings/Game'
 import PathListEditor from '@components/PathListEditor'
 import PluginSection from '@components/PluginSection'
 import CachedImage from '@components/ui/CachedImage'
+import { FieldHint } from '@components/ui/FieldHint'
 import { FormField, FormPathInput } from '@components/ui/form'
 import { MODAL_LABEL } from '@components/ui/GameEditLabel'
 import { myToast } from '@components/ui/myToast'
+import { useNavigate } from '@solidjs/router'
 import { open } from '@tauri-apps/plugin-dialog'
 import { errToStr } from '@utils/log'
 import { refreshBackendOwnedFields } from '@utils/patch'
@@ -65,6 +67,7 @@ const DEFAULT_GAME: Game = {
 export default function GameEditModal(props: GameEditModalProps) {
   const { t } = useI18n()
   const { config } = useConfig()
+  const navigate = useNavigate()
 
   const isEditMode = () => props.editMode ?? !!props.gameInfo
 
@@ -121,6 +124,17 @@ export default function GameEditModal(props: GameEditModalProps) {
     const remainingSecs = origTotalSecs % 60
     const totalSecs = h * 3600 + m * 60 + remainingSecs
     setLocalGame('useTime', [totalSecs, origNanos])
+  }
+
+  const hasDailyStats = () =>
+    isEditMode() &&
+    config.settings.launch.dailyStat &&
+    Object.keys(localGame.dailyPlaytime ?? {}).length > 0
+
+  // Editing the total here never touches dailyPlaytime, so recommend to go to edit daily playtime instead.
+  const handleGoToStats = () => {
+    props.cancel()
+    navigate(`/Statistics?editPlaytime=${localGame.id}`)
   }
 
   // 提交图片更改的逻辑
@@ -388,26 +402,40 @@ export default function GameEditModal(props: GameEditModalProps) {
                 label={t('game.edit.useTime')}
                 labelClass={MODAL_LABEL}
               >
-                <div class="flex w-full items-center gap-4">
-                  <InputWithSuffix
-                    min="0"
-                    onInput={e => {
-                      updateDuration(parseInt(e.currentTarget.value) || 0, playTime().m)
-                    }}
-                    suffix={t('unit.hour')}
-                    type="number"
-                    value={playTime().h}
-                  />
-                  <InputWithSuffix
-                    max="59"
-                    min="0"
-                    onInput={e => {
-                      updateDuration(playTime().h, parseInt(e.currentTarget.value) || 0)
-                    }}
-                    suffix={t('unit.minute')}
-                    type="number"
-                    value={playTime().m}
-                  />
+                <div class="flex w-full flex-col gap-1">
+                  <div class="flex w-full items-center gap-4">
+                    <InputWithSuffix
+                      min="0"
+                      onInput={e => {
+                        updateDuration(parseInt(e.currentTarget.value) || 0, playTime().m)
+                      }}
+                      suffix={t('unit.hour')}
+                      type="number"
+                      value={playTime().h}
+                    />
+                    <InputWithSuffix
+                      max="59"
+                      min="0"
+                      onInput={e => {
+                        updateDuration(playTime().h, parseInt(e.currentTarget.value) || 0)
+                      }}
+                      suffix={t('unit.minute')}
+                      type="number"
+                      value={playTime().m}
+                    />
+                  </div>
+                  <Show when={hasDailyStats()}>
+                    <FieldHint class="flex-wrap" variant="tip">
+                      {t('game.edit.editInStatsHint')}
+                      <button
+                        class="cursor-pointer font-medium underline underline-offset-2 hover:text-blue-500 dark:hover:text-blue-400"
+                        onClick={handleGoToStats}
+                        type="button"
+                      >
+                        {t('game.edit.goToStats')}
+                      </button>
+                    </FieldHint>
+                  </Show>
                 </div>
               </FormField>
             </div>

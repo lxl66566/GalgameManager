@@ -13,10 +13,12 @@ export const dict = {
       clickToSelectImage: 'Click to select image',
       confirmSave: 'Save',
       deleteGame: 'Delete Game',
+      editInStatsHint: 'Editing the total here does not update daily statistics.',
       editTitle: 'Edit Game',
       exePath: 'Executable Path',
       exePathPlaceholder: 'Select executable file',
       gameName: 'Game Name',
+      goToStats: 'Edit daily playtime in Statistics →',
       imageUrl: 'Image Url',
       imageUrlPlaceholder: 'https://... or C:/...',
       lastPlayedTime: 'Last Played Time',
@@ -377,6 +379,9 @@ export const dict = {
   },
   stats: {
     backToCurrent: 'Now',
+    dateExists: 'This date already has a record',
+    editDailyPlaytime: "Edit this game's daily playtime",
+    emptyDaily: 'No daily records yet. Pick a date below to add one.',
     granularity: {
       month: 'Month',
       week: 'Week',
@@ -402,7 +407,10 @@ export const dict = {
       }
     },
     prevPeriod: 'Previous period',
-    self: 'Statistics'
+    removeDate: 'Remove this date',
+    saveAdjustsTotal: "Saving also adjusts this game's total playtime",
+    self: 'Statistics',
+    totalLabel: 'Total'
   },
   time: {
     daysAgo: '{{n}}d ago',
