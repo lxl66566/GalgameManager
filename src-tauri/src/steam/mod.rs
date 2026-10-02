@@ -116,6 +116,7 @@ mod unsupported {
         Err(Error::Steam(SteamError::UnsupportedPlatform))
     }
 
+    #[must_use]
     pub fn resolve_app_install_dir(_appid: u32) -> Option<PathBuf> {
         None
     }

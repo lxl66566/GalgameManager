@@ -38,6 +38,9 @@ pub use windows::{GameLaunchRes, game_loop, launch_game, launch_game_steam};
 // a different library/process model); the seam lives here so a future Linux
 // implementation only has to provide this one function.
 #[cfg(not(windows))]
+// Signature must match the windows variant so call sites can `.await` it
+// identically; the stub never awaits.
+#[allow(clippy::unused_async)]
 async fn launch_game_steam(
     _game_id: u32,
     _app: AppHandle,
