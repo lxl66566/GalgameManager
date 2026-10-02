@@ -124,9 +124,7 @@ missing_errors_doc      = "allow"
 missing_panics_doc      = "allow"
 multiple_crate_versions = "allow"
 pedantic                = { level = "warn", priority = -1 }
-# All wildcard-import warnings originate from `tauri::generate_handler!`
-# macro expansion, not user code — impossible to fix without patching tauri.
-wildcard_imports        = "allow"
+wildcard_imports        = "allow"  # https://github.com/rust-lang/rust-clippy/issues/17799
 
 [lints.rust]
 unsafe_code           = "allow"
