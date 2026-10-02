@@ -282,7 +282,7 @@ pub fn extract_speedup_assets(
         Ok(())
     })();
 
-    // 如果中途解压失败，清理掉已经解压出来的部分文件
+    // Clean up partially extracted files if any step fails midway
     if let Err(e) = result {
         cleanup_files(&files);
         return Err(e);

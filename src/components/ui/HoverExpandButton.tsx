@@ -38,8 +38,8 @@ export default function HoverExpandButton(props: HoverExpandButtonProps) {
       type="button"
     >
       <Dynamic class={cn('h-4 w-4 shrink-0', props.iconClass)} component={props.icon} />
-      {/* 利用 grid-template-columns 实现平滑的宽度展开动画。
-          disabled 变体需要盖过 group-hover，避免禁用态仍展开文字。 */}
+      {/* Smooth width expansion via grid-template-columns. The disabled
+          variant must override group-hover so disabled buttons stay collapsed. */}
       <div class="grid grid-cols-[0fr] transition-[grid-template-columns] duration-300 ease-in-out group-hover:grid-cols-[1fr] disabled:group-hover:grid-cols-[0fr]">
         <span class="overflow-hidden pl-0 text-xs font-medium whitespace-nowrap transition-all duration-300 group-hover:pl-1.5 disabled:group-hover:pl-0">
           {props.label}

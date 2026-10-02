@@ -3,7 +3,7 @@ import { pickRandom } from '~/lib/utils'
 import type { DeepPartial } from '.'
 import type { RawDictionary } from './en-US'
 
-// 使用 Partial<RawDictionary> 允许缺失字段
+// DeepPartial: zh keys may be missing and fall back to English
 export const dict: DeepPartial<RawDictionary> = {
   game: {
     backupButtonHint: '备份存档并上传至远程',

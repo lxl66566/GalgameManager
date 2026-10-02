@@ -16,8 +16,7 @@ export type TFunc = Translator<import('@solid-primitives/i18n').Flatten<RawDicti
 
 const dateToInput = (isoString: null | string) => {
   if (!isoString) return ''
-  // 假设后端给的是 ISO 格式 (UTC)，我们需要转为本地时间给 input 显示
-  // 这里的逻辑是将 UTC 时间转换为本地时间的 ISO 字符串片段
+  // Backend gives UTC ISO; shift to local time for <input> display
   const date = new Date(isoString)
   const offset = date.getTimezoneOffset() * 60_000
   const localDate = new Date(date.getTime() - offset)
@@ -26,11 +25,11 @@ const dateToInput = (isoString: null | string) => {
 
 const inputToDate = (value: string) => {
   if (!value) return null
-  // input 产生的是本地时间，转回 ISO (UTC) 存库
+  // <input> yields local time; convert back to ISO (UTC) for storage
   return new Date(value).toISOString()
 }
 
-// 时长转换工具 [secs, nanos] <-> {h, m}
+// Duration helpers: [secs, nanos] <-> {h, m}
 const durationToForm = (useTime: [number, number]) => {
   const totalSecs = useTime[0]
   const h = Math.floor(totalSecs / 3600)

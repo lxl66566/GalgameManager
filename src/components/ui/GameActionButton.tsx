@@ -2,9 +2,9 @@ import { Show, type JSX } from 'solid-js'
 
 interface GameActionButtonProps {
   colorClass: string
-  disabled?: boolean // 新增
+  disabled?: boolean
   icon: JSX.Element
-  loading?: boolean // 新增
+  loading?: boolean
   onClick: () => void
   title: string
 }
@@ -33,7 +33,6 @@ export const GameActionButton = (props: GameActionButtonProps) => {
       title={props.title}
     >
       <Show fallback={props.icon} when={props.loading}>
-        {/* 加载动画 Spinner */}
         <svg
           class="h-5 w-5 animate-spin text-current"
           fill="none"

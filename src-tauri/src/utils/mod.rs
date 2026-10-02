@@ -32,7 +32,6 @@ pub fn diff(old_conf: &Config, new_conf: &Config) -> String {
     let old_str = toml::to_string(old_conf).unwrap();
     let new_str = toml::to_string(new_conf).unwrap();
 
-    // 生成 diff
     TextDiff::from_lines(&old_str, &new_str)
         .unified_diff()
         .context_radius(2)

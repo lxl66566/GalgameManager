@@ -1,11 +1,12 @@
 /**
- * 全屏遮罩组件，变黑。z-index = 20
- * 使用方法：
+ * Full-screen dark overlay. z-index = 20.
+ * Usage:
  * <Show when={mask()}>
  *   <FullScreenMask />
  * </Show>
  *
- * 还可以传入 children 元素，它会在遮罩层上居中显示；可以传入 onClose 回调函数，点击遮罩层后触发
+ * children are rendered centered on the overlay; an onClose callback fires
+ * when the overlay itself is clicked.
  */
 
 import type { JSX } from 'solid-js'

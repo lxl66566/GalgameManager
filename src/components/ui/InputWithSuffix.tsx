@@ -1,6 +1,5 @@
 /**
- * 带后缀文本的输入框组件
- * 适用于需要显示单位（如：小时、分钟、MB）的场景
+ * Input with a trailing suffix label (e.g. units like hours, minutes, MB).
  */
 
 import { splitProps, type JSX } from 'solid-js'

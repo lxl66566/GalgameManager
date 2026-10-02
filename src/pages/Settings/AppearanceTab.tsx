@@ -1,5 +1,3 @@
-// src/pages/settings/AppearanceTab.tsx
-//
 // "Interface" + "Statistics" + "Time Display" sub-sections. The time display
 // section lets the user pick an independent language for the home-page
 // timestamps and switch between relative ("2d ago") and absolute

@@ -42,13 +42,11 @@ const STILL_ACTIVE: u32 = 259;
 /// PID of the process that owns the current foreground window.
 fn foreground_pid() -> Option<u32> {
     unsafe {
-        // 1. 获取前台窗口句柄
         let hwnd = GetForegroundWindow();
         if hwnd.is_invalid() {
             return None;
         }
 
-        // 2. 获取窗口对应的 PID
         let mut pid = 0;
         GetWindowThreadProcessId(hwnd, Some(&raw mut pid));
         (pid != 0).then_some(pid)
@@ -90,7 +88,6 @@ unsafe impl Sync for GameJob {}
 
 impl GameJob {
     fn new() -> Result<Self> {
-        // 创建一个未命名的 Job Object
         let handle = unsafe { CreateJobObjectW(None, None) }?;
         Ok(Self {
             handle,
@@ -99,14 +96,12 @@ impl GameJob {
         })
     }
 
-    // 将进程加入 Job
     fn assign_process(&self, pid: u32) -> Result<()> {
         // SAFETY: plain kernel call with our own job handle.
         unsafe { assign_pid_to_job(self.handle, pid)? };
         Ok(())
     }
 
-    // 检查 Job 里是否还有活动的进程
     fn has_active_processes(&self) -> bool {
         unsafe {
             let mut info = JOBOBJECT_BASIC_ACCOUNTING_INFORMATION::default();
@@ -125,7 +120,8 @@ impl GameJob {
             if res.is_err() {
                 return false;
             }
-            // TotalProcesses 是历史总数，ActiveProcesses 是当前存活数
+            // TotalProcesses is the historical total; ActiveProcesses is the
+            // currently alive count.
             info.ActiveProcesses > 0
         }
     }
@@ -156,9 +152,8 @@ impl GameJob {
         };
 
         let in_job = unsafe {
-            // 3. 临时打开进程句柄查询是否属于 Job。
-            // PROCESS_QUERY_LIMITED_INFORMATION 权限足够用于 IsProcessInJob，且比
-            // ALL_ACCESS 更容易成功
+            // PROCESS_QUERY_LIMITED_INFORMATION is enough for
+            // IsProcessInJob and succeeds more often than ALL_ACCESS.
             let Ok(process_handle) =
                 OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, foreground_pid)
             else {
@@ -170,8 +165,9 @@ impl GameJob {
             is_in_job.as_bool()
         };
 
-        // 4. 当游戏本体的窗口在前台时，长期持有一个 handle 以便
-        // 退出时查询退出码。PID 没变就复用旧 handle，避免每秒开关。
+        // When the game's own window is focused, hold a long-lived handle so
+        // the exit code can be queried after exit; reuse it while the PID is
+        // unchanged to avoid per-second open/close.
         if in_job && self.game_pid != Some(foreground_pid) {
             if let Some(old) = self.game_handle.take() {
                 unsafe {
@@ -201,7 +197,7 @@ impl Drop for GameJob {
     }
 }
 
-// --- 主逻辑 ---
+// --- main game loop ---
 
 const SAVE_INTERVAL: TimeDelta = TimeDelta::seconds(60);
 
@@ -278,11 +274,10 @@ pub async fn launch_game(
     let child = start_ctx.build_async_command()?.spawn()?;
     let child_pid = child.id().ok_or(Error::Launch)?;
 
-    // 2. 创建 Job 并绑定
+    // Assign the launcher to the job: any child it spawns later (the game
+    // itself) inherits membership automatically.
     let tracker = {
         let job = GameJob::new().map_err(|_| Error::Launch)?;
-        // 关键点：将启动器加入 Job。
-        // 之后启动器生成的任何子进程（游戏本体）都会自动继承进入这个 Job。
         match job.assign_process(child_pid) {
             Ok(()) => GameLaunchRes::Job(job),
             Err(e) => {
@@ -299,7 +294,6 @@ pub async fn launch_game(
         }
     };
 
-    // 3. 发出事件，告知前端已经启动了
     info!("Game spawned: game_id={game_id}");
     app.emit(&format!("game://spawn/{game_id}"), ())?;
     game_start_sender
@@ -426,7 +420,7 @@ unsafe fn assign_pid_to_job(job: HANDLE, pid: u32) -> windows_result::Result<()>
     unsafe {
         let process_handle = OpenProcess(PROCESS_SET_QUOTA | PROCESS_TERMINATE, false, pid)?;
         let res = AssignProcessToJobObject(job, process_handle);
-        // 用完进程句柄记得关闭（Rust 的 Drop 不会自动关 Raw Handle）
+        // Close the raw process handle explicitly; Rust Drop does not close it.
         let _ = CloseHandle(process_handle);
         res
     }
@@ -523,8 +517,9 @@ pub async fn game_loop(
         }
 
         let now = chrono::Utc::now();
-        // 始终调用 is_focused：除了计时判定外，它还顺带维护用于查询
-        // 退出码的 game_handle。非 precision 模式下无视其返回值。
+        // Always call is_focused: besides the focus check it maintains
+        // game_handle (used to query the exit code); its return value only
+        // matters in precision mode.
         let focused = job.is_focused();
         if !precision_mode || focused {
             time_counter += now - last_time_saved;

@@ -1,6 +1,5 @@
 import { For, type JSX } from 'solid-js'
 
-// src/components/Tabs.tsx
 import { useI18n } from '~/i18n'
 import { cn } from '~/lib/utils'
 
@@ -22,10 +21,7 @@ export function Tabs<T extends string>(props: TabsProps<T>): JSX.Element {
     <div
       class={cn('w-full border-b border-gray-200 dark:border-gray-800 mt-0', props.class)}
     >
-      {/*
-        justify-center: 居中所有 tab
-        -mb-px: 让 active border 盖住底部分割线
-      */}
+      {/* -mb-px: let the active tab's border cover the bottom divider */}
       <nav
         aria-label={t('ui.tabs')}
         class="no-scrollbar -mb-px flex justify-center space-x-8 overflow-x-auto"

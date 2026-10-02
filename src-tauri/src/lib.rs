@@ -114,12 +114,12 @@ pub fn run() {
                     .plugin(tauri_plugin_window_state::Builder::default().build());
             }
 
-            // 通过 initialization_script 将磁盘上已加载的 Config 注入到
-            // window.__INITIAL_CONFIG__。该脚本在页面任何脚本之前执行，前端
-            // createStore 可直接消费，从而：
-            //   1. 省掉启动时一次 get_config IPC 往返（首屏可见时间下降）；
-            //   2. 移除前端 DEFAULT_CONFIG——Rust 的 Config::default() 成为
-            //      唯一真相源，杜绝两边默认值漂移。
+            // Inject the on-disk Config into window.__INITIAL_CONFIG__ via
+            // initialization_script (runs before any page script), so the
+            // frontend createStore can consume it directly. Saves one
+            // get_config IPC round-trip on startup and makes Rust's
+            // Config::default() the single source of truth (no frontend
+            // DEFAULT_CONFIG to drift).
             let config_json = serde_json::to_string(&*CONFIG.lock())
                 .expect("config serialization should not fail");
 

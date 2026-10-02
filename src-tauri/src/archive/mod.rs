@@ -234,14 +234,13 @@ pub fn prune_stale(coverage: &ExtractCoverage) -> io::Result<()> {
 
 // region impl
 
-// 格式: YYYYMMDD_HHMMSS_{DeviceName}.{Ext}
+// Filename format: YYYYMMDD_HHMMSS_{DeviceName}.{Ext}
 pub fn archive_impl(
     device_name: &str,
     archive_conf: &ArchiveConfig,
     game_backup_dir: &Path,
     paths: &[String],
 ) -> Result<String> {
-    // 1. 解析路径
     let target_paths: Vec<PathBuf> = paths
         .iter()
         .map(|s| resolve_var(s).map(PathBuf::from))

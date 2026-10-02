@@ -1,7 +1,6 @@
 /**
- * 基础单行输入框组件（模态框/表单密度），用于 GameEditModal 等弹窗表单。
- * 设置页密度的输入框请使用 controls.tsx 的 Input（尺寸 token 不同）。
- * 包含默认的边框、背景色、焦点高亮以及禁用状态样式
+ * Basic single-line input (modal/form density) for dialogs like GameEditModal.
+ * For settings-page density use the Input in controls.tsx (different size tokens).
  */
 
 import { splitProps, type JSX } from 'solid-js'

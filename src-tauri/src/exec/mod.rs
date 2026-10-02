@@ -150,7 +150,7 @@ impl StartCtx {
         // joined with `current_dir`.
         let has_path_sep = program.contains('/') || program.contains('\\');
         let (resolved_program, resolved_current_dir) = if program_path.is_absolute() {
-            // 绝对路径：如果没有 current_dir，则从它的父目录推断
+            // Absolute: infer current_dir from the exe's parent if unset
             let cd = self.current_dir.clone().or_else(|| {
                 program_path
                     .parent()
@@ -160,7 +160,7 @@ impl StartCtx {
             (program_path, cd)
         } else if has_path_sep {
             if let Some(cd) = &self.current_dir {
-                // 相对路径 + 有 current_dir：拼接出系统能找到的绝对路径
+                // Relative + current_dir: join into an absolute path the OS can find
                 let joined = Path::new(cd).join(&program_path);
                 debug!(
                     "Relative program '{}' specified with current_dir '{}', joined to '{}'",
@@ -414,7 +414,7 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
         launch_game(game_id, launch.app.clone(), game_start_tx, start_ctx).await
     };
 
-    // 4. 如果游戏进程本身启动失败，立即回滚
+    // The game process itself failed to spawn: roll back immediately
     let res = match res {
         Ok(r) => r,
         Err(e) => {

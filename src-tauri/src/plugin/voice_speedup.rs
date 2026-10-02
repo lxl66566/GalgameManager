@@ -194,12 +194,14 @@ mod win_impl {
                 });
 
             if config.provider == SpeedupProvider::MMDevAPI {
-                // stub 部署在应用 local 数据目录（非 config，避免污染用户配置）
+                // Stub lives in the app local data dir (not config, to avoid
+                // polluting user config)
                 let stub_dir = ctx.launch.app.path().app_local_data_dir()?;
                 audio_speed_hack::set_mmdevapi_registry(&stub_dir)?;
-                // 注册表指向纯透传的转发 stub，整个游戏会话期间保留不影响其他
-                // 进程，还能覆盖游戏晚启动子进程/延迟初始化音频的情况，
-                // 因此到游戏退出时再回收（stub 文件本身不回收）
+                // The registry points to a pure pass-through stub; keeping it
+                // for the whole session is harmless to other processes and
+                // covers late-spawned children / delayed audio init, so
+                // reclaim it only at game exit (the stub file itself stays).
                 ctx.launch
                     .transaction
                     .add_cleanup(CleanupPhase::AfterGameExit, || {
@@ -215,7 +217,7 @@ mod win_impl {
         }
 
         async fn after_game_exit(&self, _ctx: PluginContext) -> Result<()> {
-            // 所有的清理工作已经交由 Transaction 自动处理，这里无需任何代码
+            // All cleanup is handled by the Transaction; nothing to do here.
             Ok(())
         }
 

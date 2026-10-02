@@ -1,7 +1,7 @@
 /**
- * 将字节大小转换为人类可读的字符串 (KB, MB, GB)
- * @param bytes - 文件大小 (bigint)
- * @param decimals - 小数位数，默认为 1
+ * Convert a byte size into a human-readable string (KB, MB, GB).
+ * @param bytes - File size (bigint)
+ * @param decimals - Decimal places, default 1
  */
 export const formatBytes = (bytes: bigint, decimals = 1): string => {
   if (bytes === 0n) return '0 B'
@@ -10,7 +10,8 @@ export const formatBytes = (bytes: bigint, decimals = 1): string => {
   const dm = Math.max(decimals, 0)
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
 
-  // 将 bigint 转为 number 进行对数运算 (对于游戏存档大小，精度损失可忽略)
+  // bigint -> number for the log computation; precision loss is negligible
+  // for save-file sizes
   const index = Math.floor(Math.log(Number(bytes)) / Math.log(k))
 
   return `${Number.parseFloat((Number(bytes) / Math.pow(k, index)).toFixed(dm))} ${sizes[index]}`

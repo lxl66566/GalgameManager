@@ -104,28 +104,24 @@ export default function GameEditModal(props: GameEditModalProps) {
 
   const [localGame, setLocalGame] = createStore<Game>(baseGame)
 
-  // 临时存储输入框的内容，避免每次按键都触发图片加载
+  // Buffer the input value so each keystroke doesn't retrigger an image load
   // eslint-disable-next-line solid/reactivity -- used once for initial signal value
   const [temporaryImageUrl, setTemporaryImageUrl] = createSignal(localGame.imageUrl ?? '')
 
-  // VNDB 搜索相关状态与逻辑
   const [isSearching, setIsSearching] = createSignal(false)
   const [searchId, setSearchId] = createSignal(0)
-
-  // Steam 导入弹窗开关
   const [steamPickerOpen, setSteamPickerOpen] = createSignal(false)
 
   // eslint-disable-next-line solid/reactivity -- used once for initial signal value
   const [playTime, setPlayTime] = createSignal(durationToForm(localGame.useTime))
 
-  // 自动触发逻辑：如果不是编辑模式，并且创建时带了游戏名称，则自动搜索 VNDB 封面
   onMount(() => {
     if (!isEditMode() && localGame.name) {
       void handleSearchVnCover()
     }
   })
 
-  // 当 store 中的 imageUrl 发生变化时，同步到输入框
+  // Sync external imageUrl changes (VNDB search / Steam import) into the input
   createEffect(() => {
     setTemporaryImageUrl(localGame.imageUrl ?? '')
   })
@@ -149,7 +145,6 @@ export default function GameEditModal(props: GameEditModalProps) {
     navigate(`/Statistics?editPlaytime=${localGame.id}`)
   }
 
-  // 提交图片更改的逻辑
   const commitImageChange = () => {
     const currentInput = temporaryImageUrl().trim()
     if (currentInput !== (localGame.imageUrl ?? '')) {

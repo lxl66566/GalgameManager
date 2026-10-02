@@ -12,7 +12,8 @@ export default defineConfig({
   build: {
     cssMinify: process.env.TAURI_DEBUG ? false : 'lightningcss',
     // don't minify for debug builds
-    // vite 8 (rolldown) 下 esbuild minify 需额外安装 esbuild 且 API 已废弃，改用内置 oxc minifier
+    // vite 8 (rolldown): the esbuild minifier needs an extra dependency and its
+    // API is deprecated, so use the built-in oxc minifier instead.
     minify: process.env.TAURI_DEBUG ? false : 'oxc',
     // produce sourcemaps for debug builds
     sourcemap: !!process.env.TAURI_DEBUG,
@@ -39,17 +40,18 @@ export default defineConfig({
     jsxImportSource: 'solid-js'
   },
   optimizeDeps: {
-    // virtua 的 solid 入口 ships .jsx with @jsxImportSource solid-js pragma；
-    // esbuild 的 automatic runtime 转换与 babel-preset-solid 输出不完全一致，
-    // 故交由 vite-plugin-solid 在请求管线中处理，不参与 dep optimizer。
+    // virtua's solid entry ships .jsx with a @jsxImportSource pragma, whose
+    // output differs from babel-preset-solid; let vite-plugin-solid handle it
+    // in the request pipeline instead of the dep optimizer.
     exclude: ['virtua'],
-    // 预构建常用依赖：Vite 默认是"首次请求才 esbuild 预构建"，导致 dev
-    // 冷启动时这些库的第一次 import 要等数百 ms。显式 include 让 Vite 在
-    // dev server 启动阶段一次性预构建，避免首屏渲染被懒预构建阻塞。
-    // 注意：@solidjs/router、@kobalte/core、solid-toast 不能加进来——它们
-    // 经 vite-plugin-solid 的 'solid' export condition 解析为 .jsx 入口，
-    // 而 Vite 的 OPTIMIZABLE_ENTRY_RE 不含 .jsx，include 只会触发
-    // "Cannot optimize dependency" 警告（它们本来就走插件管线，无行为差异）。
+    // Pre-bundle common deps: Vite only pre-bundles on first request, so the
+    // first dev import of these would stall cold start by hundreds of ms.
+    // Explicit include builds them once at dev-server startup.
+    // NOTE: do NOT add @solidjs/router, @kobalte/core or solid-toast — they
+    // resolve to .jsx entries via vite-plugin-solid's 'solid' export condition,
+    // and OPTIMIZABLE_ENTRY_RE excludes .jsx, so include only triggers a
+    // "Cannot optimize dependency" warning (they go through the plugin
+    // pipeline anyway, no behavior difference).
     include: [
       'solid-js',
       'solid-js/web',

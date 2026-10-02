@@ -28,7 +28,6 @@ export function DropArea(props: DropAreaProps) {
   const { t } = useI18n()
   const [hovering, setHovering] = createSignal(false)
 
-  // 存储取消监听的函数
   let unlisteners: UnlistenFn[] = []
   // Tracks whether the component has been disposed. If listeners finish
   // registering after unmount, we must tear them down immediately.
@@ -59,10 +58,8 @@ export function DropArea(props: DropAreaProps) {
     }
   }
 
-  // 初始化监听
   void setupListeners()
 
-  // 组件卸载时清理监听，保证 Robust
   onCleanup(() => {
     isDisposed = true
     for (const function_ of unlisteners) function_()
@@ -80,7 +77,6 @@ export function DropArea(props: DropAreaProps) {
           </div>
         </FullScreenMask>
       </Show>
-      {/* 使用 div 包裹并应用传入的 class */}
       <div class={props.class}>{props.children}</div>
     </>
   )

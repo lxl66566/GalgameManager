@@ -1,6 +1,6 @@
 /**
- * 基础表单标签组件，主要用于 GameEditModal 组件
- * 提供统一的字体大小和颜色（支持暗黑模式）
+ * Form label for GameEditModal-style dialogs; unified font size and color
+ * (dark-mode aware).
  */
 
 import { splitProps, type JSX } from 'solid-js'

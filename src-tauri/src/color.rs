@@ -163,10 +163,10 @@ async fn compute_color(hash: &str) -> Option<String> {
 /// chroma to yield a meaningful hue.
 #[must_use]
 pub fn extract_color(bytes: &[u8]) -> Option<String> {
-    // 36 个色相桶，每 10 度一个
+    // 36 hue buckets, one per 10 degrees
     const BUCKETS: usize = 36;
 
-    // 记录每个像素的数据以便后续局部平均
+    // Per-pixel data kept for the later local average
     struct PixelData {
         h: f64,
         s: f64,
@@ -180,7 +180,8 @@ pub fn extract_color(bytes: &[u8]) -> Option<String> {
         return None;
     }
 
-    // 1. 修复采样逻辑：使用 2D 步长，避免 1D 步长导致的垂直/水平条纹偏差
+    // 2D stride sampling; a 1D stride caused vertical/horizontal stripe
+    // bias (bug fix)
     let target_pixels: f64 = 4096.0;
     let step_x = ((w as f64) / target_pixels.sqrt()).ceil() as usize;
     let step_y = ((h as f64) / target_pixels.sqrt()).ceil() as usize;
@@ -205,12 +206,11 @@ pub fn extract_color(bytes: &[u8]) -> Option<String> {
             let b = f64::from(pixel[2]) / 255.0;
             let (hue, s, l) = rgb_to_hsl(r, g, b);
 
-            // 权重逻辑保留：过滤掉黑白灰
+            // Weighting filters out black/white/gray pixels
             let l_weight = 1.0 - (2.0 * l - 1.0).abs();
             let weight = s * l_weight;
 
             if weight > 0.05 {
-                // 忽略极度灰暗的像素
                 let bucket_idx = ((hue / 10.0).floor() as usize) % BUCKETS;
                 hue_buckets[bucket_idx] += weight;
 
@@ -230,11 +230,12 @@ pub fn extract_color(bytes: &[u8]) -> Option<String> {
         return None;
     }
 
-    // 2. 找到权重最高的色相桶（主色调）
+    // Pick the highest-weighted hue bucket (dominant color)
     let mut max_weight = -1.0;
     let mut best_bucket = 0;
     for i in 0..BUCKETS {
-        // 考虑相邻桶的平滑（处理处于边界的颜色）
+        // Smooth with neighbor buckets so hues near a bucket boundary
+        // don't flip arbitrarily
         let prev = (i + BUCKETS - 1) % BUCKETS;
         let next = (i + 1) % BUCKETS;
         let smoothed_weight = hue_buckets[prev] * 0.5 + hue_buckets[i] + hue_buckets[next] * 0.5;
@@ -245,7 +246,7 @@ pub fn extract_color(bytes: &[u8]) -> Option<String> {
         }
     }
 
-    // 3. 局部平均：只平均属于主色调范围内的像素
+    // Local average over pixels belonging to the dominant hue range
     let target_hue_center = best_bucket as f64 * 10.0 + 5.0;
     let mut sum_sin = 0.0;
     let mut sum_cos = 0.0;
@@ -254,13 +255,12 @@ pub fn extract_color(bytes: &[u8]) -> Option<String> {
     let mut cluster_weight = 0.0;
 
     for p in sampled_pixels {
-        // 计算色相差（考虑 360 度循环）
+        // Hue difference with 360-degree wraparound
         let mut diff = (p.h - target_hue_center).abs();
         if diff > 180.0 {
             diff = 360.0 - diff;
         }
 
-        // 只统计距离主色调 30 度以内的像素
         if diff <= 30.0 {
             let rad = p.h * std::f64::consts::PI / 180.0;
             sum_cos += p.weight * rad.cos();
@@ -283,8 +283,9 @@ pub fn extract_color(bytes: &[u8]) -> Option<String> {
     let final_sat = sum_s / cluster_weight;
     let final_light = sum_l / cluster_weight;
 
-    // 4. 优化 Clamp：放宽限制，保留原本色彩的特性，只做最基本的防瞎眼处理
-    // 如果必须保证 UI 可读性，建议在前端用 CSS 处理，而不是在后端写死
+    // Deliberately loose clamp: keep the original color's character, only
+    // guard against unreadable values. Stricter UI readability should be
+    // handled in the frontend with CSS, not hard-coded here.
     let sat = final_sat.clamp(0.15, 0.85);
     let light = final_light.clamp(0.20, 0.80);
 
