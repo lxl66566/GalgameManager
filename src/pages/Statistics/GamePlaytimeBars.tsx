@@ -11,6 +11,7 @@
 //   user can hover any column up top and immediately see the linked row even
 //   when the list is scrolled.
 import CachedImage from '@components/ui/CachedImage'
+import { FiEdit2 } from 'solid-icons/fi'
 import { createEffect, createMemo, For, Show, type Component } from 'solid-js'
 
 import { useI18n } from '~/i18n'
@@ -29,6 +30,8 @@ export interface GameBarRow {
 interface GamePlaytimeBarsProps {
   class?: string
   highlightGameId: null | number
+  /** Open the daily-playtime editor for a game. Omitted → no edit button. */
+  onEditGame?: (id: number) => void
   onHoverGame: (id: null | number) => void
   rows: GameBarRow[]
   units: DurationUnits
@@ -110,6 +113,17 @@ const GamePlaytimeBars: Component<GamePlaytimeBarsProps> = props => {
                     </span>
                   </div>
                 </div>
+
+                <Show when={props.onEditGame}>
+                  <button
+                    class="shrink-0 cursor-pointer rounded p-1 text-gray-400 opacity-60 transition-all hover:bg-gray-200 hover:text-blue-500 hover:opacity-100 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-blue-400"
+                    onClick={() => props.onEditGame?.(row.id)}
+                    title={t('stats.editDailyPlaytime')}
+                    type="button"
+                  >
+                    <FiEdit2 class="h-3.5 w-3.5" />
+                  </button>
+                </Show>
               </div>
             )
           }}

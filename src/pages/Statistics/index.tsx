@@ -10,7 +10,9 @@
 // buckets (see timeRange.ts); adding a free-form date-range picker later only
 // needs to produce a different `Bucket[]`, the charts won't change.
 import { Button } from '@components/ui/controls'
+import FullScreenMask from '@components/ui/FullScreenMask'
 import * as Popover from '@kobalte/core/popover'
+import { useSearchParams } from '@solidjs/router'
 import { FiChevronLeft, FiChevronRight, FiRotateCcw } from 'solid-icons/fi'
 import {
   createEffect,
@@ -26,6 +28,7 @@ import { useI18n } from '~/i18n'
 import { cn } from '~/lib/utils'
 import { useConfig } from '~/store'
 
+import DailyPlaytimeEditModal from './DailyPlaytimeEditModal'
 import { goldenColor } from './gameColors'
 import GamePlaytimeBars, { type GameBarRow } from './GamePlaytimeBars'
 import StackedPlaytimeChart, {
@@ -111,6 +114,23 @@ const StatisticsPage: Component = () => {
   })
 
   const [pickerOpen, setPickerOpen] = createSignal(false)
+
+  // ── daily-playtime editor ──
+  // Opened from a row's edit button, or via the `?editPlaytime=<id>` deep
+  // link used by the game-edit dialog's "edit in Statistics" hint.
+  const [editingGameId, setEditingGameId] = createSignal<null | number>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  createEffect(() => {
+    const raw = searchParams.editPlaytime
+    const str = Array.isArray(raw) ? raw[0] : raw
+    if (!str) return
+    const id = Number(str)
+    if (config.games.some(g => g.id === id)) {
+      // Drop the param so closing the dialog and refreshing don't reopen it.
+      setSearchParams({ editPlaytime: undefined }, { replace: true })
+      setEditingGameId(id)
+    }
+  })
 
   /** Jump to the week / month / year containing the picked date. */
   const jumpToDate = (value: string) => {
@@ -335,6 +355,7 @@ const StatisticsPage: Component = () => {
               <div class="custom-scrollbar min-h-0 flex-1 overflow-y-auto" ref={listRef}>
                 <GamePlaytimeBars
                   highlightGameId={hover()?.gameId ?? null}
+                  onEditGame={setEditingGameId}
                   onHoverGame={setFocusGameId}
                   rows={rows()}
                   units={units()}
@@ -344,6 +365,15 @@ const StatisticsPage: Component = () => {
           </Show>
         </div>
       </main>
+
+      <Show when={editingGameId() !== null}>
+        <FullScreenMask onClose={() => setEditingGameId(null)}>
+          <DailyPlaytimeEditModal
+            cancel={() => setEditingGameId(null)}
+            gameId={editingGameId()!}
+          />
+        </FullScreenMask>
+      </Show>
     </div>
   )
 }
