@@ -2,6 +2,8 @@ mod squashfs;
 mod tar;
 
 use std::{
+    cmp::Reverse,
+    collections::{HashMap, HashSet},
     fs, io,
     path::{Path, PathBuf},
 };
@@ -11,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use squashfs::SquashfsArchiver;
 use tar::TarArchiver;
 use ts_rs::TS;
+use walkdir::WalkDir;
 
 use crate::{bindings::resolve_var, error::Result};
 
@@ -103,11 +106,15 @@ pub trait Archive {
         paths: Vec<impl AsRef<Path>>,
         writer: impl io::Write + io::Seek,
     ) -> io::Result<()>;
+    /// Extract onto `targets` and report the coverage: what the archive
+    /// actually contains under each target. The caller feeds it to
+    /// [`prune_stale`] so a restore makes disk state match the archive
+    /// exactly instead of just overlaying files.
     fn extract(
         &self,
         reader: impl io::Read + io::Seek + Send,
         targets: Vec<impl AsRef<Path>>,
-    ) -> io::Result<()>;
+    ) -> io::Result<ExtractCoverage>;
 }
 
 impl Archive for ArchiveConfig {
@@ -126,12 +133,103 @@ impl Archive for ArchiveConfig {
         &self,
         reader: impl io::Read + io::Seek + Send,
         targets: Vec<impl AsRef<Path>>,
-    ) -> io::Result<()> {
+    ) -> io::Result<ExtractCoverage> {
         match self.algorithm {
             ArchiveAlgo::SquashfsZstd => SquashfsArchiver(self.level).extract(reader, targets),
             ArchiveAlgo::Tar => TarArchiver.extract(reader, targets),
         }
     }
+}
+
+// region prune
+
+/// What an `Archive::extract` wrote: per extracted target root, the set of
+/// (normalized) relative paths the archive contains.
+///
+/// The keep-set derives from archive contents, not from `save_paths` config,
+/// so it stays self-consistent with any future archive-side filtering:
+/// a future exclude feature must skip `cover()` for excluded paths, which
+/// automatically keeps them out of the pruning set.
+#[derive(Default)]
+pub struct ExtractCoverage {
+    /// target root -> normalized relative paths present in the archive
+    roots: HashMap<PathBuf, HashSet<PathBuf>>,
+}
+
+impl ExtractCoverage {
+    /// Record `rel` as present in the archive under `root`.
+    /// Ancestors are inserted too: tar archives built elsewhere may omit
+    /// explicit dir entries, and the ancestors guarantee a stale directory
+    /// can only contain stale children (relied on by `prune_stale`).
+    fn cover(&mut self, root: &Path, rel: &Path) {
+        let set = self.roots.entry(root.to_path_buf()).or_default();
+        let mut prefix = PathBuf::new();
+        for comp in rel.components() {
+            prefix.push(comp);
+            set.insert(norm(&prefix));
+        }
+    }
+}
+
+/// Case-fold a relative path for keep-set lookups.
+/// Windows filesystems match names case-insensitively while archive entries
+/// keep their original case; without folding, a disk file whose case differs
+/// from the archive entry would be pruned as stale and take the just-restored
+/// content with it (extract writes through the existing inode).
+#[cfg(windows)]
+fn norm(path: &Path) -> PathBuf {
+    path.iter()
+        .map(|c| c.to_string_lossy().to_lowercase())
+        .collect()
+}
+
+#[cfg(not(windows))]
+fn norm(path: &Path) -> PathBuf {
+    path.to_path_buf()
+}
+
+/// Delete entries under each covered root that the archive does not contain.
+/// Runs only after a fully successful extract, so a failed restore never
+/// deletes anything. Never crosses symlinks and never touches the roots
+/// themselves or anything outside them (file targets have no children).
+pub fn prune_stale(coverage: &ExtractCoverage) -> io::Result<()> {
+    for (root, keep) in &coverage.roots {
+        // WalkDir is preorder; collect first and delete after, otherwise
+        // removing a directory mid-walk breaks iteration.
+        let mut stale_files = Vec::new();
+        let mut stale_dirs = Vec::new();
+        for entry in WalkDir::new(root).follow_links(false).min_depth(1) {
+            let entry = entry.map_err(io::Error::other)?;
+            // WalkDir paths are always root-prefixed.
+            let rel = entry.path().strip_prefix(root).map_err(io::Error::other)?;
+            if keep.contains(&norm(rel)) {
+                continue;
+            }
+            // file_type() describes the link itself, so symlinks (even to
+            // dirs) land in stale_files and are unlinked, never followed.
+            if entry.file_type().is_dir() {
+                stale_dirs.push(entry.path().to_path_buf());
+            } else {
+                stale_files.push(entry.path().to_path_buf());
+            }
+        }
+
+        for f in &stale_files {
+            fs::remove_file(f)?;
+        }
+        // Deepest first; by the ancestors invariant every child of a stale
+        // dir is stale too, so remove_dir_all cannot touch kept files.
+        stale_dirs.sort_by_key(|d| Reverse(d.components().count()));
+        for d in &stale_dirs {
+            fs::remove_dir_all(d)?;
+        }
+
+        let total = stale_files.len() + stale_dirs.len();
+        if total > 0 {
+            info!("pruned {total} stale entries under {}", root.display());
+        }
+    }
+    Ok(())
 }
 
 // region impl
@@ -209,7 +307,10 @@ pub fn restore_impl(
         target_paths
     );
 
-    archive_conf.extract(file, target_paths)?;
+    let coverage = archive_conf.extract(file, target_paths)?;
+    // Restore means "disk state == archive state": delete what the archive
+    // does not contain. Only after a fully successful extract.
+    prune_stale(&coverage)?;
 
     Ok(())
 }
@@ -231,6 +332,9 @@ mod tests {
         fs::create_dir(&dir2_path)?;
         let subfile_path = dir2_path.join("sub.txt");
         fs::write(&subfile_path, "sub")?;
+        // empty dir: must survive restore, but stale disk content inside it
+        // must still be pruned
+        fs::create_dir(dir2_path.join("empty"))?;
 
         let paths_to_archive = vec![file1_path.clone(), dir2_path.clone()];
         println!("paths_to_archive: {paths_to_archive:?}");
@@ -256,8 +360,23 @@ mod tests {
         let targets = vec![target_file.clone(), target_dir.clone()];
         println!("restore targets: {targets:?}");
 
+        // stale state: present on disk, absent from the archive
+        fs::create_dir_all(&target_dir)?;
+        let stale_file = target_dir.join("stale.txt");
+        fs::write(&stale_file, "old")?;
+        let stale_dir = target_dir.join("junk/deep");
+        fs::create_dir_all(&stale_dir)?;
+        fs::write(stale_dir.join("old.bin"), "old")?;
+        let stale_in_empty = target_dir.join("empty/stale.txt");
+        fs::create_dir(stale_in_empty.parent().unwrap())?;
+        fs::write(&stale_in_empty, "old")?;
+        // sibling of the *file* target: outside every covered root, must survive
+        let sibling = target_file.parent().unwrap().join("sibling.txt");
+        fs::write(&sibling, "keep me")?;
+
         let mut reader = fs::File::open(&archive_file_path)?;
-        archiver.extract(&mut reader, targets).unwrap();
+        let coverage = archiver.extract(&mut reader, targets).unwrap();
+        prune_stale(&coverage)?;
 
         assert!(target_file.exists(), "Target file should exist");
         let content = fs::read_to_string(&target_file)?;
@@ -272,6 +391,22 @@ mod tests {
         let sub_content = fs::read_to_string(&target_subfile)?;
         assert_eq!(sub_content, "sub");
 
+        // pruning
+        assert!(!stale_file.exists(), "Stale file should be pruned");
+        assert!(!stale_dir.exists(), "Stale dir tree should be pruned");
+        assert!(
+            !stale_in_empty.exists(),
+            "Stale file inside kept empty dir should be pruned"
+        );
+        assert!(
+            target_dir.join("empty").exists(),
+            "Empty dir from archive should be kept"
+        );
+        assert!(
+            sibling.exists(),
+            "Sibling of a file target is outside coverage and must survive"
+        );
+
         Ok(())
     }
 
@@ -283,5 +418,16 @@ mod tests {
     #[test]
     fn test_squashfs_archiver() -> io::Result<()> {
         test_archiver(&SquashfsArchiver(1))
+    }
+
+    #[test]
+    fn test_norm() {
+        // Windows filesystems are case-insensitive while archives are not:
+        // lookups must fold, or a case-mismatched disk file would be pruned
+        // as stale and take the just-restored content with it.
+        #[cfg(windows)]
+        assert_eq!(norm(Path::new("A/b/C.txt")), PathBuf::from("a/b/c.txt"));
+        #[cfg(not(windows))]
+        assert_eq!(norm(Path::new("A/b/C.txt")), PathBuf::from("A/b/C.txt"));
     }
 }

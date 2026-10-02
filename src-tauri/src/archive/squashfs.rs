@@ -18,6 +18,8 @@ use backhand::{
 use pathdiff::diff_paths;
 use walkdir::WalkDir;
 
+use super::ExtractCoverage;
+
 pub(crate) struct SquashfsArchiver(pub(crate) u8);
 
 impl SquashfsArchiver {
@@ -60,10 +62,14 @@ impl SquashfsArchiver {
         }
     }
 
-    fn get_dest_from_fullpath(
+    /// Map an archive entry path to (target root on disk, relative path under
+    /// it). The archive stores each top-level input path under its file name,
+    /// so the first component after `/` selects the target and the rest is
+    /// the relative path.
+    fn split_fullpath<'a>(
         fullpath: &Path,
-        path_map: &HashMap<&OsStr, PathBuf>,
-    ) -> io::Result<PathBuf> {
+        path_map: &'a HashMap<&OsStr, PathBuf>,
+    ) -> io::Result<(&'a Path, PathBuf)> {
         let mut components = fullpath.components();
         let root_dir = components.next();
         if root_dir != Some(Component::RootDir) {
@@ -78,7 +84,7 @@ impl SquashfsArchiver {
                 "Invalid file entry in squashfs: first component not found",
             )
         })?;
-        let mut ret = path_map
+        let root = path_map
             .get(first.as_os_str())
             .ok_or_else(|| {
                 io::Error::new(
@@ -86,11 +92,9 @@ impl SquashfsArchiver {
                     "Invalid path map: corresponding path on disk not found",
                 )
             })?
-            .clone();
-        for c in components {
-            ret.push(c);
-        }
-        Ok(ret)
+            .as_path();
+        let rel = components.collect::<PathBuf>();
+        Ok((root, rel))
     }
 }
 
@@ -162,7 +166,7 @@ impl super::Archive for SquashfsArchiver {
         &self,
         reader: impl io::Read + io::Seek + Send,
         targets: Vec<impl AsRef<Path>>,
-    ) -> io::Result<()> {
+    ) -> io::Result<ExtractCoverage> {
         let mut buf_reader = BufReader::new(reader);
         let fs = FilesystemReader::from_reader(&mut buf_reader)?;
 
@@ -177,6 +181,7 @@ impl super::Archive for SquashfsArchiver {
         }
 
         // 遍历镜像中的所有节点
+        let mut coverage = ExtractCoverage::default();
         for node in fs.files() {
             let path_in_image = &node.fullpath;
             // skip root dir
@@ -184,7 +189,15 @@ impl super::Archive for SquashfsArchiver {
                 continue;
             }
 
-            let dest_path = Self::get_dest_from_fullpath(&node.fullpath, &target_map)?;
+            let (root, rel) = Self::split_fullpath(&node.fullpath, &target_map)?;
+            coverage.cover(root, &rel);
+            // join("") would append a trailing separator, which Windows
+            // rejects on file creation
+            let dest_path = if rel.as_os_str().is_empty() {
+                root.to_path_buf()
+            } else {
+                root.join(&rel)
+            };
 
             // 处理不同类型的节点
             match &node.inner {
@@ -222,7 +235,7 @@ impl super::Archive for SquashfsArchiver {
             }
         }
 
-        Ok(())
+        Ok(coverage)
     }
 }
 
@@ -233,7 +246,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_get_dest_from_fullpath() {
+    fn test_split_fullpath() {
         let path_map = HashMap::from([
             (OsStr::new("a"), PathBuf::from("/a")),
             (OsStr::new("b"), PathBuf::from("/2/b")),
@@ -241,15 +254,19 @@ mod tests {
         ]);
 
         let fullpath = Path::new("/a/b/c");
-        let dest_path = SquashfsArchiver::get_dest_from_fullpath(fullpath, &path_map).unwrap();
-        assert_eq!(dest_path, PathBuf::from("/a/b/c"));
+        let (root, rel) = SquashfsArchiver::split_fullpath(fullpath, &path_map).unwrap();
+        assert_eq!((root, rel.as_path()), (Path::new("/a"), Path::new("b/c")));
 
         let fullpath = Path::new("/b/c");
-        let dest_path = SquashfsArchiver::get_dest_from_fullpath(fullpath, &path_map).unwrap();
-        assert_eq!(dest_path, PathBuf::from("/2/b/c"));
+        let (root, rel) = SquashfsArchiver::split_fullpath(fullpath, &path_map).unwrap();
+        assert_eq!((root, rel.as_path()), (Path::new("/2/b"), Path::new("c")));
 
+        // top-level entry maps onto the target itself: empty rel
         let fullpath = Path::new("/c.txt");
-        let dest_path = SquashfsArchiver::get_dest_from_fullpath(fullpath, &path_map).unwrap();
-        assert_eq!(dest_path, PathBuf::from("/c/c.txt"));
+        let (root, rel) = SquashfsArchiver::split_fullpath(fullpath, &path_map).unwrap();
+        assert_eq!(
+            (root, rel.as_os_str().is_empty()),
+            (Path::new("/c/c.txt"), true)
+        );
     }
 }

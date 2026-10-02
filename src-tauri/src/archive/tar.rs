@@ -5,6 +5,8 @@ use std::{
 
 use tar::Builder;
 
+use super::ExtractCoverage;
+
 pub(crate) struct TarArchiver;
 
 impl super::Archive for TarArchiver {
@@ -49,7 +51,7 @@ impl super::Archive for TarArchiver {
         &self,
         reader: impl io::Read + io::Seek + Send,
         targets: Vec<impl AsRef<Path>>,
-    ) -> io::Result<()> {
+    ) -> io::Result<ExtractCoverage> {
         let mut archive = tar::Archive::new(reader);
         let entries = archive.entries()?;
         let mut targets_iter = targets.into_iter();
@@ -57,6 +59,7 @@ impl super::Archive for TarArchiver {
         // State to track the current top-level entry being processed.
         // (prefix_in_tar, target_path_on_disk)
         let mut current_mapping: Option<(PathBuf, PathBuf)> = None;
+        let mut coverage = ExtractCoverage::default();
 
         for entry in entries {
             let mut entry = entry?;
@@ -81,6 +84,8 @@ impl super::Archive for TarArchiver {
                             format!("Path strip prefix error: {e}"),
                         )
                     })?;
+
+                    coverage.cover(target, relative);
 
                     // Construct destination: "/target/path" + "subdir/file"
                     let dest = target.join(relative);
@@ -107,6 +112,10 @@ impl super::Archive for TarArchiver {
                 // entry_path here is the name stored in tar (e.g., "dir_name" or "file.txt")
                 current_mapping = Some((entry_path.clone(), target.clone()));
 
+                // Register the root even though its rel is empty: an archive
+                // dir with no children must still have its disk contents pruned
+                coverage.cover(&target, Path::new(""));
+
                 // Ensure parent directory of the target exists
                 if let Some(parent) = target.parent() {
                     fs::create_dir_all(parent)?;
@@ -120,6 +129,6 @@ impl super::Archive for TarArchiver {
             }
         }
 
-        Ok(())
+        Ok(coverage)
     }
 }
