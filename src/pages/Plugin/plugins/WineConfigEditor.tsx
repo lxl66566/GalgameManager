@@ -195,7 +195,7 @@ export const WINE_PLUGIN: PluginDefinition<'wine'> = {
     links: [{ label: 'WineHQ', url: 'https://www.winehq.org/' }],
     nameKey: 'plugin.wine.name',
     platforms: ['linux'],
-    version: '1.3.3'
+    version: '1.4.0'
   },
   MetaEditor: AutoAddMetaEditor,
   metaKey: 'wine'
