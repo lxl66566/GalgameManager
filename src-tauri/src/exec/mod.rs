@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, LazyLock as Lazy},
 };
 
-use dashmap::DashMap;
+use dashmap::{DashMap, DashSet};
 use log::{debug, info, warn};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
@@ -53,6 +53,24 @@ async fn launch_game_steam(
 
 pub(crate) static GAME_LOOP_HANDLES: Lazy<DashMap<u32, JoinHandle<Result<()>>>> =
     Lazy::new(DashMap::new);
+
+/// Game ids with a launch attempt in flight: `launch_game_with_plugins` entry
+/// until the game-loop handle is registered in [`GAME_LOOP_HANDLES`]. Covers
+/// the window where the handle does not exist yet (plugin hooks, Steam
+/// process discovery) so duplicate-launch detection is airtight for the whole
+/// session attempt.
+static LAUNCHING: Lazy<DashSet<u32>> = Lazy::new(DashSet::new);
+
+/// Removes the game id from [`LAUNCHING`] on drop, so every early-return
+/// error path (hook failure, spawn failure, ...) releases the ticket without
+/// per-site cleanup.
+struct LaunchTicket(u32);
+
+impl Drop for LaunchTicket {
+    fn drop(&mut self) {
+        LAUNCHING.remove(&self.0);
+    }
+}
 
 /// Whether a game session (spawned game loop) is still active.
 pub fn is_game_running(game_id: u32) -> bool {
@@ -235,6 +253,20 @@ pub struct ResolvedParts {
     pub env: Option<HashMap<String, String>>,
 }
 pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()> {
+    // Deduplicate launches: Tauri replays an in-flight invoke when the webview
+    // reloads (the aborted ipc fetch falls back to postMessage and re-sends the
+    // same command, tauri-apps/tauri#14154, unfixed as of tauri 2.12). `exec`
+    // stays pending for the whole session, so an F5 mid-session re-enters here
+    // and would launch a second game instance. The frontend `isPlaying` guard
+    // cannot catch it — the replay never passes through frontend code.
+    if !LAUNCHING.insert(game_id) || is_game_running(game_id) {
+        warn!("game {game_id} is already launching/running, ignoring duplicate launch");
+        return Ok(());
+    }
+    // Held for the launch phase; released explicitly once GAME_LOOP_HANDLES
+    // takes over (and again, no-op, when the function returns).
+    let _ticket = LaunchTicket(game_id);
+
     let (plugins, metas, exe_path, current_dir, steam_launch) = {
         let lock = CONFIG.lock();
         let game = lock.get_game_by_id(game_id)?;
@@ -425,6 +457,11 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
         game_loop(res, game_id, app_for_loop, game_exit_tx).await
     });
     _ = GAME_LOOP_HANDLES.insert(game_id, handle);
+    // Session tracking is handed over to GAME_LOOP_HANDLES; release the launch
+    // ticket so a relaunch is allowed as soon as game_loop finishes — the exit
+    // hooks below (auto upload, ...) can run for a while and must not block a
+    // new session.
+    LAUNCHING.remove(&game_id);
 
     if let Err(e) = start_res.await? {
         log::error!("start_res error: {e}");
