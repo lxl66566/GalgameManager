@@ -1,6 +1,8 @@
 pub mod audio_speed_hack;
 pub mod persist;
 pub mod toast;
+#[cfg(windows)]
+pub mod win_procs;
 
 use std::{io, path::Path, time::Duration};
 
