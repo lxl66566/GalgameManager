@@ -14,8 +14,12 @@ use crate::{
 };
 
 /// Steam "apps" that are not games (redistributable bundles etc).
-/// appmanifests carry no app-type field, so known tools are filtered by id.
-const NON_GAME_APPIDS: &[u32] = &[2289838]; // Steamworks Common Redistributables
+/// appmanifests carry no app-type field, so known tools are filtered by id;
+/// Steamworks Common Redistributables exists under two appids (legacy +
+/// current) and is double-guarded by exact name, since more tool-type
+/// entries keep appearing and ids alone are a moving target.
+const NON_GAME_APPIDS: &[u32] = &[228983, 2289838];
+const NON_GAME_NAMES: &[&str] = &["steamworks common redistributables"];
 
 /// Subdirectory names (lowercase) that never contain the game exe — only
 /// redistributables and support tooling.
@@ -51,6 +55,17 @@ fn is_fully_installed(app: &App) -> bool {
     })
 }
 
+fn is_non_game(app: &App) -> bool {
+    is_non_game_raw(app.app_id, app.name.as_deref())
+}
+
+/// Pure part of [`is_non_game`], separated so tests don't need to
+/// construct steamlocate's `#[non_exhaustive]` App.
+fn is_non_game_raw(appid: u32, name: Option<&str>) -> bool {
+    NON_GAME_APPIDS.contains(&appid)
+        || name.is_some_and(|n| NON_GAME_NAMES.iter().any(|bad| n.eq_ignore_ascii_case(bad)))
+}
+
 /// Scan every library for fully-installed games. The Steam client process
 /// must be running (import is a user-triggered, interactive flow and we
 /// report a clear state instead of letting the UI mistake a dead client for
@@ -73,7 +88,7 @@ pub fn list_installed_games() -> Result<SteamListResult> {
                     continue;
                 },
             };
-            if NON_GAME_APPIDS.contains(&app.app_id) || !is_fully_installed(&app) {
+            if is_non_game(&app) || !is_fully_installed(&app) {
                 continue;
             }
             let Some(name) = app.name.clone() else {
@@ -297,5 +312,18 @@ mod tests {
         assert!(name_matches("mygamelauncher", "mygame"));
         assert!(name_matches("myg", "mygame_x"));
         assert!(!name_matches("zzz", "mygame"));
+    }
+
+    #[test]
+    fn non_game_filtering() {
+        // known ids (legacy + current) and exact name, any casing
+        assert!(is_non_game_raw(228983, None));
+        assert!(is_non_game_raw(2289838, None));
+        assert!(is_non_game_raw(
+            123456,
+            Some("Steamworks Common Redistributables")
+        ));
+        // real games must survive both guards
+        assert!(!is_non_game_raw(123456, Some("My Game")));
     }
 }
