@@ -68,3 +68,9 @@ export function isAbsolutePath(p: string): boolean {
   if (p.startsWith('\\\\')) return true
   return false
 }
+
+/// Check whether a string is a URL with a scheme (e.g. `steam://rungameid/1`)
+/// rather than a filesystem path — existence/absoluteness checks do not apply.
+export function isUrl(p: string): boolean {
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(p)
+}

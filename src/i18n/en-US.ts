@@ -19,6 +19,7 @@ export const dict = {
       gameName: 'Game Name',
       imageUrl: 'Image Url',
       imageUrlPlaceholder: 'https://... or C:/...',
+      importFromSteam: 'Import from Steam',
       lastPlayedTime: 'Last Played Time',
       savePath: 'Save Path',
       searchFailed: 'Search Failed',
@@ -39,6 +40,14 @@ export const dict = {
       lastPlayed: 'Last Played',
       name: 'Name',
       playTime: 'Play Time'
+    },
+    steam: {
+      alreadyAdded: 'Added',
+      gameNum: 'Games',
+      loadFailed: 'Failed to load the Steam library',
+      noGames: 'No installed Steam games found',
+      notRunning: 'Steam is not running. Please start the Steam client and try again.',
+      self: 'Select a Steam Game'
     },
     sync: {
       archiveNum: 'Archives',

@@ -25,6 +25,7 @@ export const dict: DeepPartial<RawDictionary> = {
       gameName: '游戏名称',
       imageUrl: '封面图片',
       imageUrlPlaceholder: 'https://... 或 C:/...',
+      importFromSteam: '从 Steam 导入',
       lastPlayedTime: '最后游玩时间',
       savePath: '存档路径',
       searchFailed: '搜索失败',
@@ -45,6 +46,14 @@ export const dict: DeepPartial<RawDictionary> = {
       lastPlayed: '最近',
       name: '名称',
       playTime: '时长'
+    },
+    steam: {
+      alreadyAdded: '已添加',
+      gameNum: '款游戏',
+      loadFailed: '加载 Steam 游戏库失败',
+      noGames: '未找到已安装的 Steam 游戏',
+      notRunning: 'Steam 未运行，请先启动 Steam 客户端后重试。',
+      self: '选择 Steam 游戏'
     },
     sync: {
       archiveNum: '个存档',

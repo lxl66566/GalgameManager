@@ -8,7 +8,7 @@
 import { Tooltip } from '@kobalte/core/tooltip'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
-import { fuckBackslash } from '@utils/path'
+import { fuckBackslash, isUrl } from '@utils/path'
 import { resolveVar } from '@utils/resolveVar'
 import { useVarMap } from '@utils/useVarMap'
 import { useVarWarning } from '@utils/useVarWarning'
@@ -265,6 +265,9 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
     }),
     async ({ enabled, path, vars }) => {
       if (!enabled || !path || !vars) return false
+      // URL-scheme launch paths (steam://rungameid/…) are not filesystem
+      // paths — the existence check does not apply.
+      if (isUrl(path)) return false
       try {
         const resolved = resolveVar(path, vars)
         const results = await invoke<boolean[]>('paths_exist', { paths: [resolved] })

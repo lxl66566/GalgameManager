@@ -139,6 +139,8 @@ export function diffGame(base: Game, current: Game): GamePatch {
     p.dailyPlaytime = current.dailyPlaytime
   if (!jsonEq(base.coverColor, current.coverColor)) p.coverColor = current.coverColor
   if (!jsonEq(base.plugins, current.plugins)) p.plugins = current.plugins
+  // Whole-replacement on the Rust side (nullable patch field)
+  if (!jsonEq(base.steam, current.steam)) p.steam = current.steam
   return p
 }
 
