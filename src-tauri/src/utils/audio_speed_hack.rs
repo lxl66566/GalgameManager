@@ -435,7 +435,8 @@ mod win_impl {
                         RegValueData::String(item.threading_model.into()),
                     ),
                 ])
-                .set()?;
+                .set()
+                .map_err(io::Error::other)?;
             log::info!("Registry created: HKCU\\{}", item.path);
         }
         Ok(())
@@ -458,7 +459,7 @@ mod win_impl {
     /// Set the SPEEDUP environment variable to the given speed value.
     pub fn set_speedup_env(speed: f32) -> Result<()> {
         acquire_session_marker();
-        windows_env::set(SPEEDUP_ENV_NAME, format!("{speed:.1}"))?;
+        windows_env::set(SPEEDUP_ENV_NAME, format!("{speed:.1}")).map_err(io::Error::from)?;
         log::info!("Set env {SPEEDUP_ENV_NAME}={speed:.1}");
         Ok(())
     }
@@ -469,7 +470,7 @@ mod win_impl {
     /// above zero (marker file leaked → false crash-residue cleanup at the
     /// next startup).
     pub fn update_speedup_env(speed: f32) -> Result<()> {
-        windows_env::set(SPEEDUP_ENV_NAME, format!("{speed:.1}"))?;
+        windows_env::set(SPEEDUP_ENV_NAME, format!("{speed:.1}")).map_err(io::Error::from)?;
         log::info!("Updated env {SPEEDUP_ENV_NAME}={speed:.1}");
         Ok(())
     }

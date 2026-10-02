@@ -21,7 +21,7 @@ name       = "app_lib"
 
 [dependencies]
 async-trait               = "0.1"
-backhand                  = "0.25.1"
+backhand                  = "0.25"
 backon                    = "1"
 chrono                    = { version = "0.4", features = ["serde"] }
 config-file2              = "0.7"
@@ -38,8 +38,8 @@ include_assets            = { version = "1", default-features = false, features 
 indexmap                  = { version = "2", features = ["serde"] }
 log                       = "0.4"
 machine-uid               = "0.6"
-opendal                   = { version = "0.58", features = ["services-fs", "services-s3", "services-webdav"] }
-opener                    = "0.8"
+opendal                   = { version = "0.59", features = ["services-fs", "services-s3", "services-webdav"] }
+opener                    = "0.9"
 parking_lot               = "0.12"
 pathdiff                  = "0.2"
 reqwest                   = { version = "0.13", features = ["json"] }
@@ -54,16 +54,16 @@ struct-patch              = {
 }
 sys-locale                = "0.3"
 tar                       = "0.4"
-tauri                     = { version = "2.11.3", features = ["tray-icon"] }
+tauri                     = { version = "2.12.1", features = ["tray-icon"] }
 tauri-plugin-dialog       = "2"
-tauri-plugin-fs           = "2.5"
-tauri-plugin-notification = "2.3"
-tauri-plugin-opener       = "2.5"
+tauri-plugin-fs           = "2.6"
+tauri-plugin-notification = "2.5"
+tauri-plugin-opener       = "2.7"
 tempfile                  = "3"
 thiserror                 = "2"
 tokio                     = { version = "1", features = ["fs", "macros", "process", "rt", "time"] }
 tokio-util                = { version = "0.7", features = ["compat"] }
-toml                      = "1.1.3"
+toml                      = "1.1.6"
 ts-rs                     = {
   version  = "12.0",
   features = ["chrono-impl", "format", "indexmap-impl", "no-serde-warnings"]
@@ -80,8 +80,8 @@ tokio = { version = "1", features = ["macros", "rt", "test-util"] }
 tauri-build = { version = "2", features = [] }
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
-tauri-plugin-single-instance = "2.4"
-tauri-plugin-window-state    = "2.4"
+tauri-plugin-single-instance = "2.5"
+tauri-plugin-window-state    = "2.5"
 
 # ── Linux-only: foreground-window tracking & process tracking ───────────────
 # x11rb: EWMH queries (_NET_ACTIVE_WINDOW / _NET_WM_PID) on X11 / XWayland.
@@ -90,7 +90,7 @@ tauri-plugin-window-state    = "2.4"
 # futures-util: StreamExt for iterating over zbus `MessageStream`.
 [target.'cfg(target_os = "linux")'.dependencies]
 futures-util = "0.3"
-x11rb        = { version = "0.13", default-features = false }
+x11rb        = { version = "0.14", default-features = false }
 zbus         = { version = "5", default-features = false, features = ["tokio"] }
 
 # steamlocate: offline Steam library discovery (registry + libraryfolders.vdf
@@ -108,8 +108,9 @@ windows              = {
     "Win32_UI_WindowsAndMessaging"
   ]
 }
-windows-env          = "0.2.0"
-windows_registry_obj = "0.1.0"
+windows-env          = "0.3"
+windows_registry_obj = "0.2"
+# windows 0.62 returns windows-result 0.4 types
 windows-result       = { version = "0.4" }
 
 [features]
