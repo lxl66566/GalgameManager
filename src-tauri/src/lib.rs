@@ -141,20 +141,23 @@ pub fn run() {
                 _ = main_window.restore_state(StateFlags::POSITION | StateFlags::SIZE);
             }
 
+            let language = CONFIG.lock().settings.appearance.language.clone();
+            let [
+                open_config_label,
+                open_save_label,
+                open_log_label,
+                quit_nosync_label,
+                quit_label,
+            ] = tray_menu_labels(&language);
             let open_config_folder =
-                MenuItem::with_id(app, "open_config", "Open Config Folder", true, None::<&str>)?;
+                MenuItem::with_id(app, "open_config", open_config_label, true, None::<&str>)?;
             let open_save_folder =
-                MenuItem::with_id(app, "open_save", "Open Save Folder", true, None::<&str>)?;
+                MenuItem::with_id(app, "open_save", open_save_label, true, None::<&str>)?;
             let open_log_folder =
-                MenuItem::with_id(app, "open_log", "Open Log Folder", true, None::<&str>)?;
-            let quit_nosync = MenuItem::with_id(
-                app,
-                "quit_nosync",
-                "Quit (without sync)",
-                true,
-                None::<&str>,
-            )?;
-            let quit_sync = MenuItem::with_id(app, "quit_sync", "Quit", true, None::<&str>)?;
+                MenuItem::with_id(app, "open_log", open_log_label, true, None::<&str>)?;
+            let quit_nosync =
+                MenuItem::with_id(app, "quit_nosync", quit_nosync_label, true, None::<&str>)?;
+            let quit_sync = MenuItem::with_id(app, "quit_sync", quit_label, true, None::<&str>)?;
             let menu = Menu::with_items(app, &[
                 &open_config_folder,
                 &open_save_folder,
@@ -165,6 +168,7 @@ pub fn run() {
             #[allow(clippy::single_match)]
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
+                .tooltip("GalgameManager")
                 .menu(&menu)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "quit_sync" => {
@@ -284,6 +288,56 @@ pub fn run() {
             },
             _ => (),
         });
+}
+
+fn tray_menu_labels(language: &str) -> [&'static str; 5] {
+    if language == "zh-CN" {
+        [
+            "打开配置文件夹",
+            "打开存档文件夹",
+            "打开日志文件夹",
+            "退出（不同步）",
+            "退出",
+        ]
+    } else {
+        [
+            "Open Config Folder",
+            "Open Save Folder",
+            "Open Log Folder",
+            "Quit (without sync)",
+            "Quit",
+        ]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::tray_menu_labels;
+
+    #[test]
+    fn tray_menu_labels_follow_configured_language() {
+        assert_eq!(
+            tray_menu_labels("zh-CN"),
+            [
+                "打开配置文件夹",
+                "打开存档文件夹",
+                "打开日志文件夹",
+                "退出（不同步）",
+                "退出",
+            ]
+        );
+        assert_eq!(
+            tray_menu_labels("en-US"),
+            [
+                "Open Config Folder",
+                "Open Save Folder",
+                "Open Log Folder",
+                "Quit (without sync)",
+                "Quit",
+            ]
+        );
+        assert_eq!(tray_menu_labels("unknown"), tray_menu_labels("en-US"));
+    }
 }
 
 /// Show a desktop notification off the current thread.
