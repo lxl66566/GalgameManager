@@ -2,7 +2,7 @@
 
 export type LaunchConfig = {
   /**
-   * 统计游玩时长启用精确模式
+   * Precise mode for playtime tracking
    */
   precisionMode: boolean;
   /**

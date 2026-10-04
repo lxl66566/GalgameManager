@@ -1,4 +1,3 @@
-// src/stores/configStore.ts
 import { type Config } from '@bindings/Config'
 import type { Device } from '@bindings/Device'
 import type { Game } from '@bindings/Game'
@@ -37,10 +36,10 @@ type PluginMetadatasPatch = DeepPartial<RustPluginMetadatasPatch>
 // nested field (matches the wire-level `#[serde(default)]` behavior).
 type SettingsPatch = DeepPartial<RustSettingsPatch>
 
-// 由 Rust 端的 initialization_script 在页面任何脚本之前注入
-// （见 src-tauri/src/lib.rs 的 WebviewWindowBuilder::initialization_script）。
-// 它是 Rust 端 CONFIG 静态量序列化后的快照，作为前端 store 的初始值，
-// 让 SolidJS 首屏渲染时 config.games 已有真实数据，无需等 IPC 往返。
+// Injected by the Rust initialization_script before any page script runs
+// (see src-tauri/src/lib.rs). It is the serialized snapshot of the Rust-side
+// CONFIG static, used as the store's initial value so the first render has
+// real config.games without waiting for an IPC round trip.
 declare global {
   // Ambient global declaration: `var` (required for `declare global`) makes
   // the property visible on `globalThis` so `unicorn/prefer-global-this` and
@@ -79,7 +78,6 @@ const startToastListener = async (t: i18n.Translator<Dictionary>) => {
     toast.dismiss(event.payload)
   })
 
-  // Return a single cleanup function that unregisters both listeners.
   return () => {
     unlistenShow()
     unlistenDismiss()
@@ -88,9 +86,9 @@ const startToastListener = async (t: i18n.Translator<Dictionary>) => {
 
 // ── Config store ─
 
-// 前端不再维护 DEFAULT_CONFIG：初始值由 Rust 端通过
-// initialization_script 注入（window.__INITIAL_CONFIG__），与 Config::default()
-// /磁盘 config 完全一致。TS 端只消费，不复制默认值，避免漂移。
+// No DEFAULT_CONFIG on the TS side: the initial value is injected by the
+// Rust initialization_script (window.__INITIAL_CONFIG__), identical to
+// Config::default() / on-disk config. TS only consumes it, avoiding drift.
 const [config, setConfig] = createStore<Config>(globalThis.__INITIAL_CONFIG__)
 
 // Module-level translator so non-component helpers (refreshConfig,
@@ -112,15 +110,14 @@ export const useConfigInit = (t?: i18n.Translator<Dictionary>, onReady?: () => v
     let isMounted = true
 
     const init = async () => {
-      // Config 的初始值已经由 initialization_script 注入（见 lib.rs），
-      // 这里只需注册监听器。两个 listen 互不依赖，并行注册以节省一次
-      // IPC 往返。refreshConfig 与 listener 注册竞速：listener 必须先注册
-      // 完成才不会漏掉 config://updated 事件，故 refreshConfig 的 await
-      // 放在 Promise.all 之后——这样既保证不漏消息，又不阻塞 listener 注册。
+      // Initial config is already injected by the initialization_script (see
+      // lib.rs), so only listeners need registering. refreshConfig races the
+      // listener registration: listeners must be ready before config://updated
+      // can fire, so refreshConfig is awaited only after Promise.all — no
+      // missed events, no blocked registration.
       const refreshPromise = refreshConfig()
 
-      // 0. Listen for backend toast events (needs t for i18n resolution)
-      // 1. 监听 Rust 端的主动推送
+      // Backend toast listener (needs t for i18n resolution) + config://updated
       const toastTask: Promise<(() => void) | undefined> = t
         ? startToastListener(t)
         : Promise.resolve(undefined)
@@ -130,7 +127,7 @@ export const useConfigInit = (t?: i18n.Translator<Dictionary>, onReady?: () => v
 
       const [toastFunction, function_] = await Promise.all([toastTask, listenTask])
 
-      // 如果 await 期间组件已卸载，立即注销监听，防止内存泄漏
+      // Unmounted while awaiting: unregister immediately to avoid leaks
       if (!isMounted) {
         toastFunction?.()
         function_()
@@ -140,12 +137,13 @@ export const useConfigInit = (t?: i18n.Translator<Dictionary>, onReady?: () => v
       unlistenToast = toastFunction
       unlisten = function_
 
-      // 2. 等待 refreshConfig 完成。initialization_script 已注入初始值，
-      //    这里是防御性的：确保 listener 注册期间若发生外部修改能被纠正。
+      // Wait for refreshConfig. The initial value is already injected; this is
+      // defensive, correcting any external change made during registration.
       await refreshPromise
 
-      // 配置损坏回退提示：Rust 启动时检测到 config.toml 损坏会静默回退默认值，
-      // 但彼时 webview 尚未注册监听器，emit 的 toast 会丢失，因此在这里主动查询。
+      // Corrupted-config fallback: the backend detects a corrupt config.toml at
+      // startup and silently falls back to defaults, but the webview has no
+      // listener yet at that point, so the emitted toast is lost — query here.
       try {
         if (await invoke<boolean>('config_was_corrupted')) {
           myToast({
@@ -160,10 +158,10 @@ export const useConfigInit = (t?: i18n.Translator<Dictionary>, onReady?: () => v
         log.error(`Failed to query config corruption flag: ${errToStr(error)}`)
       }
 
-      // onReady 在至少一次 await 后调用，此时必然已切到 microtask 队列，
-      // SolidJS 的所有同步 effects（colorMode 同步 dark class、Toaster 的
-      // mergeContainerOptions 同步 position 等）都已执行完毕。这样由
-      // onReady 触发的 toast 才会用正确的 position 与主题色渲染。
+      // onReady fires after at least one await, so we are already on the
+      // microtask queue and all synchronous SolidJS effects (colorMode dark
+      // class, Toaster mergeContainerOptions) have run — toasts triggered by
+      // onReady render with the correct position and theme.
       // isMounted is flipped to false by the onCleanup closure below; the
       // type checker can't see that cross-callback mutation, so the guard
       // is not unnecessary.
@@ -194,39 +192,37 @@ const refreshConfig = async () => {
   }
 }
 
-// 核心逻辑：拉取远端并提供撤回
+// Pull the remote config and offer an undo action.
 export const checkAndPullRemote = async (
   t: i18n.Translator<Dictionary>,
   skipCheck?: boolean
 ) => {
-  // skipCheck 为 false 为自动拉取，不提醒
+  // skipCheck === false means auto-pull: stay silent when unconfigured
   if (!skipCheck && config.settings.storage.provider === 'none') {
     toast(t('hint.remoteNotConfigured'))
     return
   }
-  // 显示一个 processing toast，结束时用相同 id 替换为结果提示
+  // Loading toast; replaced in place (same id) by the result message
   const toastId = toast.loading(t('hint.checkingRemoteConfig'))
   try {
     const [oldConfig, remoteIsNone] = await invoke<[Config | null, boolean]>(
       'apply_remote_config',
       { safe: !skipCheck }
     )
-    // 如果是手动拉取，则 toast 提示
     if (skipCheck && remoteIsNone) {
       toast.error(t('hint.remoteConfigNotFound'), { id: toastId })
       return
     }
     if (oldConfig) {
-      // 弹出带撤回按钮的 Toast
       myToast({
         actions: [
           {
             label: t('ui.withdraw'),
             onClick: () => {
               setConfig(reconcile(oldConfig))
-              // 恢复旧配置到磁盘。这里必须用 save_config（全量覆盖），
-              // 不能用 patch_config——patch 只携带声明过的字段，
-              // 而撤回的语义就是"强制恢复到这个快照"。
+              // Restore to disk. Must be save_config (full overwrite), not
+              // patch_config — a patch only carries declared fields, while
+              // undo means "force-restore to this snapshot".
               void (async () => {
                 try {
                   await invoke('save_config', { newConfig: oldConfig })
@@ -251,7 +247,8 @@ export const checkAndPullRemote = async (
       toast.success(t('hint.localIsTheNewest'), { id: toastId })
     }
   } catch (error) {
-    // 只在自动拉取且配置了存储后端时提示，提升首次启动的体验
+    // Only notify on auto-pull with a configured provider; avoids a scary
+    // error toast on first launch
     if (skipCheck || !(error as Error).toString().includes('Storage provider not set')) {
       toast.error(t('hint.checkRemoteConfigFailed') + ': ' + errToStr(error), {
         id: toastId
@@ -463,9 +460,7 @@ export const useConfig = () => {
             const index = state.devices.findIndex(d => d.uid === uid)
             if (index === -1) {
               state.devices.push(deviceUnwrap)
-            }
-            // 如果没有找到，则添加
-            else {
+            } else {
               state.devices[index] = deviceUnwrap
             }
           })
@@ -497,9 +492,7 @@ export const useConfig = () => {
             const index = state.devices.findIndex(d => d.uid === uid)
             if (index === -1) {
               state.devices.push(deviceUnwrap)
-            }
-            // 如果没有找到，则添加
-            else {
+            } else {
               state.devices[index] = deviceUnwrap
             }
           })
@@ -571,9 +564,3 @@ export const useConfig = () => {
     refresh: refreshConfig
   }
 }
-
-/* usage:
-
-calls initConfig() in App.tsx, then use `const { config, actions } = useConfig();` in other components
-
-*/

@@ -31,7 +31,7 @@ const HINT_UPLOADING: &str = "<hint.uploading>";
 
 // ── Config types ──
 
-/// Where the retention (末位淘汰) policy is enforced.
+/// Where the retention policy is enforced.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub enum RetentionScope {
@@ -46,7 +46,7 @@ pub enum RetentionScope {
 #[serde(rename_all = "camelCase", default)]
 pub struct AutoUploadGameConfig {
     /// Max number of archives to keep for this game; the oldest are evicted
-    /// (末位淘汰) once exceeded. `0` means unlimited.
+    /// once exceeded. `0` means unlimited.
     pub max_kept: u32,
     /// Where the retention policy is enforced.
     pub retention_scope: RetentionScope,
@@ -217,7 +217,7 @@ impl super::PluginHandler for AutoUploadPlugin {
         save_dispatcher.dispatch_after(&archive_filename).await;
         tx.execute_after_exit();
 
-        // Retention (末位淘汰): keep only the newest `max_kept` archives.
+        // Retention: keep only the newest `max_kept` archives.
         if max_kept > 0 {
             if matches!(
                 retention_scope,
@@ -246,7 +246,7 @@ impl super::PluginHandler for AutoUploadPlugin {
     }
 }
 
-// ── Retention (末位淘汰) helpers ──
+// ── Retention helpers ──
 
 /// Delete the oldest remote archives until at most `max_kept` remain.
 ///

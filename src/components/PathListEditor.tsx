@@ -48,7 +48,6 @@ interface PathListEditorProps {
 export default function PathListEditor(props: PathListEditorProps) {
   const { t } = useI18n()
   const variableMap = useVarMap()
-  // 记录当前正在编辑的索引，null 表示没有在编辑
   const [editingIndex, setEditingIndex] = createSignal<null | number>(null)
 
   // ─── Validations ──────────────────────────────────────────────────────────
@@ -85,7 +84,6 @@ export default function PathListEditor(props: PathListEditorProps) {
 
   // ─── Path helpers ─────────────────────────────────────────────────────────
 
-  // 路径标准化逻辑
   const normalizePath = (p: string) => {
     let value = fuckBackslash(p)
     if (props.onBulkInput) {
@@ -124,7 +122,6 @@ export default function PathListEditor(props: PathListEditorProps) {
 
   const handleUpdatePath = (index: number, newValue: string) => {
     const trimmed = newValue.trim()
-    // 如果为空或值未改变，则不触发 onChange
     if (!trimmed || props.paths[index] === trimmed) {
       setEditingIndex(null)
       return
@@ -171,7 +168,6 @@ export default function PathListEditor(props: PathListEditorProps) {
                 <li class="group flex min-h-[28px] items-center justify-between rounded border border-gray-200 bg-white px-2 py-1 text-xs transition-colors dark:border-transparent dark:bg-gray-700">
                   <Show
                     fallback={
-                      // 显示模式
                       <span
                         class="mr-2 flex-1 cursor-text truncate text-gray-600 transition-colors select-text hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
                         onDblClick={() => setEditingIndex(index())}
@@ -182,7 +178,6 @@ export default function PathListEditor(props: PathListEditorProps) {
                     }
                     when={editingIndex() === index()}
                   >
-                    {/* 编辑模式 */}
                     <input
                       class="mr-2 min-w-0 flex-1 rounded border border-blue-500 bg-white px-1 text-gray-900 outline-none dark:bg-gray-900 dark:text-white"
                       onBlur={e => {
@@ -229,7 +224,7 @@ export default function PathListEditor(props: PathListEditorProps) {
         </Show>
       </div>
 
-      {/* 构建一个高度为 0 的锚点，让 warning 相对于这里进行绝对定位 */}
+      {/* Zero-height anchor so warnings can be absolutely positioned here */}
       <div class="relative h-0 w-full">
         <div class="absolute top-0 left-0 z-10 flex w-full flex-col gap-2">
           <Show when={variableWarning()}>
@@ -241,7 +236,7 @@ export default function PathListEditor(props: PathListEditorProps) {
         </div>
       </div>
 
-      {/* 正常文档流中的提示，永远紧贴主体 */}
+      {/* In-flow hint, always attached below the list */}
       <Show when={props.paths.length > 0}>
         <div class="top-0 pr-1 text-right text-[10px] text-gray-400 dark:text-gray-500">
           {t('hint.doubleClickToEdit')}

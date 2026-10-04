@@ -285,7 +285,6 @@ export const FormPathInput: Component<FormPathInputProps> = props => {
   const inputClass = () =>
     cn(DEFAULT_PATH_INPUT, 'col-start-1 row-start-1 w-full pr-8', props.inputClass)
 
-  // 图标按钮：小巧的正方形，悬浮时显示半透明背景
   const buttonClass = () =>
     cn(
       'absolute right-1.5 top-1/2 -translate-y-1/2',

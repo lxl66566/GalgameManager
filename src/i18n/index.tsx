@@ -14,7 +14,7 @@ import * as zh from './zh-CN'
 export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P]
 }
-// Flatten 将嵌套对象转换为 "button.toggle" 这种键值对
+// Flatten turns nested objects into dotted keys like "button.toggle"
 export type Dictionary = i18n.Flatten<RawDictionary>
 export type Locale = 'en-US' | 'zh-CN'
 export type RawDictionary = typeof en.dict
@@ -41,7 +41,6 @@ const dictmap: Partial<Record<Locale, DeepPartial<RawDictionary>>> = {
 
 let cachedEnDict: Dictionary | null = null
 
-// --- 2. 创建 Context ---
 interface I18nContextType {
   loading: boolean
   locale: () => Locale
@@ -92,19 +91,17 @@ export const I18nProvider: FlowComponent = props => {
   const initialLocale = detectInitialLocale()
   const [locale, setLocale] = createSignal<Locale>(initialLocale)
 
-  // 使用 Resource 异步加载字典；初始值同步给出目标语言词典，避免闪烁
+  // Resource loads the dictionary async; the synchronous initialValue gives
+  // the target-locale dictionary up front to avoid an English flash.
   const [dict] = createResource(locale, fetchDictionary, {
     initialValue: resolveDictionary(initialLocale)
   })
 
-  // 生成翻译函数 t
-  // translator 会自动处理响应性，当 dict 更新时 t 也会更新
+  // The translator stays reactive: dict updates propagate to t
   const t = i18n.translator(dict, i18n.resolveTemplate)
 
-  // --- 3. 动态样式逻辑 ---
   createEffect(() => {
     const currentLang = locale()
-    // 修改 html 标签属性，供 CSS 使用
     document.documentElement.lang = currentLang
     document.documentElement.dataset.themeLang = currentLang
   })
@@ -117,7 +114,6 @@ export const I18nProvider: FlowComponent = props => {
   )
 }
 
-// 导出 hook 方便使用
 export function useI18n() {
   const context = useContext(I18nContext)
   if (!context) throw new Error('useI18n must be used within I18nProvider')

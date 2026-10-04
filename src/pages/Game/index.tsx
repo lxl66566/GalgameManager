@@ -45,9 +45,9 @@ import { useGameRuntime } from '~/store/gameRuntime'
 
 import { GameItem, GameItemWrapper } from './GameItem'
 
-// 模态框按需加载（字符串字面量动态 import，类型静态可推导）：它们拖着的
-// form/tooltip 等 kobalte 组件不再进入首屏 chunk，首次打开时才加载（本地
-// 资源，延迟为毫秒级）。
+// Modals are lazy-loaded (string-literal dynamic imports, fully static
+// types): their kobalte form/tooltip deps stay out of the initial chunk and
+// load on first open (local resources, millisecond-level latency).
 const GameEditModal = lazy(() => import('./GameEditModal'))
 const ArchiveSyncModal = lazy(() => import('./SyncModal'))
 
@@ -85,14 +85,13 @@ const GamePage = (): JSX.Element => {
   })
 
   const sortedGames = createMemo(() => {
-    // 浅拷贝数组以避免修改 Store
     const games = [...config.games]
     const type = sortType()
 
     return games.toSorted((a, b) => {
       switch (type) {
         case 'lastPlayed': {
-          // 处理 null 情况，未游玩的排在后面
+          // null (never played) sorts last
           const timeA = a.lastPlayedTime ? new Date(a.lastPlayedTime).getTime() : 0
           const timeB = b.lastPlayedTime ? new Date(b.lastPlayedTime).getTime() : 0
           return timeB - timeA
@@ -245,7 +244,7 @@ const GamePage = (): JSX.Element => {
     actions.setCoverColor(index, color)
   }
 
-  // 游戏启动逻辑 — delegated to the global runtime store so listeners and
+  // Launch flow is delegated to the global runtime store so listeners and
   // session timing survive sidebar navigation.
   const handleStart = async (index: number) => {
     const game = config.games[index]
@@ -364,7 +363,6 @@ const GamePage = (): JSX.Element => {
     }
   }
 
-  // 并发备份处理
   const handleBackup = async (index: number) => {
     const game = config.games[index]
     if (!game) return
@@ -373,13 +371,11 @@ const GamePage = (): JSX.Element => {
       return
     }
 
-    // 检查该游戏是否正在备份中
     if (runtime.isBackingUp(game.id)) {
       log.warn('Game is already backing up')
       return
     }
 
-    // 添加到备份队列
     runtime.markBackingUp(game.id)
 
     const toastId = toast.loading(t('hint.archiving') + game.name + '...')
@@ -420,7 +416,6 @@ const GamePage = (): JSX.Element => {
       if (unlistenUploadError) {
         unlistenUploadError()
       }
-      // 从备份队列中移除
       runtime.unmarkBackingUp(game.id)
     }
   }
@@ -451,7 +446,6 @@ const GamePage = (): JSX.Element => {
         callback={handleDropAdd}
         class="flex h-full w-full flex-col py-4 pr-0 pl-4"
       >
-        {/* 头部区域：标题 + 排序控件 */}
         <div class="mb-4 flex flex-row items-center justify-between">
           <h1 class="text-2xl font-bold dark:text-white">{t('game.self')}</h1>
 
@@ -481,7 +475,6 @@ const GamePage = (): JSX.Element => {
                 >
                   <For each={row}>
                     {game => {
-                      // 获取真实索引用于操作
                       const realIndex = () => getRealIndex(game.id)
 
                       return (
@@ -502,7 +495,7 @@ const GamePage = (): JSX.Element => {
                           onImageHashUpdate={newhash => {
                             handleImageHashUpdate(realIndex(), newhash)
                           }}
-                          // 所有的操作回调都使用 realIndex()
+                          // All action callbacks use realIndex()
                           onStart={() => handleStart(realIndex())}
                           onSync={() => {
                             openSyncModal(realIndex())

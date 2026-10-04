@@ -37,11 +37,10 @@ const COMPRESSION_RULES: Record<
   ArchiveAlgo,
   { disabled: boolean; max: number; min: number }
 > = {
-  squashfsZstd: { disabled: false, max: 22, min: 1 }, // Zstd 通常 1-22
-  tar: { disabled: true, max: 0, min: 0 } // Tar 通常仅归档不压缩，禁用等级
+  squashfsZstd: { disabled: false, max: 22, min: 1 }, // Zstd level range: 1-22
+  tar: { disabled: true, max: 0, min: 0 } // tar is archive-only, no level
 }
 
-// --- 子组件：WebDAV 表单 ---
 const WebDavForm: Component<{
   config: WebDavConfig
   onChange: (key: keyof WebDavConfig, value: string) => void
@@ -89,7 +88,6 @@ const WebDavForm: Component<{
   )
 }
 
-// --- 子组件：S3 表单 ---
 const S3Form: Component<{
   config: S3Config
   onChange: (key: keyof S3Config, value: string) => void
@@ -151,7 +149,6 @@ const S3Form: Component<{
   )
 }
 
-// --- 新增子组件：Local 表单 ---
 const LocalForm: Component<{
   onChange: (value: string) => void
   path: string
@@ -188,7 +185,7 @@ const CompressionForm: Component<{
 
   const currentRule = createMemo(() => COMPRESSION_RULES[props.config.algorithm])
 
-  // 优化：接收 Event 对象以便直接操作 DOM
+  // Takes the event object so the DOM value can be refilled directly
   const handleLevelChange = (
     e: Event & {
       currentTarget: HTMLInputElement
@@ -199,15 +196,13 @@ const CompressionForm: Component<{
     const rule = currentRule()
     const rawValue = target.value
 
-    // 1. 如果规则禁用，强制重置为默认/最小值
     if (rule.disabled) {
       const resetValue = rule.min
       props.actions.updateSettingsDebounced({ archive: { level: resetValue } })
-      target.value = resetValue.toString() // 强制回填
+      target.value = resetValue.toString()
       return
     }
 
-    // 2. 解析与边界限制 (Clamping)
     let value = parseInt(rawValue)
 
     if (Number.isNaN(value)) {
@@ -217,11 +212,10 @@ const CompressionForm: Component<{
       if (value > rule.max) value = rule.max
     }
 
-    // 3. 更新 Store（debounce 磁盘写入）
     props.actions.updateSettingsDebounced({ archive: { level: value } })
 
-    // 4. 关键步骤：如果 DOM 显示的值与计算后的值不一致，手动强制回填
-    // 这解决了 "输入99 -> Store保持22 -> 界面仍显示99" 的问题
+    // Refill the DOM when it disagrees with the computed value, else the UI
+    // keeps showing 99 while the store holds 22
     if (target.value !== value.toString()) {
       target.value = value.toString()
     }
@@ -248,16 +242,15 @@ const CompressionForm: Component<{
         <Input
           disabled={currentRule().disabled}
           max={currentRule().max}
-          // 增加 min/max 属性辅助浏览器原生校验 UI
+          // min/max feed the browser's native validation UI
           min={currentRule().min}
-          // 传入事件对象 e，而不是 e.currentTarget.value
           onChange={e => {
             handleLevelChange(e)
           }}
           placeholder={
             currentRule().disabled ? 'N/A' : `${currentRule().min}-${currentRule().max}`
           }
-          type="number" // 建议加上 type="number"
+          type="number"
           value={currentRule().disabled ? '' : props.config.level}
         />
       </SettingRow>
@@ -265,13 +258,10 @@ const CompressionForm: Component<{
   )
 }
 
-// --- 主组件 ---
-
 export const StorageTab: Component = () => {
   const { actions, config } = useConfig()
   const { t } = useI18n()
 
-  // 获取当前的 provider 字符串
   const currentProvider = () => config.settings.storage.provider
 
   // Debounced operator cache invalidation: avoids an IPC call per keystroke
@@ -287,32 +277,28 @@ export const StorageTab: Component = () => {
     cleanOperatorDebounced.cancel()
   })
 
-  // 切换 Provider：只修改 provider 字段，不触碰具体配置
+  // Switching provider only flips the field; per-provider configs are kept
   const handleProviderChange = (e: Event) => {
     const newProvider = (e.target as HTMLSelectElement).value as StorageProvider
     actions.updateSettings({ storage: { provider: newProvider } })
     void invoke('clean_current_operator')
   }
 
-  // 更新 WebDAV 配置（文本输入，debounce 磁盘写入）
   const updateWebDav = (key: keyof WebDavConfig, value: string) => {
     actions.updateSettingsDebounced({ storage: { webdav: { [key]: value } } })
     cleanOperatorDebounced()
   }
 
-  // 更新 S3 配置（文本输入，debounce 磁盘写入）
   const updateS3 = (key: keyof S3Config, value: string) => {
     actions.updateSettingsDebounced({ storage: { s3: { [key]: value } } })
     cleanOperatorDebounced()
   }
 
-  // 更新 Local 配置（文本输入，debounce 磁盘写入）
   const updateLocal = (value: string) => {
     actions.updateSettingsDebounced({ storage: { local: { path: value } } })
     cleanOperatorDebounced()
   }
 
-  // 上传配置
   const [uploading, setUploading] = createSignal(false)
   const handleUploadConfig = async () => {
     setUploading(true)
@@ -343,17 +329,14 @@ export const StorageTab: Component = () => {
         </SettingRow>
 
         <Switch>
-          {/* Local Case */}
           <Match when={currentProvider() === 'local'}>
             <LocalForm onChange={updateLocal} path={config.settings.storage.local.path} />
           </Match>
 
-          {/* WebDAV Case */}
           <Match when={currentProvider() === 'webDav'}>
             <WebDavForm config={config.settings.storage.webdav} onChange={updateWebDav} />
           </Match>
 
-          {/* S3 Case */}
           <Match when={currentProvider() === 's3'}>
             <S3Form config={config.settings.storage.s3} onChange={updateS3} />
           </Match>

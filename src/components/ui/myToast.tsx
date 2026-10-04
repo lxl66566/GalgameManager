@@ -238,8 +238,9 @@ export const myToast = (props: CustomToastOptions) => {
     t => {
       let element: HTMLDivElement | undefined
 
-      // toast.custom 不经过 solid-toast 的 ToastBar，默认没有进出动画，
-      // 这里复刻 ToastBar 的 WAAPI 动画以保证与原生 toast 一致。
+      // toast.custom bypasses solid-toast's ToastBar, which provides no
+      // enter/exit animations; replicate ToastBar's WAAPI animation so
+      // custom toasts match the native ones.
       createEffect(() => {
         if (!element) return
         const position = t.position ?? 'bottom-left'
@@ -303,7 +304,7 @@ export const myToast = (props: CustomToastOptions) => {
           {/* 3. Actions */}
           <Show when={actions.length > 0}>
             <div class="mx-1 h-4 w-px bg-gray-200 dark:bg-slate-700" />
-            {/* mr-1.5: 让最右按钮到 toast 边缘的距离 = 最左按钮到分割线的距离（gap-3 + 分割线 mx-1 = 16px） */}
+            {/* mr-1.5: rightmost button -> toast edge equals leftmost button -> divider (gap-3 + divider mx-1 = 16px) */}
             <div class="mr-1.5 flex shrink-0 items-center gap-3">
               <For each={actions}>
                 {action => (

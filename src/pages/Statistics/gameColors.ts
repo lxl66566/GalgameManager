@@ -1,4 +1,3 @@
-// src/pages/Statistics/gameColors.ts
 // Series color assignment for the statistics charts.
 //
 // Games with a cover image get a deterministic accent color extracted from

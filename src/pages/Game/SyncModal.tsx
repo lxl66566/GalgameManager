@@ -21,10 +21,8 @@ import toast from 'solid-toast'
 
 import { useI18n } from '~/i18n'
 
-// --- 类型定义 ---
-
 interface ActionButtonProps {
-  icon: typeof TbOutlineCloudUpload // 使用 solid-icons 的类型
+  icon: typeof TbOutlineCloudUpload
   label?: string
   onClick: () => void
   size?: 'sm' | 'xs'
@@ -38,27 +36,21 @@ interface ArchiveItem extends ArchiveInfo {
 
 type ArchiveStatus = 'LocalOnly' | 'RemoteOnly' | 'Synced'
 
-// --- 主组件 ---
-
 interface ArchiveSyncModalProps {
   gameId: number
   gameInfo: Game
   onClose: () => void
 }
 
-// --- 辅助组件：按钮 ---
-
 export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
   const { t } = useI18n()
   const [archives, setArchives] = createSignal<ArchiveItem[]>([])
   const [loading, setLoading] = createSignal(false)
 
-  // 重命名状态
   const [editingName, setEditingName] = createSignal<null | string>(null)
   const [temporaryName, setTemporaryName] = createSignal('')
   const [isRenaming, setIsRenaming] = createSignal(false)
 
-  // 加载数据
   const fetchData = async () => {
     setLoading(true)
     try {
@@ -79,32 +71,26 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
         }
       })()
 
-      // 本地请求失败则直接抛出到外层 catch
+      // Local fetch failure propagates to the outer catch (unlike remote).
       const localPromise = invoke<ArchiveInfo[]>('list_local_archive', {
         gameId: props.gameId
       })
 
-      // 并行执行
       const [localList, remoteList] = await Promise.all([localPromise, remotePromise])
 
       log.info(`localList: ${JSON.stringify(localList)}`)
       log.info(`remoteList: ${JSON.stringify(remoteList)}`)
 
-      // 1. 将 List 转换为 Map，key 为 name，value 为完整的 ArchiveInfo 对象
-      // 这样我们可以通过 name 快速查找对象是否存在
+      // Merge by name; base info prefers the local entry. Non-null because
+      // allNames is the union of both maps.
       const localMap = new Map(localList.map(item => [item.name, item]))
       const remoteMap = new Map(remoteList.map(item => [item.name, item]))
-
-      // 2. 获取所有唯一的 name 集合
       const allNames = new Set([...localMap.keys(), ...remoteMap.keys()])
 
-      // 3. 遍历所有 name，生成最终的 merged 数组
       const merged: ArchiveItem[] = [...allNames].map(name => {
         const localItem = localMap.get(name)
         const remoteItem = remoteMap.get(name)
 
-        // 确定基础信息：优先使用本地的数据，如果本地没有则使用远端的数据
-        // 因为 allNames 来源于两者之和，所以 baseInfo 一定存在
         const baseInfo = (localItem ?? remoteItem)!
 
         let status: ArchiveStatus = 'Synced'
@@ -114,12 +100,10 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
         } else if (!localItem && remoteItem) {
           status = 'RemoteOnly'
         }
-        // 如果两者都有 (localItem && remoteItem)，则保持默认的 'Synced'
 
         return { ...baseInfo, status }
       })
 
-      // 按名称倒序排序
       merged.sort((a, b) => b.name.localeCompare(a.name))
       setArchives(merged)
     } catch (error) {
@@ -133,8 +117,6 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
   onMount(() => {
     void fetchData()
   })
-
-  // --- 操作处理 ---
 
   const handleUpload = async (filename: string) => {
     const toastId = toast.loading(t('hint.uploading') + filename + '...')
@@ -159,7 +141,6 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       await invoke('upload_archive', { archiveFilename: filename, gameId: props.gameId })
       toast.success(t('hint.uploadSuccess') + filename, { id: toastId })
 
-      // 上传成功：LocalOnly -> Synced
       setArchives(previous =>
         previous.map(item =>
           item.name === filename ? { ...item, status: 'Synced' } : item
@@ -182,7 +163,6 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       await invoke('pull_archive', { archiveFilename: filename, gameId: props.gameId })
       toast.success(t('hint.downloadSuccess') + filename, { id: toastId })
 
-      // 下载成功：RemoteOnly -> Synced
       setArchives(previous =>
         previous.map(item =>
           item.name === filename ? { ...item, status: 'Synced' } : item
@@ -242,14 +222,12 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       await invoke('delete_archive', { archiveFilename: filename, gameId: props.gameId })
       toast.success(t('hint.deleteSuccess') + filename, { id: toastId })
 
-      // 不重新 fetch，直接更新本地状态
+      // Update local state in place instead of refetching.
       setArchives(previous =>
         previous
           .map(item => {
             if (item.name !== filename) return item
-            // 如果原本是已同步，删除云端后变为仅本地
             if (item.status === 'Synced') return { ...item, status: 'LocalOnly' }
-            // 如果原本是仅云端，则直接移除
             return null
           })
           .filter((item): item is ArchiveItem => item !== null)
@@ -270,14 +248,12 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       })
       toast.success(t('hint.deleteSuccess') + filename, { id: toastId })
 
-      // 不重新 fetch，直接更新本地状态
+      // Update local state in place instead of refetching.
       setArchives(previous =>
         previous
           .map(item => {
             if (item.name !== filename) return item
-            // 如果原本是已同步，删除本地后变为仅云端
             if (item.status === 'Synced') return { ...item, status: 'RemoteOnly' }
-            // 如果原本是仅本地，则直接移除
             return null
           })
           .filter((item): item is ArchiveItem => item !== null)
@@ -288,25 +264,22 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       })
     }
   }
-  // --- 重命名逻辑 ---
   const startRename = (name: string) => {
     setEditingName(name)
     setTemporaryName(name)
   }
 
   const commitRename = async (oldName: string, status: ArchiveStatus) => {
-    // 0. 防重复提交锁：如果正在重命名中，直接忽略后续调用
     if (isRenaming()) return
 
     const newName = temporaryName().trim()
 
-    // 1. 基础校验：名称为空或未修改
     if (!newName || newName === oldName) {
       setEditingName(null)
       return
     }
 
-    // 2. 冲突校验：检查新名称是否已存在于列表中（排除自身，允许仅大小写变化的重命名）
+    // Self is excluded so case-only renames are allowed.
     const isDuplicate = isDuplicateArchiveName(
       archives().map(a => a.name),
       oldName,
@@ -318,7 +291,6 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       return
     }
 
-    // 开启锁
     setIsRenaming(true)
     const toastId = toast.loading(t('hint.renaming') + oldName + '...')
 
@@ -336,15 +308,14 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
           newArchiveFilename: newName
         })
       } else {
-        // Synced: 原子性操作模拟
-        // 1. 先改本地
+        // Synced rename emulated atomically: local first, then remote; roll
+        // back the local rename if the remote rename fails.
         await invoke('rename_local_archive', {
           archiveFilename: oldName,
           gameId: props.gameId,
           newArchiveFilename: newName
         })
 
-        // 2. 再改远程
         try {
           await invoke('rename_remote_archive', {
             archiveFilename: oldName,
@@ -352,20 +323,18 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
             newArchiveFilename: newName
           })
         } catch (error) {
-          // 3. 远程失败，回滚本地
           log.error(`Remote rename failed, rolling back local...: ${errToStr(error)}`)
           try {
             await invoke('rename_local_archive', {
-              archiveFilename: newName, // 注意：这里要把新名字改回旧名字
+              archiveFilename: newName,
               gameId: props.gameId,
               newArchiveFilename: oldName
             })
-            // 抛出特定错误信息给外层 catch
             throw new Error(`${t('hint.renameRemoteFailedRollback')}${errToStr(error)}`, {
               cause: error
             })
           } catch (error_) {
-            // 极端的灾难性错误：本地回滚也失败了（文件被占用等）
+            // Worst case: the local rollback also failed (e.g. file locked).
             throw new Error(
               `${t('hint.renameRemoteRollbackFailed')}${errToStr(error)}, Rollback: ${errToStr(error_)}`,
               { cause: error_ }
@@ -374,10 +343,8 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
         }
       }
 
-      // 成功处理
       toast.success(t('hint.renameSuccess'), { id: toastId })
 
-      // 更新列表状态
       setArchives(previous => {
         const updatedList = previous.map(item =>
           item.name === oldName ? { ...item, name: newName } : item
@@ -385,19 +352,17 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
         return updatedList.toSorted((a, b) => b.name.localeCompare(a.name))
       })
 
-      // 只有成功时才关闭编辑框
       setEditingName(null)
     } catch (error) {
       toast.error(t('hint.renameFailed') + String(error), { id: toastId })
-      // 注意：发生错误时，不设置 setEditingName(null)，保留用户输入以便修改重试
+      // Keep editingName on error so the user can fix the input and retry.
     } finally {
-      // 无论成功失败，最后释放锁
       setIsRenaming(false)
     }
   }
 
   return (
-    // 修改 1: 固定宽度 (w-[90vw] max-w-2xl) 和高度 (h-[80vh])，防止界面随内容抖动
+    // Fixed modal size so the layout doesn't jitter as content changes.
     <div class="flex h-[80vh] w-[90vw] max-w-2xl flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl transition-all dark:border-gray-700 dark:bg-gray-800">
       {/* Header */}
       <div class="flex flex-shrink-0 items-center justify-between border-b border-gray-200 bg-gray-50 px-5 py-4 dark:border-gray-700 dark:bg-gray-800/50">
@@ -501,19 +466,15 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                           />
                         </Show>
 
-                        {/* 修改部分：元数据行 (状态文本 + 文件大小) */}
                         <div class="mt-0.5 flex min-w-0 items-center gap-2">
-                          {/* 状态文本 */}
                           <span class="flex-shrink-1 truncate text-[10px] leading-none text-gray-400 dark:text-gray-500">
                             {t('game.sync.statusLong')[item.status]}
                           </span>
 
-                          {/* 分隔符 (仅在有状态文本时显示，视具体翻译长度而定，这里默认显示) */}
                           <span class="text-[10px] leading-none text-gray-300 select-none dark:text-gray-600">
                             •
                           </span>
 
-                          {/* 文件大小 */}
                           <span class="flex-shrink-0 font-mono text-[11px] leading-none whitespace-nowrap text-gray-400 dark:text-gray-500">
                             {formatBytes(item.size)}
                           </span>
@@ -618,11 +579,6 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
           </Show>
         </Show>
       </div>
-
-      {/* Footer Hint */}
-      {/* <div class="px-4 py-2 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 text-[10px] text-gray-400 text-center flex-shrink-0">
-        双击文件名重命名
-      </div> */}
     </div>
   )
 }
@@ -644,7 +600,7 @@ function ActionButton(props: ActionButtonProps) {
 
   const sizes = {
     sm: 'w-8 h-8',
-    xs: 'h-6 px-1 min-w-0' // 紧凑模式
+    xs: 'h-6 px-1 min-w-0'
   }
 
   return (

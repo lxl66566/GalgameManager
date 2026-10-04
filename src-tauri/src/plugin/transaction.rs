@@ -4,9 +4,9 @@ use parking_lot::Mutex;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CleanupPhase {
-    /// 游戏成功启动后执行（或在启动失败时立即回滚）
+    /// Run after the game starts (rolled back immediately on launch failure)
     AfterGameStart,
-    /// 游戏结束后执行（或在启动失败时立即回滚）
+    /// Run after the game exits (rolled back immediately on launch failure)
     AfterGameExit,
 }
 
@@ -24,7 +24,7 @@ impl Transaction {
         Self::default()
     }
 
-    /// 注册一个清理任务，任务会按照注册的相反顺序（LIFO）执行
+    /// Register a cleanup task; tasks run in LIFO order.
     pub fn add_cleanup<F: FnOnce() + Send + Sync + 'static>(&self, phase: CleanupPhase, f: F) {
         match phase {
             CleanupPhase::AfterGameStart => self.after_start.lock().push(Box::new(f)),
@@ -46,7 +46,7 @@ impl Transaction {
         }
     }
 
-    /// 回滚所有未执行的清理任务
+    /// Roll back all not-yet-run cleanup tasks.
     pub fn rollback(&self) {
         self.execute_after_start();
         self.execute_after_exit();

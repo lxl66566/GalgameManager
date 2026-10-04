@@ -1,4 +1,3 @@
-// src/pages/Statistics/StackedPlaytimeChart.tsx
 // d3 stacked bar chart: x = time buckets, y = playtime, one colored segment
 // per game. Solid owns the outer DOM + tooltip, d3 owns everything inside
 // <svg> (data join, scales, axes, transitions).

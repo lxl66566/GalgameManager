@@ -82,11 +82,7 @@ impl AtspiDetector {
 impl ForegroundDetector for AtspiDetector {
     fn focused_pid(&self) -> Option<u32> {
         let pid = FOCUSED_PID.load(Ordering::Relaxed);
-        if pid == 0 {
-            None
-        } else {
-            Some(pid)
-        }
+        if pid == 0 { None } else { Some(pid) }
     }
 }
 

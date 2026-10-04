@@ -1,4 +1,3 @@
-// src/pages/Statistics/index.tsx
 // Playtime statistics: a d3 stacked bar chart (time buckets × games) linked
 // two-ways with a per-game horizontal bar list.
 //

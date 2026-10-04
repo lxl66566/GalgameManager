@@ -5,7 +5,6 @@ import toast from 'solid-toast'
 import { useI18n } from '~/i18n'
 import { cn } from '~/lib/utils'
 
-// 核心：自动调整 Textarea 高度的辅助函数
 const autoResize = (element: HTMLTextAreaElement) => {
   element.style.height = 'auto'
   element.style.height = `${element.scrollHeight}px`
@@ -158,7 +157,7 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
       >
         {/* Add new row */}
         <Show when={isAdding()}>
-          {/* 将 items-center 改为 items-start，确保 textarea 变高时，其他元素依然顶部对齐 */}
+          {/* items-start keeps siblings top-aligned when the textarea grows */}
           <div class="mb-0.5 flex items-start gap-1 rounded border border-blue-500/30 bg-white p-1 shadow-sm dark:bg-gray-900/50 dark:shadow-none">
             <input
               autofocus
@@ -188,7 +187,7 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
                     setNewValue(e.currentTarget.value)
                   }}
                   onKeyDown={e => {
-                    // Enter 确认添加，Shift+Enter 允许换行
+                    // Enter confirms, Shift+Enter inserts a newline
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault()
                       handleConfirmAdd()
@@ -260,7 +259,7 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
         >
           <For each={sortedKeys()}>
             {key => (
-              // items-center 改为 items-start，适配多行高度
+              // items-start: accommodate multi-line values
               <div class="group flex items-start gap-1 rounded border border-gray-200 bg-white px-1 py-0.5 transition-colors hover:bg-gray-50 dark:border-transparent dark:bg-gray-700/50 dark:hover:bg-gray-700">
                 <input
                   class="mt-[1px] w-1/3 min-w-[50px] truncate rounded border border-transparent bg-transparent py-0 pr-0.5 pl-0.5 font-mono text-[11px] text-blue-600 transition-all outline-none hover:border-gray-300 focus:border-blue-500 focus:bg-gray-100 dark:text-blue-300 dark:hover:border-gray-600 dark:focus:bg-gray-900"
@@ -293,7 +292,7 @@ export const FormTableEditor: Component<FormTableEditorProps> = props => {
                         autoResize(e.currentTarget)
                       }}
                       onKeyDown={e => {
-                        // Enter 失去焦点并保存，Shift+Enter 允许修改为多行
+                        // Enter blurs and saves, Shift+Enter allows multi-line
                         if (e.key !== 'Enter' || e.shiftKey) {
                           return
                         }

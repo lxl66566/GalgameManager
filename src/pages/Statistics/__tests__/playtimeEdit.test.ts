@@ -1,4 +1,3 @@
-// src/pages/Statistics/__tests__/playtimeEdit.test.ts
 import { describe, expect, it } from 'vitest'
 
 import {

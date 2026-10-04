@@ -1,4 +1,3 @@
-// src/pages/Statistics/timeRange.ts
 // Pure time-range bucketing & aggregation logic for the statistics charts.
 // Intentionally free of Solid / d3 / i18n dependencies so it stays unit-testable.
 //

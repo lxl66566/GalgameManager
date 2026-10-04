@@ -282,7 +282,7 @@ pub fn extract_speedup_assets(
         Ok(())
     })();
 
-    // 如果中途解压失败，清理掉已经解压出来的部分文件
+    // Clean up partially extracted files if any step fails midway
     if let Err(e) = result {
         cleanup_files(&files);
         return Err(e);
@@ -666,11 +666,7 @@ mod wine_regedit {
             if delete {
                 let _ = write!(s, "[-HKEY_CURRENT_USER\\{}]\r\n\r\n", item.path);
             } else {
-                let dll = if item.stub == System::X64 {
-                    stub_x64
-                } else {
-                    stub_x86
-                };
+                let dll = if item.stub == System::X64 { stub_x64 } else { stub_x86 };
                 let _ = write!(
                     s,
                     "[HKEY_CURRENT_USER\\{}]\r\n@=\"{dll}\"\r\n\"ThreadingModel\"=\"{}\"\r\n\r\n",

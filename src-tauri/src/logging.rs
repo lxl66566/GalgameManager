@@ -45,10 +45,10 @@ fn my_log_format(
     write!(
         w,
         "[{time}] {level} [{module}] - {message}",
-        time = now.format("%Y-%m-%d %H:%M:%S"), // 时间
-        level = record.level(),                 // 等级
-        module = top_level_module,              // 顶层模块名称
-        message = record.args()                 // 日志内容
+        time = now.format("%Y-%m-%d %H:%M:%S"),
+        level = record.level(),
+        module = top_level_module,
+        message = record.args()
     )
 }
 

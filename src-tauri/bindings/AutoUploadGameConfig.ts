@@ -7,7 +7,7 @@ import type { RetentionScope } from "./RetentionScope";
 export type AutoUploadGameConfig = {
   /**
    * Max number of archives to keep for this game; the oldest are evicted
-   * (末位淘汰) once exceeded. `0` means unlimited.
+   * once exceeded. `0` means unlimited.
    */
   maxKept: number;
   /**

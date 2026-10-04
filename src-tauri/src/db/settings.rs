@@ -81,17 +81,16 @@ pub enum StorageProvider {
     S3,
 }
 
-// 2. 修改：StorageConfig 现在持有所有配置 + 当前激活的 Provider
 #[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
 pub struct StorageConfig {
-    pub provider: StorageProvider, // 当前选中的后端
+    pub provider: StorageProvider,
     #[serde(deserialize_with = "deserialize_local_config_compat")]
-    pub local: LocalConfig, // Local 配置 (路径)
-    pub webdav: WebDavConfig,      // WebDAV 配置
-    pub s3: S3Config,              // S3 配置
+    pub local: LocalConfig,
+    pub webdav: WebDavConfig,
+    pub s3: S3Config,
 }
 
 impl StorageConfig {
@@ -213,7 +212,7 @@ impl Default for S3Config {
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
 pub struct LaunchConfig {
-    /// 统计游玩时长启用精确模式
+    /// Precise mode for playtime tracking
     pub precision_mode: bool,
     /// Enable daily playtime statistics
     pub daily_stat: bool,

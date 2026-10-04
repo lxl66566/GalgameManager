@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, LazyLock as Lazy},
 };
 
-use dashmap::DashMap;
+use dashmap::{DashMap, DashSet};
 use log::{debug, info, warn};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
@@ -53,6 +53,24 @@ async fn launch_game_steam(
 
 pub(crate) static GAME_LOOP_HANDLES: Lazy<DashMap<u32, JoinHandle<Result<()>>>> =
     Lazy::new(DashMap::new);
+
+/// Game ids with a launch attempt in flight: `launch_game_with_plugins` entry
+/// until the game-loop handle is registered in [`GAME_LOOP_HANDLES`]. Covers
+/// the window where the handle does not exist yet (plugin hooks, Steam
+/// process discovery) so duplicate-launch detection is airtight for the whole
+/// session attempt.
+static LAUNCHING: Lazy<DashSet<u32>> = Lazy::new(DashSet::new);
+
+/// Removes the game id from [`LAUNCHING`] on drop, so every early-return
+/// error path (hook failure, spawn failure, ...) releases the ticket without
+/// per-site cleanup.
+struct LaunchTicket(u32);
+
+impl Drop for LaunchTicket {
+    fn drop(&mut self) {
+        LAUNCHING.remove(&self.0);
+    }
+}
 
 /// Whether a game session (spawned game loop) is still active.
 pub fn is_game_running(game_id: u32) -> bool {
@@ -150,7 +168,7 @@ impl StartCtx {
         // joined with `current_dir`.
         let has_path_sep = program.contains('/') || program.contains('\\');
         let (resolved_program, resolved_current_dir) = if program_path.is_absolute() {
-            // 绝对路径：如果没有 current_dir，则从它的父目录推断
+            // Absolute: infer current_dir from the exe's parent if unset
             let cd = self.current_dir.clone().or_else(|| {
                 program_path
                     .parent()
@@ -160,7 +178,7 @@ impl StartCtx {
             (program_path, cd)
         } else if has_path_sep {
             if let Some(cd) = &self.current_dir {
-                // 相对路径 + 有 current_dir：拼接出系统能找到的绝对路径
+                // Relative + current_dir: join into an absolute path the OS can find
                 let joined = Path::new(cd).join(&program_path);
                 debug!(
                     "Relative program '{}' specified with current_dir '{}', joined to '{}'",
@@ -235,6 +253,20 @@ pub struct ResolvedParts {
     pub env: Option<HashMap<String, String>>,
 }
 pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()> {
+    // Deduplicate launches: Tauri replays an in-flight invoke when the webview
+    // reloads (the aborted ipc fetch falls back to postMessage and re-sends the
+    // same command, tauri-apps/tauri#14154, unfixed as of tauri 2.12). `exec`
+    // stays pending for the whole session, so an F5 mid-session re-enters here
+    // and would launch a second game instance. The frontend `isPlaying` guard
+    // cannot catch it — the replay never passes through frontend code.
+    if !LAUNCHING.insert(game_id) || is_game_running(game_id) {
+        warn!("game {game_id} is already launching/running, ignoring duplicate launch");
+        return Ok(());
+    }
+    // Held for the launch phase; released explicitly once GAME_LOOP_HANDLES
+    // takes over (and again, no-op, when the function returns).
+    let _ticket = LaunchTicket(game_id);
+
     let (plugins, metas, exe_path, current_dir, steam_launch) = {
         let lock = CONFIG.lock();
         let game = lock.get_game_by_id(game_id)?;
@@ -326,11 +358,8 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
         if let Some(ctx) = launch_override {
             Some(ctx)
         } else {
-            let current_dir = if launch.current_dir.is_empty() {
-                None
-            } else {
-                Some(launch.current_dir.clone())
-            };
+            let current_dir =
+                if launch.current_dir.is_empty() { None } else { Some(launch.current_dir.clone()) };
             let exe = Path::new(&launch.exe_path);
             if exe.is_relative() && current_dir.is_none() {
                 warn!(
@@ -414,7 +443,7 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
         launch_game(game_id, launch.app.clone(), game_start_tx, start_ctx).await
     };
 
-    // 4. 如果游戏进程本身启动失败，立即回滚
+    // The game process itself failed to spawn: roll back immediately
     let res = match res {
         Ok(r) => r,
         Err(e) => {
@@ -428,6 +457,11 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
         game_loop(res, game_id, app_for_loop, game_exit_tx).await
     });
     _ = GAME_LOOP_HANDLES.insert(game_id, handle);
+    // Session tracking is handed over to GAME_LOOP_HANDLES; release the launch
+    // ticket so a relaunch is allowed as soon as game_loop finishes — the exit
+    // hooks below (auto upload, ...) can run for a while and must not block a
+    // new session.
+    LAUNCHING.remove(&game_id);
 
     if let Err(e) = start_res.await? {
         log::error!("start_res error: {e}");
@@ -477,11 +511,7 @@ fn update_game_time(
     // Periodic ticks are throttled by the writer (one disk write per
     // MIN_INTERVAL); game exit is forced so the final session chunk is
     // never lost to the throttle window.
-    if force {
-        lock.force_save_and_emit(app)
-    } else {
-        lock.save_and_emit(app)
-    }
+    if force { lock.force_save_and_emit(app) } else { lock.save_and_emit(app) }
 }
 
 #[cfg(test)]
@@ -506,11 +536,7 @@ mod tests {
         // Use forward-slash absolute paths so shlex doesn't strip backslashes
         // (shlex treats `\` as an escape). On Windows, `C:/...` is still
         // considered absolute by Path::is_absolute.
-        let abs = if cfg!(windows) {
-            "C:/usr/bin/foo.exe"
-        } else {
-            "/usr/bin/foo"
-        };
+        let abs = if cfg!(windows) { "C:/usr/bin/foo.exe" } else { "/usr/bin/foo" };
         let ctx = StartCtx {
             cmd: format!("{abs} --bar baz"),
             current_dir: None,
@@ -529,16 +555,8 @@ mod tests {
 
     #[test]
     fn explicit_current_dir_overrides_parent_inference() {
-        let abs = if cfg!(windows) {
-            "C:/usr/bin/foo.exe"
-        } else {
-            "/usr/bin/foo"
-        };
-        let cwd = if cfg!(windows) {
-            "C:/cwd"
-        } else {
-            "/cwd"
-        };
+        let abs = if cfg!(windows) { "C:/usr/bin/foo.exe" } else { "/usr/bin/foo" };
+        let cwd = if cfg!(windows) { "C:/cwd" } else { "/cwd" };
         let ctx = StartCtx {
             cmd: abs.to_string(),
             current_dir: Some(cwd.to_string()),
@@ -555,11 +573,7 @@ mod tests {
         // Bare name (no path separator) must NOT be joined with current_dir —
         // otherwise `wine` next to a game exe would be mis-resolved to
         // `<game_dir>/wine`. Regression test for that historical bug.
-        let cwd = if cfg!(windows) {
-            "C:/games/foo"
-        } else {
-            "/games/foo"
-        };
+        let cwd = if cfg!(windows) { "C:/games/foo" } else { "/games/foo" };
         let ctx = StartCtx {
             cmd: "wine notepad".to_string(),
             current_dir: Some(cwd.to_string()),
@@ -575,11 +589,7 @@ mod tests {
     fn relative_program_with_cd_is_joined() {
         // A relative path that contains a separator (./foo or subdir/foo)
         // must be resolved against current_dir to a fully-qualified path.
-        let cwd = if cfg!(windows) {
-            "C:/parent"
-        } else {
-            "/parent"
-        };
+        let cwd = if cfg!(windows) { "C:/parent" } else { "/parent" };
         let ctx = StartCtx {
             cmd: "./helper --x".to_string(),
             current_dir: Some(cwd.to_string()),

@@ -25,9 +25,10 @@ import { checkAndPullRemote, performAutoUpload, useConfig, useConfigInit } from 
 import { useAutoUploadService } from './store/AutoUploadService'
 import { initGameRuntime } from './store/gameRuntime'
 
-// 路由级代码分割（字符串字面量动态 import，类型完全静态可推导）：
-// Game 是默认路由保持静态引入；Statistics（d3）、Settings、Plugin 及其
-// 独占的 kobalte 组件推迟到首次切换时才加载/执行，降低首屏 JS 体积。
+// Route-level code splitting (string-literal dynamic imports only, so types
+// stay fully static). Game is the default route and stays eager; Statistics
+// (d3), Settings and Plugin plus their exclusive kobalte components are
+// deferred to first visit to shrink the initial bundle.
 const Statistics = lazy(() => import('./pages/Statistics'))
 const Plugin = lazy(() => import('./pages/Plugin'))
 const Settings = lazy(() => import('./pages/Settings'))
@@ -41,10 +42,10 @@ const MainLayout: Component<{ children?: JSX.Element }> = props => {
   const [isServiceReady, setServiceReady] = createSignal(false)
 
   useConfigInit(t, () => {
-    // onReady 在 useConfigInit 的 init() 完成（至少一次 await）后触发，
-    // 此时 SolidJS 的所有同步 effects（含 Toaster 的 mergeContainerOptions
-    // 与 colorMode 的 dark class 同步）都已执行，首个 toast 位置/主题才正确。
-    // 同时此处 config 已是真实值，避免基于 DEFAULT_CONFIG 误判 storage.provider。
+    // onReady fires after init()'s first await, so all synchronous SolidJS
+    // effects (Toaster mergeContainerOptions, colorMode dark class) have run
+    // and the first toast gets the right position/theme. config is real here,
+    // avoiding a misjudged storage.provider based on DEFAULT_CONFIG.
     void (async () => {
       try {
         await checkAndPullRemote(t)
@@ -65,15 +66,14 @@ const MainLayout: Component<{ children?: JSX.Element }> = props => {
     }
   })
 
-  // config.appearance.theme 是跨设备同步的主题真相；kobalte 的 localStorage
-  // 只是设备本地缓存（首帧已由 index.html 的 bootstrap 脚本对齐）。这里用
-  // effect 把 config 主题同步到 kobalte，本地修改与远端同步下发的主题变更
-  // 都会生效。
+  // config.appearance.theme is the cross-device source of truth; kobalte's
+  // localStorage is only a per-device cache (already aligned by the bootstrap
+  // script in index.html before first paint). This effect syncs config theme
+  // into kobalte so both local edits and remote-synced changes take effect.
   createEffect(() => {
     setColorMode(config.settings.appearance.theme)
   })
 
-  // 同步 Kobalte 状态到 HTML class
   createEffect(() => {
     const root = document.documentElement
     root.classList.toggle('dark', colorMode() === 'dark')
@@ -113,7 +113,7 @@ const MainLayout: Component<{ children?: JSX.Element }> = props => {
         />
       </Sidebar>
 
-      {/* 让页面内容自己处理 overflow 滚动 */}
+      {/* Pages handle their own overflow scrolling */}
       <div class="relative h-full min-w-0 flex-1 overflow-hidden p-0 transition-colors duration-200 dark:bg-slate-800 dark:text-gray-400">
         {props.children}
       </div>

@@ -1,4 +1,3 @@
-// src/pages/settings/AppearanceTab.tsx
 import { myToast } from '@components/ui/myToast'
 import { SettingRow, SettingSection, SwitchToggle } from '@components/ui/settings'
 import { invoke } from '@tauri-apps/api/core'

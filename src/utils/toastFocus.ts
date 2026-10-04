@@ -1,5 +1,6 @@
 /**
- * 支持在窗口获得焦点后再执行操作
+ * Run an action now if the window has focus, otherwise defer it until the
+ * window regains focus.
  */
 
 import { getCurrentWindow } from '@tauri-apps/api/window'
@@ -8,7 +9,6 @@ import { errToStr, log } from '@utils/log'
 const pending: (() => void)[] = []
 let isListenerInitialized = false
 
-/** fn() 为需要在获得焦点后再执行的操作 */
 export function showOrDefer(function_: () => void): void {
   if (document.hasFocus()) {
     function_()

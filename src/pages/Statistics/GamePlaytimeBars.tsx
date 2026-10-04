@@ -1,4 +1,3 @@
-// src/pages/Statistics/GamePlaytimeBars.tsx
 // Per-game horizontal bar list: [thumbnail] [name over (thin bar + duration)].
 // Bar length is proportional to the game's playtime within the current
 // statistics scope. Kept as HTML + CSS transitions (not d3): it is a list of

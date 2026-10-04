@@ -20,10 +20,9 @@ export function errToStr(value: unknown): string {
 }
 
 /**
- * 基础 log 函数，支持 log('info', 'msg', obj, 123) 调用方式
+ * Base log function; supports calls like log('info', 'msg', obj, 123)
  */
 export function log(level: LogLevel, ...args: unknown[]) {
-  // 将所有参数合并成一个字符串发送给 Rust
   const message = formatArgs(args)
 
   // Fire-and-forget IPC from a sync function: there's no caller to await,
@@ -34,8 +33,8 @@ export function log(level: LogLevel, ...args: unknown[]) {
 }
 
 /**
- * 内部辅助函数：将参数数组格式化为字符串
- * 类似于 console.log 的行为，将对象转为 JSON 字符串，以空格连接
+ * Format the arg list into a string, console.log-style: objects are
+ * JSON-stringified and results concatenated.
  */
 function formatArgs(args: unknown[]): string {
   return args
@@ -65,7 +64,8 @@ function formatArgs(args: unknown[]): string {
 // level helpers as plain function properties keeps every existing
 // `log.info(...)` / `log.warn(...)` call site working without an ES
 // namespace (which eslint flags).
-// 注意：这里的字符串 ('trace', 'info' 等) 需要匹配你 LogLevel 类型定义的实际值。
+// NOTE: the level names ('trace', 'info', ...) must match the backend
+// LogLevel variant values.
 log.trace = function (...args: unknown[]) {
   log('trace', ...args)
 }

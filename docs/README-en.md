@@ -24,11 +24,18 @@ A cross-platform game launcher based on Tauri + SolidJS, designed for managing, 
 
 ## Changelog
 
+### v1.4.0
+
+- New feature: Support importing and launching games from Steam (Windows only)
+- The statistics page now supports editing daily playtime
+- Fix: Extra files/folders were not deleted when restoring saves
+- Fix: Refreshing the page with F5 caused already running games to launch again
+
 ### v1.3.3
 
 - New feature: Audio SPEEDUP now supports adjusting the speed multiplier in-game.
 - Critical fix: False configuration sync conflicts caused by delayed disk writes.
-- Fixed: Audio SPEEDUP MMDevAPI backend causing no sound, freezing, etc. in some games[^AudioSpeedHack130].
+- Fix: Audio SPEEDUP MMDevAPI backend causing no sound, freezing, etc. in some games[^AudioSpeedHack130].
 - Some UI fixes and improvements, plus safeguards against unconventional operations.
 
 [^AudioSpeedHack130]: <https://github.com/lxl66566/AudioSpeedHack/releases/tag/v1.3.0>

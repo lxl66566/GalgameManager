@@ -1,4 +1,3 @@
-// src/pages/settings/Settings.tsx
 import { Tabs } from '@components/ui/tabs'
 import { createSignal, Match, Switch, type Component } from 'solid-js'
 
@@ -23,11 +22,9 @@ export const SettingsPage: Component = () => {
 
   return (
     <div class="flex h-full flex-col text-gray-900 dark:text-gray-100">
-      {/* Header Section (Fixed at top) */}
       <div class="flex flex-shrink-0 flex-col bg-white px-5 pt-3 pb-0 dark:bg-gray-900">
         <h1 class="text-2xl font-bold">{t('settings.self')}</h1>
 
-        {/* Reusable Horizontal Tabs */}
         <Tabs
           items={[
             { key: 'general', label: t('settings.tabs.general') },
@@ -40,7 +37,6 @@ export const SettingsPage: Component = () => {
         />
       </div>
 
-      {/* Content Area (Scrollable) */}
       <main class="flex-1 overflow-y-auto p-6 sm:p-8">
         <div class="mx-auto max-w-4xl">
           <Switch>

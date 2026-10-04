@@ -23,12 +23,11 @@ use super::ExtractCoverage;
 pub(crate) struct SquashfsArchiver(pub(crate) u8);
 
 impl SquashfsArchiver {
-    /// 辅助函数：根据文件路径生成 NodeHeader
-    /// 使用 symlink_metadata 以便正确处理符号链接
+    /// Build a `NodeHeader` from a path. Uses `symlink_metadata` so symlinks
+    /// are archived as links, not as their targets.
     fn create_header(path: &Path) -> io::Result<NodeHeader> {
         let metadata = fs::symlink_metadata(path)?;
 
-        // 获取 mtime (Unix 时间戳)
         // File mtimes fit in u32 for all realistic dates (before 2106).
         #[allow(clippy::cast_possible_truncation)]
         let mtime = metadata
@@ -50,11 +49,7 @@ impl SquashfsArchiver {
         #[cfg(not(unix))]
         {
             Ok(NodeHeader {
-                permissions: if metadata.is_dir() {
-                    0o755
-                } else {
-                    0o644
-                },
+                permissions: if metadata.is_dir() { 0o755 } else { 0o644 },
                 uid: 1000,
                 gid: 1000,
                 mtime,
@@ -110,7 +105,6 @@ impl super::Archive for SquashfsArchiver {
         fs.set_only_root_id();
         fs.set_kind(Kind::from_const(kind::LE_V4_0).unwrap());
 
-        // 配置 zstd 压缩
         let zstd_options = Zstd {
             compression_level: u32::from(self.0),
         };
@@ -118,31 +112,26 @@ impl super::Archive for SquashfsArchiver {
         let compressor = FilesystemCompressor::new(Compressor::Zstd, Some(compression_options))?;
         fs.set_compressor(compressor);
 
-        // 遍历输入的顶层路径
         for root_path in paths {
             let root_path = root_path.as_ref();
 
-            // 计算父目录，用于生成归档内的相对路径
-            // 例如：输入 /a/b/data，parent 是 /a/b，归档内路径应为 /data/...
+            // Paths in the archive are relative to the input's parent, so the
+            // top-level dir name is preserved (/a/b/data -> /data/...).
             let parent_dir = root_path.parent().ok_or_else(|| {
                 io::Error::new(io::ErrorKind::InvalidInput, "Invalid path: no parent")
             })?;
 
-            // 使用 WalkDir 递归遍历（包括目录本身）
-            // 归档链接本身，而不是链接指向的内容
+            // follow_links(false): archive symlinks themselves, not their targets
             for entry in WalkDir::new(root_path).follow_links(false) {
                 let entry = entry.map_err(io::Error::other)?;
                 let src_path = entry.path();
 
-                // 计算归档内的路径： / + (src_path - parent_dir)
-                // 例：src=/usr/bin/tool, parent=/usr, rel=bin/tool, archive=/bin/tool
                 let relative_path = diff_paths(src_path, parent_dir).ok_or_else(|| {
                     io::Error::new(io::ErrorKind::InvalidData, "Path diff failed")
                 })?;
 
                 let header = Self::create_header(src_path)?;
 
-                // 根据文件类型添加到 writer
                 if entry.file_type().is_dir() {
                     fs.push_dir(&relative_path, header)?;
                 } else if entry.file_type().is_symlink() {
@@ -152,7 +141,7 @@ impl super::Archive for SquashfsArchiver {
                     let file = File::open(src_path)?;
                     fs.push_file(file, &relative_path, header)?;
                 }
-                // 忽略其他类型（如 Socket, Block Device 等）
+                // Ignore other entry types (sockets, block devices, ...)
             }
         }
 
@@ -170,8 +159,8 @@ impl super::Archive for SquashfsArchiver {
         let mut buf_reader = BufReader::new(reader);
         let fs = FilesystemReader::from_reader(&mut buf_reader)?;
 
-        // 构建映射表：目标文件名 -> 完整目标路径
-        // 假设：Archive 中的顶层目录名 与 targets 中的文件名一一对应
+        // Map target file name -> full target path; assumes the archive's
+        // top-level dir names correspond one-to-one with target file names.
         let mut target_map: HashMap<&OsStr, PathBuf> = HashMap::new();
         for target in &targets {
             let target_path = target.as_ref();
@@ -180,7 +169,6 @@ impl super::Archive for SquashfsArchiver {
             }
         }
 
-        // 遍历镜像中的所有节点
         let mut coverage = ExtractCoverage::default();
         for node in fs.files() {
             let path_in_image = &node.fullpath;
@@ -193,20 +181,16 @@ impl super::Archive for SquashfsArchiver {
             coverage.cover(root, &rel);
             // join("") would append a trailing separator, which Windows
             // rejects on file creation
-            let dest_path = if rel.as_os_str().is_empty() {
-                root.to_path_buf()
-            } else {
-                root.join(&rel)
-            };
+            let dest_path =
+                if rel.as_os_str().is_empty() { root.to_path_buf() } else { root.join(&rel) };
 
-            // 处理不同类型的节点
+            // Handle node types
             match &node.inner {
                 InnerNode::File(file_info) => {
                     let mut reader = fs.file(file_info).reader();
                     let mut dest_file = File::create(&dest_path)?;
                     io::copy(&mut reader, &mut dest_file)?;
 
-                    // 恢复 mtime
                     let mtime =
                         SystemTime::UNIX_EPOCH + Duration::from_secs(u64::from(node.header.mtime));
                     let _ = dest_file.set_modified(mtime);
@@ -224,10 +208,9 @@ impl super::Archive for SquashfsArchiver {
                         std::os::unix::fs::symlink(&link.link, &dest_path)?;
                     }
                 },
-                _ => {}, // 忽略字符设备等
+                _ => {}, // ignore other node types (char devices, ...)
             }
 
-            // 恢复权限 (Unix only)
             #[cfg(unix)]
             if !dest_path.is_symlink() {
                 let perms = fs::Permissions::from_mode(u32::from(node.header.permissions));

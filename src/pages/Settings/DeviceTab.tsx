@@ -16,7 +16,7 @@ export const DeviceTab: Component = () => {
     return await actions.getCurrentDeviceOrDefault()
   })
 
-  // 2. 核心修改逻辑：克隆 -> 修改 -> 乐观更新 UI -> 提交到 Store
+  // Clone -> mutate -> optimistic UI update -> commit
   const modifyDevice = async (
     modifier: (d: Device) => void,
     commit: (device: Device) => Promise<void>
@@ -24,22 +24,15 @@ export const DeviceTab: Component = () => {
     const current = device()
     if (!current) return
 
-    // 第一步：深拷贝 (Deep Clone)
-    // 使用 structuredClone 创建一个全新的、非 Proxy 的普通 JavaScript 对象。
-    // 如果没有 unwrap，直接 structuredClone(current) 在现代浏览器通常也行，
-    // 但加上 unwrap 是 SolidJS 的标准做法，确保剥离 Proxy。
+    // structuredClone needs a plain object: unwrap strips the Solid store Proxy
     const next = structuredClone(unwrap(current))
 
-    // 第二步：在副本上应用修改 (此时 next 是普通对象，可以随意修改)
     modifier(next)
-
-    // 第三步：乐观更新 (Optimistic Update)
-    // 将修改后的新对象塞回 Resource，触发 UI 更新
     mutate(next)
     await commit(next)
   }
 
-  // 设备名是文本输入，debounce 磁盘写入
+  // Name is a text input (frequent callbacks), so write debounced
   const handleNameChange = (name: string) => {
     void modifyDevice(
       d => (d.name = name),
@@ -47,7 +40,7 @@ export const DeviceTab: Component = () => {
     )
   }
 
-  // 变量表是表单提交（非频繁回调），立即写入
+  // Variable table commits on submit (not a frequent callback), so write immediately
   const handleVariablesCommit = (newVariables: Record<string, string>) => {
     void modifyDevice(
       d => (d.variables = newVariables),
