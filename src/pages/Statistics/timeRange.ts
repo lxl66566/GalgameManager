@@ -36,12 +36,29 @@ const DAY_MS = 86_400_000
 export const startOfDay = (d: Date): Date =>
   new Date(d.getFullYear(), d.getMonth(), d.getDate())
 
+const addMs = (d: Date, ms: number): Date => new Date(d.getTime() + ms)
+
+/**
+ * Shift a wall-clock instant onto the logical timeline whose days start
+ * `dayStartSec` seconds after local midnight (the `launch.dayStart` setting).
+ * Mirrors the backend's `daily_key` (exec/mod.rs) — keep them in sync.
+ */
+export const toLogical = (d: Date, dayStartSec: number): Date =>
+  addMs(d, -dayStartSec * 1000)
+
+/** Inverse of {@link toLogical}. */
+export const toWallClock = (d: Date, dayStartSec: number): Date =>
+  addMs(d, dayStartSec * 1000)
+
+/** 'YYYY-MM-DD' of the statistics day containing `d` — the key format `dailyPlaytime` is recorded under. */
+export const logicalDateKey = (d: Date, dayStartSec: number): string =>
+  dateKey(toLogical(d, dayStartSec))
+
 const pad2 = (n: number): string => String(n).padStart(2, '0')
 
 /**
- * Format a Date as the local 'YYYY-MM-DD' key. Must match the backend's
- * `chrono::Local` bucketing (see `update_game_time` in exec/mod.rs) so chart
- * days line up with recorded seconds.
+ * Local 'YYYY-MM-DD' key. Must match the backend's `daily_key` so chart
+ * buckets line up with recorded seconds.
  */
 export const dateKey = (d: Date): string =>
   `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
@@ -124,11 +141,17 @@ export function aggregate(
   })
 }
 
-export function buildDayBuckets(start: Date, count: number): Bucket[] {
-  const first = startOfDay(start)
+export function buildDayBuckets(start: Date, count: number, dayStartSec = 0): Bucket[] {
+  // Bucket i spans [dayStartSec on calendar day i, dayStartSec on day i+1).
+  const first = toWallClock(startOfDay(toLogical(start, dayStartSec)), dayStartSec)
   return Array.from({ length: count }, (_, index) => {
     const s = addDays(first, index)
-    return { end: addDays(s, 1), key: dateKey(s), start: s, unit: 'day' as const }
+    return {
+      end: addDays(s, 1),
+      key: dateKey(toLogical(s, dayStartSec)),
+      start: s,
+      unit: 'day' as const
+    }
   })
 }
 
@@ -182,21 +205,26 @@ export function offsetForDate(
   granularity: Granularity,
   date: Date,
   weekFirstDay: number,
-  now: Date = new Date()
+  now: Date = new Date(),
+  dayStartSec = 0
 ): number {
+  // `now` is wall-clock — shift it onto the logical timeline; `date` comes
+  // from a date input fed with logical day keys and is already logical.
+  const nowL = toLogical(now, dayStartSec)
   switch (granularity) {
     case 'month': {
       return (
-        (date.getFullYear() - now.getFullYear()) * 12 + (date.getMonth() - now.getMonth())
+        (date.getFullYear() - nowL.getFullYear()) * 12 +
+        (date.getMonth() - nowL.getMonth())
       )
     }
     case 'week': {
-      const a = startOfWeek(now, weekFirstDay)
+      const a = startOfWeek(nowL, weekFirstDay)
       const b = startOfWeek(date, weekFirstDay)
       return Math.round((b.getTime() - a.getTime()) / (7 * DAY_MS))
     }
     case 'year': {
-      return date.getFullYear() - now.getFullYear()
+      return date.getFullYear() - nowL.getFullYear()
     }
   }
 }
@@ -216,25 +244,40 @@ export function perGameTotals(data: readonly BucketDatum[]): Map<number, number>
 export function resolveSelection(
   sel: TimeSelection,
   weekFirstDay: number,
-  now: Date = new Date()
+  now: Date = new Date(),
+  dayStartSec = 0
 ): ResolvedRange {
+  // Resolve on the logical timeline, then map the range endpoints back to
+  // wall-clock so labels and chart domains show real instants.
+  const nowL = toLogical(now, dayStartSec)
+  const wall = (d: Date): Date => toWallClock(d, dayStartSec)
   switch (sel.granularity) {
     case 'month': {
-      const start = new Date(now.getFullYear(), now.getMonth() + sel.offset, 1)
+      const start = new Date(nowL.getFullYear(), nowL.getMonth() + sel.offset, 1)
       const end = new Date(start.getFullYear(), start.getMonth() + 1, 1)
       const days = Math.round((end.getTime() - start.getTime()) / DAY_MS)
-      return { buckets: buildDayBuckets(start, days), end, start }
+      return {
+        buckets: buildDayBuckets(wall(start), days, dayStartSec),
+        end: wall(end),
+        start: wall(start)
+      }
     }
     case 'week': {
-      const start = addDays(startOfWeek(now, weekFirstDay), sel.offset * 7)
-      return { buckets: buildDayBuckets(start, 7), end: addDays(start, 7), start }
+      const start = addDays(startOfWeek(nowL, weekFirstDay), sel.offset * 7)
+      return {
+        buckets: buildDayBuckets(wall(start), 7, dayStartSec),
+        end: wall(addDays(start, 7)),
+        start: wall(start)
+      }
     }
     case 'year': {
-      const year = now.getFullYear() + sel.offset
+      const year = nowL.getFullYear() + sel.offset
+      // Month buckets fold by the 'YYYY-MM' prefix of recorded keys, which is
+      // already logical, so plain calendar months are correct.
       return {
         buckets: buildMonthBuckets(year),
-        end: new Date(year + 1, 0, 1),
-        start: new Date(year, 0, 1)
+        end: wall(new Date(year + 1, 0, 1)),
+        start: wall(new Date(year, 0, 1))
       }
     }
   }
