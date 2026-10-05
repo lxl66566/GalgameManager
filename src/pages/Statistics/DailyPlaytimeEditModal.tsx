@@ -25,7 +25,7 @@ import {
   sumDaily,
   toHourMinute
 } from './playtimeEdit'
-import { dateKey, formatDuration, type DurationUnits } from './timeRange'
+import { formatDuration, logicalDateKey, type DurationUnits } from './timeRange'
 
 interface DailyPlaytimeEditModalProps {
   /** Close without saving. */
@@ -209,7 +209,7 @@ const DailyPlaytimeEditModal: Component<DailyPlaytimeEditModalProps> = props => 
         <FiPlus class="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500" />
         <input
           class="w-full rounded-md border border-gray-300 bg-transparent px-2 py-1 text-sm tabular-nums dark:border-gray-600 dark:[color-scheme:dark]"
-          max={dateKey(new Date())}
+          max={logicalDateKey(new Date(), config.settings.launch.dayStart)}
           onChange={e => {
             setNewDate(e.currentTarget.value)
             handleAddDate(e.currentTarget.value)

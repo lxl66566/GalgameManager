@@ -216,6 +216,11 @@ pub struct LaunchConfig {
     pub precision_mode: bool,
     /// Enable daily playtime statistics
     pub daily_stat: bool,
+    /// Seconds after local midnight at which a statistics day starts
+    /// (14400 = 04:00: playtime before 04:00 counts toward the previous day).
+    /// Affects future recordings only; existing keys are not rewritten.
+    #[serde(deserialize_with = "deserialize_day_start")]
+    pub day_start: u32,
 }
 
 impl Default for LaunchConfig {
@@ -223,8 +228,20 @@ impl Default for LaunchConfig {
         Self {
             precision_mode: true,
             daily_stat: true,
+            day_start: 0,
         }
     }
+}
+
+/// Cap for `day_start` (23:59:59): a day boundary stays on the same calendar
+/// day, so chart labels keyed by bucket start always match the bucket key.
+const MAX_DAY_START_SECS: u32 = 23 * 3600 + 59 * 60 + 59;
+
+fn deserialize_day_start<'de, D>(d: D) -> std::result::Result<u32, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Ok(u32::deserialize(d)?.min(MAX_DAY_START_SECS))
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]
@@ -345,5 +362,21 @@ impl SortType {
             "playTime" => Some(SortType::PlayTime),
             _ => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn day_start_is_clamped_on_deserialize() {
+        let cfg: LaunchConfig = toml::from_str("dayStart = 90000000").unwrap();
+        assert_eq!(cfg.day_start, MAX_DAY_START_SECS);
+        let cfg: LaunchConfig = toml::from_str("dayStart = 14400").unwrap();
+        assert_eq!(cfg.day_start, 14400);
+        // Absent field falls back to midnight.
+        let cfg: LaunchConfig = toml::from_str("").unwrap();
+        assert_eq!(cfg.day_start, 0);
     }
 }

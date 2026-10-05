@@ -40,6 +40,7 @@ import {
   dateKey,
   formatDuration,
   localeFirstWeekday,
+  logicalDateKey,
   offsetForDate,
   parseDateKey,
   perGameTotals,
@@ -61,8 +62,14 @@ const StatisticsPage: Component = () => {
   const [focusGameId, setFocusGameId] = createSignal<null | number>(null)
 
   const weekFirstDay = createMemo(() => localeFirstWeekday(locale()))
+  const dayStart = () => config.settings.launch.dayStart
   const range = createMemo(() =>
-    resolveSelection({ granularity: granularity(), offset: offset() }, weekFirstDay())
+    resolveSelection(
+      { granularity: granularity(), offset: offset() },
+      weekFirstDay(),
+      new Date(),
+      dayStart()
+    )
   )
   const bucketData = createMemo(() => aggregate(config.games, range().buckets))
   const totals = createMemo(() => perGameTotals(bucketData()))
@@ -135,7 +142,9 @@ const StatisticsPage: Component = () => {
   const jumpToDate = (value: string) => {
     const d = parseDateKey(value)
     if (!d) return
-    setOffset(Math.min(0, offsetForDate(granularity(), d, weekFirstDay())))
+    setOffset(
+      Math.min(0, offsetForDate(granularity(), d, weekFirstDay(), new Date(), dayStart()))
+    )
     setPickerOpen(false)
   }
 
@@ -281,7 +290,7 @@ const StatisticsPage: Component = () => {
                       </span>
                       <input
                         class="rounded-md border border-gray-300 bg-transparent px-2 py-1 text-sm tabular-nums dark:border-gray-600 dark:[color-scheme:dark]"
-                        max={dateKey(new Date())}
+                        max={logicalDateKey(new Date(), dayStart())}
                         onChange={e => {
                           jumpToDate(e.currentTarget.value)
                         }}

@@ -9,4 +9,10 @@ export type LaunchConfig = {
    * Enable daily playtime statistics
    */
   dailyStat: boolean;
+  /**
+   * Seconds after local midnight at which a statistics day starts
+   * (14400 = 04:00: playtime before 04:00 counts toward the previous day).
+   * Affects future recordings only; existing keys are not rewritten.
+   */
+  dayStart: number;
 };

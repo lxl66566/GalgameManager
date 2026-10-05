@@ -349,6 +349,9 @@ export const dict = {
       dailyStat: 'Daily Playtime Statistics',
       dailyStatCleared: 'Cleared all game daily playtime records.',
       dailyStatDesc: 'Track daily playtime and show the chart in the statistics page.',
+      dayStart: 'Day Starts At',
+      dayStartDesc:
+        'Ex. set to 04:00, playtime from midnight to 04:00 counts toward the previous day.',
       precisionMode: 'Precision Mode',
       precisionModeDesc: 'Only count time spent in foreground when window is focused.',
       timestat: 'Time Stat'

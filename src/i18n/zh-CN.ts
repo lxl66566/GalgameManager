@@ -343,6 +343,8 @@ export const dict: DeepPartial<RawDictionary> = {
       dailyStat: '每日游玩时长统计',
       dailyStatCleared: '已清除所有游戏的每日游玩时长数据。',
       dailyStatDesc: '记录每日游玩时长并在统计页展示',
+      dayStart: '每日起始时刻',
+      dayStartDesc: '例如设为 04:00，则 00:00-04:00 的游玩时长会记入前一天。',
       precisionMode: '精确模式',
       precisionModeDesc: '开启后只计算游戏在前台游玩的时长（窗口焦点时长）',
       timestat: '时长统计'

@@ -2,14 +2,17 @@ import { describe, expect, it } from 'vitest'
 
 import {
   aggregate,
+  buildDayBuckets,
   buildMonthBuckets,
   dateKey,
   formatDuration,
+  logicalDateKey,
   offsetForDate,
   parseDateKey,
   perGameTotals,
   resolveSelection,
   startOfWeek,
+  toLogical,
   type DailyPlaytimeLike
 } from '../timeRange'
 
@@ -72,6 +75,73 @@ describe('resolveSelection', () => {
   it('year offset: shifts by whole years', () => {
     const r = resolveSelection({ granularity: 'year', offset: -1 }, 1, NOW)
     expect(r.buckets[0]!.key).toBe('2025-01')
+  })
+})
+
+describe('dayStart (logical day)', () => {
+  // dayStart 04:00: post-midnight instants belong to the previous day.
+  const DS = 4 * 3600
+  const NIGHT = new Date(2026, 6, 17, 2, 30) // Friday 02:30 → logical Thursday
+  const MONDAY_NIGHT = new Date(2026, 6, 13, 2, 30) // Monday 02:30 → logical Sunday
+
+  it('toLogical / logicalDateKey shift post-midnight instants to the previous day', () => {
+    expect(logicalDateKey(NIGHT, DS)).toBe('2026-07-16')
+    expect(logicalDateKey(new Date(2026, 6, 17, 4, 0), DS)).toBe('2026-07-17')
+    expect(logicalDateKey(NIGHT, 0)).toBe('2026-07-17')
+    expect(dateKey(toLogical(NIGHT, DS))).toBe('2026-07-16')
+  })
+
+  it('buildDayBuckets: bucket spans are shifted and keys stay logical', () => {
+    const buckets = buildDayBuckets(NIGHT, 2, DS)
+    expect(buckets[0]!.key).toBe('2026-07-16')
+    expect(buckets[0]!.start).toEqual(new Date(2026, 6, 16, 4, 0))
+    expect(buckets[0]!.end).toEqual(new Date(2026, 6, 17, 4, 0))
+    expect(buckets[1]!.key).toBe('2026-07-17')
+  })
+
+  it('week: night owls see the previous logical week', () => {
+    // Monday 02:30 with dayStart 04:00 is still logical Sunday → last week.
+    const r = resolveSelection({ granularity: 'week', offset: 0 }, 1, MONDAY_NIGHT, DS)
+    expect(r.buckets.map(b => b.key)).toEqual([
+      '2026-07-06',
+      '2026-07-07',
+      '2026-07-08',
+      '2026-07-09',
+      '2026-07-10',
+      '2026-07-11',
+      '2026-07-12'
+    ])
+    expect(r.start).toEqual(new Date(2026, 6, 6, 4, 0))
+    expect(r.end).toEqual(new Date(2026, 6, 13, 4, 0))
+  })
+
+  it('month: 1st 02:30 still belongs to the previous logical month', () => {
+    const r = resolveSelection(
+      { granularity: 'month', offset: 0 },
+      1,
+      new Date(2026, 7, 1, 2, 30), // Aug 1st, 02:30
+      DS
+    )
+    expect(r.buckets).toHaveLength(31)
+    expect(r.buckets[0]!.key).toBe('2026-07-01')
+    expect(r.buckets[30]!.key).toBe('2026-07-31')
+  })
+
+  it('offsetForDate: picked natural "today" during the night maps to the logical week', () => {
+    // Monday 02:30: logical week is 07-06..07-12, so picking natural Monday
+    // 07-13 (or any day of the new week) is one week ahead.
+    expect(offsetForDate('week', new Date(2026, 6, 13), 1, MONDAY_NIGHT, DS)).toBe(1)
+    expect(offsetForDate('week', new Date(2026, 6, 12), 1, MONDAY_NIGHT, DS)).toBe(0)
+  })
+
+  it('dayStart 0 preserves the legacy behavior', () => {
+    for (const sel of [
+      { granularity: 'week' as const, offset: 0 },
+      { granularity: 'month' as const, offset: -1 },
+      { granularity: 'year' as const, offset: 0 }
+    ]) {
+      expect(resolveSelection(sel, 1, NOW, 0)).toEqual(resolveSelection(sel, 1, NOW))
+    }
   })
 })
 

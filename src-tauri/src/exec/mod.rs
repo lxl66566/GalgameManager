@@ -5,6 +5,7 @@ use std::{
     sync::{Arc, LazyLock as Lazy},
 };
 
+use chrono::Duration;
 use dashmap::{DashMap, DashSet};
 use log::{debug, info, warn};
 use parking_lot::Mutex;
@@ -474,6 +475,19 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
     Ok(())
 }
 
+/// 'YYYY-MM-DD' key of the statistics day containing `t`, where a day starts
+/// `day_start_secs` after local midnight (0 = midnight). Mirrors the TS-side
+/// `toLogical` (src/pages/Statistics/timeRange.ts) — keep them in sync.
+fn daily_key<Tz>(t: chrono::DateTime<Tz>, day_start_secs: u32) -> String
+where
+    Tz: chrono::TimeZone,
+    Tz::Offset: fmt::Display,
+{
+    (t - Duration::seconds(i64::from(day_start_secs)))
+        .format("%Y-%m-%d")
+        .to_string()
+}
+
 fn update_game_time(
     app: &AppHandle,
     game_id: u32,
@@ -481,9 +495,10 @@ fn update_game_time(
     force: bool,
 ) -> Result<()> {
     let mut lock = CONFIG.lock();
-    // Read the toggle before mutably borrowing a game to avoid a borrow clash
+    // Read the toggles before mutably borrowing a game to avoid a borrow clash
     // (settings and games both live on the same Config).
     let daily_stat = lock.settings.launch.daily_stat;
+    let day_start = lock.settings.launch.day_start;
     let game = lock.get_game_by_id_mut(game_id)?;
     game.use_time += dur;
     game.last_played_time = Some(chrono::Utc::now());
@@ -496,10 +511,9 @@ fn update_game_time(
         #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         let secs = dur.num_seconds().max(0) as u32;
         if secs > 0 {
-            // Bucket by the user's *local* calendar day, not UTC, so an
-            // evening session lands on "today" from the player's viewpoint.
-            // The frontend chart uses the same local-day key.
-            let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+            // Bucket by the user's local statistics day (see `daily_key`),
+            // not UTC; the frontend chart aggregates with the same key.
+            let today = daily_key(chrono::Local::now(), day_start);
             *game.daily_playtime.entry(today).or_insert(0) += secs;
         }
     }
@@ -517,6 +531,30 @@ fn update_game_time(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn daily_key_shifts_day_boundary() {
+        use chrono::TimeZone as _;
+        // Fixed +08:00 so the result is independent of the host timezone.
+        let tz = chrono::FixedOffset::east_opt(8 * 3600).unwrap();
+        assert_eq!(
+            daily_key(tz.with_ymd_and_hms(2026, 10, 6, 0, 0, 0).unwrap(), 0),
+            "2026-10-06"
+        );
+        // day_start = 04:00: 03:59 closes the previous day, 04:00 opens the new one.
+        assert_eq!(
+            daily_key(tz.with_ymd_and_hms(2026, 10, 6, 3, 59, 59).unwrap(), 14400),
+            "2026-10-05"
+        );
+        assert_eq!(
+            daily_key(tz.with_ymd_and_hms(2026, 10, 6, 4, 0, 0).unwrap(), 14400),
+            "2026-10-06"
+        );
+        assert_eq!(
+            daily_key(tz.with_ymd_and_hms(2026, 10, 6, 23, 30, 0).unwrap(), 14400),
+            "2026-10-06"
+        );
+    }
 
     #[test]
     fn empty_cmd_is_invalid() {
