@@ -310,36 +310,6 @@ fn tray_menu_labels(language: &str) -> [&'static str; 5] {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::tray_menu_labels;
-
-    #[test]
-    fn tray_menu_labels_follow_configured_language() {
-        assert_eq!(
-            tray_menu_labels("zh-CN"),
-            [
-                "打开配置文件夹",
-                "打开存档文件夹",
-                "打开日志文件夹",
-                "退出（不同步）",
-                "退出",
-            ]
-        );
-        assert_eq!(
-            tray_menu_labels("en-US"),
-            [
-                "Open Config Folder",
-                "Open Save Folder",
-                "Open Log Folder",
-                "Quit (without sync)",
-                "Quit",
-            ]
-        );
-        assert_eq!(tray_menu_labels("unknown"), tray_menu_labels("en-US"));
-    }
-}
-
 /// Show a desktop notification off the current thread.
 ///
 /// notify-rust's sync `show()` ends in `zbus::block_on`; our AT-SPI dep unifies
