@@ -112,7 +112,7 @@ pub struct Config {
     /// remote
     #[patch(skip)]
     pub last_sync: Option<DateTime<Utc>>,
-    #[deprecated(note = "use last_sync instead")]
+    #[deprecated(since = "0.1.5", note = "use last_sync instead")]
     #[patch(skip)]
     pub last_uploaded: Option<DateTime<Utc>>,
     #[patch(list_patch(id = |g: &Game| g.id, id_type = u32))]
