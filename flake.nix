@@ -130,6 +130,8 @@
               [
                 webkitgtk_4_1
                 gtk3
+                glib
+                gdk-pixbuf
                 libsoup_3
                 glib-networking
                 librsvg
