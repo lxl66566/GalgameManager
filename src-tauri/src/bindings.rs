@@ -350,8 +350,10 @@ pub async fn upload_config(app: AppHandle, safe: bool) -> Result<UploadConfigSta
     info!("upload_config triggered, safe: {safe}");
     let op = build_operator_with_varmap(&app)?;
     let res = op.upload_config(&app, safe).await?;
-    #[cfg(feature = "config-daily-backup")]
+    // Read before the await; the CONFIG lock must not be held across it.
+    let daily_backup = CONFIG.lock().settings.config_daily_backup;
     if matches!(res, UploadConfigStatus::Uploaded)
+        && daily_backup
         && let Err(e) = op.replicate_config().await
     {
         log::error!("Failed to replicate config: {e}");

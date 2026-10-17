@@ -22,4 +22,9 @@ export type Settings = {
    * seconds.
    */
   syncNonIoTimeoutSecs: number;
+  /**
+   * After a successful config upload, replicate the remote config as a
+   * dated daily snapshot (`config_YYYYMMDD.toml`).
+   */
+  configDailyBackup: boolean;
 };

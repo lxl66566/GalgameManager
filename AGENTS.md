@@ -49,10 +49,6 @@ Rust 端可能 emit 的 tauri 事件如下：
 | toast://show           | ToastPayload    | 向前端显示一个 toast 提示（可以通过 `<i18n.key>` 形式引用国际化字符串）               |
 | toast://dismiss        | String          | 如果之前弹了一个 loading toast，可以发送此事件来撤销其状态                            |
 
-rust features:
-
-- config-daily-backup（默认开启）：云端将存储 config 的每日快照。
-
 ## 写入配置
 
 TS 侧一般可以用 `const { config, actions } = useConfig()` 获取配置与操作配置，参考 `src/store/index.tsx`。

@@ -12,4 +12,5 @@ export type SettingsPatch = {
   autoSyncInterval?: number;
   syncIoTimeoutSecs?: number;
   syncNonIoTimeoutSecs?: number;
+  configDailyBackup?: boolean;
 };

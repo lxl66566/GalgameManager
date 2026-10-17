@@ -236,7 +236,6 @@ impl super::MyOperation for Operator {
         Ok(Some(new_config))
     }
 
-    #[cfg(feature = "config-daily-backup")]
     async fn replicate_config(&self) -> Result<()> {
         let to = &format!("config_{}.toml", chrono::Local::now().format("%Y%m%d"));
         info!("replicate config from {CONFIG_FILENAME} to {to}");
