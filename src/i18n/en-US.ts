@@ -320,6 +320,9 @@ export const dict = {
       autoSyncInterval: 'Config Auto Sync Interval',
       autoSyncIntervalDesc: 'Upload config only, not saves',
       autoSyncIntervalPlaceholder: 'seconds, 0 to disable',
+      dailyBackup: 'Daily Config Snapshot',
+      dailyBackupDesc:
+        'After a successful config upload, also store a dated snapshot on remote',
       forceOp: 'Forced Operation',
       inSecs: 'In seconds',
       manualSync: 'Manual Syncing',

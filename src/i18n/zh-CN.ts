@@ -315,6 +315,8 @@ export const dict: DeepPartial<RawDictionary> = {
       autoSyncInterval: '自动上传间隔',
       autoSyncIntervalDesc: '仅上传配置，不上传存档',
       autoSyncIntervalPlaceholder: '单位：秒，设为 0 禁用自动上传',
+      dailyBackup: '每日配置快照',
+      dailyBackupDesc: '备份每日配置快照到云端，保障数据安全',
       forceOp: '强制上传/下载',
       inSecs: '（秒）',
       manualSync: '管理配置',

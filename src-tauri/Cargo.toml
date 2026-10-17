@@ -114,9 +114,8 @@ windows_registry_obj = "0.2"
 windows-result       = { version = "0.4" }
 
 [features]
-default             = ["config-daily-backup", "custom-protocol"]
-config-daily-backup = []
-custom-protocol     = ["tauri/custom-protocol"]
+default         = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
 
 [lints.cargo]
 non_kebab_case_bins = "allow"

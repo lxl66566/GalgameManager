@@ -10,7 +10,8 @@ import {
   Select,
   SettingRow,
   SettingSection,
-  SettingSubGroup
+  SettingSubGroup,
+  SwitchToggle
 } from '@components/ui/settings'
 import { invoke } from '@tauri-apps/api/core'
 import { debounce } from '@utils/debounce'
@@ -393,6 +394,17 @@ export const StorageTab: Component = () => {
             }}
             placeholder={t('settings.config.autoSyncIntervalPlaceholder')}
             value={config.settings.autoSyncInterval}
+          />
+        </SettingRow>
+        <SettingRow
+          description={t('settings.config.dailyBackupDesc')}
+          label={t('settings.config.dailyBackup')}
+        >
+          <SwitchToggle
+            checked={config.settings.configDailyBackup}
+            onChange={e => {
+              actions.updateSettings({ configDailyBackup: e })
+            }}
           />
         </SettingRow>
         <SettingRow

@@ -51,6 +51,9 @@ pub struct Settings {
     /// Non-IO timeout for remote sync operations (connection/listing), in
     /// seconds.
     pub sync_non_io_timeout_secs: u32,
+    /// After a successful config upload, replicate the remote config as a
+    /// dated daily snapshot (`config_YYYYMMDD.toml`).
+    pub config_daily_backup: bool,
 }
 
 impl Default for Settings {
@@ -66,6 +69,7 @@ impl Default for Settings {
             // Constants are known to fit in u32 at compile time.
             sync_io_timeout_secs: DEFAULT_IO_TIMEOUT.as_secs() as u32,
             sync_non_io_timeout_secs: DEFAULT_NON_IO_TIMEOUT.as_secs() as u32,
+            config_daily_backup: true,
         }
     }
 }

@@ -149,7 +149,6 @@ pub trait MyOperation {
         self.inner().get_remote_config().await
     }
 
-    #[cfg(feature = "config-daily-backup")]
     #[inline]
     async fn replicate_config(&self) -> Result<()> {
         self.inner().replicate_config().await
