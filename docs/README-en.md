@@ -14,6 +14,21 @@ A cross-platform game launcher based on Tauri + SolidJS, designed for managing, 
 - Logging system (with diff support), daily snapshots to ensure user data safety
 - Multi-language / light & dark theme support
 
+## Installation
+
+- **Windows / macOS / Linux**: download the installer for your platform (msi/dmg/deb/rpm/AppImage) from [Releases](https://github.com/lxl66566/GalgameManager/releases).
+- **NixOS**:
+  - Prebuilt release package via [NUR](https://github.com/lxl66566/NUR) (recommended; GTK/WebKitGTK runtime dependencies are wrapped, just declare and use):
+    ```nix
+    environment.systemPackages = [ pkgs.nur.repos.lxl66566.galgamemanager ];
+    # or via the module
+    programs.galgamemanager.enable = true;
+    ```
+  - Or build master from source with this repo's flake:
+    ```bash
+    nix run github:lxl66566/GalgameManager
+    ```
+
 ## Screenshots
 
 ![Main Interface](../assets/main.png)

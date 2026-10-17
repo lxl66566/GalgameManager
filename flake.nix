@@ -1,5 +1,5 @@
 {
-  description = "Development shell for GalgameManager (Tauri v2 + SolidJS + nightly rust)";
+  description = "GalgameManager: manage and sync your galgames (Tauri v2 + SolidJS)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -21,8 +21,25 @@
           inherit system;
           overlays = [ (import rust-overlay) ];
         };
+        lib = pkgs.lib;
+        galgamemanager = pkgs.callPackage ./nix/package.nix { };
+        # The webkitgtk stack only exists on linux; guard so `nix flake check`
+        # can still evaluate the other systems' devShells.
+        linuxOnly = lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux;
       in
       {
+        packages = linuxOnly {
+          default = galgamemanager;
+          inherit galgamemanager;
+        };
+
+        apps = linuxOnly {
+          default = {
+            type = "app";
+            program = lib.getExe galgamemanager;
+          };
+        };
+
         devShells = {
           default = pkgs.mkShell {
             nativeBuildInputs = with pkgs; [
@@ -107,8 +124,6 @@
                 gst-libav
               ]
             );
-
-            WEBKIT_DISABLE_COMPOSITING_MODE = "1";
 
             LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (
               with pkgs;

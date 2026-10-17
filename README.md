@@ -14,6 +14,17 @@
 - 日志系统（支持 diff）、每日配置快照，保障用户数据安全
 - 多语言/亮暗主题支持
 
+## 安装
+
+- Windows / macOS / Linux：从 [Releases](https://github.com/lxl66566/GalgameManager/releases) 下载对应平台的安装包（exe/dmg/deb/rpm/AppImage）。
+- NixOS：
+  ```nix
+  # 方案一（推荐）：引入我的 NUR：https://github.com/lxl66566/NUR，会从 Github 下载预编译二进制。
+  programs.galgamemanager.enable = true;
+  # 方案二：flake，从源码编译
+  nix run github:lxl66566/GalgameManager
+  ```
+
 ## Screenshots
 
 ![主界面](./assets/main.png)
@@ -101,7 +112,7 @@
 
 ### v1.0.0
 
-- （重大更新）**支持插件系统**：插件是开发者预定义的一系列功能，用户可将插件应用到游戏上，并修改参数以自定义游戏的附加功能。首批插件：
+- （重大更新）支持插件系统：插件是开发者预定义的一系列功能，用户可将插件应用到游戏上，并修改参数以自定义游戏的附加功能。首批插件：
   - 执行外部命令
   - 自动上传存档
   - 游戏启动包装
