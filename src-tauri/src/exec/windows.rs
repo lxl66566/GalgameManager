@@ -11,7 +11,7 @@ use parking_lot::Mutex;
 use tauri::{AppHandle, Emitter as _};
 use tokio::{sync::oneshot, time};
 use windows::Win32::{
-    Foundation::{CloseHandle, HANDLE},
+    Foundation::{CloseHandle, DUPLICATE_SAME_ACCESS, DuplicateHandle, HANDLE},
     System::{
         JobObjects::{
             AssignProcessToJobObject, CreateJobObjectW, IsProcessInJob,
@@ -19,8 +19,8 @@ use windows::Win32::{
             QueryInformationJobObject,
         },
         Threading::{
-            GetExitCodeProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SET_QUOTA,
-            PROCESS_TERMINATE,
+            GetCurrentProcess, GetExitCodeProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION,
+            PROCESS_SET_QUOTA, PROCESS_TERMINATE,
         },
     },
     UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId},
@@ -428,27 +428,60 @@ unsafe fn assign_pid_to_job(job: HANDLE, pid: u32) -> windows_result::Result<()>
 
 /// Late-arrival catch-up scanner (see [`STEAM_SIBLING_WINDOW_SECS`]).
 ///
-/// Holds a raw copy of the job HANDLE: the `GameJob` itself moves into the
-/// game loop, and the copy is only ever passed to AssignProcessToJobObject —
-/// never closed here (the job's own Drop owns the single close). The window
-/// is far shorter than any game session, so racing job teardown is
-/// practically impossible; even then the assign would just fail harmlessly.
+/// Works on its own **duplicated** job HANDLE: sharing the `GameJob`'s single
+/// handle with this thread raced `GameJob::Drop`'s CloseHandle against
+/// in-flight assigns (a closed-and-reused handle value could even redirect
+/// an assign onto an unrelated kernel object). The duplicate is closed by
+/// the wrapper's Drop, independently of the job's lifetime.
 fn spawn_sibling_scanner(job_handle: HANDLE, install_dir: PathBuf, seen: Arc<Mutex<HashSet<u32>>>) {
     // raw HANDLE is not Send; wrap it (same rationale as `unsafe impl Send
     // for GameJob` — an opaque kernel handle is safe to move/share).
     // Exposed as a method so closures capture the whole SendHandle instead
     // of disjoint-capturing the raw `.0` field (which is not Send).
-    #[derive(Clone, Copy)]
     struct SendHandle(HANDLE);
     unsafe impl Send for SendHandle {}
     impl SendHandle {
-        fn assign(self, pid: u32) -> windows_result::Result<()> {
-            // SAFETY: plain kernel call on a copied handle value.
+        fn assign(&self, pid: u32) -> windows_result::Result<()> {
+            // SAFETY: plain kernel call on our own duplicated handle.
             unsafe { assign_pid_to_job(self.0, pid) }
         }
     }
+    impl Drop for SendHandle {
+        fn drop(&mut self) {
+            // SAFETY: closes only the duplicate this wrapper owns — never
+            // the GameJob's original handle.
+            unsafe {
+                let _ = CloseHandle(self.0);
+            }
+        }
+    }
 
-    let job_handle = SendHandle(job_handle);
+    // SAFETY: source and target are both the current process; the source
+    // handle is owned by the live GameJob for the whole call.
+    let duplicated = unsafe {
+        let cur = GetCurrentProcess();
+        let mut handle = HANDLE::default();
+        DuplicateHandle(
+            cur,
+            job_handle,
+            cur,
+            &raw mut handle,
+            0,
+            false,
+            DUPLICATE_SAME_ACCESS,
+        )
+        .map(|()| handle)
+    };
+    let job_handle = match duplicated {
+        Ok(h) => SendHandle(h),
+        // Best-effort scanner: without its own handle it cannot run; the
+        // pre-assign stragglers simply stay untracked (same as a timeout).
+        Err(e) => {
+            warn!("failed to duplicate job handle for sibling scanner: {e}");
+            return;
+        },
+    };
+
     std::thread::Builder::new()
         .name("steam-sibling-scanner".into())
         .spawn(move || {
