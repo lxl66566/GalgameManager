@@ -200,6 +200,18 @@ impl super::PluginHandler for ExecutePlugin {
                     log::warn!("Failed to send {signal:?} to tracked process: {e}");
                 }
             }
+            // Reap the children off the async path: on Unix an un-reaped
+            // child stays a zombie until our process exits, and the app can
+            // outlive many game sessions. A SIGTERMed target may take a
+            // while to exit, so wait on the blocking pool instead of inline
+            // (on Windows wait() is harmless and keeps one code path).
+            tauri::async_runtime::spawn_blocking(move || {
+                for (mut child, signal) in processes {
+                    if let Err(e) = child.wait() {
+                        log::warn!("Failed to reap tracked process ({signal:?}): {e}");
+                    }
+                }
+            });
         }
 
         Self::try_execute(&ctx, ExecutePhase::GameExit)
