@@ -8,14 +8,7 @@ import { Navigate, Route, Router } from '@solidjs/router'
 import { BiRegularBarChartSquare, BiRegularExtension } from 'solid-icons/bi'
 import { CgGames } from 'solid-icons/cg'
 import { IoSettingsOutline } from 'solid-icons/io'
-import {
-  createEffect,
-  createSignal,
-  lazy,
-  Show,
-  type Component,
-  type JSX
-} from 'solid-js'
+import { createEffect, createSignal, lazy, type Component, type JSX } from 'solid-js'
 import { Toaster } from 'solid-toast'
 
 import { I18nProvider, useI18n, type Locale } from './i18n'
@@ -99,13 +92,13 @@ const MainLayout: Component<{ children?: JSX.Element }> = props => {
           icon={<BiRegularExtension class="h-6 w-6" />}
           label={t('sidebar.plugin')}
         />
-        <Show when={config.settings.launch.dailyStat}>
-          <SidebarItem
-            href="/Statistics"
-            icon={<BiRegularBarChartSquare class="h-6 w-6" />}
-            label={t('sidebar.statistics')}
-          />
-        </Show>
+        {/* Statistics entry is always visible: with dailyStat off the page
+            shows an empty state instead, so historical data stays reachable. */}
+        <SidebarItem
+          href="/Statistics"
+          icon={<BiRegularBarChartSquare class="h-6 w-6" />}
+          label={t('sidebar.statistics')}
+        />
         <SidebarItem
           href="/Settings"
           icon={<IoSettingsOutline class="h-6 w-6" />}

@@ -399,9 +399,12 @@ export const dict = {
   },
   stats: {
     backToCurrent: 'Now',
+    dailyStatDisabledDesc:
+      'Daily playtime statistics is disabled. Historical data is kept but not shown. Enable it in Settings → Launch.',
     dateExists: 'This date already has a record',
     editDailyPlaytime: "Edit this game's daily playtime",
     emptyDaily: 'No daily records yet. Pick a date below to add one.',
+    goToSettings: 'Go to Settings',
     granularity: {
       month: 'Month',
       week: 'Week',

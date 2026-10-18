@@ -391,9 +391,12 @@ export const dict: DeepPartial<RawDictionary> = {
   },
   stats: {
     backToCurrent: '回到本期',
+    dailyStatDisabledDesc:
+      '每日游玩时长统计已关闭，历史数据保留但暂不展示。可在 设置 → 启动 中开启。',
     dateExists: '该日期已有记录',
     editDailyPlaytime: '编辑该游戏的每日游玩时长',
     emptyDaily: '暂无每日时长记录，选择下方日期添加。',
+    goToSettings: '去设置',
     granularity: {
       month: '月',
       week: '周',
