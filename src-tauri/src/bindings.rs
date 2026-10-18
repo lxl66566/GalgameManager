@@ -79,9 +79,17 @@ pub fn patch_config(app: AppHandle, patch: ConfigPatch) -> Result<()> {
     // released (platform work there — e.g. `wine regedit` — can block).
     let live_updates =
         crate::plugin::collect_live_updates(&lock, &patch, crate::exec::is_game_running);
+    let language_before = lock.settings.appearance.language.clone();
     lock.apply(patch);
     lock.last_updated = Utc::now();
+    let language_changed = lock.settings.appearance.language != language_before;
     drop(lock);
+    if language_changed {
+        // Re-translate backend-rendered surfaces (tray menu, notifications,
+        // toasts) without a restart.
+        crate::sync_locale_from_config();
+        crate::tray::refresh_menu(&app);
+    }
     if !live_updates.is_empty() {
         tauri::async_runtime::spawn(crate::plugin::dispatch_live_updates(app, live_updates));
     }

@@ -1,6 +1,11 @@
 #![allow(clippy::unreadable_literal)] // actuallly its readable ^o^
 #![allow(clippy::needless_borrows_for_generic_args)] // https://github.com/rust-lang/rust-clippy/issues/17717
 
+// Backend i18n: compile-time embedded JSON dictionaries under `locales/`.
+// Adding a language = dropping a new `locales/<locale>.json` file in; missing
+// keys fall back to en-US. The macro must be invoked at the crate root.
+rust_i18n::i18n!("locales", fallback = "en-US");
+
 pub mod archive;
 mod bindings;
 pub mod color;
@@ -12,6 +17,7 @@ mod logging;
 pub mod plugin;
 pub mod steam;
 pub mod sync;
+pub mod tray;
 pub mod utils;
 
 use bindings::{
@@ -24,12 +30,9 @@ use bindings::{
     running_game_ids, save_config, test_storage_connection, upload_archive, upload_config,
 };
 use log::{error, info, warn};
+use rust_i18n::t;
 use sync::UploadConfigStatus;
-use tauri::{
-    AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, generate_context,
-    menu::{Menu, MenuItem},
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, generate_context};
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_window_state::{AppHandleExt, StateFlags, WindowExt};
 
@@ -142,71 +145,9 @@ pub fn run() {
                 _ = main_window.restore_state(StateFlags::POSITION | StateFlags::SIZE);
             }
 
-            let language = CONFIG.lock().settings.appearance.language.clone();
-            let [
-                open_config_label,
-                open_save_label,
-                open_log_label,
-                quit_nosync_label,
-                quit_label,
-            ] = tray_menu_labels(&language);
-            let open_config_folder =
-                MenuItem::with_id(app, "open_config", open_config_label, true, None::<&str>)?;
-            let open_save_folder =
-                MenuItem::with_id(app, "open_save", open_save_label, true, None::<&str>)?;
-            let open_log_folder =
-                MenuItem::with_id(app, "open_log", open_log_label, true, None::<&str>)?;
-            let quit_nosync =
-                MenuItem::with_id(app, "quit_nosync", quit_nosync_label, true, None::<&str>)?;
-            let quit_sync = MenuItem::with_id(app, "quit_sync", quit_label, true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[
-                &open_config_folder,
-                &open_save_folder,
-                &open_log_folder,
-                &quit_nosync,
-                &quit_sync,
-            ])?;
-            #[allow(clippy::single_match)]
-            let _tray = TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
-                .tooltip("GalgameManager")
-                .menu(&menu)
-                .on_menu_event(|app, event| match event.id.as_ref() {
-                    "quit_sync" => {
-                        app.exit(114514);
-                    },
-                    "quit_nosync" => {
-                        app.exit(0);
-                    },
-                    "open_config" => _ = opener::open(CONFIG_DIR.as_os_str()),
-                    "open_save" => {
-                        if let Ok(dir) = app.path().app_local_data_dir() {
-                            _ = opener::open(dir.join("backup"));
-                        }
-                    },
-                    "open_log" => {
-                        if let Ok(dir) = app.path().app_log_dir() {
-                            _ = opener::open(dir);
-                        }
-                    },
-                    _ => {},
-                })
-                .on_tray_icon_event(|tray, event| match event {
-                    TrayIconEvent::Click {
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
-                        ..
-                    } => {
-                        let app = tray.app_handle();
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.unminimize();
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
-                    },
-                    _ => {},
-                })
-                .build(app)?;
+            // The locale must be synced before the tray menu is built.
+            sync_locale_from_config();
+            tray::setup(app.handle())?;
             Ok(())
         })
         .build(generate_context!())
@@ -223,11 +164,7 @@ pub fn run() {
                 // minimize notification
                 let seen_path = CONFIG_DIR.join("minimize_seen");
                 if !seen_path.exists() {
-                    notify(
-                        app,
-                        env!("CARGO_PKG_NAME"),
-                        "GalgameManager is running in the background",
-                    );
+                    notify(app, env!("CARGO_PKG_NAME"), &t!("notify.minimized"));
                     _ = std::fs::File::create(seen_path);
                 }
 
@@ -241,40 +178,21 @@ pub fn run() {
                     tauri::async_runtime::spawn(async move {
                         info!("[minimize] uploading config...");
                         let res = upload_config(app.clone(), true).await;
-                        match res {
+                        match &res {
                             Ok(UploadConfigStatus::Uploaded) => {
                                 info!("[minimize] upload config success");
-                                notify(
-                                    &app,
-                                    "\u{2705} Synced",
-                                    "Configuration uploaded successfully",
-                                );
                             },
                             Ok(UploadConfigStatus::LocalClean) => {
                                 warn!("[minimize] local clean, skip upload");
-                                notify(
-                                    &app,
-                                    "\u{23ed} Sync Skipped",
-                                    "Local configuration is up to date",
-                                );
                             },
                             Ok(UploadConfigStatus::Conflict) => {
                                 warn!("[minimize] conflict detected");
-                                notify(
-                                    &app,
-                                    "\u{26a0}\u{fe0f} Sync Conflict",
-                                    "Remote configuration is newer \u{2014} please pull first",
-                                );
                             },
                             Err(e) => {
                                 error!("[minimize] failed to upload config: {e}");
-                                notify(
-                                    &app,
-                                    "\u{274c} Sync Failed",
-                                    &format!("Failed to upload configuration: {e}"),
-                                );
                             },
                         }
+                        notify_upload_result(&app, &res);
                     });
                 }
             },
@@ -294,10 +212,7 @@ pub fn run() {
                     notify(
                         app,
                         env!("CARGO_PKG_NAME"),
-                        &format!(
-                            "{running} game(s) are still running and will be closed; their \
-                             playtime has been saved"
-                        ),
+                        &t!("notify.gamesStillRunning", count = running),
                     );
                 }
                 // Flush config before anything else so a pending throttled
@@ -317,24 +232,36 @@ pub fn run() {
         });
 }
 
-fn tray_menu_labels(language: &str) -> [&'static str; 5] {
-    if language == "zh-CN" {
-        [
-            "打开配置文件夹",
-            "打开存档文件夹",
-            "打开日志文件夹",
-            "退出（不同步）",
-            "退出",
-        ]
-    } else {
-        [
-            "Open Config Folder",
-            "Open Save Folder",
-            "Open Log Folder",
-            "Quit (without sync)",
-            "Quit",
-        ]
-    }
+/// Sync rust-i18n's global locale from the app config. Called at startup
+/// and whenever a config patch changes the language (see
+/// `bindings::patch_config`, which also rebuilds the tray menu).
+pub(crate) fn sync_locale_from_config() {
+    let language = CONFIG.lock().settings.appearance.language.clone();
+    rust_i18n::set_locale(&language);
+}
+
+/// Desktop notification for an upload-config result, shared by the minimize
+/// handler and the "Quit (with sync)" exit path.
+fn notify_upload_result(app: &AppHandle, res: &error::Result<UploadConfigStatus>) {
+    let (title, body): (String, String) = match res {
+        Ok(UploadConfigStatus::Uploaded) => (
+            t!("notify.syncedTitle").into_owned(),
+            t!("notify.syncedBody").into_owned(),
+        ),
+        Ok(UploadConfigStatus::LocalClean) => (
+            t!("notify.syncSkippedTitle").into_owned(),
+            t!("notify.syncSkippedBody").into_owned(),
+        ),
+        Ok(UploadConfigStatus::Conflict) => (
+            t!("notify.syncConflictTitle").into_owned(),
+            t!("notify.syncConflictBody").into_owned(),
+        ),
+        Err(e) => (
+            t!("notify.syncFailedTitle").into_owned(),
+            t!("notify.syncFailedBody", error = e.to_string()).into_owned(),
+        ),
+    };
+    notify(app, &title, &body);
 }
 
 /// Show a desktop notification off the current thread.
@@ -367,56 +294,65 @@ fn sync_and_exit(app: &AppHandle) {
     // during the upload window — hits disk before process::exit kills the
     // writer.
     db::saver::ConfigSaver::force_save_blocking("sync_and_exit");
-    match res {
-        Ok(UploadConfigStatus::Uploaded) => {
-            info!("[exit] upload config success");
-            notify(
-                app,
-                "\u{2705} Synced",
-                "Configuration uploaded successfully",
-            );
-            before_exit();
-            std::thread::sleep(std::time::Duration::from_secs(1));
-            std::process::exit(0);
-        },
-        Ok(UploadConfigStatus::LocalClean) => {
-            warn!("[exit] local clean, skip upload");
-            notify(
-                app,
-                "\u{23ed} Sync Skipped",
-                "Local configuration is up to date",
-            );
-            before_exit();
-            std::thread::sleep(std::time::Duration::from_secs(1));
-            std::process::exit(0);
-        },
-        Ok(UploadConfigStatus::Conflict) => {
-            warn!("[exit] conflict detected");
-            notify(
-                app,
-                "\u{26a0}\u{fe0f} Sync Conflict",
-                "Remote configuration is newer \u{2014} please pull first",
-            );
-            before_exit();
-            std::thread::sleep(std::time::Duration::from_secs(1));
-            std::process::exit(0);
-        },
-        Err(e) => {
-            error!("[exit] failed to upload config: {e}");
-            notify(
-                app,
-                "\u{274c} Sync Failed",
-                &format!("Failed to upload configuration: {e}"),
-            );
-            before_exit();
-            std::thread::sleep(std::time::Duration::from_secs(1));
-            std::process::exit(1);
-        },
+    match &res {
+        Ok(UploadConfigStatus::Uploaded) => info!("[exit] upload config success"),
+        Ok(UploadConfigStatus::LocalClean) => warn!("[exit] local clean, skip upload"),
+        Ok(UploadConfigStatus::Conflict) => warn!("[exit] conflict detected"),
+        Err(e) => error!("[exit] failed to upload config: {e}"),
     }
+    notify_upload_result(app, &res);
+    before_exit();
+    std::thread::sleep(std::time::Duration::from_secs(1));
+    std::process::exit(i32::from(res.is_err()));
 }
 
 fn before_exit() {
     if let Some(handle) = LOG_HANDLE.get() {
         handle.flush();
+    }
+}
+
+#[cfg(test)]
+mod i18n_tests {
+    use std::collections::HashSet;
+
+    use rust_i18n::t;
+
+    /// Every locale file must cover the full en-US key set, so a missing
+    /// translation fails here instead of shipping fallback text. Scales to
+    /// new languages: dropping another `locales/*.json` in extends the check.
+    #[test]
+    fn all_locales_cover_the_fallback_key_set() {
+        let dir = format!("{}/locales", env!("CARGO_MANIFEST_DIR"));
+        let base: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(format!("{dir}/en-US.json")).unwrap())
+                .unwrap();
+        let base_keys: HashSet<&str> = base
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
+        for locale in rust_i18n::available_locales!() {
+            let file = std::fs::read_to_string(format!("{dir}/{locale}.json")).unwrap();
+            let value: serde_json::Value = serde_json::from_str(&file).unwrap();
+            let keys: HashSet<&str> = value
+                .as_object()
+                .unwrap()
+                .keys()
+                .map(String::as_str)
+                .collect();
+            let missing: Vec<&str> = base_keys.difference(&keys).copied().collect();
+            assert!(missing.is_empty(), "{locale} is missing keys: {missing:?}");
+        }
+    }
+
+    #[test]
+    fn t_translates_and_interpolates() {
+        rust_i18n::set_locale("zh-CN");
+        assert_eq!(t!("tray.quit"), "退出");
+        assert_eq!(t!("hint.uploading", game = "X"), "正在上传: X...");
+        rust_i18n::set_locale("en-US");
+        assert_eq!(t!("tray.quit"), "Quit");
     }
 }
