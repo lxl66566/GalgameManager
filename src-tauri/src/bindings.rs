@@ -268,6 +268,7 @@ pub async fn list_archive(app: AppHandle, game_id: u32) -> Result<Vec<ArchiveInf
 
 #[tauri::command(async)]
 pub async fn upload_archive(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
+    validate_archive_filename(&archive_filename)?;
     info!("uploading archive: game_id={game_id}, archive_filename={archive_filename}");
 
     let tx = Transaction::new();
@@ -299,6 +300,7 @@ pub async fn upload_archive(app: AppHandle, game_id: u32, archive_filename: Stri
 
 #[tauri::command(async)]
 pub async fn delete_archive(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
+    validate_archive_filename(&archive_filename)?;
     let op = build_operator_with_varmap(&app)?;
     with_sync_game(game_id, op.delete_archive(game_id, &archive_filename)).await
 }
@@ -311,6 +313,7 @@ pub async fn delete_archive_all(app: AppHandle, game_id: u32) -> Result<()> {
 
 #[tauri::command(async)]
 pub async fn pull_archive(app: AppHandle, game_id: u32, archive_filename: String) -> Result<()> {
+    validate_archive_filename(&archive_filename)?;
     let op = build_operator_with_varmap(&app)?;
     with_sync_game(
         game_id,
@@ -330,6 +333,8 @@ pub async fn rename_remote_archive(
     archive_filename: String,
     new_archive_filename: String,
 ) -> Result<()> {
+    validate_archive_filename(&archive_filename)?;
+    validate_archive_filename(&new_archive_filename)?;
     let op = build_operator_with_varmap(&app)?;
     with_sync_game(
         game_id,
