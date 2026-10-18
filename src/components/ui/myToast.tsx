@@ -232,7 +232,12 @@ export const myToast = (props: CustomToastOptions) => {
   } = props
   /* eslint-enable solid/reactivity */
 
-  const duration = variant === 'loading' ? Infinity : 8000
+  // Action toasts (confirm / undo) demand an explicit user decision: they must
+  // not auto-dismiss under the reader, and the close button guarantees an
+  // opt-out when the user declines to act.
+  const hasActions = actions.length > 0
+  const duration = variant === 'loading' || hasActions ? Infinity : 8000
+  const showClose = hasActions || closable
 
   toast.custom(
     t => {
@@ -326,7 +331,7 @@ export const myToast = (props: CustomToastOptions) => {
           </Show>
 
           {/* 4. Close */}
-          <Show when={closable}>
+          <Show when={showClose}>
             <button
               class="ml-1 shrink-0 rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-slate-700 dark:hover:text-gray-200"
               onClick={() => {
