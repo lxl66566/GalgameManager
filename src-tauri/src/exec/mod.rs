@@ -259,13 +259,22 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
     // stays pending for the whole session, so an F5 mid-session re-enters here
     // and would launch a second game instance. The frontend `isPlaying` guard
     // cannot catch it — the replay never passes through frontend code.
-    if !LAUNCHING.insert(game_id) || is_game_running(game_id) {
+    // The ticket must guard the entry from the moment it is inserted: when
+    // the game is running but LAUNCHING is already empty (the ticket was
+    // released to GAME_LOOP_HANDLES), the insert succeeds and the
+    // running-check below returns early — without a ticket the just-inserted
+    // entry would leak and block every future launch until app restart.
+    // Created only when this call owns the entry, so a duplicate-launch
+    // return never drops another launch's ticket.
+    let ticket = LAUNCHING.insert(game_id).then(|| LaunchTicket(game_id));
+    if ticket.is_none() || is_game_running(game_id) {
         warn!("game {game_id} is already launching/running, ignoring duplicate launch");
         return Ok(());
     }
     // Held for the launch phase; released explicitly once GAME_LOOP_HANDLES
-    // takes over (and again, no-op, when the function returns).
-    let _ticket = LaunchTicket(game_id);
+    // takes over (and again, no-op, when the function returns). `_`-prefix
+    // is not applicable: the binding is inspected above.
+    let _ticket = ticket;
 
     let (plugins, metas, exe_path, current_dir, steam_launch) = {
         let lock = CONFIG.lock();
