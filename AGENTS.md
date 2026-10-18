@@ -46,8 +46,12 @@ Rust 端可能 emit 的 tauri 事件如下：
 | game://spawn/{game_id} | ()              | 游戏启动时触发                                                                        |
 | config://updated       | Config          | Rust 侧更新配置时触发                                                                 |
 | sync://failed          | String          | 与远端交互（上传/下载，存档/配置）失败时触发，value 为错误信息                        |
-| toast://show           | ToastPayload    | 向前端显示一个 toast 提示（可以通过 `<i18n.key>` 形式引用国际化字符串）               |
+| toast://show           | ToastPayload    | 向前端显示一个 toast 提示                                                             |
 | toast://dismiss        | String          | 如果之前弹了一个 loading toast，可以发送此事件来撤销其状态                            |
+
+## 后端 i18n
+
+Rust 侧自行渲染的界面（托盘菜单、系统通知、toast 文案）使用 rust-i18n，语言文件为 `src-tauri/locales/*.json`（编译期嵌入，缺失 key 回退 en-US，插值语法 `%{name}`）。新增语言只需添加一个 JSON 文件；新增文案在调用处直接 `t!("key", name = value)`。前端与后端词典相互独立。语言切换时 `patch_config` 会同步 locale 并重建托盘菜单。
 
 ## 写入配置
 

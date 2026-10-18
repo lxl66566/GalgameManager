@@ -90,7 +90,6 @@ export const dict: DeepPartial<RawDictionary> = {
   hint: {
     appliedNewConfig: '已应用远端最新配置',
     archiveExists: '存档已存在',
-    archiveFailed: '归档失败: ',
     archiving: '正在归档: ',
     checkingRemoteConfig: '正在检查远端配置...',
     checkRemoteConfigFailed: '检查远端配置失败',
@@ -248,8 +247,6 @@ export const dict: DeepPartial<RawDictionary> = {
     version: '版本',
     voiceSpeedup: {
       description: '加速游戏音频播放',
-      liveSpeedUpdated: '已实时更新运行中游戏的加速倍率',
-      liveSpeedUpdateFailed: '实时更新加速倍率失败',
       mmdevapiWarn: 'MMDevAPI 注入方式在 Linux/Wine 下不可用，请使用 dsound。',
       name: 'SPEED UP!',
       provider: '注入方式',

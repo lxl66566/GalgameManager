@@ -8,7 +8,6 @@ import { myToast, type ToastVariant } from '@components/ui/myToast'
 import * as i18n from '@solid-primitives/i18n'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { resolveBackendI18n } from '@utils/backendI18n'
 import { errToStr, log } from '@utils/log'
 import {
   appendDeviceOp,
@@ -58,20 +57,18 @@ interface ToastEventPayload {
 
 /**
  * Start listening for `toast://show` and `toast://dismiss` events emitted by
- * the Rust backend.  Returns an unlisten function for each listener.
+ * the Rust backend. The backend sends already-localized messages (its own
+ * `locales/*.json` dictionaries), so they are displayed verbatim. Returns an
+ * unlisten function for each listener.
  */
-const startToastListener = async (t: i18n.Translator<Dictionary>) => {
+const startToastListener = async () => {
   const validVariants = new Set(['default', 'error', 'loading', 'success', 'warning'])
 
   const unlistenShow = await listen<ToastEventPayload>('toast://show', event => {
     const { message, toast_id, variant } = event.payload
     const v = (validVariants.has(variant) ? variant : 'default') as ToastVariant
-    const resolved = resolveBackendI18n(
-      message,
-      key => t(key as keyof Dictionary) as string
-    )
     const toastId = toast_id ?? undefined
-    myToast({ message: resolved, toastId, variant: v })
+    myToast({ message, toastId, variant: v })
   })
 
   const unlistenDismiss = await listen<string>('toast://dismiss', event => {
@@ -117,10 +114,8 @@ export const useConfigInit = (t?: i18n.Translator<Dictionary>, onReady?: () => v
       // missed events, no blocked registration.
       const refreshPromise = refreshConfig()
 
-      // Backend toast listener (needs t for i18n resolution) + config://updated
-      const toastTask: Promise<(() => void) | undefined> = t
-        ? startToastListener(t)
-        : Promise.resolve(undefined)
+      // Backend toast listener + config://updated
+      const toastTask = startToastListener()
       const listenTask = listen<Config>('config://updated', event => {
         setConfig(reconcile(event.payload))
       })
@@ -129,7 +124,7 @@ export const useConfigInit = (t?: i18n.Translator<Dictionary>, onReady?: () => v
 
       // Unmounted while awaiting: unregister immediately to avoid leaks
       if (!isMounted) {
-        toastFunction?.()
+        toastFunction()
         function_()
         return
       }

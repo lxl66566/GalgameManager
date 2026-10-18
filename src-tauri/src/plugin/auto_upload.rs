@@ -6,6 +6,7 @@
 
 use std::path::Path;
 
+use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use tauri::Manager as _;
 use ts_rs::TS;
@@ -22,12 +23,6 @@ use crate::{
 
 /// Plugin identifier used in the registry and config.
 pub const PLUGIN_ID: &str = "autoUpload";
-
-/// i18n hint keys used in toast messages.
-const HINT_ARCHIVE_FAILED: &str = "<hint.archiveFailed>";
-const HINT_UPLOAD_FAILED: &str = "<hint.uploadFailed>";
-const HINT_UPLOAD_SUCCESS: &str = "<hint.uploadSuccess>";
-const HINT_UPLOADING: &str = "<hint.uploading>";
 
 // ── Config types ──
 
@@ -152,7 +147,11 @@ impl super::PluginHandler for AutoUploadPlugin {
         let archive_filename = match archive_res {
             Ok(filename) => filename,
             Err(e) => {
-                let msg = format!("{HINT_ARCHIVE_FAILED}{game_name}: {e}");
+                let msg = t!(
+                    "hint.archiveFailed",
+                    game = game_name.as_str(),
+                    detail = e.to_string()
+                );
                 log::error!("AutoUpload: archive failed for {game_name}: {e}");
                 emit_toast(&ctx.launch.app, ToastVariant::Error, msg);
                 return Err(e);
@@ -167,7 +166,7 @@ impl super::PluginHandler for AutoUploadPlugin {
         let loading_toast_id = format!("auto_upload_{}", ctx.launch.game_id);
         emit_loading_toast(
             &ctx.launch.app,
-            format!("{HINT_UPLOADING}{game_name}"),
+            t!("hint.uploading", game = game_name.as_str()),
             &loading_toast_id,
         );
 
@@ -180,7 +179,11 @@ impl super::PluginHandler for AutoUploadPlugin {
             Ok(op) => op,
             Err(e) => {
                 dismiss_toast(&ctx.launch.app, &loading_toast_id);
-                let msg = format!("{HINT_UPLOAD_FAILED}{game_name}: {e}");
+                let msg = t!(
+                    "hint.uploadFailed",
+                    game = game_name.as_str(),
+                    detail = e.to_string()
+                );
                 log::error!("AutoUpload: build operator failed for {game_name}: {e}");
                 emit_toast(&ctx.launch.app, ToastVariant::Error, msg);
                 return Err(e);
@@ -194,7 +197,11 @@ impl super::PluginHandler for AutoUploadPlugin {
         if let Err(e) = save_dispatcher.dispatch_before(&archive_filename).await {
             tx.rollback();
             dismiss_toast(&ctx.launch.app, &loading_toast_id);
-            let msg = format!("{HINT_UPLOAD_FAILED}{game_name}: {e}");
+            let msg = t!(
+                "hint.uploadFailed",
+                game = game_name.as_str(),
+                detail = e.to_string()
+            );
             log::error!("AutoUpload: before-upload hook failed for {game_name}: {e}");
             emit_toast(&ctx.launch.app, ToastVariant::Error, msg);
             return Err(e);
@@ -212,7 +219,11 @@ impl super::PluginHandler for AutoUploadPlugin {
         {
             tx.rollback();
             dismiss_toast(&ctx.launch.app, &loading_toast_id);
-            let msg = format!("{HINT_UPLOAD_FAILED}{game_name}: {e}");
+            let msg = t!(
+                "hint.uploadFailed",
+                game = game_name.as_str(),
+                detail = e.to_string()
+            );
             log::error!("AutoUpload: upload failed for {game_name}: {e}");
             emit_toast(&ctx.launch.app, ToastVariant::Error, msg);
             return Err(e);
@@ -251,7 +262,7 @@ impl super::PluginHandler for AutoUploadPlugin {
         }
 
         dismiss_toast(&ctx.launch.app, &loading_toast_id);
-        let msg = format!("{HINT_UPLOAD_SUCCESS}{game_name}");
+        let msg = t!("hint.uploadSuccess", game = game_name.as_str());
         log::info!("AutoUpload: upload success for {game_name}");
         emit_toast(&ctx.launch.app, ToastVariant::Success, msg);
         Ok(())

@@ -84,7 +84,6 @@ export const dict = {
   hint: {
     appliedNewConfig: 'Applied remote configuration',
     archiveExists: 'Archive already exists',
-    archiveFailed: 'Archive failed: ',
     archiving: 'Archiving: ',
     checkingRemoteConfig: 'Checking remote config...',
     checkRemoteConfigFailed: 'Failed to check remote config',
@@ -246,8 +245,6 @@ export const dict = {
     version: 'Version',
     voiceSpeedup: {
       description: 'Accelerate game audio playback',
-      liveSpeedUpdated: 'Live speed updated for the running game',
-      liveSpeedUpdateFailed: 'Failed to update live speed',
       mmdevapiWarn:
         "MMDevAPI provider is unsupported on Linux/Wine. Use 'dsound' instead.",
       name: 'SPEED UP!',

@@ -15,6 +15,7 @@ use std::{
     time::Duration,
 };
 
+use rust_i18n::t;
 use tauri::AppHandle;
 use tokio::sync::oneshot;
 
@@ -77,7 +78,11 @@ impl ConfigSaver {
             let snapshot = default_snapshot();
             let store = default_store();
             let toast: ToastFn = Arc::new(move |msg| {
-                toast::emit_toast(&app, ToastVariant::Error, msg);
+                toast::emit_toast(
+                    &app,
+                    ToastVariant::Error,
+                    t!("hint.saveConfigFailed", detail = msg.as_str()),
+                );
             });
 
             // The flush closure snapshots (releasing the CONFIG mutex) and

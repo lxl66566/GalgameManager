@@ -12,11 +12,6 @@ use super::config::{ArchPreference, PluginConfig};
 /// Plugin identifier used in the registry and config.
 pub const PLUGIN_ID: &str = "voiceSpeedup";
 
-/// i18n toast tokens for live speed updates (resolved frontend-side via
-/// `<i18n.key>` substitution).
-const TOAST_LIVE_UPDATED: &str = "<plugin.voiceSpeedup.liveSpeedUpdated>";
-const TOAST_LIVE_FAILED: &str = "<plugin.voiceSpeedup.liveSpeedUpdateFailed>";
-
 // ── Config types (compiled on all platforms) ────────────────────────────────
 
 /// DLL injection provider for voice speed-up.
@@ -140,11 +135,10 @@ mod win_impl {
     use std::path::Path;
 
     use log::info;
+    use rust_i18n::t;
     use tauri::Manager as _;
 
-    use super::{
-        ArchPreference, SpeedupProvider, TOAST_LIVE_FAILED, TOAST_LIVE_UPDATED, speed_change,
-    };
+    use super::{ArchPreference, SpeedupProvider, speed_change};
     use crate::{
         error::Result,
         plugin::{CleanupPhase, LiveUpdateCtx, PluginConfig, PluginContext, PluginHandler},
@@ -227,14 +221,21 @@ mod win_impl {
             };
             match audio_speed_hack::update_speedup_env(speed) {
                 Ok(()) => {
-                    emit_toast(&ctx.app, ToastVariant::Success, TOAST_LIVE_UPDATED);
+                    emit_toast(
+                        &ctx.app,
+                        ToastVariant::Success,
+                        t!("plugin.voiceSpeedup.liveSpeedUpdated"),
+                    );
                     Ok(())
                 },
                 Err(e) => {
                     emit_toast(
                         &ctx.app,
                         ToastVariant::Error,
-                        format!("{TOAST_LIVE_FAILED}{e}"),
+                        t!(
+                            "plugin.voiceSpeedup.liveSpeedUpdateFailed",
+                            detail = e.to_string()
+                        ),
                     );
                     Err(e)
                 },
@@ -253,10 +254,9 @@ mod linux_impl {
     use std::path::Path;
 
     use log::info;
+    use rust_i18n::t;
 
-    use super::{
-        ArchPreference, SpeedupProvider, TOAST_LIVE_FAILED, TOAST_LIVE_UPDATED, speed_change,
-    };
+    use super::{ArchPreference, SpeedupProvider, speed_change};
     use crate::{
         error::Result,
         plugin::{
@@ -401,11 +401,22 @@ mod linux_impl {
             };
             match res {
                 Ok(()) => {
-                    emit_toast(&app, ToastVariant::Success, TOAST_LIVE_UPDATED);
+                    emit_toast(
+                        &app,
+                        ToastVariant::Success,
+                        t!("plugin.voiceSpeedup.liveSpeedUpdated"),
+                    );
                     Ok(())
                 },
                 Err(e) => {
-                    emit_toast(&app, ToastVariant::Error, format!("{TOAST_LIVE_FAILED}{e}"));
+                    emit_toast(
+                        &app,
+                        ToastVariant::Error,
+                        t!(
+                            "plugin.voiceSpeedup.liveSpeedUpdateFailed",
+                            detail = e.to_string()
+                        ),
+                    );
                     Err(e.into())
                 },
             }
