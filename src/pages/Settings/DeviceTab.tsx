@@ -9,12 +9,22 @@ import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'
 
 export const DeviceTab: Component = () => {
-  const { actions } = useConfig()
+  const { actions, config } = useConfig()
   const { t } = useI18n()
 
-  const [device, { mutate }] = createResource(async () => {
-    return await actions.getCurrentDeviceOrDefault()
-  })
+  // Source tracks config.devices so the form re-resolves when the store
+  // changes externally (e.g. a remote config sync via config://updated) —
+  // without it the resource fetched once on mount and stayed stale. Local
+  // edits also change config.devices, but they are store-first (updateCurrentDevice
+  // writes the store synchronously), so the refetch always resolves to the
+  // value the user just typed; currentDeviceId is a cached promise, so the
+  // refetch itself costs no IPC.
+  const [device, { mutate }] = createResource(
+    () => config.devices,
+    async () => {
+      return await actions.getCurrentDeviceOrDefault()
+    }
+  )
 
   // Clone -> mutate -> optimistic UI update -> commit
   const modifyDevice = async (
