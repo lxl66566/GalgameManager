@@ -23,7 +23,7 @@ use crate::{
         saver::ConfigSaver,
     },
     error::{Error, Result},
-    exec::{GAME_LOOP_HANDLES, launch_game_with_plugins},
+    exec::launch_game_with_plugins,
     logging::LogLevel,
     plugin::{SaveUploadDispatcher, Transaction},
     steam::SteamListResult,
@@ -424,10 +424,7 @@ pub fn is_game_running(game_id: u32) -> bool {
 
 #[tauri::command]
 pub fn running_game_ids() -> Vec<u32> {
-    GAME_LOOP_HANDLES
-        .iter()
-        .filter_map(|r| (!r.inner().is_finished()).then_some(*r.key()))
-        .collect()
+    crate::exec::running_game_ids()
 }
 
 /// Check whether each path in `paths` exists on the local filesystem.

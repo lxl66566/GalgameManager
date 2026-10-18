@@ -296,7 +296,9 @@ pub async fn game_loop(
 ) -> Result<()> {
     let mut interval = time::interval(POLL_INTERVAL);
     let mut last_time_saved = chrono::Utc::now();
-    let mut time_counter = TimeDelta::milliseconds(0);
+    // The in-flight chunk lives in the shared PENDING_PLAYTIME map (not a
+    // local) so `flush_running_playtime` can drain it at app exit while the
+    // session is still live.
     let mut total_session = TimeDelta::milliseconds(0);
     let precision_mode = CONFIG.lock().settings.launch.precision_mode;
 
@@ -307,6 +309,7 @@ pub async fn game_loop(
         interval.tick().await;
 
         if !tracker.has_active_processes() {
+            let time_counter = super::take_pending_playtime(game_id);
             total_session += time_counter;
             info!(
                 "Game exited: game_id={game_id}, playtime={}",
@@ -336,16 +339,18 @@ pub async fn game_loop(
         // Without precision mode, count all elapsed time; otherwise only
         // count when the game (or one of its child processes) is focused.
         if !precision_mode || tracker.is_focused() {
-            time_counter += now - last_time_saved;
+            super::add_pending_playtime(game_id, now - last_time_saved);
         }
         last_time_saved = now;
 
-        if time_counter >= SAVE_INTERVAL {
+        if super::pending_playtime(game_id) >= SAVE_INTERVAL {
+            // take() atomically resets the chunk; a concurrent app-exit
+            // flush that drained it first yields zero here (harmless).
+            let time_counter = super::take_pending_playtime(game_id);
             total_session += time_counter;
             if let Err(e) = super::update_game_time(&app, game_id, time_counter, false) {
                 error!("update_game_time failed: {e}");
             }
-            time_counter = TimeDelta::milliseconds(0);
         }
     }
 }

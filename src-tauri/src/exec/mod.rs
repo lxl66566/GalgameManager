@@ -79,6 +79,71 @@ pub fn is_game_running(game_id: u32) -> bool {
         .is_some_and(|h| !h.inner().is_finished())
 }
 
+/// Ids of all games with a live session (spawned game loop).
+pub fn running_game_ids() -> Vec<u32> {
+    GAME_LOOP_HANDLES
+        .iter()
+        .filter_map(|r| (!r.inner().is_finished()).then_some(*r.key()))
+        .collect()
+}
+
+/// In-flight (not yet persisted) playtime chunk per running game.
+///
+/// The platform game loops mirror their accumulator here: they only persist
+/// whole `SAVE_INTERVAL` chunks, so without a shared view the final
+/// sub-interval of a session that is still live at app exit would be lost.
+/// [`flush_running_playtime`] drains it on the exit paths.
+static PENDING_PLAYTIME: Lazy<DashMap<u32, chrono::TimeDelta>> = Lazy::new(DashMap::new);
+
+/// Accumulate `delta` into the game's pending chunk (called by game loops).
+pub(crate) fn add_pending_playtime(game_id: u32, delta: chrono::TimeDelta) {
+    PENDING_PLAYTIME
+        .entry(game_id)
+        .and_modify(|t| *t += delta)
+        .or_insert(delta);
+}
+
+/// Current pending chunk without consuming it.
+pub(crate) fn pending_playtime(game_id: u32) -> chrono::TimeDelta {
+    PENDING_PLAYTIME
+        .get(&game_id)
+        .map_or_else(chrono::TimeDelta::zero, |t| *t)
+}
+
+/// Atomically take (and reset) the game's pending chunk. Taking — not
+/// peek-then-clear — guarantees the loop's own interval/exit flush and the
+/// app-exit flush can never both apply the same chunk, whoever wins the
+/// race.
+pub(crate) fn take_pending_playtime(game_id: u32) -> chrono::TimeDelta {
+    PENDING_PLAYTIME
+        .remove(&game_id)
+        .map_or_else(chrono::TimeDelta::zero, |(_, t)| t)
+}
+
+/// Flush the pending partial playtime chunks of all still-running games
+/// into CONFIG. Called from the app-exit paths BEFORE the final config
+/// save/upload (the upload snapshots CONFIG). Returns how many games had a
+/// non-zero chunk flushed. Idempotent: drained chunks start re-accumulating
+/// from zero, so a second call only picks up fresh time.
+#[must_use]
+pub fn flush_running_playtime(app: &AppHandle) -> usize {
+    let mut flushed = 0;
+    for game_id in running_game_ids() {
+        let chunk = take_pending_playtime(game_id);
+        if chunk.is_zero() {
+            continue;
+        }
+        // force=false: the exit paths force-save right after this, so the
+        // throttled request here is enough (same as the loops' own interval
+        // flushes).
+        match update_game_time(app, game_id, chunk, false) {
+            Ok(()) => flushed += 1,
+            Err(e) => log::error!("flush playtime for game {game_id} failed: {e}"),
+        }
+    }
+    flushed
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
 pub struct StartCtx {
     pub cmd: String,

@@ -513,7 +513,9 @@ pub async fn game_loop(
 ) -> Result<()> {
     let mut interval = time::interval(Duration::from_secs(1));
     let mut last_time_saved = chrono::Utc::now();
-    let mut time_counter = TimeDelta::milliseconds(0);
+    // The in-flight chunk lives in the shared PENDING_PLAYTIME map (not a
+    // local) so `flush_running_playtime` can drain it at app exit while the
+    // session is still live.
     let mut total_session = TimeDelta::milliseconds(0);
     let precision_mode = CONFIG.lock().settings.launch.precision_mode;
 
@@ -522,6 +524,7 @@ pub async fn game_loop(
 
         if !job.has_active_processes() {
             // Include the final partial chunk
+            let time_counter = super::take_pending_playtime(game_id);
             total_session += time_counter;
             info!(
                 "Game exited: game_id={}, playtime={}",
@@ -555,19 +558,22 @@ pub async fn game_loop(
         // matters in precision mode.
         let focused = job.is_focused();
         if !precision_mode || focused {
-            time_counter += now - last_time_saved;
-            trace!("time_counter: {time_counter}");
+            super::add_pending_playtime(game_id, now - last_time_saved);
+            trace!("pending playtime: {}", super::pending_playtime(game_id));
         }
         last_time_saved = now;
 
+        let time_counter = super::pending_playtime(game_id);
         if time_counter >= SAVE_INTERVAL {
+            // take() atomically resets the chunk; a concurrent app-exit
+            // flush that drained it first yields zero here (skipped below).
+            let time_counter = super::take_pending_playtime(game_id);
             total_session += time_counter;
             // GameNotFound (deleted mid-session) or a transient save error
             // must not kill the timing loop.
             if let Err(e) = super::update_game_time(&app, game_id, time_counter, false) {
                 error!("update_game_time failed: {e}");
             }
-            time_counter = TimeDelta::milliseconds(0);
         }
     }
 

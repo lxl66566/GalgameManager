@@ -280,6 +280,26 @@ pub fn run() {
             },
             tauri::RunEvent::ExitRequested { api, code, .. } => {
                 _ = app.save_window_state(StateFlags::all());
+                // Flush the partial playtime chunks of still-running games
+                // before anything else: the game loops only persist whole
+                // SAVE_INTERVAL chunks, so without this the final (<60s)
+                // chunk of a live session is lost — on both exit paths, and
+                // ahead of the config save/upload which snapshots CONFIG.
+                let running = exec::flush_running_playtime(app);
+                if running > 0 {
+                    info!(
+                        "[exit] {running} game(s) still running; pending playtime flushed, they \
+                         will be closed"
+                    );
+                    notify(
+                        app,
+                        env!("CARGO_PKG_NAME"),
+                        &format!(
+                            "{running} game(s) are still running and will be closed; their \
+                             playtime has been saved"
+                        ),
+                    );
+                }
                 // Flush config before anything else so a pending throttled
                 // write is never lost on exit.
                 db::saver::ConfigSaver::force_save_blocking("app_exit");
@@ -334,6 +354,13 @@ fn notify(app: &AppHandle, title: &str, body: &str) {
 /// Upload config then exit. Called when the user clicks "Quit (with sync)".
 fn sync_and_exit(app: &AppHandle) {
     info!("[exit] uploading config...");
+    // Games keep accumulating playtime between the ExitRequested flush and
+    // this upload; flush again so the uploaded config carries it (the flush
+    // is idempotent — only fresh time is picked up).
+    let flushed = exec::flush_running_playtime(app);
+    if flushed > 0 {
+        info!("[exit] flushed pending playtime for {flushed} game(s) before upload");
+    }
     let res = tauri::async_runtime::block_on(async move { upload_config(app.clone(), true).await });
     // upload_config force-queues its last_sync flush on the writer task
     // (non-blocking); block here so it — plus any config write that happened

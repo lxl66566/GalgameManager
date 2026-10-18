@@ -41,6 +41,12 @@ pub async fn game_loop(
             // Branch A: process exited
             status = child.wait() => {
                 let chunk = chrono::Utc::now() - last_time_saved;
+                // Mirror the chunk into the shared pending map, then take it
+                // back out: an app-exit flush may have drained it already
+                // (the session time is then already persisted), and the take
+                // guarantees we never apply the same chunk twice.
+                super::add_pending_playtime(game_id, chunk);
+                let chunk = super::take_pending_playtime(game_id);
                 total_session += chunk;
                 // `status` is `io::Result<ExitStatus>`. Only `is_ok()` was
                 // checked before, which only tells us the *wait* itself
@@ -78,6 +84,8 @@ pub async fn game_loop(
             // Branch B: timer tick (every 60s)
             _ = interval.tick() => {
                 let chunk = chrono::Utc::now() - last_time_saved;
+                super::add_pending_playtime(game_id, chunk);
+                let chunk = super::take_pending_playtime(game_id);
                 total_session += chunk;
                 // GameNotFound (deleted mid-session) or a transient save
                 // error must not kill the timing loop.
