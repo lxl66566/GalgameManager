@@ -5,13 +5,16 @@
 //! On a 4xx the caller is recorded in the dead-URL cache
 //! ([`super::dead_url`]); 5xx and transport errors are retried here.
 
-use std::{fs, sync::LazyLock as Lazy, time::Duration};
+use std::{sync::LazyLock as Lazy, time::Duration};
 
 use backon::{ExponentialBuilder, Retryable};
 use dashmap::{DashMap, mapref::entry::Entry};
 use log::{info, warn};
 use sha2::{Digest, Sha256};
-use tokio::sync::broadcast::{self, error::RecvError};
+use tokio::{
+    fs,
+    sync::broadcast::{self, error::RecvError},
+};
 
 use super::{IMAGE_CACHE_DIR, IMAGE_CLIENT, dead_url};
 use crate::error::{Error, ReqwestDetailedError, Result};
@@ -164,7 +167,9 @@ async fn download_and_cache(url: &str, expected: Option<&str>) -> Result<String>
                      under actual hash"
                 );
             }
-            fs::write(IMAGE_CACHE_DIR.join(&actual), &bytes)?;
+            // Async write: this runs on a runtime worker; a sync write here
+            // would block other futures on the same worker.
+            fs::write(IMAGE_CACHE_DIR.join(&actual), &bytes).await?;
             URL_HASH_INDEX.insert(url.to_string(), actual.clone());
             Ok(actual)
         },

@@ -78,12 +78,14 @@ pub async fn prepare_image(path_or_url: &str, sha256: Option<&str>) -> Result<St
 
     // 2. Local file: read, (re-)hash, copy into the cache.
     if !path_or_url.starts_with("http") {
-        let bytes = fs::read(path_or_url)?;
+        // tokio::fs: this function runs on a runtime worker, and a local
+        // path can sit on slow/network storage.
+        let bytes = tokio::fs::read(path_or_url).await?;
         // Prefer a caller-provided valid hash when available; otherwise
         // recompute from content so the cached filename matches what
         // `galimg://` will later request.
         let h = sha256.map_or_else(|| hash_image(&bytes), String::from);
-        fs::write(IMAGE_CACHE_DIR.join(&h), &bytes)?;
+        tokio::fs::write(IMAGE_CACHE_DIR.join(&h), &bytes).await?;
         return Ok(h);
     }
 

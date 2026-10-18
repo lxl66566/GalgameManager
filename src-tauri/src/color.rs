@@ -71,10 +71,11 @@ pub async fn prepare_image(
 /// silently skipped; their `cover_color` stays `None` and the statistics
 /// page falls back to the golden-angle palette for them.
 ///
-/// Concurrency is unbounded — the underlying `prepare_image` is mostly
-/// `spawn_blocking` work (file I/O + image decode) which naturally fans out
-/// across the tokio blocking pool, so one future per game saturates all
-/// cores instead of artificial throttling.
+/// Concurrency is bounded by [`REFRESH_CONCURRENCY`]: cache misses issue real
+/// HTTP downloads, and the CPU-bound part (file I/O + image decode) fans out
+/// across the tokio blocking pool either way.
+const REFRESH_CONCURRENCY: usize = 8;
+
 pub async fn refresh_all_cover_colors(app: &AppHandle) -> Result<()> {
     // Snapshot under a short lock so the (slow) downloads / decodes below
     // don't block other CONFIG users.
@@ -97,7 +98,7 @@ pub async fn refresh_all_cover_colors(app: &AppHandle) -> Result<()> {
                 .map_or(None, |(_, c)| c);
             (id, color)
         })
-        .buffer_unordered(usize::MAX)
+        .buffer_unordered(REFRESH_CONCURRENCY)
         .collect()
         .await;
 

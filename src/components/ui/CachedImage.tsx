@@ -69,9 +69,19 @@ const CachedImage: Component<ImageProps> = props => {
   // stale `coverColor` lingers on any game.
   const colorEnabled = () =>
     (props.extractColor ?? false) && config.settings.appearance.extractCoverColor
+
+  // Bookkeeping of the last REAL prepare_image call, used to skip refetches
+  // that are only echoes of this component's own callbacks: the parent stores
+  // the returned hash (onHashUpdate) and flips `extractColor` off once the
+  // color lands (onColorExtracted), and each write re-triggers the resource
+  // key below. Both echoes used to cost one redundant (cache-hit) IPC — with
+  // them skipped, a first cover load costs exactly one prepare_image.
+  let lastFetchUrl = ''
+  let lastFetchReturnedHash: null | string = null
+  let lastFetchDidColor = false
+
   const [imageHash] = createResource(
     () => `${props.url ?? ''}\0${props.hash ?? ''}\0${colorEnabled()}`,
-    // eslint-disable-next-line solid/reactivity -- fetcher only re-runs on key change; reactive props are safe
     async key => {
       const [rawUrl, currentHash, extractColor] = key.split('\0') as [
         string,
@@ -79,6 +89,19 @@ const CachedImage: Component<ImageProps> = props => {
         'false' | 'true'
       ]
       if (!rawUrl) return null
+
+      const needColor = extractColor === 'true'
+      // Echo skip: same url, the stored hash is exactly what the last real
+      // fetch returned, and either no color is requested now or the last real
+      // fetch already extracted it. External hash changes / resets never equal
+      // the returned hash, so they still trigger a real revalidation.
+      if (
+        rawUrl === lastFetchUrl &&
+        currentHash === lastFetchReturnedHash &&
+        (!needColor || lastFetchDidColor)
+      ) {
+        return lastFetchReturnedHash
+      }
 
       const resolvedUrl = await resolveVarForDevice(rawUrl, config.devices)
       // Always call prepare_image to ensure cache exists on this device.
@@ -91,10 +114,14 @@ const CachedImage: Component<ImageProps> = props => {
       // a bogus empty hash. The backend now validates, but the right
       // semantic on the TS side is still `null`.
       const [hash, color] = await invoke<[string, null | string]>('prepare_image', {
-        needColor: extractColor === 'true',
+        needColor,
         sha256: currentHash || null,
         url: resolvedUrl
       })
+
+      lastFetchUrl = rawUrl
+      lastFetchReturnedHash = hash
+      lastFetchDidColor = needColor
 
       // Notify parent of the resolved hash (may differ from currentHash
       // if cache was missing and had to be re-computed). Fire before the
