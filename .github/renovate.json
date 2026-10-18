@@ -1,18 +1,4 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:base", ":disableDependencyDashboard"],
-  "enabledManagers": ["cargo", "npm", "github-actions"],
-  "commitMessagePrefix": "chore(deps):",
-  "packageRules": [
-    {
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest", "rollback"],
-      "automerge": true,
-      "automergeType": "branch"
-    },
-    {
-      "matchUpdateTypes": ["major"],
-      "automerge": false,
-      "prCreation": "immediate"
-    }
-  ]
+  "extends": ["github>lxl66566/.github"]
 }
