@@ -99,7 +99,7 @@ impl super::PluginHandler for AutoUploadPlugin {
         };
         let (max_kept, retention_scope) = (config.max_kept, config.retention_scope);
 
-        let game = {
+        let mut game = {
             let lock = crate::db::CONFIG.lock();
             lock.get_game_by_id(ctx.launch.game_id)?.clone()
         };
@@ -140,12 +140,16 @@ impl super::PluginHandler for AutoUploadPlugin {
             "AutoUploadPlugin: archiving saves for game {}",
             ctx.launch.game_id
         );
-        let archive_filename = match crate::archive::archive_impl(
-            &device_name,
-            &archive_conf,
-            &game_backup_dir,
-            &game.save_paths,
-        ) {
+        // squashfs/zstd compression is fully synchronous CPU+IO work; keep it
+        // off the async runtime workers (same rationale as the `archive`
+        // command in bindings.rs).
+        let save_paths = std::mem::take(&mut game.save_paths);
+        let archive_res = tauri::async_runtime::spawn_blocking(move || {
+            crate::archive::archive_impl(&device_name, &archive_conf, &game_backup_dir, &save_paths)
+        })
+        .await
+        .map_err(|e| crate::error::Error::JoinError(e.to_string()))?;
+        let archive_filename = match archive_res {
             Ok(filename) => filename,
             Err(e) => {
                 let msg = format!("{HINT_ARCHIVE_FAILED}{game_name}: {e}");
@@ -233,8 +237,16 @@ impl super::PluginHandler for AutoUploadPlugin {
                 retention_scope,
                 RetentionScope::Local | RetentionScope::Both
             ) {
+                // Deletions are synchronous disk IO; keep them off the async
+                // runtime workers. Errors are already logged inside.
                 let local_game_dir = data_dir.join("backup").join(ctx.launch.game_id.to_string());
-                prune_local(&local_game_dir, max_kept as usize);
+                if let Err(e) = tauri::async_runtime::spawn_blocking(move || {
+                    prune_local(&local_game_dir, max_kept as usize);
+                })
+                .await
+                {
+                    log::error!("AutoUpload: prune_local task failed: {e}");
+                }
             }
         }
 

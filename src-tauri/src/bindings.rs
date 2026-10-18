@@ -17,7 +17,11 @@ use tauri::{AppHandle, Manager as _};
 
 use crate::{
     archive::{ArchiveInfo, archive_impl, restore_impl},
-    db::{CONFIG, Config, ConfigPatch, device::DEVICE_UID, saver::ConfigSaver},
+    db::{
+        CONFIG, Config, ConfigPatch,
+        device::{DEVICE_UID, ResolveVar as _},
+        saver::ConfigSaver,
+    },
     error::{Error, Result},
     exec::{GAME_LOOP_HANDLES, launch_game_with_plugins},
     logging::LogLevel,
@@ -149,13 +153,21 @@ fn validate_archive_filename(name: &str) -> Result<()> {
     Ok(())
 }
 
-#[tauri::command]
-pub fn list_local_archive(app: AppHandle, game_id: u32) -> Result<Vec<ArchiveInfo>> {
+// Sync commands run on the main thread, where blocking IO (directory scans,
+// steamlocate's registry/vdf walk, stat on network paths) freezes the whole
+// window — hence async + spawn_blocking for the disk-bound parts.
+#[tauri::command(async)]
+pub async fn list_local_archive(app: AppHandle, game_id: u32) -> Result<Vec<ArchiveInfo>> {
     let game_backup_dir = game_backup_dir(&app, game_id)?;
-    if !game_backup_dir.exists() {
-        return Ok(vec![]);
-    }
-    Ok(list_dir_all(game_backup_dir)?)
+
+    tauri::async_runtime::spawn_blocking(move || -> Result<Vec<ArchiveInfo>> {
+        if !game_backup_dir.exists() {
+            return Ok(vec![]);
+        }
+        Ok(list_dir_all(game_backup_dir)?)
+    })
+    .await
+    .map_err(|e| Error::JoinError(e.to_string()))?
 }
 
 #[tauri::command]
@@ -408,39 +420,64 @@ pub fn running_game_ids() -> Vec<u32> {
 ///
 /// Resolves variables first, then checks existence. Returns a `Vec<bool>`
 /// with the same length and order as the input.
-#[tauri::command]
-pub fn paths_exist(paths: Vec<String>) -> Result<Vec<bool>> {
-    let lock = CONFIG.lock();
-    let results = paths
-        .iter()
-        .map(|p| {
-            lock.resolve_var(p)
-                .is_ok_and(|resolved| Path::new(&resolved).exists())
-        })
-        .collect();
-    Ok(results)
+#[tauri::command(async)]
+pub async fn paths_exist(paths: Vec<String>) -> Result<Vec<bool>> {
+    // Variable resolution is cheap and stays under the lock; the stat calls
+    // can hit network paths and go to the blocking pool.
+    let resolved: Vec<Option<String>> = {
+        let lock = CONFIG.lock();
+        paths.iter().map(|p| lock.resolve_var(p).ok()).collect()
+    };
+    tauri::async_runtime::spawn_blocking(move || {
+        resolved
+            .into_iter()
+            .map(|r| r.is_some_and(|resolved| Path::new(&resolved).exists()))
+            .collect::<Vec<bool>>()
+    })
+    .await
+    .map_err(|e| Error::JoinError(e.to_string()))
 }
 
 /// Open the directory containing the game executable in the system file
 /// manager. Steam games open their install dir instead (`steam://` URLs
 /// have no parent).
-#[tauri::command]
-pub fn open_game_dir(game_id: u32) -> Result<()> {
-    let lock = CONFIG.lock();
-    let game = lock.get_game_by_id(game_id)?;
-    let dir: PathBuf = if let Some(steam) = &game.steam {
-        crate::steam::resolve_app_install_dir(steam.appid)
-            .or_else(|| lock.resolve_var(&steam.install_dir).ok().map(PathBuf::from))
-            .ok_or(Error::Launch)?
-    } else {
-        let exe_path = game.excutable_path.as_deref().ok_or(Error::Launch)?;
-        let resolved = lock.resolve_var(exe_path)?;
-        Path::new(&resolved)
-            .parent()
-            .ok_or_else(|| Error::InvalidCommand("no parent dir".into()))?
-            .to_path_buf()
+#[tauri::command(async)]
+pub async fn open_game_dir(game_id: u32) -> Result<()> {
+    // Clone out of the CONFIG lock: the Steam resolution below
+    // (steamlocate: registry + library manifests) is synchronous IO and must
+    // neither hold the lock nor run on the main thread.
+    let (steam, raw_exe, varmap) = {
+        let lock = CONFIG.lock();
+        let game = lock.get_game_by_id(game_id)?;
+        (
+            game.steam.clone(),
+            game.excutable_path.clone(),
+            lock.varmap().clone(),
+        )
     };
-    drop(lock);
+
+    let dir: PathBuf = tauri::async_runtime::spawn_blocking(move || -> Result<PathBuf> {
+        if let Some(steam) = &steam {
+            crate::steam::resolve_app_install_dir(steam.appid)
+                .or_else(|| {
+                    varmap
+                        .resolve_var(&steam.install_dir)
+                        .ok()
+                        .map(PathBuf::from)
+                })
+                .ok_or(Error::Launch)
+        } else {
+            let exe_path = raw_exe.as_deref().ok_or(Error::Launch)?;
+            let resolved = varmap.resolve_var(exe_path)?;
+            Path::new(&resolved)
+                .parent()
+                .ok_or_else(|| Error::InvalidCommand("no parent dir".into()))
+                .map(Path::to_path_buf)
+        }
+    })
+    .await
+    .map_err(|e| Error::JoinError(e.to_string()))??;
+
     opener::open(&dir).map_err(Error::Open)?;
     Ok(())
 }
