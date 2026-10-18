@@ -151,6 +151,8 @@ export const dict: DeepPartial<RawDictionary> = {
     saveConfigFailed: '保存配置失败',
     selectImageFailed: '选择图片失败',
     selectSaveArchive: '选择存档文件/文件夹',
+    storageTestFailed: '存储连接测试失败: ',
+    storageTestSuccess: '存储连接测试成功',
     supportVar: '支持插入花括号模板，类似 {变量名}',
     syncFailed: '同步失败: ',
     syncSuccess: '同步成功',
@@ -370,6 +372,7 @@ export const dict: DeepPartial<RawDictionary> = {
       s3Region: 'Region',
       s3SecretKey: 'Secret Key',
       self: '云存储',
+      testConnection: '测试连接',
       Username: '用户名'
     },
     tabs: {

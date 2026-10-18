@@ -362,6 +362,20 @@ pub fn clean_current_operator() {
     CONFIG.lock().settings.storage.clean_current_operator();
 }
 
+/// Probe a (possibly unsaved) storage configuration for reachability.
+/// See [`crate::sync::test_storage_connection`]. Returns the full error
+/// chain as a string so the settings page can surface the underlying cause
+/// (DNS failure, 401, missing directory, ...) to the user.
+#[tauri::command(async)]
+pub async fn test_storage_connection(
+    app: AppHandle,
+    storage: crate::db::settings::StorageConfig,
+) -> std::result::Result<(), String> {
+    crate::sync::test_storage_connection(&app, storage)
+        .await
+        .map_err(|e| crate::error::format_error_chain(&e))
+}
+
 #[tauri::command(async)]
 pub async fn upload_config(app: AppHandle, safe: bool) -> Result<UploadConfigStatus> {
     info!("upload_config triggered, safe: {safe}");

@@ -147,6 +147,8 @@ export const dict = {
     saveConfigFailed: 'Failed to save config',
     selectImageFailed: 'Failed to select image',
     selectSaveArchive: 'Select save archive file/folder',
+    storageTestFailed: 'Storage connection test failed: ',
+    storageTestSuccess: 'Storage connection test succeeded',
     supportVar: 'support template like {var_name}',
     syncFailed: 'Sync Failed: ',
     syncSuccess: 'Sync Success',
@@ -378,6 +380,7 @@ export const dict = {
       s3Region: 'Region',
       s3SecretKey: 'Secret Key',
       self: 'Storage backend',
+      testConnection: 'Test Connection',
       Username: 'Username'
     },
     tabs: {

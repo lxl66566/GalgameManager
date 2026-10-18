@@ -21,7 +21,7 @@ use bindings::{
     get_remote_config, is_game_running, list_archive, list_local_archive, list_steam_games, log,
     open_game_dir, patch_config, paths_exist, prepare_image, pull_archive,
     refresh_all_cover_colors, rename_local_archive, rename_remote_archive, resolve_var,
-    running_game_ids, save_config, upload_archive, upload_config,
+    running_game_ids, save_config, test_storage_connection, upload_archive, upload_config,
 };
 use log::{error, info, warn};
 use sync::UploadConfigStatus;
@@ -81,6 +81,7 @@ pub fn run() {
             pull_archive,
             rename_remote_archive,
             clean_current_operator,
+            test_storage_connection,
             upload_config,
             get_remote_config,
             apply_remote_config,

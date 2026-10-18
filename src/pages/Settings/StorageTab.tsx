@@ -15,8 +15,9 @@ import {
 } from '@components/ui/settings'
 import { invoke } from '@tauri-apps/api/core'
 import { debounce } from '@utils/debounce'
+import { errToStr } from '@utils/log'
 import { useVarWarning } from '@utils/useVarWarning'
-import { FiDownload, FiLoader, FiUpload } from 'solid-icons/fi'
+import { FiActivity, FiDownload, FiLoader, FiUpload } from 'solid-icons/fi'
 import {
   createMemo,
   createSignal,
@@ -26,6 +27,7 @@ import {
   Switch,
   type Component
 } from 'solid-js'
+import toast from 'solid-toast'
 
 import { useI18n } from '~/i18n'
 import { checkAndPullRemote, performManualUpload, useConfig } from '~/store'
@@ -40,6 +42,43 @@ const COMPRESSION_RULES: Record<
 > = {
   squashfsZstd: { disabled: false, max: 22, min: 1 }, // Zstd level range: 1-22
   tar: { disabled: true, max: 0, min: 0 } // tar is archive-only, no level
+}
+
+// Ghost icon button rendered tight against the provider label: reads the live
+// form values from the config store (the form is controlled, so
+// `config.settings.storage` is always the current value).
+const TestConnectionButton: Component = () => {
+  const { config } = useConfig()
+  const { t } = useI18n()
+
+  const [testing, setTesting] = createSignal(false)
+  const handleTestConnection = async () => {
+    if (testing()) return
+    setTesting(true)
+    try {
+      await invoke('test_storage_connection', { storage: config.settings.storage })
+      toast.success(t('hint.storageTestSuccess'))
+    } catch (error) {
+      toast.error(t('hint.storageTestFailed') + errToStr(error))
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  return (
+    <button
+      aria-label={t('settings.storage.testConnection')}
+      class="inline-flex size-6 flex-none items-center justify-center rounded text-gray-400 transition-colors hover:bg-gray-200/70 hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-700/70 dark:hover:text-gray-300"
+      disabled={testing()}
+      onClick={handleTestConnection}
+      title={t('settings.storage.testConnection')}
+      type="button"
+    >
+      <Show fallback={<FiLoader class="size-3.5 animate-spin" />} when={!testing()}>
+        <FiActivity class="size-3.5" />
+      </Show>
+    </button>
+  )
 }
 
 const WebDavForm: Component<{
@@ -316,7 +355,17 @@ export const StorageTab: Component = () => {
   return (
     <div class="max-w-4xl">
       <SettingSection title={t('settings.storage.self')}>
-        <SettingRow class="relative z-10" label={t('settings.storage.provider')}>
+        <SettingRow
+          class="relative z-10"
+          label={
+            <span class="inline-flex items-center gap-1.5">
+              {t('settings.storage.provider')}
+              <Show when={currentProvider() !== 'none'}>
+                <TestConnectionButton />
+              </Show>
+            </span>
+          }
+        >
           <Select
             onChange={handleProviderChange}
             options={[

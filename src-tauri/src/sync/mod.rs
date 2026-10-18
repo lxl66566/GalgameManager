@@ -22,7 +22,7 @@ use crate::{
     db::{
         CONFIG, CONFIG_FILENAME, Config, TimeCmp,
         device::{ResolveVar, VarMap},
-        settings::{LocalConfig, S3Config, WebDavConfig},
+        settings::{LocalConfig, S3Config, StorageConfig, StorageProvider, WebDavConfig},
     },
     error::{Error, Result},
     utils,
@@ -470,6 +470,67 @@ impl BuildOperator for S3Config {
 
     fn remove_operator(&self) {
         *self.operator.borrow_mut() = None;
+    }
+}
+
+/// Light-weight reachability probe for a storage backend configuration.
+///
+/// Used by the settings page's "test connection" action with a possibly
+/// *unsaved* `storage`: varmap and timeouts come from the global CONFIG,
+/// but the operator is built from the passed-in config — its operator cache
+/// is a throwaway copy, so unsaved credentials under test never pollute the
+/// live operator cache. No directories are created (the local probe only
+/// stats the resolved path).
+///
+/// Takes `storage` by value and keeps no `&StorageConfig` alive across an
+/// await: the RefCell operator caches make it `!Sync`, which would break
+/// the `Send` bound tauri requires of command futures.
+pub async fn test_storage_connection(app: &AppHandle, storage: StorageConfig) -> Result<()> {
+    let (varmap, io_timeout, non_io_timeout) = {
+        let lock = CONFIG.lock();
+        (
+            lock.varmap().clone(),
+            Duration::from_secs(u64::from(lock.settings.sync_io_timeout_secs.max(1))),
+            Duration::from_secs(u64::from(lock.settings.sync_non_io_timeout_secs.max(1))),
+        )
+    };
+
+    match storage.provider {
+        StorageProvider::None => Err(Error::ProviderNotSet),
+        StorageProvider::Local => {
+            // Existence probe only: building the Fs operator would
+            // create_dir_all the root as a side effect.
+            // The `&storage` borrow ends at this statement, before the await.
+            let resolved = varmap.resolve_var(&storage.local.path)?;
+            if resolved.trim().is_empty() {
+                return Err(Error::InvalidPath);
+            }
+            let path = PathBuf::from(resolved);
+            // The path can sit on slow/network storage; stat it off the
+            // async workers.
+            tauri::async_runtime::spawn_blocking(move || -> Result<()> {
+                if path.is_dir() {
+                    Ok(())
+                } else {
+                    Err(Error::Io(std::io::Error::new(
+                        std::io::ErrorKind::NotFound,
+                        format!("directory does not exist: {}", path.display()),
+                    )))
+                }
+            })
+            .await
+            .map_err(|e| Error::JoinError(e.to_string()))?
+        },
+        StorageProvider::WebDav | StorageProvider::S3 => {
+            // build_operator_with_timeouts is fully synchronous, so the
+            // `&storage` borrow ends before the check() await below.
+            let op =
+                storage.build_operator_with_timeouts(app, &varmap, io_timeout, non_io_timeout)?;
+            // One list request against the root — surfaces auth, endpoint,
+            // DNS and timeout problems without writing anything.
+            op.inner().check().await?;
+            Ok(())
+        },
     }
 }
 
