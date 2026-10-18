@@ -8,7 +8,7 @@ use steamlocate::{App, SteamDir, app::StateFlag};
 
 use super::{SteamError, SteamGameEntry, SteamInfo, SteamLaunchPaths, SteamListResult};
 use crate::{
-    db::Config,
+    db::device::{ResolveVar as _, VarMap},
     error::{Error, Result},
     utils::win_procs,
 };
@@ -134,18 +134,27 @@ pub fn resolve_app_install_dir(appid: u32) -> Option<PathBuf> {
 /// library may have moved since import); the variable-templated snapshot is
 /// the fallback. The exe falls back to a fresh heuristic scan when the
 /// stored guess no longer exists (another device's path, game update).
+///
+/// Takes a `VarMap` (cloned out of the CONFIG lock by the caller) so the
+/// registry/vdf/walkdir work inside never runs while holding the CONFIG
+/// mutex.
 pub fn resolve_launch_paths(
-    lock: &Config,
+    varmap: &VarMap,
     game_name: &str,
     steam: &SteamInfo,
 ) -> Result<SteamLaunchPaths> {
     let install_dir: PathBuf = resolve_app_install_dir(steam.appid)
-        .or_else(|| lock.resolve_var(&steam.install_dir).ok().map(PathBuf::from))
+        .or_else(|| {
+            varmap
+                .resolve_var(&steam.install_dir)
+                .ok()
+                .map(PathBuf::from)
+        })
         .ok_or_else(|| Error::Steam(SteamError::InstallDirNotFound(steam.appid)))?;
 
     let exe_path = match &steam.exe_path {
         Some(p) => {
-            let resolved = lock.resolve_var(p)?;
+            let resolved = varmap.resolve_var(p)?;
             if Path::new(&resolved).is_file() {
                 resolved
             } else {

@@ -14,7 +14,7 @@ use tokio::sync::oneshot;
 use ts_rs::TS;
 
 use crate::{
-    db::CONFIG,
+    db::{CONFIG, device::ResolveVar as _},
     error::{Error, Result},
     plugin::{LaunchCtx, PluginConfig, Transaction, enabled_plugin_contexts, instance_config},
 };
@@ -276,35 +276,38 @@ pub async fn launch_game_with_plugins(app: AppHandle, game_id: u32) -> Result<()
     // is not applicable: the binding is inspected above.
     let _ticket = ticket;
 
-    let (plugins, metas, exe_path, current_dir, steam_launch) = {
+    // Clone everything needed out of the CONFIG lock; the Steam resolution
+    // below (registry + vdf + walkdir, all synchronous IO) must not run
+    // while holding the lock — it would stall every other CONFIG user for
+    // the duration of a full library scan.
+    let (plugins, metas, game_name, steam_info, raw_exe, varmap) = {
         let lock = CONFIG.lock();
         let game = lock.get_game_by_id(game_id)?;
-        // Steam games launch through the steam:// protocol; their exe/dir
-        // resolve from the live Steam library (snapshot fallback) so plugins
-        // still get a real deploy target for DLL side-loading.
-        let (exe, current_dir, steam_launch) = if let Some(steam) = &game.steam {
-            let paths = crate::steam::resolve_launch_paths(&lock, &game.name, steam)?;
-            let launch = Some((steam.appid, paths.install_dir));
-            (Some(paths.exe_path), paths.current_dir, launch)
-        } else {
-            let exe = match &game.excutable_path {
-                Some(p) => Some(lock.resolve_var(p)?),
-                None => None,
-            };
-            let current_dir = exe
-                .as_ref()
-                .and_then(|p| Path::new(p).parent())
-                .map(|p| p.to_string_lossy().to_string())
-                .unwrap_or_default();
-            (exe, current_dir, None)
-        };
         (
             game.plugins.clone(),
             lock.plugin_metadatas.clone(),
-            exe,
-            current_dir,
-            steam_launch,
+            game.name.clone(),
+            game.steam.clone(),
+            game.excutable_path.clone(),
+            lock.varmap().clone(),
         )
+    };
+
+    // Steam games launch through the steam:// protocol; their exe/dir
+    // resolve from the live Steam library (snapshot fallback) so plugins
+    // still get a real deploy target for DLL side-loading.
+    let (exe_path, current_dir, steam_launch) = if let Some(steam) = &steam_info {
+        let paths = crate::steam::resolve_launch_paths(&varmap, &game_name, steam)?;
+        let launch = Some((steam.appid, paths.install_dir));
+        (Some(paths.exe_path), paths.current_dir, launch)
+    } else {
+        let exe = raw_exe.map(|p| varmap.resolve_var(&p)).transpose()?;
+        let current_dir = exe
+            .as_ref()
+            .and_then(|p| Path::new(p).parent())
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_default();
+        (exe, current_dir, None)
     };
 
     let exe_path = exe_path.ok_or(Error::Launch)?;

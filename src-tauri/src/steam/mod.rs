@@ -108,7 +108,7 @@ mod unsupported {
 
     use super::*;
     use crate::{
-        db::Config,
+        db::device::VarMap,
         error::{Error, Result},
     };
 
@@ -122,7 +122,7 @@ mod unsupported {
     }
 
     pub fn resolve_launch_paths(
-        _lock: &Config,
+        _varmap: &VarMap,
         _game_name: &str,
         _steam: &SteamInfo,
     ) -> Result<SteamLaunchPaths> {
