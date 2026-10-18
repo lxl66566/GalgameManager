@@ -109,6 +109,7 @@ export const dict: DeepPartial<RawDictionary> = {
     deleteGameFailed: '删除游戏失败',
     deleteGameFailedConfirm: '仍然删除本地游戏？',
     deleteGameSuccess: '删除游戏成功: ',
+    deleteLocalArchiveCleanupFailed: '清理本地归档失败: ',
     deleteSuccess: '删除成功: ',
     deleting: '正在删除: ',
     deletingLocalArchive: '正在删除本地存档: ',

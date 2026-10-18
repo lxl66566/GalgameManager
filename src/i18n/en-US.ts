@@ -103,6 +103,7 @@ export const dict = {
     deleteGameFailed: 'Delete game failed',
     deleteGameFailedConfirm: 'Still delete local game?',
     deleteGameSuccess: 'Delete game successfully: ',
+    deleteLocalArchiveCleanupFailed: 'Failed to clean local archives: ',
     deleteSuccess: 'Delete Success: ',
     deleting: 'Deleting: ',
     deletingLocalArchive: 'Deleting local archive: ',

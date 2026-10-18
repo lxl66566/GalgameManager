@@ -125,13 +125,17 @@ const GamePage = (): JSX.Element => {
 
   // Duplicate-ID detection is a side effect — keep it out of the (pure)
   // sortedGames memo so it doesn't fire during render or repeat per recompute.
+  // Warn once per page visit: the effect re-runs on every config update, but
+  // the corruption itself is unchanged until the user fixes the config.
+  let hasWarnedDuplicateIds = false
   createEffect(() => {
     const games = config.games
     if (games.length === 0) return
     const ids = games.map(g => g.id)
-    if (ids.length !== new Set(ids).size) {
-      toast.error(t('hint.duplicateGameId'))
-    }
+    if (ids.length === new Set(ids).size) return
+    if (hasWarnedDuplicateIds) return
+    hasWarnedDuplicateIds = true
+    toast.error(t('hint.duplicateGameId'))
   })
 
   // ── Virtualized responsive grid ───────────────────────────────────────────
@@ -299,7 +303,16 @@ const GamePage = (): JSX.Element => {
     if (!game) return
     try {
       if (game.savePaths.length > 0) {
-        void invoke('delete_local_archive_all', { gameId: game.id })
+        // Best-effort cleanup: its failure must not block the game deletion,
+        // but the user still needs to know leftover archives exist.
+        void invoke('delete_local_archive_all', { gameId: game.id }).catch(
+          (error: unknown) => {
+            log.error(
+              `Failed to clean local archives of ${game.name}: ${errToStr(error)}`
+            )
+            toast.error(t('hint.deleteLocalArchiveCleanupFailed') + errToStr(error))
+          }
+        )
         if (config.settings.storage.provider === 'none') {
           actions.removeGame(game.id)
           toast.success(t('hint.deleteGameSuccess') + game.name)
@@ -310,7 +323,8 @@ const GamePage = (): JSX.Element => {
       actions.removeGame(game.id)
       toast.success(t('hint.deleteGameAndRemote') + game.name)
     } catch (error) {
-      toast.error(t('hint.deleteArchiveFailed') + errToStr(error))
+      // Single toast: the actionable one (keep error detail in its message).
+      log.error(`Failed to delete game ${game.name}: ${errToStr(error)}`)
       myToast({
         actions: [
           {
@@ -326,7 +340,7 @@ const GamePage = (): JSX.Element => {
             variant: 'danger'
           }
         ],
-        message: t('hint.deleteGameFailedConfirm'),
+        message: `${t('hint.deleteGameFailedConfirm')} (${errToStr(error)})`,
         title: t('hint.deleteGameFailed'),
         variant: 'error'
       })
