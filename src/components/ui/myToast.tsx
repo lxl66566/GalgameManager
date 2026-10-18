@@ -283,33 +283,47 @@ export const myToast = (props: CustomToastOptions) => {
         }
       })
 
+      // Layout mirrors solid-toast's ToastBar metrics so custom toasts are
+      // pixel-identical to native ones (verified in-app): 20px flex-centered
+      // icon box, inherited 16px message font, 4px message vertical margins,
+      // 10px icon->text gap, and ToastBar's inline box-shadow (classes cannot
+      // override it on native toasts, so it is replicated verbatim here).
       return (
         <div
           class={cn(
-            'pointer-events-auto flex max-w-[350px] items-center gap-3 rounded-md border px-2.5 py-2 shadow-lg',
+            'pointer-events-auto flex max-w-[350px] items-center gap-2.5 rounded-md border px-2.5 py-2',
             'border-gray-200 bg-white text-gray-900',
             'dark:border-slate-700 dark:bg-slate-800 dark:text-gray-100'
           )}
           ref={element}
-          style={{ 'line-height': '1.3', 'will-change': 'transform' }}
+          style={{
+            'box-shadow': '0 3px 10px rgba(0, 0, 0, 0.1), 0 3px 3px rgba(0, 0, 0, 0.05)',
+            'line-height': '1.3',
+            'will-change': 'transform'
+          }}
         >
           {/* 1. Icon */}
-          <div class={cn('shrink-0 text-lg', ICON_COLORS[variant])}>
+          <div
+            class={cn(
+              'flex min-h-[20px] min-w-[20px] shrink-0 items-center justify-center text-center',
+              ICON_COLORS[variant]
+            )}
+          >
             {VARIANT_ICONS[variant]()}
           </div>
 
           {/* 2. Content */}
-          <div class="flex flex-col justify-center">
+          <div class="my-1 flex flex-col justify-center">
             <Show when={title}>
-              <div class="text-sm font-semibold">{title}</div>
+              <div class="font-semibold">{title}</div>
             </Show>
-            <div class="text-sm text-gray-600 dark:text-gray-300">{message}</div>
+            <div class="whitespace-pre-line">{message}</div>
           </div>
 
           {/* 3. Actions */}
           <Show when={actions.length > 0}>
-            <div class="mx-1 h-4 w-px bg-gray-200 dark:bg-slate-700" />
-            {/* mr-1.5: rightmost button -> toast edge equals leftmost button -> divider (gap-3 + divider mx-1 = 16px) */}
+            <div class="mx-1.5 h-4 w-px bg-gray-200 dark:bg-slate-700" />
+            {/* mr-1.5: rightmost button -> toast edge equals leftmost button -> divider (gap-2.5 + divider mx-1.5 = 16px) */}
             <div class="mr-1.5 flex shrink-0 items-center gap-3">
               <For each={actions}>
                 {action => (
