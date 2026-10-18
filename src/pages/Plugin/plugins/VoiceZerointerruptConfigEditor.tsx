@@ -62,7 +62,7 @@ export const VOICE_ZEROINTERRUPT_PLUGIN: PluginDefinition<'voiceZerointerrupt'> 
       }
     ],
     nameKey: 'plugin.voiceZerointerrupt.name',
-    version: '1.4.0'
+    version: '1.4.1'
   },
   MetaEditor: AutoAddMetaEditor,
   metaKey: 'voiceZerointerrupt'

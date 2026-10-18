@@ -1,6 +1,6 @@
 [package]
 name        = "GalgameManager"
-version     = "1.4.0"
+version     = "1.4.1"
 edition     = "2024"
 description = "Manage and sync your galgames"
 readme      = "../README.md"
@@ -54,16 +54,16 @@ struct-patch              = {
 }
 sys-locale                = "0.3"
 tar                       = "0.4"
-tauri                     = { version = "2.12.1", features = ["tray-icon"] }
+tauri                     = { version = "2.12.4", features = ["tray-icon"] }
 tauri-plugin-dialog       = "2"
-tauri-plugin-fs           = "2.6"
-tauri-plugin-notification = "2.5"
+tauri-plugin-fs           = "2.7"
+tauri-plugin-notification = "2.7"
 tauri-plugin-opener       = "2.7"
 tempfile                  = "3"
 thiserror                 = "2"
 tokio                     = { version = "1", features = ["fs", "macros", "process", "rt", "time"] }
 tokio-util                = { version = "0.7", features = ["compat"] }
-toml                      = "1.1.6"
+toml                      = "1.1.8"
 ts-rs                     = {
   version  = "12.0",
   features = ["chrono-impl", "format", "indexmap-impl", "no-serde-warnings"]
@@ -135,7 +135,7 @@ unsafe_code           = "allow"
 unused_qualifications = "warn"
 
 [profile.release]
-opt-level     = "s"
+opt-level     = 3
 strip         = true
 lto           = true
 panic         = "abort"
