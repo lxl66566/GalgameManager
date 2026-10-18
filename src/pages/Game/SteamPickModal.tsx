@@ -12,8 +12,10 @@ import { formatBytes } from '@utils/file'
 import { errToStr } from '@utils/log'
 import { FaBrandsSteam } from 'solid-icons/fa'
 import { TbOutlineX } from 'solid-icons/tb'
-import { createMemo, createSignal, For, Match, onMount, Show, Switch } from 'solid-js'
+import { createMemo, createSignal, Match, onMount, Show, Switch } from 'solid-js'
+import { Virtualizer } from 'virtua/solid'
 
+import { Input } from '~/components/ui/Input'
 import { useI18n } from '~/i18n'
 import { useConfig } from '~/store'
 
@@ -34,6 +36,10 @@ export default function SteamPickModal(props: SteamPickModalProps) {
 
   const [state, setState] = createSignal<ListState>({ type: 'loading' })
 
+  // Case-insensitive name filter. Buffered in a signal; filtering happens in
+  // the derived memo below, never in the input handler.
+  const [search, setSearch] = createSignal('')
+
   // Narrowed views over the state — reading `state()` more than once in an
   // expression loses Solid's type narrowing, so each is derived once here.
   const games = createMemo(() => {
@@ -45,6 +51,14 @@ export default function SteamPickModal(props: SteamPickModalProps) {
     return s.type === 'error' ? s.message : null
   })
   const notRunning = createMemo(() => state().type === 'notRunning')
+
+  const filteredGames = createMemo(() => {
+    const all = games()
+    if (!all) return []
+    const query = search().trim().toLowerCase()
+    if (!query) return all
+    return all.filter(g => g.name.toLowerCase().includes(query))
+  })
 
   // appids already imported as games — informational badge only, the user
   // may still want to add them again (e.g. a second copy with other plugins)
@@ -93,6 +107,20 @@ export default function SteamPickModal(props: SteamPickModalProps) {
         </button>
       </div>
 
+      {/* Search — only meaningful once the library has loaded */}
+      <Show when={(games()?.length ?? 0) > 0}>
+        <div class="flex-shrink-0 border-b border-gray-200 px-3 py-2 dark:border-gray-700">
+          <Input
+            onInput={e => {
+              setSearch(e.currentTarget.value)
+            }}
+            placeholder={t('game.steam.searchPlaceholder')}
+            type="text"
+            value={search()}
+          />
+        </div>
+      </Show>
+
       {/* Body */}
       <div class="custom-scrollbar min-h-0 flex-1 overflow-y-auto p-2">
         <Switch>
@@ -132,8 +160,17 @@ export default function SteamPickModal(props: SteamPickModalProps) {
               }
               when={(games()?.length ?? 0) > 0}
             >
-              <div class="flex flex-col gap-1">
-                <For each={games()}>
+              <Show
+                fallback={
+                  <div class="flex h-full items-center justify-center text-sm text-gray-400 dark:text-gray-500">
+                    {t('game.steam.noMatches')}
+                  </div>
+                }
+                when={filteredGames().length > 0}
+              >
+                {/* Virtualized: a full Steam library is thousands of rows,
+                    each with a cover that costs one prepare_image IPC. */}
+                <Virtualizer data={filteredGames()}>
                   {entry => (
                     <button
                       class="group flex w-full cursor-pointer items-center gap-3 rounded-lg border border-transparent p-2 text-left transition-all duration-200 hover:border-gray-200 hover:bg-gray-100 dark:hover:border-gray-600 dark:hover:bg-gray-700/50"
@@ -175,8 +212,8 @@ export default function SteamPickModal(props: SteamPickModalProps) {
                       </Show>
                     </button>
                   )}
-                </For>
-              </div>
+                </Virtualizer>
+              </Show>
             </Show>
           </Match>
         </Switch>

@@ -56,7 +56,9 @@ export const dict: DeepPartial<RawDictionary> = {
       gameNum: '款游戏',
       loadFailed: '加载 Steam 游戏库失败',
       noGames: '未找到已安装的 Steam 游戏',
+      noMatches: '未找到匹配的游戏',
       notRunning: 'Steam 未运行，请先启动 Steam 客户端后重试。',
+      searchPlaceholder: '搜索游戏...',
       self: '选择 Steam 游戏'
     },
     sync: {

@@ -50,7 +50,9 @@ export const dict = {
       gameNum: 'Games',
       loadFailed: 'Failed to load the Steam library',
       noGames: 'No installed Steam games found',
+      noMatches: 'No games match the search',
       notRunning: 'Steam is not running. Please start the Steam client and try again.',
+      searchPlaceholder: 'Search games...',
       self: 'Select a Steam Game'
     },
     sync: {
