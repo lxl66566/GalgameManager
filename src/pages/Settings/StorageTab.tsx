@@ -263,7 +263,7 @@ const CompressionForm: Component<{
 
   return (
     <SettingSection title={t('settings.compression.self')}>
-      <SettingRow indent label={t('settings.compression.algorithm')}>
+      <SettingRow label={t('settings.compression.algorithm')}>
         <Select
           onChange={e => {
             props.actions.updateSettings({
@@ -278,7 +278,7 @@ const CompressionForm: Component<{
         />
       </SettingRow>
 
-      <SettingRow indent label={t('settings.compression.level')}>
+      <SettingRow label={t('settings.compression.level')}>
         <Input
           disabled={currentRule().disabled}
           max={currentRule().max}
