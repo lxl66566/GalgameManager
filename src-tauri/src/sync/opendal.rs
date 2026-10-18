@@ -9,7 +9,7 @@ use tokio_util::compat::TokioAsyncReadCompatExt;
 
 use crate::{
     archive::ArchiveInfo,
-    db::{CONFIG, CONFIG_FILENAME, Config},
+    db::{CONFIG_FILENAME, Config},
     error::{Error, Result},
 };
 
@@ -207,13 +207,15 @@ impl super::MyOperation for Operator {
         Ok(())
     }
 
-    async fn upload_config_inner(&self, filename: &str) -> Result<()> {
+    /// Upload the caller-provided serialized config payload. The caller owns
+    /// the snapshot that produced it — see `MyOperation::upload_config`.
+    /// Owned `String` because opendal's writer requires `'static` buffers.
+    async fn upload_config_inner(&self, filename: &str, config_str: String) -> Result<()> {
         let mut uploader = self
             .writer_with(filename)
             .chunk(if self.chunkable() { WRITER_NORMAL_CHUNK_SIZE } else { WRITER_MAX_BUFFER_SIZE })
             .concurrent(8)
             .await?;
-        let config_str = toml::to_string(&*CONFIG.lock()).unwrap();
         uploader.write(config_str).await?;
         uploader.close().await?;
         Ok(())

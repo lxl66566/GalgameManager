@@ -2,6 +2,7 @@ mod opendal;
 use std::{
     future::Future,
     path::{Path, PathBuf},
+    sync::LazyLock,
     time::Duration,
 };
 
@@ -45,6 +46,12 @@ pub struct SyncFailedPayload {
     /// Human-readable error description.
     pub message: String,
 }
+
+/// Serializes config uploads across tasks: the close-to-tray upload can race
+/// a "quit with sync" upload, and two interleaved check/write/last_sync
+/// sequences would clobber each other's remote state.
+static CONFIG_UPLOAD_LOCK: LazyLock<tokio::sync::Mutex<()>> =
+    LazyLock::new(|| tokio::sync::Mutex::new(()));
 
 tokio::task_local! {
     /// Game whose remote sync operation is running in the current task.
@@ -154,11 +161,13 @@ pub trait MyOperation {
         self.inner().replicate_config().await
     }
 
-    /// upload config to remote, do not check anything or print log. should not
-    /// be used outside this mod.
+    /// Upload an already-serialized config payload to remote under
+    /// `filename`. Does not check anything or print log; the caller owns the
+    /// snapshot that produced `config_str`. Should not be used outside this
+    /// mod.
     #[inline]
-    async fn upload_config_inner(&self, filename: &str) -> Result<()> {
-        self.inner().upload_config_inner(filename).await
+    async fn upload_config_inner(&self, filename: &str, config_str: String) -> Result<()> {
+        self.inner().upload_config_inner(filename, config_str).await
     }
 
     /// upload config to remote
@@ -167,8 +176,17 @@ pub trait MyOperation {
     ///
     /// - safe=true: will not upload config if local is clean or remote config is newer
     async fn upload_config(&self, app: &AppHandle, safe: bool) -> Result<UploadConfigStatus> {
-        // Local Clean Check
+        let _guard = CONFIG_UPLOAD_LOCK.lock().await;
+
+        // Snapshot + serialize ONCE and derive everything from it: the
+        // checks below, the uploaded bytes and the `last_sync` written
+        // afterwards must all refer to the same state. The payload used to
+        // be re-serialized from a fresh CONFIG lock inside
+        // `upload_config_inner`, so a concurrent mutation (e.g. a game loop
+        // writing use_time) could slip between the checks and the upload —
+        // and last_sync could describe bytes that were never uploaded.
         let local_config = CONFIG.lock().clone();
+        let config_str = toml::to_string(&local_config)?;
         let local_last_sync = local_config.last_sync.unwrap_or_default();
         if safe && local_config.last_updated <= local_last_sync {
             warn!(
@@ -210,9 +228,10 @@ pub trait MyOperation {
             info!("remote config is null, uploading");
         }
 
-        self.upload_config_inner(CONFIG_FILENAME).await?;
+        self.upload_config_inner(CONFIG_FILENAME, config_str)
+            .await?;
         info!("upload config success");
-        // Update local last_sync
+        // Update local last_sync — pinned to the snapshot that was uploaded.
         {
             let mut locked_config = CONFIG.lock();
             locked_config.last_sync = Some(local_config.last_updated);

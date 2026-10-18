@@ -230,46 +230,52 @@ pub fn run() {
                     _ = std::fs::File::create(seen_path);
                 }
 
-                // upload config
-                let app = app.clone();
-                tauri::async_runtime::spawn(async move {
-                    info!("[minimize] uploading config...");
-                    let res = upload_config(app.clone(), true).await;
-                    match res {
-                        Ok(UploadConfigStatus::Uploaded) => {
-                            info!("[minimize] upload config success");
-                            notify(
-                                &app,
-                                "\u{2705} Synced",
-                                "Configuration uploaded successfully",
-                            );
-                        },
-                        Ok(UploadConfigStatus::LocalClean) => {
-                            warn!("[minimize] local clean, skip upload");
-                            notify(
-                                &app,
-                                "\u{23ed} Sync Skipped",
-                                "Local configuration is up to date",
-                            );
-                        },
-                        Ok(UploadConfigStatus::Conflict) => {
-                            warn!("[minimize] conflict detected");
-                            notify(
-                                &app,
-                                "\u{26a0}\u{fe0f} Sync Conflict",
-                                "Remote configuration is newer \u{2014} please pull first",
-                            );
-                        },
-                        Err(e) => {
-                            error!("[minimize] failed to upload config: {e}");
-                            notify(
-                                &app,
-                                "\u{274c} Sync Failed",
-                                &format!("Failed to upload configuration: {e}"),
-                            );
-                        },
-                    }
-                });
+                // upload config. Skipped when no storage backend is
+                // configured: uploading would just fail and pop a scary
+                // "Sync Failed" notification.
+                if CONFIG.lock().settings.storage.is_not_set() {
+                    info!("[minimize] storage not configured, skipping config upload");
+                } else {
+                    let app = app.clone();
+                    tauri::async_runtime::spawn(async move {
+                        info!("[minimize] uploading config...");
+                        let res = upload_config(app.clone(), true).await;
+                        match res {
+                            Ok(UploadConfigStatus::Uploaded) => {
+                                info!("[minimize] upload config success");
+                                notify(
+                                    &app,
+                                    "\u{2705} Synced",
+                                    "Configuration uploaded successfully",
+                                );
+                            },
+                            Ok(UploadConfigStatus::LocalClean) => {
+                                warn!("[minimize] local clean, skip upload");
+                                notify(
+                                    &app,
+                                    "\u{23ed} Sync Skipped",
+                                    "Local configuration is up to date",
+                                );
+                            },
+                            Ok(UploadConfigStatus::Conflict) => {
+                                warn!("[minimize] conflict detected");
+                                notify(
+                                    &app,
+                                    "\u{26a0}\u{fe0f} Sync Conflict",
+                                    "Remote configuration is newer \u{2014} please pull first",
+                                );
+                            },
+                            Err(e) => {
+                                error!("[minimize] failed to upload config: {e}");
+                                notify(
+                                    &app,
+                                    "\u{274c} Sync Failed",
+                                    &format!("Failed to upload configuration: {e}"),
+                                );
+                            },
+                        }
+                    });
+                }
             },
             tauri::RunEvent::ExitRequested { api, code, .. } => {
                 _ = app.save_window_state(StateFlags::all());

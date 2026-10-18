@@ -56,6 +56,9 @@ pub enum Error {
     #[error("Broken config content: {0}")]
     BrokenConfig(#[from] toml::de::Error),
 
+    #[error("Config serialization failed: {0}")]
+    ConfigSerialize(#[from] toml::ser::Error),
+
     #[error("Storage provider not set")]
     ProviderNotSet,
 
@@ -118,7 +121,7 @@ impl Serialize for Error {
 /// drops the underlying causes. This walks the whole chain so Tauri consumers
 /// (and logs) see the full "Caused by:" trail — for every error variant, not
 /// just reqwest.
-fn format_error_chain(err: &dyn std::error::Error) -> String {
+pub(crate) fn format_error_chain(err: &dyn std::error::Error) -> String {
     use std::fmt::Write;
     let mut s = err.to_string();
     let mut current = err.source();

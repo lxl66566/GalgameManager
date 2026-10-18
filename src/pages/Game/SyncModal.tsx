@@ -7,6 +7,7 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { isDuplicateArchiveName } from '@utils/archiveName'
 import { formatBytes } from '@utils/file'
 import { errToStr, log } from '@utils/log'
+import { FiLoader } from 'solid-icons/fi'
 import {
   TbOutlineArrowBackUp,
   TbOutlineCloudDownload,
@@ -22,8 +23,10 @@ import toast from 'solid-toast'
 import { useI18n } from '~/i18n'
 
 interface ActionButtonProps {
+  disabled?: boolean
   icon: typeof TbOutlineCloudUpload
   label?: string
+  loading?: boolean
   onClick: () => void
   size?: 'sm' | 'xs'
   tooltip: string
@@ -50,6 +53,13 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
   const [editingName, setEditingName] = createSignal<null | string>(null)
   const [temporaryName, setTemporaryName] = createSignal('')
   const [isRenaming, setIsRenaming] = createSignal(false)
+
+  // In-flight archive filename per operation; guards against rapid repeated
+  // clicks firing concurrent upload/pull/extract invokes. Same-type operations
+  // are serialized, different types may still overlap.
+  const [uploading, setUploading] = createSignal<null | string>(null)
+  const [pulling, setPulling] = createSignal<null | string>(null)
+  const [extracting, setExtracting] = createSignal<null | string>(null)
 
   const fetchData = async () => {
     setLoading(true)
@@ -119,6 +129,8 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
   })
 
   const handleUpload = async (filename: string) => {
+    if (uploading() !== null) return
+    setUploading(filename)
     const toastId = toast.loading(t('hint.uploading') + filename + '...')
     let unlistenUploadError: undefined | UnlistenFn
     // Capture once: reading props inside the (untracked) event callback would
@@ -154,10 +166,13 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       if (unlistenUploadError) {
         unlistenUploadError()
       }
+      setUploading(null)
     }
   }
 
   const handlePull = async (filename: string) => {
+    if (pulling() !== null) return
+    setPulling(filename)
     const toastId = toast.loading(t('hint.downloading') + filename + '...')
     try {
       await invoke('pull_archive', { archiveFilename: filename, gameId: props.gameId })
@@ -172,10 +187,14 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       toast.error(filename + ' ' + t('hint.downloadFailed') + errToStr(error), {
         id: toastId
       })
+    } finally {
+      setPulling(null)
     }
   }
 
   const handleExtract = async (filename: string) => {
+    if (extracting() !== null) return
+    setExtracting(filename)
     const toastId = toast.loading(t('hint.reverting') + filename + '...')
     try {
       await invoke('extract', { archiveFilename: filename, gameId: props.gameId })
@@ -184,6 +203,8 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
       toast.error(filename + ' ' + t('hint.revertFailed') + errToStr(error), {
         id: toastId
       })
+    } finally {
+      setExtracting(null)
     }
   }
 
@@ -488,7 +509,9 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                       <div class="flex w-full justify-center">
                         <Show when={item.status !== 'RemoteOnly'}>
                           <ActionButton
+                            disabled={extracting() !== null}
                             icon={TbOutlineArrowBackUp}
+                            loading={extracting() === item.name}
                             onClick={() => handleExtract(item.name)}
                             tooltip={t('game.sync.recoverArchive')}
                             variant="secondary"
@@ -501,7 +524,9 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                         <Switch>
                           <Match when={item.status === 'LocalOnly'}>
                             <ActionButton
+                              disabled={uploading() !== null}
                               icon={TbOutlineCloudUpload}
+                              loading={uploading() === item.name}
                               onClick={() => handleUpload(item.name)}
                               tooltip={t('game.sync.upload')}
                               variant="primary"
@@ -509,7 +534,9 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
                           </Match>
                           <Match when={item.status === 'RemoteOnly'}>
                             <ActionButton
+                              disabled={pulling() !== null}
                               icon={TbOutlineCloudDownload}
+                              loading={pulling() === item.name}
                               onClick={() => handlePull(item.name)}
                               tooltip={t('game.sync.download')}
                               variant="primary"
@@ -585,7 +612,7 @@ export function ArchiveSyncModal(props: ArchiveSyncModalProps) {
 
 function ActionButton(props: ActionButtonProps) {
   const baseClass =
-    'flex items-center justify-center transition-colors rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 dark:focus:ring-offset-gray-800 cursor-pointer'
+    'flex items-center justify-center transition-colors rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 dark:focus:ring-offset-gray-800 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
 
   const variants = {
     danger:
@@ -603,17 +630,22 @@ function ActionButton(props: ActionButtonProps) {
     xs: 'h-6 px-1 min-w-0'
   }
 
+  const isDisabled = () => props.disabled === true || props.loading === true
+
   return (
     <button
       aria-label={props.tooltip}
       class={`${baseClass} ${variants[props.variant]} ${sizes[props.size ?? 'sm']}`}
+      disabled={isDisabled()}
       onClick={e => {
         e.stopPropagation()
         props.onClick()
       }}
       title={props.tooltip}
     >
-      <props.icon class={props.size === 'xs' ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+      <Show fallback={<FiLoader class="h-4 w-4 animate-spin" />} when={!props.loading}>
+        <props.icon class={props.size === 'xs' ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+      </Show>
       <Show when={props.label}>
         <span class="ml-0.5 text-[10px] leading-none font-medium">{props.label}</span>
       </Show>

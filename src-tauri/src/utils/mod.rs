@@ -29,8 +29,11 @@ pub fn list_dir_all(path: impl AsRef<Path>) -> io::Result<Vec<ArchiveInfo>> {
 }
 
 pub fn diff(old_conf: &Config, new_conf: &Config) -> String {
-    let old_str = toml::to_string(old_conf).unwrap();
-    let new_str = toml::to_string(new_conf).unwrap();
+    // Log-only output: degrade to a placeholder instead of unwrapping — with
+    // release panic=abort a serialization failure here would crash the app.
+    let (Ok(old_str), Ok(new_str)) = (toml::to_string(old_conf), toml::to_string(new_conf)) else {
+        return "<config serialization failed; diff unavailable>".to_string();
+    };
 
     TextDiff::from_lines(&old_str, &new_str)
         .unified_diff()
