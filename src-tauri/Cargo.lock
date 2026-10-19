@@ -57,7 +57,7 @@ dependencies = [
  "walkdir",
  "windows",
  "windows-env",
- "windows-result 0.4.1",
+ "windows-result 0.100.0",
  "windows_registry_obj",
  "x11rb",
  "zbus",
