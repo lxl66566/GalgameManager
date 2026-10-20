@@ -35,6 +35,11 @@
 
 ## Changelog
 
+### v1.4.1
+
+- 完整的后端 i18n
+- bug 修复与 UI 优化
+
 ### v1.4.0
 
 - 新功能：支持从 Steam 导入与启动游戏（Windows only）

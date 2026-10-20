@@ -1,4 +1,10 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>lxl66566/.github"]
+  "extends": ["github>lxl66566/.github"],
+  "packageRules": [
+    {
+      "packageNames": ["windows", "windows-result", "typescript"],
+      "enabled": false
+    }
+  ]
 }

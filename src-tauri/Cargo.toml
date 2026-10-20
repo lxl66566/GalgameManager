@@ -112,7 +112,7 @@ windows              = {
 windows-env          = "0.3"
 windows_registry_obj = "0.2"
 # windows 0.62 returns windows-result 0.4 types
-windows-result       = { version = "0.100" }
+windows-result       = { version = "0.4" }
 
 [features]
 default         = ["custom-protocol"]
