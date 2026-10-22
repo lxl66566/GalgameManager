@@ -39,6 +39,12 @@ A cross-platform game launcher based on Tauri + SolidJS, designed for managing, 
 
 ## Changelog
 
+### v1.4.1
+
+- Complete backend i18n
+- Daily configuration snapshots become a user setting
+- [Some bug fixes and UI improvements](https://github.com/lxl66566/GalgameManager/releases/tag/v1.4.1)
+
 ### v1.4.0
 
 - New feature: Support importing and launching games from Steam (Windows only)

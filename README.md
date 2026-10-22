@@ -38,7 +38,8 @@
 ### v1.4.1
 
 - 完整的后端 i18n
-- bug 修复与 UI 优化
+- 每日配置快照成为用户配置项
+- [一些 bug 修复与 UI 优化](https://github.com/lxl66566/GalgameManager/releases/tag/v1.4.1)
 
 ### v1.4.0
 
