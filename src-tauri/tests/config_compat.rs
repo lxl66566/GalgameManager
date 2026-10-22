@@ -6,7 +6,7 @@
 //! through TOML and asserting that historical config fragments still
 //! deserialize without data loss.
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use app_lib::db::{Config, Game, TimeCmp};
 use chrono::{DateTime, Utc};
@@ -43,7 +43,7 @@ fn sample_config() -> Config {
                 .with_timezone(&Utc),
         ),
         last_upload_time: None,
-        daily_playtime: HashMap::default(),
+        daily_playtime: BTreeMap::from([("2026-01-09".into(), 120), ("2026-01-10".into(), 3600)]),
         cover_color: None,
         steam: None,
         plugins: vec![],
@@ -68,6 +68,15 @@ fn config_toml_roundtrip_preserves_all_fields() {
     assert_eq!(g.save_paths, vec!["{home}/save"]);
     assert_eq!(g.use_time, chrono::Duration::seconds(3661));
     assert!(g.last_played_time.is_some());
+    assert_eq!(g.daily_playtime, original.games[0].daily_playtime);
+    // Date keys must serialize in ascending order so repeated sync uploads
+    // produce stable diffs. (2026-* dates are unique to daily_playtime in the
+    // sample config, so string search cannot hit another field.)
+    let (a, b) = (
+        serialized.find("2026-01-09").unwrap(),
+        serialized.find("2026-01-10").unwrap(),
+    );
+    assert!(a < b);
 }
 
 #[test]
