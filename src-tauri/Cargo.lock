@@ -821,9 +821,9 @@ dependencies = [
 
 [[package]]
 name = "config-file2"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a7b1e89c6575073d3af339f5233aa9f760cbfc546e441311b37cdebcf30d54f"
+checksum = "de7b6257880ff60c88a816a4e568984053d87e4a1dd66d16594b02af375e2a71"
 dependencies = [
  "serde",
  "tempfile",
