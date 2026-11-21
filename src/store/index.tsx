@@ -192,9 +192,10 @@ export const checkAndPullRemote = async (
   t: i18n.Translator<Dictionary>,
   skipCheck?: boolean
 ) => {
-  // skipCheck === false means auto-pull: stay silent when unconfigured
+  // Auto-pull (skipCheck unset) runs on every startup: stay silent when
+  // unconfigured instead of nagging users who never use remote sync.
+  // Manual pull (skipCheck=true) proceeds and surfaces the IPC error.
   if (!skipCheck && config.settings.storage.provider === 'none') {
-    toast(t('hint.remoteNotConfigured'))
     return
   }
   // Loading toast; replaced in place (same id) by the result message
@@ -255,6 +256,10 @@ export const checkAndPullRemote = async (
 }
 
 export const performAutoUpload = async (t: i18n.Translator<Dictionary>) => {
+  if (config.settings.storage.provider === 'none') {
+    log.info('[ConfigAutoUpload] Storage provider not set, skip auto upload')
+    return
+  }
   log.info('[ConfigAutoUpload] Triggered')
   try {
     const res = await invoke<UploadConfigStatus>('upload_config', { safe: true })

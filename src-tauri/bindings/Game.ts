@@ -18,8 +18,7 @@ export type Game = {
   lastUploadTime: string | null;
   /**
    * Daily playtime owned by this game: date (YYYY-MM-DD) -> seconds played.
-   * Lives on the game (not the Config root) so it migrates, syncs and is
-   * cleared together with the rest of the game's state.
+   * BTreeMap keeps the serialized key order deterministic.
    */
   dailyPlaytime?: { [key in string]: number };
   /**
@@ -31,8 +30,7 @@ export type Game = {
   coverColor?: string | null;
   /**
    * Present when this game is launched through Steam (`steam://rungameid/`
-   * lives in `excutable_path`). Whole-replacement on the patch side —
-   * written only by the import flow / whole-game edits.
+   * lives in `excutable_path`).
    */
   steam?: SteamInfo | null;
   plugins?: Array<PluginInstance>;

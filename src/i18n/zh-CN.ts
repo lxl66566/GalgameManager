@@ -134,7 +134,6 @@ export const dict: DeepPartial<RawDictionary> = {
     partialPathNotExist: '部分路径在当前设备上不存在',
     pathNotExist: '路径在当前设备上不存在',
     remoteConfigNotFound: '未找到远端配置',
-    remoteNotConfigured: '远端存储未配置',
     renameFailed: '重命名失败: ',
     renameRemoteFailedRollback: '云端同步失败，已恢复本地文件名。错误: ',
     renameRemoteRollbackFailed:

@@ -280,6 +280,11 @@ fn notify(app: &AppHandle, title: &str, body: &str) {
 
 /// Upload config then exit. Called when the user clicks "Quit (with sync)".
 fn sync_and_exit(app: &AppHandle) {
+    if CONFIG.lock().settings.storage.is_not_set() {
+        info!("[exit] storage not configured, exiting without sync");
+        before_exit();
+        std::process::exit(0);
+    }
     info!("[exit] uploading config...");
     // Games keep accumulating playtime between the ExitRequested flush and
     // this upload; flush again so the uploaded config carries it (the flush

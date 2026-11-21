@@ -129,7 +129,6 @@ export const dict = {
     partialPathNotExist: 'Partial path does not exist on this device',
     pathNotExist: 'Path does not exist on this device',
     remoteConfigNotFound: 'Remote config not found',
-    remoteNotConfigured: 'Remote provider is not configured',
     renameFailed: 'Rename Failed: ',
     renameRemoteFailedRollback:
       'Remote sync failed; local filename was restored. Error: ',
