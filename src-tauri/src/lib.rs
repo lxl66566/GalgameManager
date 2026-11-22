@@ -41,6 +41,7 @@ use crate::{
     logging::{LOG_HANDLE, init_logger},
 };
 
+#[allow(unknown_lints, clippy::large_unopt_stack_frames)] // https://github.com/rust-lang/rust-clippy/pull/17749
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()

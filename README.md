@@ -24,6 +24,7 @@
   # 方案二：flake，从源码编译
   nix run github:lxl66566/GalgameManager
   ```
+  如果遇到白屏，可以尝试设置环境变量 WEBKIT_DISABLE_COMPOSITING_MODE=1
 
 ## Screenshots
 
