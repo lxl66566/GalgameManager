@@ -40,7 +40,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@solid-primitives/i18n": "^2.2.1",
+    "@solid-primitives/i18n": "^3.0.0",
     "@solidjs/router": "^1.0.0",
     "@tauri-apps/cli": "^2.12.3",
     "@types/d3": "^7.4.3",
