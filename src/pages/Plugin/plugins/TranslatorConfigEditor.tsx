@@ -87,7 +87,7 @@ export const TRANSLATOR_PLUGIN: PluginDefinition<'translator'> = {
       }
     ],
     nameKey: 'plugin.translator.name',
-    version: '1.4.1'
+    version: '1.4.2'
   },
   MetaEditor: AutoAddMetaEditor,
   metaKey: 'translator'

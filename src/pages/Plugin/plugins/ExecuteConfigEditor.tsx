@@ -176,7 +176,7 @@ export const EXECUTE_PLUGIN: PluginDefinition<'execute'> = {
     id: 'execute',
     links: [],
     nameKey: 'plugin.execute.name',
-    version: '1.4.1'
+    version: '1.4.2'
   },
   MetaEditor: AutoAddMetaEditor,
   metaKey: 'execute'

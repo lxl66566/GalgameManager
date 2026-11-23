@@ -1,6 +1,6 @@
 [package]
 name        = "GalgameManager"
-version     = "1.4.1"
+version     = "1.4.2"
 edition     = "2024"
 description = "Manage and sync your galgames"
 readme      = "../README.md"
@@ -27,7 +27,7 @@ chrono                    = { version = "0.4", features = ["serde"] }
 config-file2              = "0.8"
 dashmap                   = "6"
 easy_strfmt               = { path = "./easy_strfmt", features = ["indexmap"] }
-flexi_logger              = { version = "0.31", features = ["compress"] }
+flexi_logger              = { version = "0.32", features = ["compress"] }
 futures                   = "0.3"
 goblin                    = "0.10"
 hex                       = "0.4"
