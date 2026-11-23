@@ -20,7 +20,7 @@ use ts_rs::TS;
 use crate::{
     archive::ArchiveInfo,
     db::{
-        CONFIG, CONFIG_FILENAME, Config, TimeCmp,
+        CONFIG, CONFIG_FILENAME, Config, TimeCmp, compact,
         device::{ResolveVar, VarMap},
         settings::{LocalConfig, S3Config, StorageConfig, StorageProvider, WebDavConfig},
     },
@@ -186,7 +186,7 @@ pub trait MyOperation {
         // writing use_time) could slip between the checks and the upload —
         // and last_sync could describe bytes that were never uploaded.
         let local_config = CONFIG.lock().clone();
-        let config_str = toml::to_string(&local_config)?;
+        let config_str = compact::compact_config_string(&local_config)?;
         let local_last_sync = local_config.last_sync.unwrap_or_default();
         if safe && local_config.last_updated <= local_last_sync {
             warn!(

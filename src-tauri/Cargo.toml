@@ -64,7 +64,7 @@ tempfile                  = "3"
 thiserror                 = "2"
 tokio                     = { version = "1", features = ["fs", "macros", "process", "rt", "time"] }
 tokio-util                = { version = "0.7", features = ["compat"] }
-toml                      = "1.1.8"
+toml                      = { version = "1.1.8", features = ["preserve_order"] }
 ts-rs                     = {
   version  = "12.0",
   features = ["chrono-impl", "format", "indexmap-impl", "no-serde-warnings"]

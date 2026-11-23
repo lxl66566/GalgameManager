@@ -19,10 +19,11 @@ use crate::{bindings::resolve_var, error::Result};
 
 // region structure
 
-#[derive(Debug, Serialize, Deserialize, Clone, TS)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub enum ArchiveAlgo {
+    #[default]
     SquashfsZstd,
     Tar,
 }
@@ -39,7 +40,7 @@ impl ArchiveAlgo {
 
 #[derive(Debug, Serialize, Deserialize, Clone, TS)]
 #[ts(export)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", default)]
 pub struct ArchiveConfig {
     pub algorithm: ArchiveAlgo,
     pub level: u8,

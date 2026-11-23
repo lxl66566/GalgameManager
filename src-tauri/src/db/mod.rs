@@ -1,3 +1,4 @@
+pub mod compact;
 pub mod device;
 mod migration;
 pub mod saver;
@@ -6,7 +7,7 @@ pub mod settings;
 use std::{collections::BTreeMap, fs, path::PathBuf, sync::LazyLock as Lazy};
 
 use chrono::{DateTime, Duration, Utc};
-use config_file2::{LoadConfigFile, Storable};
+use config_file2::{LoadConfigFile, Storable, StoreConfigFile};
 use device::{DEVICE_UID, Device};
 pub use device::{DevicePatch, ResolveVar};
 use log::warn;
@@ -194,7 +195,13 @@ pub struct Game {
 
 impl Config {
     pub fn store(&self) -> Result<()> {
-        Ok(self.save_opts().pretty(false).execute()?)
+        // Store the compacted table (type-zero defaults omitted; see `compact`)
+        // instead of `self`, keeping config_file2's parent-dir creation and
+        // atomic temp-file rename.
+        let table = compact::compact_config_table(self)?;
+        Ok(StoreConfigFile::store_opts(&table, CONFIG_PATH.as_path())
+            .pretty(false)
+            .execute()?)
     }
 
     #[inline]

@@ -8,7 +8,10 @@ use std::{io, path::Path, time::Duration};
 
 use similar::TextDiff;
 
-use crate::{archive::ArchiveInfo, db::Config};
+use crate::{
+    archive::ArchiveInfo,
+    db::{Config, compact},
+};
 
 #[must_use]
 pub fn format_time_delta(delta: chrono::TimeDelta) -> String {
@@ -31,7 +34,11 @@ pub fn list_dir_all(path: impl AsRef<Path>) -> io::Result<Vec<ArchiveInfo>> {
 pub fn diff(old_conf: &Config, new_conf: &Config) -> String {
     // Log-only output: degrade to a placeholder instead of unwrapping — with
     // release panic=abort a serialization failure here would crash the app.
-    let (Ok(old_str), Ok(new_str)) = (toml::to_string(old_conf), toml::to_string(new_conf)) else {
+    // Compact form (defaults omitted) keeps the diff focused on real changes.
+    let (Ok(old_str), Ok(new_str)) = (
+        compact::compact_config_string(old_conf),
+        compact::compact_config_string(new_conf),
+    ) else {
         return "<config serialization failed; diff unavailable>".to_string();
     };
 
