@@ -60,7 +60,7 @@ dependencies = [
  "windows-result 0.4.1",
  "windows_registry_obj",
  "x11rb",
- "zbus 5.19.0",
+ "zbus 6.5.0",
 ]
 
 [[package]]
@@ -6552,7 +6552,6 @@ dependencies = [
  "signal-hook-registry",
  "socket2",
  "tokio-macros",
- "tracing",
  "windows-sys 0.61.2",
 ]
 
@@ -7812,7 +7811,6 @@ dependencies = [
  "rustix",
  "serde",
  "serde_repr",
- "tokio",
  "tracing",
  "uds_windows",
  "uuid",
@@ -7840,6 +7838,7 @@ dependencies = [
  "serde",
  "serde_repr",
  "socket2",
+ "tokio",
  "uds_windows",
  "uuid",
  "windows-sys 0.61.2",
