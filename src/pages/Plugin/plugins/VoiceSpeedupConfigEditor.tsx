@@ -109,7 +109,7 @@ export const VOICE_SPEEDUP_PLUGIN: PluginDefinition<'voiceSpeedup'> = {
       }
     ],
     nameKey: 'plugin.voiceSpeedup.name',
-    version: '1.4.2'
+    version: '1.4.3'
   },
   MetaEditor: AutoAddMetaEditor,
   metaKey: 'voiceSpeedup'

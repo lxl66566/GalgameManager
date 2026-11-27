@@ -137,7 +137,9 @@ pub fn run() {
             #[cfg(windows)]
             let main_window = main_window.drag_and_drop(true);
             let main_window = main_window
-                .user_agent("github:lxl66566/GalgameManager")
+                // No ':' allowed here: WebKitGTK validates the UA against the
+                // RFC 7231 token grammar and silently rejects invalid values.
+                .user_agent("lxl66566/GalgameManager")
                 .initialization_script(format!("window.__INITIAL_CONFIG__ = {config_json};"))
                 .build()?;
 

@@ -32,11 +32,10 @@ use std::{
 use futures_util::StreamExt as _;
 use parking_lot::Mutex;
 use zbus::{
-    Connection, MatchRule, MessageStream,
+    Connection, MatchRule, MessageStream, OwnedVariant,
     fdo::DBusProxy,
     message::Type,
     names::{BusName, UniqueName},
-    zvariant::OwnedValue,
 };
 
 use super::ForegroundDetector;
@@ -113,13 +112,13 @@ async fn run_listener() -> zbus::Result<()> {
     let session = Connection::session().await?;
 
     // Build the match rule and turn it into a stream in one shot. zbus
-    // handles AddMatch/RemoveMatch for us.
+    // handles AddMatch/RemoveMatch for us. Setters defer errors to `build()`.
     let rule = MatchRule::builder()
         .msg_type(Type::Signal)
-        .interface("org.a11y.atspi.Event.Object")?
-        .member("StateChanged")?
-        .arg(0, "focused")?
-        .build();
+        .interface("org.a11y.atspi.Event.Object")
+        .member("StateChanged")
+        .arg(0, "focused")
+        .build()?;
 
     let mut stream = MessageStream::for_match_rule(rule, &session, None).await?;
 
@@ -139,7 +138,7 @@ async fn run_listener() -> zbus::Result<()> {
         // gains so we don't flicker.
         let gained: Option<i32> = msg
             .body()
-            .deserialize::<(String, i32, i32, OwnedValue)>()
+            .deserialize::<(String, i32, i32, OwnedVariant)>()
             .ok()
             .map(|(_, detail1, ..)| detail1);
         if !matches!(gained, Some(1)) {

@@ -135,8 +135,12 @@
                 libsoup_3
                 glib-networking
                 librsvg
+                # cairo, required by the Rust binary itself (via gtk-sys)
+                cairo
                 openssl
                 libayatana-appindicator
+                # liblzma.so.5, required by the prebuilt @tauri-apps/cli native binary
+                xz
                 # X11 + D-Bus runtime libs (must be visible to the Rust
                 # binaries spawned by `cargo run` / `tauri dev`).
                 libx11
