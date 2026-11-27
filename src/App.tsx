@@ -130,6 +130,7 @@ const App: Component = () => {
             <Route component={Settings} path="/Settings" />
           </Router>
           <Toaster
+            containerClassName="toast-layer"
             position="bottom-left"
             toastOptions={{
               className: `

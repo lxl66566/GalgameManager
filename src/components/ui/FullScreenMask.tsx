@@ -72,6 +72,15 @@ export default (props: FullScreenMaskProps) => {
               'fixed inset-0 z-20 flex items-center justify-center p-4 pointer-events-none',
               props.contentClass
             )}
+            // Toast clicks land outside the dialog; they must not dismiss it.
+            onInteractOutside={event => {
+              if (
+                event.target instanceof Element &&
+                event.target.closest('.toast-layer')
+              ) {
+                event.preventDefault()
+              }
+            }}
           >
             <div class="pointer-events-auto">{props.children}</div>
           </Dialog.Content>
