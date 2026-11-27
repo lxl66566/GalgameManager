@@ -64,12 +64,11 @@ export default (props: FullScreenMaskProps) => {
           <Dialog.Overlay
             class={cn('fixed inset-0 z-20 bg-black/70 backdrop-blur-sm', props.class)}
           />
-          {/* pointer-events-none lets clicks on the backdrop pass through to
-              the overlay, which counts as "outside the content" and dismisses
-              the dialog (matches the previous mask-click-to-close behavior). */}
+          {/* Backdrop clicks must reach the overlay; Kobalte sets an inline
+              pointer-events:auto on this node, so the class is important. */}
           <Dialog.Content
             class={cn(
-              'fixed inset-0 z-20 flex items-center justify-center p-4 pointer-events-none',
+              'fixed inset-0 z-20 flex items-center justify-center p-4 !pointer-events-none',
               props.contentClass
             )}
             // Toast clicks land outside the dialog; they must not dismiss it.
