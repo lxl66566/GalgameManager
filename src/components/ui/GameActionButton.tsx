@@ -26,6 +26,10 @@ export const GameActionButton = (props: GameActionButtonProps) => {
       }
       onClick={e => {
         e.stopPropagation()
+        // Blur on pointer activation: the toolbar is revealed via
+        // group-focus-within, so stale focus would keep it open without hover.
+        // Keyboard activation (detail === 0) keeps focus for a11y.
+        if (e.detail > 0) e.currentTarget.blur()
         if (!props.disabled && !props.loading) {
           props.onClick()
         }
