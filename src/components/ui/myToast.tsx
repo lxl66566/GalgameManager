@@ -313,7 +313,7 @@ export const myToast = (props: CustomToastOptions) => {
           </div>
 
           {/* 2. Content */}
-          <div class="my-1 flex flex-col justify-center">
+          <div class="my-1 flex min-w-0 flex-1 flex-col justify-center break-words">
             <Show when={title}>
               <div class="font-semibold">{title}</div>
             </Show>
