@@ -215,6 +215,9 @@ importers:
       d3:
         specifier: ^7.9.2
         version: 7.9.2
+      d3-transition:
+        specifier: ^3.0.2
+        version: 3.0.2(d3-selection@3.0.1)
       dayjs:
         specifier: ^1.11.23
         version: 1.11.23

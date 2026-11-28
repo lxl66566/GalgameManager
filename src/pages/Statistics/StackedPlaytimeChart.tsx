@@ -11,6 +11,12 @@
 //   the x axis and re-stacks the other games (grayed) on top, so columns
 //   keep their total height with no gaps and no rescaling.
 import { useColorMode } from '@kobalte/core'
+// d3-transition installs selection.prototype.transition/interrupt purely as an
+// import side effect. d3@7.9.1+ marks the d3 barrel `sideEffects: false`, so
+// bundlers drop d3-transition when no named export of it is used (d3/d3#4151)
+// and .transition() below throws at runtime. This bare import forces the
+// patch into the bundle; do not remove (d3/d3#4152 unmerged).
+import 'd3-transition'
 import * as d3 from 'd3'
 import {
   createEffect,
