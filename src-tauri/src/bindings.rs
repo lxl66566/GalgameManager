@@ -28,6 +28,7 @@ use crate::{
     plugin::{SaveUploadDispatcher, Transaction},
     steam::SteamListResult,
     sync::{MyOperation, UploadConfigStatus, with_sync_game},
+    update::UpdateStatus,
     utils::list_dir_all,
 };
 
@@ -135,6 +136,15 @@ pub async fn refresh_all_cover_colors(app: AppHandle) -> Result<()> {
 #[tauri::command]
 pub fn clear_all_cover_colors(app: AppHandle) -> Result<()> {
     crate::color::clear_all_cover_colors(&app)
+}
+
+// region update
+
+/// Ask GitHub for the latest release and compare it with the running version.
+/// See [`crate::update::check_update`].
+#[tauri::command(async)]
+pub async fn check_update() -> Result<UpdateStatus> {
+    crate::update::check_update().await
 }
 
 // region archive

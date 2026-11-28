@@ -147,6 +147,7 @@ impl Zero for Settings {
             sync_io_timeout_secs: 0,
             sync_non_io_timeout_secs: 0,
             config_daily_backup: false,
+            auto_check_update: false,
         }
     }
 }

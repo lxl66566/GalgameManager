@@ -54,6 +54,9 @@ pub struct Settings {
     /// After a successful config upload, replicate the remote config as a
     /// dated daily snapshot (`config_YYYYMMDD.toml`).
     pub config_daily_backup: bool,
+    /// Check GitHub releases for a newer version and notify. Opt-in: the
+    /// check contacts the network, so it is off until the user enables it.
+    pub auto_check_update: bool,
 }
 
 impl Default for Settings {
@@ -70,6 +73,7 @@ impl Default for Settings {
             sync_io_timeout_secs: DEFAULT_IO_TIMEOUT.as_secs() as u32,
             sync_non_io_timeout_secs: DEFAULT_NON_IO_TIMEOUT.as_secs() as u32,
             config_daily_backup: true,
+            auto_check_update: true,
         }
     }
 }

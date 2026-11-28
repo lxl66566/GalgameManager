@@ -18,10 +18,11 @@ pub mod plugin;
 pub mod steam;
 pub mod sync;
 pub mod tray;
+pub mod update;
 pub mod utils;
 
 use bindings::{
-    apply_remote_config, archive, clean_current_operator, clear_all_cover_colors,
+    apply_remote_config, archive, check_update, clean_current_operator, clear_all_cover_colors,
     clear_all_daily_playtime, config_was_corrupted, delete_archive, delete_archive_all,
     delete_local_archive, delete_local_archive_all, device_id, exec, extract, get_config,
     get_remote_config, is_game_running, list_archive, list_local_archive, list_steam_games, log,
@@ -96,6 +97,7 @@ pub fn run() {
             paths_exist,
             list_steam_games,
             clear_all_daily_playtime,
+            check_update,
         ])
         .register_uri_scheme_protocol("galimg", |_, request| http::image_protocol_handler(request))
         .setup(|app| {

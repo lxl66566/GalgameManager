@@ -16,7 +16,7 @@ use tokio::{
     sync::broadcast::{self, error::RecvError},
 };
 
-use super::{IMAGE_CACHE_DIR, IMAGE_CLIENT, dead_url};
+use super::{HTTP_CLIENT, IMAGE_CACHE_DIR, dead_url};
 use crate::error::{Error, ReqwestDetailedError, Result};
 
 /// Hex length of a cache key produced by [`hash_image`].
@@ -202,7 +202,7 @@ async fn download_image_once(url: &str) -> Result<Vec<u8>> {
     // the status code + url), which `From<reqwest::Error>` renders as a clear
     // "HTTP <code> <reason> (client/server error) for <url>" message — instead
     // of silently caching the error body (e.g. a 404 HTML page) as an image.
-    let resp = IMAGE_CLIENT.get(url).send().await?.error_for_status()?;
+    let resp = HTTP_CLIENT.get(url).send().await?.error_for_status()?;
     Ok(resp.bytes().await?.to_vec())
 }
 

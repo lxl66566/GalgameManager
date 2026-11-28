@@ -5,10 +5,10 @@ import { useI18n } from '~/i18n'
 
 import { AppearanceTab } from './AppearanceTab'
 import { DeviceTab } from './DeviceTab'
-import { LaunchTab } from './LaunchTab'
+import { GameTab } from './GameTab'
 import { StorageTab } from './StorageTab'
 
-type TabKey = 'appearance' | 'device' | 'general' | 'launch'
+type TabKey = 'appearance' | 'device' | 'game' | 'general'
 
 // Module-level signal: survives SettingsPage mount/unmount cycles caused by
 // route changes, so switching away and back keeps the active sub-page.
@@ -28,7 +28,7 @@ export const SettingsPage: Component = () => {
         <Tabs
           items={[
             { key: 'general', label: t('settings.tabs.general') },
-            { key: 'launch', label: t('settings.tabs.launch') },
+            { key: 'game', label: t('settings.tabs.game') },
             { key: 'device', label: t('settings.tabs.device') },
             { key: 'appearance', label: t('settings.tabs.appearance') }
           ]}
@@ -43,8 +43,8 @@ export const SettingsPage: Component = () => {
             <Match when={activeTab() === 'general'}>
               <StorageTab />
             </Match>
-            <Match when={activeTab() === 'launch'}>
-              <LaunchTab />
+            <Match when={activeTab() === 'game'}>
+              <GameTab />
             </Match>
             <Match when={activeTab() === 'device'}>
               <DeviceTab />

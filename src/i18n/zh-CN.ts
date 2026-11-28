@@ -90,7 +90,9 @@ export const dict: DeepPartial<RawDictionary> = {
     archiveExists: '存档已存在',
     archiving: '正在归档: ',
     checkingRemoteConfig: '正在检查远端配置...',
+    checkingUpdate: '正在检查更新...',
     checkRemoteConfigFailed: '检查远端配置失败',
+    checkUpdateFailed: '检查更新失败',
     configAutoUploadFailed: '配置自动上传失败',
     configAutoUploadSuccess: '配置自动上传成功',
     configCorrupted:
@@ -154,6 +156,9 @@ export const dict: DeepPartial<RawDictionary> = {
     syncFailed: '同步失败: ',
     syncSuccess: '同步成功',
     unknownVar: '未知变量: ',
+    updateAvailable: '发现新版本 {{version}}',
+    updateGoToRelease: '前往 Release 下载',
+    updateUpToDate: '当前已是最新版本（v{{version}}）',
     uploadFailed: '上传失败: ',
     uploading: '正在上传: ',
     uploadSuccess: '上传成功: '
@@ -338,18 +343,6 @@ export const dict: DeepPartial<RawDictionary> = {
       variables: '变量',
       variablesDesc: '定义此设备关联的变量，将插入到路径中的 {...} 模板中'
     },
-    launch: {
-      clearDailyStat: '清除每日游玩时长数据',
-      clearDailyStatDesc: '删除所有游戏的每日游玩时长数据。',
-      dailyStat: '每日游玩时长统计',
-      dailyStatCleared: '已清除所有游戏的每日游玩时长数据。',
-      dailyStatDesc: '记录每日游玩时长并在统计页展示',
-      dayStart: '每日起始时刻',
-      dayStartDesc: '例如设为 04:00，则 00:00-04:00 的游玩时长会记入前一天。',
-      precisionMode: '精确模式',
-      precisionModeDesc: '开启后只计算游戏在前台游玩的时长（窗口焦点时长）',
-      timestat: '时长统计'
-    },
     self: '设置',
     storage: {
       Endpoint: 'URL',
@@ -375,8 +368,26 @@ export const dict: DeepPartial<RawDictionary> = {
     tabs: {
       appearance: '外观',
       device: '设备',
-      general: '通用',
-      launch: '启动'
+      game: '游戏',
+      general: '通用'
+    },
+    timestat: {
+      clearDailyStat: '清除每日游玩时长数据',
+      clearDailyStatDesc: '删除所有游戏的每日游玩时长数据。',
+      dailyStat: '每日游玩时长统计',
+      dailyStatCleared: '已清除所有游戏的每日游玩时长数据。',
+      dailyStatDesc: '记录每日游玩时长并在统计页展示',
+      dayStart: '每日起始时刻',
+      dayStartDesc: '例如设为 04:00，则 00:00-04:00 的游玩时长会记入前一天。',
+      precisionMode: '精确模式',
+      precisionModeDesc: '开启后只计算游戏在前台游玩的时长（窗口焦点时长）',
+      self: '时长统计'
+    },
+    update: {
+      autoCheck: '启动时检查更新',
+      checkNow: '立即检查',
+      currentVersion: '当前版本',
+      self: '更新'
     }
   },
   sidebar: {
