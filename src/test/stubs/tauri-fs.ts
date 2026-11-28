@@ -1,30 +1,34 @@
 /// Stub for `@tauri-apps/plugin-fs`.
 
-export enum BaseDirectory {
-  AppCache = 'AppCache',
-  AppConfig = 'AppConfig',
-  AppData = 'AppData',
-  AppLocalData = 'AppLocalData',
-  AppLog = 'AppLog',
-  Audio = 'Audio',
-  Cache = 'Cache',
-  Config = 'Config',
-  Current = 'Current',
-  Data = 'Data',
-  Desktop = 'Desktop',
-  Document = 'Document',
-  Downloads = 'Downloads',
-  Home = 'Home',
-  LocalData = 'LocalData',
-  Log = 'Log',
-  Picture = 'Picture',
-  Public = 'Public',
-  Resource = 'Resource',
-  Runtime = 'Runtime',
-  Template = 'Template',
-  Temporary = 'Temp',
-  Video = 'Video'
-}
+// A const object + literal union mirrors the real `BaseDirectory` enum
+// without enum syntax, which `erasableSyntaxOnly` rejects.
+export const BaseDirectory = {
+  AppCache: 'AppCache',
+  AppConfig: 'AppConfig',
+  AppData: 'AppData',
+  AppLocalData: 'AppLocalData',
+  AppLog: 'AppLog',
+  Audio: 'Audio',
+  Cache: 'Cache',
+  Config: 'Config',
+  Current: 'Current',
+  Data: 'Data',
+  Desktop: 'Desktop',
+  Document: 'Document',
+  Downloads: 'Downloads',
+  Home: 'Home',
+  LocalData: 'LocalData',
+  Log: 'Log',
+  Picture: 'Picture',
+  Public: 'Public',
+  Resource: 'Resource',
+  Runtime: 'Runtime',
+  Template: 'Template',
+  Temporary: 'Temp',
+  Video: 'Video'
+} as const
+
+export type BaseDirectory = (typeof BaseDirectory)[keyof typeof BaseDirectory]
 
 export async function exists(_path: string, _options?: unknown): Promise<boolean> {
   return false

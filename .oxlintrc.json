@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["eslint", "import", "oxc", "promise", "typescript", "vitest"],
+  "plugins": ["import", "oxc", "promise", "typescript", "vitest"],
   "categories": {
     "correctness": "error",
     "perf": "error",
@@ -10,10 +10,17 @@
   "rules": {
     "eslint/no-unassigned-vars": "off",
     "eslint/no-underscore-dangle": "off",
+    "eslint/no-unexpected-multiline": "off",
     "import/no-named-as-default": "off",
     "import/no-unassigned-import": "off",
     "oxc/no-map-spread": "off",
-    "vitest/require-hook": "off"
+    "promise/always-return": "off",
+    "vitest/no-identical-title": "error",
+    "vitest/no-import-node-test": "error",
+    "vitest/no-interpolation-in-snapshots": "error",
+    "vitest/no-mocks-import": "error",
+    "vitest/no-unneeded-async-expect-function": "error",
+    "vitest/prefer-called-exactly-once-with": "error"
   },
   "env": {
     "browser": true,

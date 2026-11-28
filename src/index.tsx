@@ -1,4 +1,7 @@
 /* @refresh reload */
+// Entry module: the only module shipped to the browser that may run code at
+// import time. Every other module stays pure when imported; `sideEffects` in
+// package.json mirrors this.
 import 'virtual:uno.css'
 import { render } from 'solid-js/web'
 

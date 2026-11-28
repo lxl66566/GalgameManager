@@ -20,6 +20,7 @@ temperature: 0
 - `pnpm check` 检查 tsx 代码，`pnpm test` 运行 TS 单测（vitest），`pnpm lint` 运行 eslint。或者可以使用 `pnpm verify` 运行所有前端检查。
 - 在 `src-tauri` 下使用 `cargo test` 运行 Rust 单测/集成测试。
 - 修改了 Rust 代码并影响到前后端接口时，请在 src-tauri 下执行 `cargo test export_bindings` 更新 bindings。（别尝试找这个测试，别问为什么，直接执行即可）
+- 除入口模块 `src/index.tsx` 与 CSS 外，模块的 import 必须无副作用；由 `@lxl66566/eslint-plugin-import-purity` 强制，白名单见 `eslint.config.js`。
 - 对于复杂任务，请遵循原子化 commit。提交前请运行 `pnpm fmt` 进行代码格式化。
 
 # 项目规范

@@ -58,21 +58,6 @@ interface GameEditModalProps {
   onDelete: () => void
 }
 
-const DEFAULT_GAME: Game = {
-  addedTime: new Date().toISOString(),
-  excutablePath: null,
-  id: 0,
-  imageSha256: null,
-  imageUrl: null,
-  lastPlayedTime: null,
-  lastUploadTime: null,
-  name: '',
-  plugins: [],
-  savePaths: [],
-  steam: null,
-  useTime: [0, 0]
-}
-
 export default function GameEditModal(props: GameEditModalProps) {
   const { t } = useI18n()
   const { config } = useConfig()
@@ -92,7 +77,7 @@ export default function GameEditModal(props: GameEditModalProps) {
 
   // Auto-populate plugins for new games based on autoAdd meta config
   // eslint-disable-next-line solid/reactivity -- used once for initial state
-  const baseGame = structuredClone(unwrap(props.gameInfo ?? DEFAULT_GAME))
+  const baseGame = structuredClone(unwrap(props.gameInfo ?? defaultGame()))
   // eslint-disable-next-line solid/reactivity -- used once for initial state
   if (!isEditMode()) {
     const autoPlugins = PLUGIN_REGISTRY.filter(def => {
@@ -551,4 +536,23 @@ export default function GameEditModal(props: GameEditModalProps) {
       </Show>
     </div>
   )
+}
+
+// Computed on demand: the import-time timestamp of a module-level constant
+// would be stale, and constructing it at import would be a side effect.
+function defaultGame(): Game {
+  return {
+    addedTime: new Date().toISOString(),
+    excutablePath: null,
+    id: 0,
+    imageSha256: null,
+    imageUrl: null,
+    lastPlayedTime: null,
+    lastUploadTime: null,
+    name: '',
+    plugins: [],
+    savePaths: [],
+    steam: null,
+    useTime: [0, 0]
+  }
 }

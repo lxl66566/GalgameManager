@@ -243,6 +243,9 @@ importers:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.15.0(jiti@2.7.0))
+      '@lxl66566/eslint-plugin-import-purity':
+        specifier: ^0.1.0
+        version: 0.1.0(eslint@10.15.0(jiti@2.7.0))
       '@solid-primitives/i18n':
         specifier: ^3.0.1
         version: 3.0.1(@solidjs/web@2.0.4(solid-js@1.9.20))(solid-js@1.9.20)
@@ -261,9 +264,6 @@ importers:
       '@unocss/preset-wind4':
         specifier: ^66.13.0
         version: 66.13.0
-      '@vitest/eslint-plugin':
-        specifier: ^1.6.28
-        version: 1.6.28(@typescript-eslint/eslint-plugin@8.74.0(@typescript-eslint/parser@8.74.0(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3)(vitest@5.1.2(@types/node@26.6.11)(vite@8.3.8(@types/node@26.6.11)(jiti@2.7.0)(yaml@2.9.1)))
       eslint:
         specifier: ^10.15.0
         version: 10.15.0(jiti@2.7.0)
@@ -542,6 +542,12 @@ packages:
     resolution: {integrity: sha512-jRVXr+zsVHxzDXRoh+CDeXzvCsFJ6uiHhqqNQ26Cw9ZsZ3D6nqPUBt1gGVtj2ZPmRL3a9Uk1v8D1aJ8/I12Dow==}
     peerDependencies:
       solid-js: ^1.8.8
+
+  '@lxl66566/eslint-plugin-import-purity@0.1.0':
+    resolution: {integrity: sha512-NwCGaNS07r1ZmqUToYCqDfXrdP1/FxIscsZHrIFtoPjWVHTjJOf6i/0MXEKGxSHT20P782RUg5EJP3WfeyqSYw==}
+    engines: {node: ^20.19.0 || ^22.13.0 || >=24}
+    peerDependencies:
+      eslint: ^9.0.0 || ^10.0.0
 
   '@napi-rs/wasm-runtime@1.2.6':
     resolution: {integrity: sha512-mRyDmEw9/fCDXCGfL1sbgIw/GUK0PVxRW4YwgPN61F3LQ+fSyoBFarJVzgGyhF6kRzEQZ0FejDqm4WLXSeqQmw==}
@@ -1586,22 +1592,6 @@ packages:
     resolution: {integrity: sha512-DpLMlAqlrk4zBVK3DiDjwKD0oq7pZNy+8BiIBRuByqb6dm5jsdoLMhIiyh/xR7+WejaW/1Ui+XgbgMNa4+zWJg==}
     cpu: [x64]
     os: [win32]
-
-  '@vitest/eslint-plugin@1.6.28':
-    resolution: {integrity: sha512-2QorUqhTIR7gaDkANEBTjuG2SE5MJgFaWElINyq9bIaOEJXycZUliu5xYSzG6QRLunWopYshgcRs2vW2CTRqGA==}
-    engines: {node: '>=22'}
-    peerDependencies:
-      '@typescript-eslint/eslint-plugin': '*'
-      eslint: '>=8.57.0'
-      typescript: '>=6.0.0'
-      vitest: '*'
-    peerDependenciesMeta:
-      '@typescript-eslint/eslint-plugin':
-        optional: true
-      typescript:
-        optional: true
-      vitest:
-        optional: true
 
   '@vitest/mocker@5.1.2':
     resolution: {integrity: sha512-UGc97wUIy0Ji2+9GxzHEJiOhiwkaukgE7VYcUNnjpX3sWnwQ8XogmNXX4WyOukxYgKb8Nh2XFa7KId0ZjpmVhQ==}
@@ -3090,6 +3080,10 @@ snapshots:
       '@solid-primitives/utils': 6.4.1(solid-js@1.9.20)
       solid-js: 1.9.20
 
+  '@lxl66566/eslint-plugin-import-purity@0.1.0(eslint@10.15.0(jiti@2.7.0))':
+    dependencies:
+      eslint: 10.15.0(jiti@2.7.0)
+
   '@napi-rs/wasm-runtime@1.2.6(@emnapi/core@2.0.0-beta.2)(@emnapi/runtime@2.0.0-beta.2)':
     dependencies:
       '@emnapi/core': 2.0.0-beta.2
@@ -3964,19 +3958,6 @@ snapshots:
 
   '@unrs/resolver-binding-win32-x64-msvc@1.13.0':
     optional: true
-
-  '@vitest/eslint-plugin@1.6.28(@typescript-eslint/eslint-plugin@8.74.0(@typescript-eslint/parser@8.74.0(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3)(vitest@5.1.2(@types/node@26.6.11)(vite@8.3.8(@types/node@26.6.11)(jiti@2.7.0)(yaml@2.9.1)))':
-    dependencies:
-      '@typescript-eslint/scope-manager': 8.74.0
-      '@typescript-eslint/utils': 8.74.0(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint: 10.15.0(jiti@2.7.0)
-    optionalDependencies:
-      '@typescript-eslint/eslint-plugin': 8.74.0(@typescript-eslint/parser@8.74.0(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3)
-      typescript: 6.0.3
-      vitest: 5.1.2(@types/node@26.6.11)(vite@8.3.8(@types/node@26.6.11)(jiti@2.7.0)(yaml@2.9.1))
-    transitivePeerDependencies:
-      - '@typescript/native'
-      - supports-color
 
   '@vitest/mocker@5.1.2(vite@8.3.8(@types/node@26.6.11)(jiti@2.7.0)(yaml@2.9.1))':
     dependencies:

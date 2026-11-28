@@ -6,15 +6,16 @@
 //      floating promises, unsafe `any` leakage, etc.
 //   3. perfectionist + regexp                    — opinionated consistency
 //   4. eslint-plugin-solid (flat/typescript)     — SolidJS reactivity pitfalls
-//   5. eslint-plugin-oxlint                      — turn off rules already handled by oxlint
-//   6. eslint-config-prettier                    — disable formatting conflicts
+//   5. @lxl66566/eslint-plugin-import-purity     — import-time side-effect policy
+//   6. eslint-plugin-oxlint                      — turn off rules already handled by oxlint
+//   7. eslint-config-prettier                    — disable formatting conflicts
 //
 // Fast rule-only feedback also runs via oxlint (see .oxlintrc.json); ESLint is
 // kept for the type-aware and Solid-specific rules oxlint can't do yet.
 // eslint-plugin-oxlint reads .oxlintrc.json and disables all ESLint rules that
 // oxlint already covers, avoiding duplicate work.
 import js from '@eslint/js'
-import vitest from '@vitest/eslint-plugin'
+import importPurity from '@lxl66566/eslint-plugin-import-purity'
 import prettier from 'eslint-config-prettier'
 import { importX } from 'eslint-plugin-import-x'
 import oxlint from 'eslint-plugin-oxlint'
@@ -72,10 +73,42 @@ export default tseslint.config(
     }
   },
   {
-    files: ['src/**/*.{test,spec}.{ts,tsx}'],
-    ...vitest.configs.recommended,
+    // Import-time side effects belong to the entry module; tests run on import.
+    files: ['src/**/*.{js,ts,tsx}'],
+    ignores: ['src/index.tsx', 'src/**/*.{test,spec}.{js,ts,tsx}'],
+    plugins: { '@lxl66566/import-purity': importPurity },
     rules: {
-      ...vitest.configs.recommended.rules,
+      '@lxl66566/import-purity/no-top-level-side-effects': [
+        'error',
+        {
+          allowedCalls: [
+            // Pure JS factories.
+            'Map',
+            'Object.freeze',
+            'Set',
+            'Symbol',
+            'Symbol.for',
+            'URL',
+            'WeakMap',
+            'WeakSet',
+            // Pure string member call: platform detection reads
+            // `navigator.platform` at import time.
+            '*.startsWith',
+            // Solid factories that need no reactive owner.
+            'createContext',
+            'createSignal',
+            'createStore',
+            'lazy'
+          ],
+          allowSideEffectImports: ['**/*.css', 'd3-transition']
+        }
+      ]
+    }
+  },
+  {
+    files: ['src/**/*.{test,spec}.{ts,tsx}'],
+    rules: {
+      // Tests legitimately read signals outside tracked scopes.
       'solid/reactivity': 'off'
     }
   },
@@ -112,9 +145,6 @@ export default tseslint.config(
       'import-x/no-unresolved': 'off',
       'no-unassigned-vars': 'off',
       'no-undef': 'off',
-      'no-underscore-dangle': 'off',
-      // --- rules from plugins not loaded in ESLint ---
-      'oxc/no-map-spread': 'off',
       // Import ordering is owned by oxfmt's built-in sortImports (run via
       // `oxfmt`, which executes *after* `eslint --fix` in lint-staged).
       // Perfectionist's sort-imports rules use a different grouping, so the
@@ -124,8 +154,7 @@ export default tseslint.config(
       // rules (sort-objects, sort-object-types, …) stay.
       'perfectionist/sort-imports': 'off',
       'perfectionist/sort-named-imports': 'off',
-      'prefer-const': 'error',
-      'promise/always-return': 'off'
+      'prefer-const': 'error'
     }
   },
   prettier

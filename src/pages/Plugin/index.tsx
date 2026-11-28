@@ -18,7 +18,6 @@ import {
   type AnyMeta,
   type ConfigEditorProps
 } from './plugins/types'
-import { PLUGINS } from './registry'
 
 export default function PluginPage() {
   const { t } = useI18n()
@@ -54,7 +53,7 @@ export default function PluginPage() {
               {t('plugin.noPlugins')}
             </div>
           }
-          when={PLUGINS.length > 0}
+          when={PLUGIN_REGISTRY.length > 0}
         >
           <div class="space-y-3">
             <For each={PLUGIN_REGISTRY}>

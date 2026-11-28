@@ -20,19 +20,6 @@ export function errToStr(value: unknown): string {
 }
 
 /**
- * Base log function; supports calls like log('info', 'msg', obj, 123)
- */
-export function log(level: LogLevel, ...args: unknown[]) {
-  const message = formatArgs(args)
-
-  // Fire-and-forget IPC from a sync function: there's no caller to await,
-  // so `.catch` is the appropriate way to surface backend failures.
-  void invoke('log', { level, msg: message }).catch((error: unknown) => {
-    console.error('Failed to log:', errToStr(error))
-  })
-}
-
-/**
  * Format the arg list into a string, console.log-style: objects are
  * JSON-stringified and results concatenated.
  */
@@ -60,24 +47,37 @@ function formatArgs(args: unknown[]): string {
     .join('')
 }
 
-// Namespace-free equivalents of the old `namespace log` API. Attaching the
-// level helpers as plain function properties keeps every existing
-// `log.info(...)` / `log.warn(...)` call site working without an ES
-// namespace (which eslint flags).
-// NOTE: the level names ('trace', 'info', ...) must match the backend
-// LogLevel variant values.
-log.trace = function (...args: unknown[]) {
-  log('trace', ...args)
+/**
+ * Send one log line to the backend.
+ */
+function send(level: LogLevel, args: unknown[]) {
+  const message = formatArgs(args)
+
+  // Fire-and-forget IPC from a sync function: there's no caller to await,
+  // so `.catch` is the appropriate way to surface backend failures.
+  void invoke('log', { level, msg: message }).catch((error: unknown) => {
+    console.error('Failed to log:', errToStr(error))
+  })
 }
-log.debug = function (...args: unknown[]) {
-  log('debug', ...args)
-}
-log.info = function (...args: unknown[]) {
-  log('info', ...args)
-}
-log.warn = function (...args: unknown[]) {
-  log('warn', ...args)
-}
-log.error = function (...args: unknown[]) {
-  log('error', ...args)
+
+// Level helpers as a plain object keep every existing `log.info(...)` /
+// `log.warn(...)` call site working. Assigning the helpers onto the `log`
+// function instead would be a top-level side effect.
+// NOTE: the keys match the backend LogLevel variant values.
+export const log: Record<LogLevel, (...args: unknown[]) => void> = {
+  debug: (...args) => {
+    send('debug', args)
+  },
+  error: (...args) => {
+    send('error', args)
+  },
+  info: (...args) => {
+    send('info', args)
+  },
+  trace: (...args) => {
+    send('trace', args)
+  },
+  warn: (...args) => {
+    send('warn', args)
+  }
 }

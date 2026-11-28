@@ -37,12 +37,8 @@ const DEFAULT_INTERVAL = 60_000
 // A single app-lifetime heartbeat. Every "relative time" memo subscribes to
 // this one tick instead of each game card spinning its own setInterval —
 // otherwise a grid of N visible cards kept N timers alive simultaneously.
-const sharedTick: Accessor<number> = (() => {
-  const [tick, setTick] = createSignal(Date.now())
-  // Intentionally never cleared: one 60s timer for the whole app window.
-  setInterval(() => setTick(Date.now()), DEFAULT_INTERVAL)
-  return tick
-})()
+// Created on first use: importing the module must not start a timer.
+let sharedTick: Accessor<number> | undefined
 
 /**
  * Create a memo that re-computes the relative time string on a fixed
@@ -65,7 +61,7 @@ export function createRelativeTime(
 ) {
   let tick: Accessor<number>
   if (intervalMs === DEFAULT_INTERVAL) {
-    tick = sharedTick
+    tick = getSharedTick()
   } else {
     const [localTick, setLocalTick] = createSignal(Date.now())
     const timer = setInterval(() => setLocalTick(Date.now()), intervalMs)
@@ -95,6 +91,16 @@ export function createRelativeTime(
     return formatTimeAgoLocale(time, options.locale())
   })
   return memo
+}
+
+function getSharedTick(): Accessor<number> {
+  if (sharedTick === undefined) {
+    const [tick, setTick] = createSignal(Date.now())
+    // Intentionally never cleared: one 60s timer for the whole app window.
+    setInterval(() => setTick(Date.now()), DEFAULT_INTERVAL)
+    sharedTick = tick
+  }
+  return sharedTick
 }
 
 /*
