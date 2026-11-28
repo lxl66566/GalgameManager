@@ -39,6 +39,11 @@ A cross-platform game launcher based on Tauri + SolidJS, designed for managing, 
 
 ## Changelog
 
+### v1.4.4
+
+- Critical fix: Bar chart on the Statistics page does not display
+- Automatically check for updates on startup
+
 ### v1.4.3
 
 - UI/UX: Deleting saves no longer requires confirmation; toast appearance fixed; modals are no longer affected by toasts

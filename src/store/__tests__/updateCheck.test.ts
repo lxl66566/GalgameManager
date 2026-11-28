@@ -64,13 +64,13 @@ const t = ((key: string) => {
 }) as unknown as i18n.Translator<Dictionary>
 
 const AVAILABLE: UpdateStatus = {
-  current: '1.4.3',
+  current: '1.4.4',
   latestVersion: 'v1.5.0',
   type: 'available',
   url: 'https://github.com/lxl66566/GalgameManager/releases/tag/v1.5.0'
 }
 
-const UP_TO_DATE: UpdateStatus = { current: '1.4.3', type: 'upToDate' }
+const UP_TO_DATE: UpdateStatus = { current: '1.4.4', type: 'upToDate' }
 
 // Fresh import per test: the config store singleton is built from
 // `__INITIAL_CONFIG__` when `~/store` is first imported.

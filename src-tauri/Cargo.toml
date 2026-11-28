@@ -1,6 +1,6 @@
 [package]
 name        = "GalgameManager"
-version     = "1.4.3"
+version     = "1.4.4"
 edition     = "2024"
 description = "Manage and sync your galgames"
 readme      = "../README.md"
