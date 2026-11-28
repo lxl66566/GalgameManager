@@ -17,6 +17,7 @@ import { Sidebar, SidebarItem } from './Sidebar'
 import { checkAndPullRemote, performAutoUpload, useConfig, useConfigInit } from './store'
 import { useAutoUploadService } from './store/AutoUploadService'
 import { initGameRuntime } from './store/gameRuntime'
+import { autoCheckUpdate } from './store/updateCheck'
 
 // Route-level code splitting (string-literal dynamic imports only, so types
 // stay fully static). Game is the default route and stays eager; Statistics
@@ -45,6 +46,8 @@ const MainLayout: Component<{ children?: JSX.Element }> = props => {
       } finally {
         setServiceReady(true)
       }
+      // After the remote pull, so a setting synced from another device counts.
+      await autoCheckUpdate(t)
     })()
   })
 

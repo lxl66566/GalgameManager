@@ -1,5 +1,3 @@
-import type { ArchiveAlgo } from '@bindings/ArchiveAlgo'
-import type { ArchiveConfig } from '@bindings/ArchiveConfig'
 import type { S3Config } from '@bindings/S3Config'
 import type { StorageProvider } from '@bindings/StorageProvider'
 import type { WebDavConfig } from '@bindings/WebDavConfig'
@@ -18,31 +16,13 @@ import { debounce } from '@utils/debounce'
 import { errToStr } from '@utils/log'
 import { useVarWarning } from '@utils/useVarWarning'
 import { FiActivity, FiDownload, FiLoader, FiUpload } from 'solid-icons/fi'
-import {
-  createMemo,
-  createSignal,
-  Match,
-  onCleanup,
-  Show,
-  Switch,
-  type Component
-} from 'solid-js'
+import { createSignal, Match, onCleanup, Show, Switch, type Component } from 'solid-js'
 import toast from 'solid-toast'
 
 import { useI18n } from '~/i18n'
 import { checkAndPullRemote, performManualUpload, useConfig } from '~/store'
 
-// Keyed by ArchiveAlgo (a finite union), not `string`: with
-// noUncheckedIndexedAccess a Record<string, T> lookup returns T | undefined
-// even on the `?? fallback` branch, polluting every downstream use. A finite
-// key union makes each access a concrete property lookup (always defined).
-const COMPRESSION_RULES: Record<
-  ArchiveAlgo,
-  { disabled: boolean; max: number; min: number }
-> = {
-  squashfsZstd: { disabled: false, max: 22, min: 1 }, // Zstd level range: 1-22
-  tar: { disabled: true, max: 0, min: 0 } // tar is archive-only, no level
-}
+import { UpdateSection } from './UpdateSection'
 
 // Ghost icon button rendered tight against the provider label: reads the live
 // form values from the config store (the form is controlled, so
@@ -217,87 +197,6 @@ const LocalForm: Component<{
   )
 }
 
-const CompressionForm: Component<{
-  actions: ReturnType<typeof useConfig>['actions']
-  config: ArchiveConfig
-}> = props => {
-  const { t } = useI18n()
-
-  const currentRule = createMemo(() => COMPRESSION_RULES[props.config.algorithm])
-
-  // Takes the event object so the DOM value can be refilled directly
-  const handleLevelChange = (
-    e: Event & {
-      currentTarget: HTMLInputElement
-      target: HTMLInputElement
-    }
-  ) => {
-    const target = e.currentTarget
-    const rule = currentRule()
-    const rawValue = target.value
-
-    if (rule.disabled) {
-      const resetValue = rule.min
-      props.actions.updateSettingsDebounced({ archive: { level: resetValue } })
-      target.value = resetValue.toString()
-      return
-    }
-
-    let value = parseInt(rawValue)
-
-    if (Number.isNaN(value)) {
-      value = rule.min
-    } else {
-      if (value < rule.min) value = rule.min
-      if (value > rule.max) value = rule.max
-    }
-
-    props.actions.updateSettingsDebounced({ archive: { level: value } })
-
-    // Refill the DOM when it disagrees with the computed value, else the UI
-    // keeps showing 99 while the store holds 22
-    if (target.value !== value.toString()) {
-      target.value = value.toString()
-    }
-  }
-
-  return (
-    <SettingSection title={t('settings.compression.self')}>
-      <SettingRow label={t('settings.compression.algorithm')}>
-        <Select
-          onChange={e => {
-            props.actions.updateSettings({
-              archive: { algorithm: e.currentTarget.value as ArchiveAlgo }
-            })
-          }}
-          options={[
-            { label: 'Squashfs + Zstd', value: 'squashfsZstd' },
-            { label: 'tar', value: 'tar' }
-          ]}
-          value={props.config.algorithm}
-        />
-      </SettingRow>
-
-      <SettingRow label={t('settings.compression.level')}>
-        <Input
-          disabled={currentRule().disabled}
-          max={currentRule().max}
-          // min/max feed the browser's native validation UI
-          min={currentRule().min}
-          onChange={e => {
-            handleLevelChange(e)
-          }}
-          placeholder={
-            currentRule().disabled ? 'N/A' : `${currentRule().min}-${currentRule().max}`
-          }
-          type="number"
-          value={currentRule().disabled ? '' : props.config.level}
-        />
-      </SettingRow>
-    </SettingSection>
-  )
-}
-
 export const StorageTab: Component = () => {
   const { actions, config } = useConfig()
   const { t } = useI18n()
@@ -424,8 +323,6 @@ export const StorageTab: Component = () => {
         </SettingRow>
       </SettingSection>
 
-      <CompressionForm actions={actions} config={config.settings.archive} />
-
       <SettingSection title={t('settings.config.self')}>
         <SettingRow
           description={t('settings.config.autoSyncIntervalDesc')}
@@ -488,6 +385,8 @@ export const StorageTab: Component = () => {
           </div>
         </SettingRow>
       </SettingSection>
+
+      <UpdateSection />
     </div>
   )
 }

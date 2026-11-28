@@ -84,7 +84,9 @@ export const dict = {
     archiveExists: 'Archive already exists',
     archiving: 'Archiving: ',
     checkingRemoteConfig: 'Checking remote config...',
+    checkingUpdate: 'Checking for updates...',
     checkRemoteConfigFailed: 'Failed to check remote config',
+    checkUpdateFailed: 'Update check failed',
     configAutoUploadFailed: 'Config auto upload failed',
     configAutoUploadSuccess: 'Config auto upload successfully',
     configCorrupted:
@@ -150,6 +152,9 @@ export const dict = {
     syncFailed: 'Sync Failed: ',
     syncSuccess: 'Sync Success',
     unknownVar: 'Unknown variable(s): ',
+    updateAvailable: 'A new version {{version}} is available',
+    updateGoToRelease: 'Open release page',
+    updateUpToDate: 'You are already on the latest version (v{{version}})',
     uploadFailed: 'Upload Failed: ',
     uploading: 'Uploading: ',
     uploadSuccess: 'Upload Success: '
@@ -345,19 +350,6 @@ export const dict = {
       variablesDesc:
         'Define variables for current device. This will be inserted into template paths.'
     },
-    launch: {
-      clearDailyStat: 'Clear Daily Playtime Data',
-      clearDailyStatDesc: 'Delete all game daily playtime records.',
-      dailyStat: 'Daily Playtime Statistics',
-      dailyStatCleared: 'Cleared all game daily playtime records.',
-      dailyStatDesc: 'Track daily playtime and show the chart in the statistics page.',
-      dayStart: 'Day Starts At',
-      dayStartDesc:
-        'Ex. set to 04:00, playtime from midnight to 04:00 counts toward the previous day.',
-      precisionMode: 'Precision Mode',
-      precisionModeDesc: 'Only count time spent in foreground when window is focused.',
-      timestat: 'Time Stat'
-    },
     self: 'Settings',
     storage: {
       Endpoint: 'Endpoint',
@@ -384,8 +376,27 @@ export const dict = {
     tabs: {
       appearance: 'Appearance',
       device: 'Device',
-      general: 'General',
-      launch: 'Launch'
+      game: 'Game',
+      general: 'General'
+    },
+    timestat: {
+      clearDailyStat: 'Clear Daily Playtime Data',
+      clearDailyStatDesc: 'Delete all game daily playtime records.',
+      dailyStat: 'Daily Playtime Statistics',
+      dailyStatCleared: 'Cleared all game daily playtime records.',
+      dailyStatDesc: 'Track daily playtime and show the chart in the statistics page.',
+      dayStart: 'Day Starts At',
+      dayStartDesc:
+        'Ex. set to 04:00, playtime from midnight to 04:00 counts toward the previous day.',
+      precisionMode: 'Precision Mode',
+      precisionModeDesc: 'Only count time spent in foreground when window is focused.',
+      self: 'Time Stat'
+    },
+    update: {
+      autoCheck: 'Check for Updates at Startup',
+      checkNow: 'Check Now',
+      currentVersion: 'Version',
+      self: 'Update'
     }
   },
   sidebar: {

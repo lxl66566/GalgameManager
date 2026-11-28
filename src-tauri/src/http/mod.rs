@@ -41,7 +41,7 @@ pub static IMAGE_CACHE_DIR: Lazy<PathBuf> = Lazy::new(|| {
 
 static USER_AGENT: &str = "github:lxl66566/GalgameManager";
 
-pub static IMAGE_CLIENT: Lazy<Client> = Lazy::new(|| {
+pub static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| {
     let mut header_map = header::HeaderMap::with_capacity(1);
     header_map.insert(
         header::USER_AGENT,

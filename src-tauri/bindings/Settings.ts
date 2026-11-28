@@ -27,4 +27,9 @@ export type Settings = {
    * dated daily snapshot (`config_YYYYMMDD.toml`).
    */
   configDailyBackup: boolean;
+  /**
+   * Check GitHub releases for a newer version and notify. Opt-in: the
+   * check contacts the network, so it is off until the user enables it.
+   */
+  autoCheckUpdate: boolean;
 };

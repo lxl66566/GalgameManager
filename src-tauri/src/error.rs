@@ -59,6 +59,9 @@ pub enum Error {
     #[error("Config serialization failed: {0}")]
     ConfigSerialize(#[from] toml::ser::Error),
 
+    #[error("Invalid version string: {0}")]
+    InvalidVersion(String),
+
     #[error("Storage provider not set")]
     ProviderNotSet,
 
